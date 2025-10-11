@@ -1,0 +1,22 @@
+## Interface: 110205
+## Title: MattMinimalFrames
+## Author: Seathasky
+## Version: 1.0.0
+## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
+## SavedVariables: MattMinimalFramesDB
+
+# Libraries
+Libs\LibStub\LibStub.lua
+Libs\LibCustomGlow-1.0\LibCustomGlow-1.0.lua
+
+# Modules
+MattMinimalFrames_Utils.lua
+MattMinimalFrames_UnitFrames.lua
+MattMinimalFrames_Auras.lua
+MattMinimalFrames_FrameManager.lua
+MattMinimalFrames_UI.lua
+MattMinimalFrames_Minimap.lua
+MattMinimalFrames_Frames.lua
+MattMinimalFrames_Core.lua
+MattMinimalFrames_RangeCheck.lua
+MattMinimalFrames_ClassResources.lua
