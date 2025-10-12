@@ -21,8 +21,6 @@ Minimal unit frames for World of Warcraft. Clean, lightweight, and standalone.
 
 ## Installation
 
-1. Download and extract to `World of Warcraft\_retail_\Interface\AddOns\`
-2. Restart WoW or `/reload`
-
+https://www.curseforge.com/wow/addons/mattminimalframes
 ---
 
