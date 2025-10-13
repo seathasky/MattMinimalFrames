@@ -40,6 +40,9 @@ function MMF_SetupTargetAuras()
         
         aura.cooldown = CreateFrame("Cooldown", nil, aura, "CooldownFrameTemplate")
         aura.cooldown:SetAllPoints(aura)
+        if aura.cooldown.SetHideCountdownNumbers then
+            aura.cooldown:SetHideCountdownNumbers(true)
+        end
         
         aura.timerFrame = CreateFrame("Frame", nil, aura)
         aura.timerFrame:SetAllPoints(aura)
@@ -97,6 +100,9 @@ function MMF_SetupTargetAuras()
         
         aura.cooldown = CreateFrame("Cooldown", nil, aura, "CooldownFrameTemplate")
         aura.cooldown:SetAllPoints(aura)
+        if aura.cooldown.SetHideCountdownNumbers then
+            aura.cooldown:SetHideCountdownNumbers(true)
+        end
         
         aura.timerFrame = CreateFrame("Frame", nil, aura)
         aura.timerFrame:SetAllPoints(aura)
