@@ -1,26 +1,26 @@
 # MattMinimalFrames
+[![Minimal Unit Frames Preview](https://raw.githubusercontent.com/seathasky/MattMinimalFrames/refs/heads/main/minimal.png)](https://www.curseforge.com/wow/addons/mattminimalframes)
 
-Minimal unit frames for World of Warcraft. Clean, lightweight, and standalone.
+Clean, lightweight, and fully standalone **minimal unit frames** for World of Warcraft.  
 
-![Minimal Unit Frames Preview](https://raw.githubusercontent.com/seathasky/MattMinimalFrames/refs/heads/main/minimal.png)
-
-## Features
-
-- **Minimal Design** - Clean unit frames for Player, Target, Target-of-Target, Focus, and Pet
-- **Buffs & Debuffs** - Target aura display with timers
-- **Resource Bars** - Mana, rage, energy display
-- **Range Checking** - Frames fade when out of range
-- **Easy Movement** - Hold SHIFT + drag to reposition frames
-- **Standalone** - No dependencies required
-
-## Usage
-
-- **Move Frames**: Hold `SHIFT` + drag with left mouse button (out of combat)
-- **Settings**: Type `/mmf` or click the minimap button
-- **Toggle Options**: Buffs, debuffs, resource bars, and minimap button
-
-## Installation
-
-https://www.curseforge.com/wow/addons/mattminimalframes
 ---
 
+## ✨ Features  
+- **Minimal Design** – Sleek unit frames for *Player*, *Target*, *Target-of-Target*, *Focus*, and *Pet*  
+- **Buffs & Debuffs** – Target aura display with timers  
+- **Resource Bars** – Displays mana, rage, or energy  
+- **Range Checking** – Frames fade when units are out of range  
+- **Easy Movement** – Hold **SHIFT + Drag** to reposition frames  
+- **Standalone** – No external dependencies required  
+
+---
+
+## ⚙️ Usage  
+- **Move Frames:** Hold `SHIFT` and drag with the left mouse button *(out of combat)*  
+- **Open Settings:** Type `/mmf` or click the minimap button  
+- **Toggle Options:** Buffs, debuffs, resource bars, and minimap button visibility  
+
+---
+
+## 📦 Installation  
+👉 **[Install via CurseForge](https://www.curseforge.com/wow/addons/mattminimalframes)** 
