@@ -1,8 +1,3 @@
---========================================================
--- MattMinimalFrames_RangeCheck.lua
--- Range checking and frame alpha fading
---========================================================
-
 -- Helper function to get a spell's name from its ID.
 local function GetSpellName(spellID)
     -- Try the legacy global function first.
