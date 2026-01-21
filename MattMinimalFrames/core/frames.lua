@@ -591,16 +591,39 @@ local updateInterval = 0.1  -- Update every 0.1 seconds
 local function UpdateUnitFrame(frame)
     if not frame or not frame.unit or not frame.nameText then return end
     local unit = frame.unit
-    local unitName = UnitName(unit) or ""
+    local unitName = ""
+    local hasValidName = false
+    
+    -- Safely get unit name - wrap the check inside pcall to handle secret values
+    local success, result = pcall(function()
+        local name = UnitName(unit)
+        if name and name ~= "" then
+            return name
+        end
+        return nil
+    end)
+    
+    if success and result then
+        unitName = result
+        hasValidName = true
+    end
 
     -- Truncate target-of-target name if needed
     if unit == "targettarget" then
-        local truncated = string.sub(unitName, 1, 8)
-        if #unitName > 8 then truncated = truncated .. "…" end
-        frame.nameText:SetText(truncated)
+        if hasValidName then
+            local truncated = string.sub(unitName, 1, 8)
+            if #unitName > 8 then truncated = truncated .. "…" end
+            pcall(function() frame.nameText:SetText(truncated) end)
+        else
+            pcall(function() frame.nameText:SetText("") end)
+        end
     else
-        frame.nameText:SetText(unitName)
-        frame.nameText:SetWidth(frame.originalWidth - 4)
+        if hasValidName then
+            pcall(function() frame.nameText:SetText(unitName) end)
+        else
+            pcall(function() frame.nameText:SetText("") end)
+        end
+        pcall(function() frame.nameText:SetWidth(frame.originalWidth - 4) end)
     end
 
     -- Update health bar using StatusBar (handles secret values internally)
@@ -662,7 +685,7 @@ local function UpdateUnitFrame(frame)
         
         -- Check for shaman specs and override powerType to mana if necessary
         local useManaPowerType = false
-        if UnitClass(unit) == "Shaman" then
+        if unit == "player" and UnitClass(unit) == "Shaman" then
             local spec = GetSpecialization()
             if spec == 1 or spec == 2 then
                 useManaPowerType = true
