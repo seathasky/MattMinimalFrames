@@ -1,5 +1,6 @@
 --========================================================
 -- MattMinimalFrames_Frames.lua
+-- VERSION 2.0 - StatusBar based (Secret Value Fix)
 --========================================================
 
 
@@ -8,6 +9,7 @@
 -------------------------------------------------
 
 function MMF_FormatNumber(num)
+    if type(num) ~= "number" then return "0" end
     if num >= 1e6 then
         return string.format("%.1fM", num / 1e6)
     elseif num >= 1e3 then
@@ -16,6 +18,8 @@ function MMF_FormatNumber(num)
         return tostring(num)
     end
 end
+
+-- No caching needed - StatusBars handle secret values directly
 
 local function MMF_ResetSecureAttributes(frame)
     if not frame or not frame.unit then return end
@@ -74,7 +78,7 @@ end
 local DEFAULT_POWER_BAR_WIDTH = 73
 local DEFAULT_POWER_BAR_HEIGHT = 5
 local DEFAULT_POWER_BAR_VERTICAL_OFFSET = -24  -- Distance from bottom of frame
-local DEFAULT_POWER_BAR_HORIZONTAL_OFFSET = 4  -- Distance from edge of frame
+local DEFAULT_POWER_BAR_HORIZONTAL_OFFSET = 1  -- Distance from edge of frame
 
 local function CreateSecureMinimalUnitFrame(unit, frameName, width, height, point, relPoint, xOfs, yOfs)
     -- Create a secure clickable unit button
@@ -187,22 +191,25 @@ local function CreateSecureMinimalUnitFrame(unit, frameName, width, height, poin
     end)
 
     ------------------------------------------------------
-    -- Minimal visuals: Health BG & FG
+    -- Minimal visuals: Health Bar (using StatusBar for secret value support)
     ------------------------------------------------------
-    -- "Health bar" background (using texture instead of StatusBar)
+    -- Health bar background
     f.healthBarBG = f:CreateTexture(nil, "BACKGROUND")
     f.healthBarBG:SetAllPoints(f)
-    f.healthBarBG:SetColorTexture(0, 0, 0, 0.5)  -- (0,0,0,0) for fully invisible
+    f.healthBarBG:SetColorTexture(0, 0, 0, 0.5)
 
-    -- "Health bar" foreground (using texture instead of StatusBar)
-    f.healthBarFG = f:CreateTexture(nil, "ARTWORK")
-    f.healthBarFG:ClearAllPoints()
-    f.healthBarFG:SetPoint("TOPLEFT", f, "TOPLEFT", 1, -1)
-    f.healthBarFG:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 1, 1)
-    f.healthBarFG:SetTexture("Interface\\AddOns\\MattMinimalFrames\\Textures\\Melli.tga")
-    f.healthBarFG:SetTexCoord(0, 1, 0, 1)
+    -- Health bar as actual StatusBar (can handle secret values)
+    f.healthBar = CreateFrame("StatusBar", nil, f)
+    f.healthBar:SetPoint("TOPLEFT", f, "TOPLEFT", 1, -1)
+    f.healthBar:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -1, 1)
+    f.healthBar:SetStatusBarTexture("Interface\\AddOns\\MattMinimalFrames\\Textures\\Melli.tga")
+    f.healthBar:SetMinMaxValues(0, 1)
+    f.healthBar:SetValue(1)
+    
+    -- Keep reference to the texture for color changes
+    f.healthBarFG = f.healthBar:GetStatusBarTexture()
 
-    -- Power bar (using texture instead of StatusBar)
+    -- Power bar (as StatusBar)
     if unit == "player" or unit == "target" then
         f.powerBarFrame = CreateFrame("Frame", nil, f)
         f.powerBarFrame:SetFrameLevel(f:GetFrameLevel() + 1)
@@ -210,37 +217,37 @@ local function CreateSecureMinimalUnitFrame(unit, frameName, width, height, poin
         f.powerBarBG = f.powerBarFrame:CreateTexture(nil, "BACKGROUND")
         f.powerBarBG:SetColorTexture(0, 0, 0, 0.25)
         
-        f.powerBarFG = f.powerBarFrame:CreateTexture(nil, "ARTWORK")
-        f.powerBarFG:SetTexture("Interface\\AddOns\\MattMinimalFrames\\Textures\\Melli.tga")
+        -- Power bar as StatusBar
+        f.powerBar = CreateFrame("StatusBar", nil, f.powerBarFrame)
+        f.powerBar:SetStatusBarTexture("Interface\\AddOns\\MattMinimalFrames\\Textures\\Melli.tga")
+        f.powerBar:SetMinMaxValues(0, 1)
+        f.powerBar:SetValue(1)
+        f.powerBarFG = f.powerBar:GetStatusBarTexture()
     end
 
     if unit == "player" or unit == "target" then
-        -- Create the shield texture behind the health bar
-        f.shieldBarFG = f:CreateTexture(nil, "BACKGROUND")
-        f.shieldBarFG:SetTexture("Interface\\AddOns\\MattMinimalFrames\\Textures\\shield.tga")
-        f.shieldBarFG:SetHorizTile(true)
-        f.shieldBarFG:SetVertTile(true)
-        f.shieldBarFG:SetPoint("TOPLEFT", f.healthBarFG, "TOPRIGHT", 0, 0)
-        f.shieldBarFG:SetPoint("BOTTOMLEFT", f.healthBarFG, "BOTTOMRIGHT", 0, 0)
-        f.shieldBarFG:SetTexCoord(0, 1, 0, 1)
-        f.shieldBarFG:SetDrawLayer("BACKGROUND", 0)
-        f.shieldBarFG:SetAlpha(0.5)  -- Set 50% transparency
-        f.shieldBarFG:Hide()
-
-        -- Create the overlay shield texture at the end of the frame
-        f.shieldBarFG2 = f:CreateTexture(nil, "OVERLAY")
-        f.shieldBarFG2:SetTexture("Interface\\AddOns\\MattMinimalFrames\\Textures\\white.tga")
-        f.shieldBarFG2:SetWidth(2)
-        f.shieldBarFG2:SetPoint("TOPRIGHT", f, "TOPRIGHT", -2, -1)
-        f.shieldBarFG2:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -2, 1)
-        f.shieldBarFG2:SetTexCoord(0, 1, 0, 1)
-        f.shieldBarFG2:SetDrawLayer("OVERLAY", 7)
-        f.shieldBarFG2:Hide()
-
-        -- Adjust the height dynamically based on the frame's height
-        f:SetScript("OnSizeChanged", function(self)
-            f.shieldBarFG2:SetHeight(self:GetHeight() - 2)
-        end)
+        -- Create absorb StatusBar (overlays on top of health bar)
+        f.absorbBar = CreateFrame("StatusBar", nil, f)
+        f.absorbBar:SetStatusBarTexture("Interface\\AddOns\\MattMinimalFrames\\Textures\\shield.tga")
+        f.absorbBar:SetMinMaxValues(0, 1)
+        f.absorbBar:SetValue(0)
+        f.absorbBar:SetStatusBarColor(0, 1, 1, 1.0)  -- Bright cyan for absorbs
+        f.absorbBar:SetReverseFill(true)  -- Fill from right to left
+        
+        -- Enable texture tiling for shield pattern
+        local texture = f.absorbBar:GetStatusBarTexture()
+        if texture then
+            texture:SetHorizTile(true)
+            texture:SetVertTile(true)
+        end
+        
+        f.absorbBar:Hide()
+        f.absorbBar:SetWidth(46)
+        
+        -- Position at right edge for both player and target
+        f.absorbBar:SetPoint("RIGHT", f.healthBar, "RIGHT", 0, 0)
+        f.absorbBar:SetHeight(f.healthBar:GetHeight() or 20)
+        f.absorbBar:SetFrameLevel(f.healthBar:GetFrameLevel() + 2)
     end
 
     -- Add highlight texture (after health bar creation, before name text)
@@ -250,10 +257,14 @@ local function CreateSecureMinimalUnitFrame(unit, frameName, width, height, poin
     f.highlightTexture:Hide()
 
     ------------------------------------------------------
-    -- Name text
+    -- Name text (on overlay frame so it draws above the StatusBar)
     ------------------------------------------------------
     local fontPath = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
-    f.nameText = f:CreateFontString(nil, "OVERLAY")
+    f.nameOverlay = CreateFrame("Frame", nil, f)
+    f.nameOverlay:SetAllPoints(f)
+    f.nameOverlay:SetFrameLevel(f:GetFrameLevel() + 10)
+    
+    f.nameText = f.nameOverlay:CreateFontString(nil, "OVERLAY", nil, 7)
     if unit == "focus" or unit == "targettarget" then
         f.nameText:SetFont(fontPath, 10, "OUTLINE")  -- Smaller font for focus and ToT
     else
@@ -263,33 +274,33 @@ local function CreateSecureMinimalUnitFrame(unit, frameName, width, height, poin
     f.nameText:SetShadowOffset(1, -1)
     f.nameText:SetShadowColor(0, 0, 0, 0.9)
     if unit == "player" then
-        f.nameText:SetPoint("TOPLEFT", f, "TOPLEFT", 0, 8)
+        f.nameText:SetPoint("LEFT", f, "TOPLEFT", 2, 0)
         f.nameText:SetJustifyH("LEFT")
     elseif unit == "target" then
-        f.nameText:SetPoint("TOPRIGHT", f, "TOPRIGHT", 0, 8)
+        f.nameText:SetPoint("RIGHT", f, "TOPRIGHT", -2, 0)
         f.nameText:SetJustifyH("RIGHT")
     elseif unit == "targettarget" then
-        f.nameText:SetPoint("TOP", f, "TOP", 0, 4)
+        f.nameText:SetPoint("CENTER", f, "TOP", 0, 0)
         f.nameText:SetJustifyH("CENTER")
     elseif unit == "pet" then
-        f.nameText:SetPoint("BOTTOM", f, "BOTTOM", 0, -5)
+        f.nameText:SetPoint("CENTER", f, "TOP", 0, 0)
         f.nameText:SetJustifyH("CENTER")
     elseif unit == "focus" then
-        f.nameText:SetPoint("TOP", f, "TOP", 0, 4)
+        f.nameText:SetPoint("CENTER", f, "TOP", 0, 0)
         f.nameText:SetJustifyH("CENTER")
     else
-        f.nameText:SetPoint("TOP", f, "TOP", 0, 1)
+        f.nameText:SetPoint("CENTER", f, "TOP", 0, 0)
         f.nameText:SetJustifyH("CENTER")
     end
     f.nameText:SetWidth(f.originalWidth - 4)
 
     ------------------------------------------------------
-    -- HP & Power text
+    -- HP & Power text (on overlay frame so it draws above the StatusBar)
     ------------------------------------------------------
-    f.hpText = f:CreateFontString(nil, "OVERLAY")
+    f.hpText = f.nameOverlay:CreateFontString(nil, "OVERLAY")
     f.hpText:SetFont(fontPath, 13, "OUTLINE")
     f.hpText:SetTextColor(1, 1, 1)
-    f.powerText = f:CreateFontString(nil, "OVERLAY")
+    f.powerText = f.nameOverlay:CreateFontString(nil, "OVERLAY")
     f.powerText:SetFont(fontPath, 13, "OUTLINE")
     f.powerText:SetTextColor(1, 1, 1)
     if unit == "player" then
@@ -299,8 +310,7 @@ local function CreateSecureMinimalUnitFrame(unit, frameName, width, height, poin
         -- Create power bar frame container
         f.powerBarFrame = CreateFrame("Frame", nil, f)
         f.powerBarFrame:SetSize(DEFAULT_POWER_BAR_WIDTH + 2, DEFAULT_POWER_BAR_HEIGHT + 2)
-        f.powerBarFrame:SetPoint("BOTTOM", f, "BOTTOM", 0, DEFAULT_POWER_BAR_VERTICAL_OFFSET)
-        f.powerBarFrame:SetPoint("RIGHT", f, "RIGHT", -DEFAULT_POWER_BAR_HORIZONTAL_OFFSET, 0)
+        f.powerBarFrame:SetPoint("BOTTOMRIGHT", f, "BOTTOMRIGHT", -DEFAULT_POWER_BAR_HORIZONTAL_OFFSET, DEFAULT_POWER_BAR_VERTICAL_OFFSET)
         f.powerBarFrame:SetMovable(true)
         f.powerBarFrame:EnableMouse(true)
         f.powerBarFrame:RegisterForDrag("LeftButton")
@@ -325,17 +335,15 @@ local function CreateSecureMinimalUnitFrame(unit, frameName, width, height, poin
         f.powerBarBorder:SetColorTexture(0, 0, 0, 0.5)
         f.powerBarBorder:SetAllPoints()
 
-        f.powerBarBG = f.powerBarFrame:CreateTexture(nil, "ARTWORK", nil, 1)
-        f.powerBarBG:SetColorTexture(0, 0, 0, 0.25)  -- 75% transparency for background
         f.powerBarBG:SetHeight(DEFAULT_POWER_BAR_HEIGHT)
         f.powerBarBG:SetWidth(DEFAULT_POWER_BAR_WIDTH)
         f.powerBarBG:SetPoint("CENTER", f.powerBarBorder, "CENTER", 0, 0)
 
-        f.powerBarFG = f.powerBarFrame:CreateTexture(nil, "ARTWORK", nil, 2)
-        f.powerBarFG:SetHeight(DEFAULT_POWER_BAR_HEIGHT)
-        f.powerBarFG:SetTexture("Interface\\AddOns\\MattMinimalFrames\\Textures\\Melli.tga")
-        f.powerBarFG:SetAlpha(0.5)  -- 50% transparency for power bar
-        f.powerBarFG:SetPoint("BOTTOMLEFT", f.powerBarBG, "BOTTOMLEFT", 0, 0)
+        -- Set up the StatusBar power bar position and size
+        f.powerBar:SetHeight(DEFAULT_POWER_BAR_HEIGHT)
+        f.powerBar:SetWidth(DEFAULT_POWER_BAR_WIDTH)
+        f.powerBar:SetPoint("CENTER", f.powerBarBorder, "CENTER", 0, 0)
+        f.powerBar:SetAlpha(0.5)  -- 50% transparency for power bar
 
     elseif unit == "target" then
         f.hpText:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", 2, -14.5)
@@ -344,8 +352,7 @@ local function CreateSecureMinimalUnitFrame(unit, frameName, width, height, poin
         -- Create power bar frame container
         f.powerBarFrame = CreateFrame("Frame", nil, f)
         f.powerBarFrame:SetSize(DEFAULT_POWER_BAR_WIDTH + 2, DEFAULT_POWER_BAR_HEIGHT + 2)
-        f.powerBarFrame:SetPoint("BOTTOM", f, "BOTTOM", 0, DEFAULT_POWER_BAR_VERTICAL_OFFSET)
-        f.powerBarFrame:SetPoint("LEFT", f, "LEFT", DEFAULT_POWER_BAR_HORIZONTAL_OFFSET, 0)
+        f.powerBarFrame:SetPoint("BOTTOMLEFT", f, "BOTTOMLEFT", DEFAULT_POWER_BAR_HORIZONTAL_OFFSET, DEFAULT_POWER_BAR_VERTICAL_OFFSET)
         f.powerBarFrame:SetMovable(true)
         f.powerBarFrame:EnableMouse(true)
         f.powerBarFrame:RegisterForDrag("LeftButton")
@@ -370,17 +377,15 @@ local function CreateSecureMinimalUnitFrame(unit, frameName, width, height, poin
         f.powerBarBorder:SetColorTexture(0, 0, 0, 0.5)
         f.powerBarBorder:SetAllPoints()
 
-        f.powerBarBG = f.powerBarFrame:CreateTexture(nil, "ARTWORK", nil, 1)
-        f.powerBarBG:SetColorTexture(0, 0, 0, 0.25)  -- 75% transparency for background
         f.powerBarBG:SetHeight(DEFAULT_POWER_BAR_HEIGHT)
         f.powerBarBG:SetWidth(DEFAULT_POWER_BAR_WIDTH)
         f.powerBarBG:SetPoint("CENTER", f.powerBarBorder, "CENTER", 0, 0)
 
-        f.powerBarFG = f.powerBarFrame:CreateTexture(nil, "ARTWORK", nil, 2)
-        f.powerBarFG:SetHeight(DEFAULT_POWER_BAR_HEIGHT)
-        f.powerBarFG:SetTexture("Interface\\AddOns\\MattMinimalFrames\\Textures\\Melli.tga")
-        f.powerBarFG:SetAlpha(0.5)  -- 50% transparency for power bar
-        f.powerBarFG:SetPoint("BOTTOMLEFT", f.powerBarBG, "BOTTOMLEFT", 0, 0)
+        -- Set up the StatusBar power bar position and size
+        f.powerBar:SetHeight(DEFAULT_POWER_BAR_HEIGHT)
+        f.powerBar:SetWidth(DEFAULT_POWER_BAR_WIDTH)
+        f.powerBar:SetPoint("CENTER", f.powerBarBorder, "CENTER", 0, 0)
+        f.powerBar:SetAlpha(0.5)  -- 50% transparency for power bar
 
     elseif unit == "targettarget" or unit == "pet" then
         f.hpText:SetPoint("BOTTOM", f, "BOTTOM", 0, 0)
@@ -397,14 +402,15 @@ local function CreateSecureMinimalUnitFrame(unit, frameName, width, height, poin
     -- COMBAT TEXTURE (for player only)
     ------------------------------------------------------
     if unit == "player" then
-        f.combatTexture = f:CreateTexture(nil, "OVERLAY")
+        f.combatTexture = f.nameOverlay:CreateTexture(nil, "OVERLAY", nil, 7)
         f.combatTexture:SetTexture("Interface\\CharacterFrame\\UI-StateIcon")
         f.combatTexture:SetTexCoord(0.5, 1, 0, 0.49)
         f.combatTexture:SetSize(22, 22) -- Adjust size as needed
         f.combatTexture:SetPoint("CENTER", f, "CENTER", 0, 0)
+        f.combatTexture:SetDrawLayer("OVERLAY", 7)
         f.combatTexture:Hide()
 
-        f.restingTexture = f:CreateTexture(nil, "OVERLAY")
+        f.restingTexture = f.nameOverlay:CreateTexture(nil, "OVERLAY", nil, 7)
         f.restingTexture:SetTexture("Interface\\CharacterFrame\\UI-StateIcon")
         f.restingTexture:SetTexCoord(0, 0.5, 0, 0.421875)
         f.restingTexture:SetSize(20, 20) -- Adjust size as needed
@@ -465,20 +471,33 @@ local function CreateSecureMinimalUnitFrame(unit, frameName, width, height, poin
             if event == "UNIT_SPELLCAST_START" then
                 local name, text, texture, startTime, endTime, isTradeSkill, castID, notInterruptible = UnitCastingInfo(self.unit)
                 if name then
-                    self.casting = true
-                    self.castStart = GetTime()
-                    self.castDuration = (endTime - startTime) / 1000
+                    -- Wrap arithmetic in pcall to handle secret values
+                    local success, duration = pcall(function()
+                        return (endTime - startTime) / 1000
+                    end)
                     
-                    -- Set color based on interruptibility
-                    if notInterruptible then
-                        self.castBarFG:SetColorTexture(0.7, 0.7, 0.7, 1) -- Gray for non-interruptible
+                    if success and duration then
+                        self.casting = true
+                        self.castStart = GetTime()
+                        self.castDuration = duration
+                        
+                        -- Set color based on interruptibility
+                        if notInterruptible then
+                            self.castBarFG:SetColorTexture(0.7, 0.7, 0.7, 1) -- Gray for non-interruptible
+                        else
+                            self.castBarFG:SetColorTexture(1, 1, 1, 1) -- White for interruptible (changed from yellow)
+                        end
+                        
+                        self.castBarBG:Show()
+                        self.castBarFG:Show()
+                        self:SetScript("OnUpdate", self.UpdateCastBar)
                     else
-                        self.castBarFG:SetColorTexture(1, 1, 1, 1) -- White for interruptible (changed from yellow)
+                        -- Secret values - hide cast bar
+                        self.casting = false
+                        self.castBarBG:Hide()
+                        self.castBarFG:Hide()
+                        self:SetScript("OnUpdate", nil)
                     end
-                    
-                    self.castBarBG:Show()
-                    self.castBarFG:Show()
-                    self:SetScript("OnUpdate", self.UpdateCastBar)
                 end
             elseif event == "UNIT_SPELLCAST_STOP" or 
                    event == "UNIT_SPELLCAST_FAILED" or 
@@ -584,111 +603,109 @@ local function UpdateUnitFrame(frame)
         frame.nameText:SetWidth(frame.originalWidth - 4)
     end
 
-    local hp = UnitHealth(unit)
+    -- Update health bar using StatusBar (handles secret values internally)
     local maxHP = UnitHealthMax(unit)
-    local power = UnitPower(unit)
-    local maxPower = UnitPowerMax(unit)
-    local healthPercent = (maxHP > 0) and math.floor((hp / maxHP) * 100) or 0
+    local hp = UnitHealth(unit)
+    
+    if frame.healthBar then
+        frame.healthBar:SetMinMaxValues(0, maxHP)
+        frame.healthBar:SetValue(hp)
+    end
+    
+    -- Shield bar - we can't compare/calculate with secret values
+    -- Just hide it since we can't determine if absorbs exist
+    if frame.shieldBarFG then
+        frame.shieldBarFG:Hide()
+    end
+    if frame.shieldBarFG2 then
+        frame.shieldBarFG2:Hide()
+    end
+    
+    -- HP text - display raw HP number (pass secret value directly to SetText)
+    if frame.hpText and (unit == "player" or unit == "target") then
+        frame.hpText:SetText(hp)
+        frame.hpText:Show()
+    end
 
-    if frame.hpText then
-        frame.hpText:SetText(MMF_FormatNumber(hp) .. " | " .. healthPercent .. "%")
+    -- Update absorb bar (shows in the missing health portion)
+    if frame.absorbBar and (unit == "player" or unit == "target") then
+        local absorb = UnitGetTotalAbsorbs(unit) or 0
+        
+        -- StatusBar fills from left to right based on absorb value
+        frame.absorbBar:SetMinMaxValues(0, maxHP)
+        frame.absorbBar:SetValue(absorb)
+        frame.absorbBar:SetAlpha(1.0)
+        frame.absorbBar:Show()
+    else
+        if frame.absorbBar then
+            frame.absorbBar:Hide()
+        end
     end
 
     -- Hide HP/Power if unit is targettarget or pet
     if unit == "targettarget" or unit == "pet" then
-        frame.hpText:Hide()
-        frame.powerText:Hide()
+        if frame.hpText then frame.hpText:Hide() end
+        if frame.powerText then frame.powerText:Hide() end
     else
-        frame.hpText:Show()
-        frame.powerText:Hide()  -- Only showing HP% by default
+        if frame.powerText then frame.powerText:Hide() end
     end
 
-    -- Adjust the health bar foreground
-    local healthPercent = (maxHP > 0) and (hp / maxHP) or 0
-    local fullWidth = frame.originalWidth - 2
-    if hp == 0 then
-        frame.healthBarFG:SetWidth(1)
-    else
-        frame.healthBarFG:Show()
-        local newWidth = math.max(1, fullWidth * healthPercent)
-        frame.healthBarFG:SetWidth(newWidth)
-    end
-
-    -- Update class/unit color
+    -- Update class/unit color on health bar
     local r, g, b = MMF_GetUnitColor(unit)
-    frame.healthBarFG:SetVertexColor(r, g, b, 1)
-
-    -- Update the absorb shield bar for player and target frames (behind health bar)
-    if (unit == "player" or unit == "target") and frame.shieldBarFG then
-        local shield = UnitGetTotalAbsorbs(unit) or 0
-        if shield > 0 and hp < maxHP then
-            frame.shieldBarFG:Show()
-            local shieldWidth = math.min(fullWidth - frame.healthBarFG:GetWidth(), fullWidth * (shield / maxHP))
-            frame.shieldBarFG:SetWidth(shieldWidth)
-            frame.shieldBarFG:SetVertexColor(1, 1, 1, 1)  -- Keep full vertex color
-            frame.shieldBarFG:SetAlpha(0.5)  -- Ensure 50% transparency is maintained
-        else
-            frame.shieldBarFG:Hide()
-        end
-    end
-
-    -- Update the absorb shield bar for player and target frames (above health bar)
-    -- Only show if there is a shield AND unit is at full health.
-    if (unit == "player" or unit == "target") and frame.shieldBarFG2 then
-        local shield = UnitGetTotalAbsorbs(unit) or 0
-        if shield > 0 and hp == maxHP then
-            frame.shieldBarFG2:Show()
-        else
-            frame.shieldBarFG2:Hide()
-        end
+    if frame.healthBar then
+        frame.healthBar:SetStatusBarColor(r, g, b, 1)
     end
 
     -- Update power bar if it exists
-    if frame.powerBarFG and (unit == "player" or unit == "target") then
+    if frame.powerBar and (unit == "player" or unit == "target") then
         local powerType = UnitPowerType(unit)
-        local power = UnitPower(unit)
-        local maxPower = UnitPowerMax(unit)
         
         -- Check for shaman specs and override powerType to mana if necessary
+        local useManaPowerType = false
         if UnitClass(unit) == "Shaman" then
             local spec = GetSpecialization()
-            if spec == 1 or spec == 2 then  -- 1: Elemental, 2: Enhancement
-                powerType = 0  -- 0 is MANA
-                power = UnitPower(unit, 0)
-                maxPower = UnitPowerMax(unit, 0)
+            if spec == 1 or spec == 2 then
+                useManaPowerType = true
+                powerType = 0
             end
         end
+        
+        local maxPower = useManaPowerType and UnitPowerMax(unit, 0) or UnitPowerMax(unit)
+        local power = useManaPowerType and UnitPower(unit, 0) or UnitPower(unit)
 
-        -- Hide power bar if unit doesn't use power
-        if maxPower <= 0 or powerType == 7 then -- 7 is SPELL_POWER_ALTERNATE which some NPCs use
-            frame.powerBarBorder:Hide()
+        -- Only show power bar if unit has power (check if maxPower > 0, wrapped in pcall)
+        local hasPower = false
+        pcall(function()
+            if maxPower and maxPower > 0 then
+                hasPower = true
+            end
+        end)
+        
+        if hasPower then
+            -- Just use the StatusBar to display - don't do arithmetic
+            frame.powerBar:SetMinMaxValues(0, maxPower)
+            frame.powerBar:SetValue(power)
+            
+            -- Get power color with custom mana color
+            local powerColor = PowerBarColor[powerType]
+            local r, g, b = 1, 1, 1
+            if powerType == 0 then  -- 0 is MANA
+                r, g, b = 0.2, 0.7, 1  -- Light blue color for mana
+            elseif powerColor then
+                r, g, b = powerColor.r, powerColor.g, powerColor.b
+            end
+            
+            frame.powerBar:SetStatusBarColor(r, g, b, 1)
+            
+            if frame.powerBarBorder then frame.powerBarBorder:Show() end
+            frame.powerBarBG:Show()
+            frame.powerBar:Show()
+        else
+            -- No power - hide the bar
+            if frame.powerBarBorder then frame.powerBarBorder:Hide() end
             frame.powerBarBG:Hide()
-            frame.powerBarFG:Hide()
-            return
+            frame.powerBar:Hide()
         end
-        
-        local powerPercent = power / maxPower
-        
-        -- Get power color with custom mana color
-        local powerColor = PowerBarColor[powerType]
-        local r, g, b = 1, 1, 1
-        if powerType == 0 then  -- 0 is MANA
-            r, g, b = 0.2, 0.7, 1  -- Light blue color for mana
-        elseif powerColor then
-            r, g, b = powerColor.r, powerColor.g, powerColor.b
-        end
-        
-        -- Update power bar width
-        local width = frame.powerBarBG:GetWidth() * powerPercent
-        frame.powerBarFG:ClearAllPoints()
-        frame.powerBarFG:SetPoint("BOTTOMLEFT", frame.powerBarBG, "BOTTOMLEFT", 0, 0)
-        frame.powerBarFG:SetWidth(width)
-        
-        frame.powerBarFG:SetVertexColor(r, g, b, 1)
-        
-        frame.powerBarBorder:Show()
-        frame.powerBarBG:Show()
-        frame.powerBarFG:Show()
     end
 end
 
@@ -962,20 +979,8 @@ local function MMF_UpdateTargetAuras()
         table.insert(debuffs, auraData)
     end
 
-    -- Sort: permanent first, then by time left ascending
-    local function auraSort(a, b)
-        local aPermanent = (a.duration == 0)
-        local bPermanent = (b.duration == 0)
-        if aPermanent ~= bPermanent then
-            return aPermanent
-        elseif aPermanent and bPermanent then
-            return (a.name < b.name)
-        else
-            return (a.expirationTime - GetTime()) < (b.expirationTime - GetTime())
-        end
-    end
-    table.sort(buffs, auraSort)
-    table.sort(debuffs, auraSort)
+    -- Note: Sorting disabled due to secret value restrictions
+    -- Auras will display in their default order
 
     -- Update Buff icons
     local buffContainer = MMF_TargetFrame.BuffContainer
@@ -996,45 +1001,43 @@ local function MMF_UpdateTargetAuras()
                 auraFrame.auraData = auraData
                 auraFrame.auraIndex = auraData._index
                 auraFrame.auraFilter = "HELPFUL"
-                -- Show stack count if >1
-                local count = auraData.applications or auraData.count or 0
-                if count > 1 then
+                -- Show stack count if >1 (handle secret values)
+                local count = auraData.applications or auraData.count
+                local showCount = false
+                local countText = ""
+                pcall(function()
+                    if count and count > 1 then
+                        showCount = true
+                        countText = tostring(count)
+                    end
+                end)
+                if showCount then
                     if not auraFrame.count then
                         auraFrame.count = auraFrame:CreateFontString(nil, "OVERLAY")
                         auraFrame.count:SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
                         auraFrame.count:SetPoint("BOTTOMRIGHT", auraFrame, "BOTTOMRIGHT", -2, 2)
                     end
-                    auraFrame.count:SetText(count)
+                    auraFrame.count:SetText(countText)
                     auraFrame.count:Show()
                 elseif auraFrame.count then
                     auraFrame.count:Hide()
                 end
-                -- Show cooldown if duration > 0
-                if auraData.duration and auraData.duration > 0 and auraData.expirationTime then
-                    auraFrame.cooldown:SetCooldown(auraData.expirationTime - auraData.duration, auraData.duration)
-                    auraFrame.cooldown:Show()
-                    -- Timer text
-                    auraFrame.timerText:Show()
-                    auraFrame.timerText:SetText("")
-                    auraFrame:SetScript("OnUpdate", function(self, elapsed)
-                        local now = GetTime()
-                        local timeLeft = (auraData.expirationTime or 0) - now
-                        if timeLeft > 0 and timeLeft < 60 then
-                            self.timerText:SetText(tostring(math.floor(timeLeft)))
-                            self.timerText:Show()
-                        else
-                            self.timerText:SetText("")
-                            self.timerText:Hide()
-                            if timeLeft <= 0 then
-                                self:SetScript("OnUpdate", nil)
-                            end
-                        end
-                    end)
-                else
+                -- Show cooldown if duration > 0 (wrap entire cooldown logic in pcall for secret values)
+                local cooldownSuccess = pcall(function()
+                    if auraData.duration and auraData.duration > 0 and auraData.expirationTime then
+                        -- Do arithmetic inside pcall where secret values may cause errors
+                        local startTime = auraData.expirationTime - auraData.duration
+                        auraFrame.cooldown:SetCooldown(startTime, auraData.duration)
+                        auraFrame.cooldown:Show()
+                    else
+                        auraFrame.cooldown:Hide()
+                    end
+                end)
+                if not cooldownSuccess then
                     auraFrame.cooldown:Hide()
-                    auraFrame.timerText:Hide()
-                    auraFrame:SetScript("OnUpdate", nil)
                 end
+                auraFrame.timerText:Hide()  -- Disable timer text due to secret values
+                auraFrame:SetScript("OnUpdate", nil)
                 auraFrame:Show()
                 idx = idx + 1
             end
@@ -1060,45 +1063,43 @@ local function MMF_UpdateTargetAuras()
                 auraFrame.auraData = auraData
                 auraFrame.auraIndex = auraData._index
                 auraFrame.auraFilter = "HARMFUL"
-                -- Show stack count if >1
-                local count = auraData.applications or auraData.count or 0
-                if count > 1 then
+                -- Show stack count if >1 (handle secret values)
+                local count = auraData.applications or auraData.count
+                local showCount = false
+                local countText = ""
+                pcall(function()
+                    if count and count > 1 then
+                        showCount = true
+                        countText = tostring(count)
+                    end
+                end)
+                if showCount then
                     if not auraFrame.count then
                         auraFrame.count = auraFrame:CreateFontString(nil, "OVERLAY")
                         auraFrame.count:SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
                         auraFrame.count:SetPoint("BOTTOMRIGHT", auraFrame, "BOTTOMRIGHT", -2, 2)
                     end
-                    auraFrame.count:SetText(count)
+                    auraFrame.count:SetText(countText)
                     auraFrame.count:Show()
                 elseif auraFrame.count then
                     auraFrame.count:Hide()
                 end
-                -- Show cooldown if duration > 0
-                if auraData.duration and auraData.duration > 0 and auraData.expirationTime then
-                    auraFrame.cooldown:SetCooldown(auraData.expirationTime - auraData.duration, auraData.duration)
-                    auraFrame.cooldown:Show()
-                    -- Timer text
-                    auraFrame.timerText:Show()
-                    auraFrame.timerText:SetText("")
-                    auraFrame:SetScript("OnUpdate", function(self, elapsed)
-                        local now = GetTime()
-                        local timeLeft = (auraData.expirationTime or 0) - now
-                        if timeLeft >= 1 and timeLeft < 60 then
-                            self.timerText:SetText(string.format("%d", math.floor(timeLeft)))
-                            self.timerText:Show()
-                        else
-                            self.timerText:SetText("")
-                            self.timerText:Hide()
-                            if timeLeft <= 0 then
-                                self:SetScript("OnUpdate", nil)
-                            end
-                        end
-                    end)
-                else
+                -- Show cooldown if duration > 0 (wrap entire cooldown logic in pcall for secret values)
+                local cooldownSuccess = pcall(function()
+                    if auraData.duration and auraData.duration > 0 and auraData.expirationTime then
+                        -- Do arithmetic inside pcall where secret values may cause errors
+                        local startTime = auraData.expirationTime - auraData.duration
+                        auraFrame.cooldown:SetCooldown(startTime, auraData.duration)
+                        auraFrame.cooldown:Show()
+                    else
+                        auraFrame.cooldown:Hide()
+                    end
+                end)
+                if not cooldownSuccess then
                     auraFrame.cooldown:Hide()
-                    auraFrame.timerText:Hide()
-                    auraFrame:SetScript("OnUpdate", nil)
                 end
+                auraFrame.timerText:Hide()  -- Disable timer text due to secret values
+                auraFrame:SetScript("OnUpdate", nil)
                 -- Debuff border color by dispel type
                 if auraFrame.border then
                     local color = DebuffTypeColor and DebuffTypeColor[auraData.dispelName or auraData.debuffType or "none"] or {r=1,g=1,b=1}
