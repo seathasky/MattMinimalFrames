@@ -82,15 +82,8 @@ local function IsUnitInRange(unit)
         end
     end
 
-    -- Fallback for friendly units
-    if isFriendly then
-        local unitInRange = UnitInRange(unit)
-        if unitInRange ~= nil then
-            return unitInRange
-        end
-    end
-
-    -- If no other checks work, assume in range
+    -- If no spell-based checks work, assume in range
+    -- Note: UnitInRange returns secret values that addon code cannot use
     return true
 end
 
@@ -108,6 +101,8 @@ local function UpdateFrameRange(frame, unit)
         return
     end
 
+    -- Use our custom spell-based range check instead of UnitInRange
+    -- UnitInRange returns secret values that addon code cannot use
     local inRange = IsUnitInRange(unit)
     local targetAlpha = inRange and 1 or 0.5
     local currentAlpha = frame:GetAlpha()
