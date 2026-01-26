@@ -1,6 +1,5 @@
 --========================================================
 -- MattMinimalFrames_Frames.lua
--- VERSION 2.0 - StatusBar based (Secret Value Fix)
 --========================================================
 
 
@@ -903,21 +902,165 @@ end
 -- TARGET AURA DISPLAY (Buffs & Debuffs) – Default Tooltip, Timer Updates, No Debug Prints
 -------------------------------------------------
 
-local AURA_ICON_SIZE    = 18
+-- Get aura settings from DB or use defaults
+local function GetAuraIconSize()
+    return (MattMinimalFramesDB and MattMinimalFramesDB.auraIconSize) or 18
+end
+
+local function GetAuraTextScale()
+    return (MattMinimalFramesDB and MattMinimalFramesDB.auraTextScale) or 1.0
+end
+
+local function GetTimerTextScale()
+    return (MattMinimalFramesDB and MattMinimalFramesDB.timerTextScale) or 1.0
+end
+
 local AURA_ICON_SPACING = 2
 local MAX_AURA_ICONS    = 12
 local ROW_ICONS         = 4
 
+-- Cache the aura APIs for secret value handling
+local GetAuraSlots = C_UnitAuras.GetAuraSlots
+local GetAuraDataBySlot = C_UnitAuras.GetAuraDataBySlot
+local GetAuraDuration = C_UnitAuras.GetAuraDuration
+local GetAuraApplicationDisplayCount = C_UnitAuras.GetAuraApplicationDisplayCount
+local issecretvalue = issecretvalue
+
+-- Function to update aura text scale (stack count - called from popup slider)
+function MMF_UpdateAuraTextScale(scale)
+    if not MMF_TargetFrame then return end
+    
+    local fontSize = math.max(6, math.floor(10 * scale))
+    
+    -- Directly update ALL count texts right now
+    if MMF_TargetFrame.BuffContainer and MMF_TargetFrame.BuffContainer.auras then
+        for _, aura in ipairs(MMF_TargetFrame.BuffContainer.auras) do
+            if aura.count then
+                aura.count:SetFont(STANDARD_TEXT_FONT, fontSize, "OUTLINE")
+            end
+        end
+    end
+    
+    if MMF_TargetFrame.DebuffContainer and MMF_TargetFrame.DebuffContainer.auras then
+        for _, aura in ipairs(MMF_TargetFrame.DebuffContainer.auras) do
+            if aura.count then
+                aura.count:SetFont(STANDARD_TEXT_FONT, fontSize, "OUTLINE")
+            end
+        end
+    end
+end
+
+-- Function to update timer text scale (duration - called from popup slider)
+function MMF_UpdateTimerTextScale(scale)
+    if not MMF_TargetFrame then return end
+    
+    local fontSize = math.max(8, math.floor(12 * scale))
+    
+    -- Directly update ALL timer texts right now
+    if MMF_TargetFrame.BuffContainer and MMF_TargetFrame.BuffContainer.auras then
+        for _, aura in ipairs(MMF_TargetFrame.BuffContainer.auras) do
+            if aura.timerText then
+                aura.timerText:SetFont(STANDARD_TEXT_FONT, fontSize, "OUTLINE")
+            end
+        end
+    end
+    
+    if MMF_TargetFrame.DebuffContainer and MMF_TargetFrame.DebuffContainer.auras then
+        for _, aura in ipairs(MMF_TargetFrame.DebuffContainer.auras) do
+            if aura.timerText then
+                aura.timerText:SetFont(STANDARD_TEXT_FONT, fontSize, "OUTLINE")
+            end
+        end
+    end
+end
+
+-- Function to update aura icon size (called from popup slider)
+function MMF_UpdateAuraIconSize(size)
+    if not MMF_TargetFrame then return end
+    
+    size = math.floor(size)
+    
+    -- Update buff icons
+    if MMF_TargetFrame.BuffContainer and MMF_TargetFrame.BuffContainer.auras then
+        -- Resize container
+        MMF_TargetFrame.BuffContainer:SetSize(
+            (size + AURA_ICON_SPACING) * ROW_ICONS - AURA_ICON_SPACING,
+            (size + AURA_ICON_SPACING) * 3 - AURA_ICON_SPACING
+        )
+        
+        for i, aura in ipairs(MMF_TargetFrame.BuffContainer.auras) do
+            aura:SetSize(size, size)
+            local row = math.floor((i - 1) / ROW_ICONS)
+            local col = (i - 1) % ROW_ICONS
+            aura:ClearAllPoints()
+            aura:SetPoint("TOPRIGHT", MMF_TargetFrame.BuffContainer, "TOPRIGHT",
+                -col * (size + AURA_ICON_SPACING),
+                -row * (size + AURA_ICON_SPACING))
+        end
+    end
+    
+    -- Update debuff icons
+    if MMF_TargetFrame.DebuffContainer and MMF_TargetFrame.DebuffContainer.auras then
+        -- Resize container
+        MMF_TargetFrame.DebuffContainer:SetSize(
+            (size + AURA_ICON_SPACING) * ROW_ICONS - AURA_ICON_SPACING,
+            (size + AURA_ICON_SPACING) * 3 - AURA_ICON_SPACING
+        )
+        
+        for i, aura in ipairs(MMF_TargetFrame.DebuffContainer.auras) do
+            aura:SetSize(size, size)
+            local row = math.floor((i - 1) / ROW_ICONS)
+            local col = (i - 1) % ROW_ICONS
+            aura:ClearAllPoints()
+            aura:SetPoint("TOPLEFT", MMF_TargetFrame.DebuffContainer, "TOPLEFT",
+                col * (size + AURA_ICON_SPACING),
+                row * (size + AURA_ICON_SPACING))
+        end
+    end
+end
+
+-- Function to update buff position (called from popup sliders)
+function MMF_UpdateBuffPosition(x, y)
+    if not MMF_TargetFrame or not MMF_TargetFrame.BuffContainer then return end
+    MMF_TargetFrame.BuffContainer:ClearAllPoints()
+    MMF_TargetFrame.BuffContainer:SetPoint("BOTTOMRIGHT", MMF_TargetFrame, "BOTTOMRIGHT", x, y)
+end
+
+-- Function to update debuff position (called from popup sliders)
+function MMF_UpdateDebuffPosition(x, y)
+    if not MMF_TargetFrame or not MMF_TargetFrame.DebuffContainer then return end
+    MMF_TargetFrame.DebuffContainer:ClearAllPoints()
+    MMF_TargetFrame.DebuffContainer:SetPoint("TOPLEFT", MMF_TargetFrame, "TOPLEFT", x, y)
+end
+
+-- Helper functions to get buff/debuff positions from DB
+local function GetBuffXOffset()
+    return (MattMinimalFramesDB and MattMinimalFramesDB.buffXOffset) or -3
+end
+
+local function GetBuffYOffset()
+    return (MattMinimalFramesDB and MattMinimalFramesDB.buffYOffset) or -60
+end
+
+local function GetDebuffXOffset()
+    return (MattMinimalFramesDB and MattMinimalFramesDB.debuffXOffset) or 3
+end
+
+local function GetDebuffYOffset()
+    return (MattMinimalFramesDB and MattMinimalFramesDB.debuffYOffset) or 27
+end
+
 local function MMF_SetupTargetAuras()
     if not MMF_TargetFrame then return end
-
+    
+    local AURA_ICON_SIZE = GetAuraIconSize()
     -- Buff container (bottom-right)
     MMF_TargetFrame.BuffContainer = CreateFrame("Frame", nil, MMF_TargetFrame)
     MMF_TargetFrame.BuffContainer:SetSize(
         (AURA_ICON_SIZE + AURA_ICON_SPACING) * ROW_ICONS - AURA_ICON_SPACING,
         (AURA_ICON_SIZE + AURA_ICON_SPACING) * 3 - AURA_ICON_SPACING
     )
-    MMF_TargetFrame.BuffContainer:SetPoint("BOTTOMRIGHT", MMF_TargetFrame, "BOTTOMRIGHT", -3, -60)
+    MMF_TargetFrame.BuffContainer:SetPoint("BOTTOMRIGHT", MMF_TargetFrame, "BOTTOMRIGHT", GetBuffXOffset(), GetBuffYOffset())
     MMF_TargetFrame.BuffContainer.auras = {}
 
     for i = 1, MAX_AURA_ICONS do
@@ -933,30 +1076,30 @@ local function MMF_SetupTargetAuras()
         aura.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
         aura.cooldown = CreateFrame("Cooldown", nil, aura, "CooldownFrameTemplate")
         aura.cooldown:SetAllPoints(aura)
-        -- Create a frame above the cooldown spiral for timer text
-        aura.timerFrame = CreateFrame("Frame", nil, aura)
-        aura.timerFrame:SetAllPoints(aura)
-        aura.timerFrame:SetFrameLevel(aura.cooldown:GetFrameLevel() + 10)
-        aura.timerText = aura.timerFrame:CreateFontString(nil, "OVERLAY")
-        aura.timerText:SetFont("Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
-        aura.timerText:SetPoint("TOP", aura.timerFrame, "TOP", 0, -2)
-        aura.timerText:SetJustifyH("CENTER")
-        aura.timerText:Hide()
+        aura.cooldown:SetDrawEdge(false)
+        aura.cooldown:SetHideCountdownNumbers(false)  -- Show built-in countdown
+        -- Get the cooldown's built-in text region (like ElvUI does)
+        aura.timerText = aura.cooldown:GetRegions()
+        if aura.timerText and aura.timerText.SetFont then
+            aura.timerText:SetFont(STANDARD_TEXT_FONT, 12, "OUTLINE")
+            aura.timerText:ClearAllPoints()
+            aura.timerText:SetPoint("CENTER", aura.cooldown, "CENTER", 0, 0)
+        end
         aura:SetScript("OnEnter", function(self)
-            if self.auraIndex and self.auraFilter then
+            if self.auraData and self.auraData.auraInstanceID then
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                GameTooltip:SetUnitAura("target", self.auraIndex, self.auraFilter)
+                -- Use SetUnitAuraByAuraInstanceID for reliable tooltip display (handles secret values)
+                if GameTooltip.SetUnitAuraByAuraInstanceID then
+                    GameTooltip:SetUnitAuraByAuraInstanceID("target", self.auraData.auraInstanceID, self.auraFilter)
+                elseif self.auraIndex then
+                    GameTooltip:SetUnitAura("target", self.auraIndex, self.auraFilter)
+                end
                 GameTooltip:Show()
-                self:SetScript("OnUpdate", function(self, elapsed)
-                    if GameTooltip:GetOwner() == self then
-                        GameTooltip:SetUnitAura("target", self.auraIndex, self.auraFilter)
-                    end
-                end)
+                -- No OnUpdate needed - tooltip updates automatically with auraInstanceID
             end
         end)
         aura:SetScript("OnLeave", function(self)
             GameTooltip:Hide()
-            self:SetScript("OnUpdate", nil)
         end)
         aura:Hide()
         MMF_TargetFrame.BuffContainer.auras[i] = aura
@@ -968,7 +1111,7 @@ local function MMF_SetupTargetAuras()
         (AURA_ICON_SIZE + AURA_ICON_SPACING) * ROW_ICONS - AURA_ICON_SPACING,
         (AURA_ICON_SIZE + AURA_ICON_SPACING) * 3 - AURA_ICON_SPACING
     )
-    MMF_TargetFrame.DebuffContainer:SetPoint("TOPLEFT", MMF_TargetFrame, "TOPLEFT", 3, 27)
+    MMF_TargetFrame.DebuffContainer:SetPoint("TOPLEFT", MMF_TargetFrame, "TOPLEFT", GetDebuffXOffset(), GetDebuffYOffset())
     MMF_TargetFrame.DebuffContainer.auras = {}
 
     for i = 1, MAX_AURA_ICONS do
@@ -984,62 +1127,122 @@ local function MMF_SetupTargetAuras()
         aura.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
         aura.cooldown = CreateFrame("Cooldown", nil, aura, "CooldownFrameTemplate")
         aura.cooldown:SetAllPoints(aura)
-        -- Create a frame above the cooldown spiral for timer text
-        aura.timerFrame = CreateFrame("Frame", nil, aura)
-        aura.timerFrame:SetAllPoints(aura)
-        aura.timerFrame:SetFrameLevel(aura.cooldown:GetFrameLevel() + 10)
-        aura.timerText = aura.timerFrame:CreateFontString(nil, "OVERLAY")
-        aura.timerText:SetFont("Fonts\\FRIZQT__.TTF", 12, "OUTLINE")
-        aura.timerText:SetPoint("TOP", aura.timerFrame, "TOP", 0, -2)
-        aura.timerText:SetJustifyH("CENTER")
-        aura.timerText:Hide()
+        aura.cooldown:SetDrawEdge(false)
+        aura.cooldown:SetHideCountdownNumbers(false)  -- Show built-in countdown
+        -- Get the cooldown's built-in text region (like ElvUI does)
+        aura.timerText = aura.cooldown:GetRegions()
+        if aura.timerText and aura.timerText.SetFont then
+            aura.timerText:SetFont(STANDARD_TEXT_FONT, 12, "OUTLINE")
+            aura.timerText:ClearAllPoints()
+            aura.timerText:SetPoint("CENTER", aura.cooldown, "CENTER", 0, 0)
+        end
         aura.border = aura:CreateTexture(nil, "OVERLAY")
         aura.border:SetTexture("Interface\\Buttons\\UI-Debuff-Border")
         aura.border:SetAllPoints(aura)
         aura:SetScript("OnEnter", function(self)
-            if self.auraIndex and self.auraFilter then
+            if self.auraData and self.auraData.auraInstanceID then
                 GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-                GameTooltip:SetUnitAura("target", self.auraIndex, self.auraFilter)
+                -- Use SetUnitAuraByAuraInstanceID for reliable tooltip display (handles secret values)
+                if GameTooltip.SetUnitAuraByAuraInstanceID then
+                    GameTooltip:SetUnitAuraByAuraInstanceID("target", self.auraData.auraInstanceID, self.auraFilter)
+                elseif self.auraIndex then
+                    GameTooltip:SetUnitAura("target", self.auraIndex, self.auraFilter)
+                end
                 GameTooltip:Show()
-                self:SetScript("OnUpdate", function(self, elapsed)
-                    if GameTooltip:GetOwner() == self then
-                        GameTooltip:SetUnitAura("target", self.auraIndex, self.auraFilter)
-                    end
-                end)
+                -- No OnUpdate needed - tooltip updates automatically with auraInstanceID
             end
         end)
         aura:SetScript("OnLeave", function(self)
             GameTooltip:Hide()
-            self:SetScript("OnUpdate", nil)
         end)
         aura:Hide()
         MMF_TargetFrame.DebuffContainer.auras[i] = aura
     end
 end
 
-local function MMF_UpdateTargetAuras()
+-- Helper function to check if a value is a secret value
+local function IsSecretValue(value)
+    if issecretvalue and issecretvalue(value) then
+        return true
+    end
+    return false
+end
+
+local function NotSecretValue(value)
+    if not issecretvalue or not issecretvalue(value) then
+        return true
+    end
+    return false
+end
+
+-- Collect auras using GetAuraSlots (more reliable with secret values)
+local function CollectAuras(unit, filter)
+    local auras = {}
+    if not GetAuraSlots then return auras end
+    
+    local function ProcessAuraSlot(token, ...)
+        for i = 1, select('#', ...) do
+            local slot = select(i, ...)
+            local aura = GetAuraDataBySlot(unit, slot)
+            if aura then
+                table.insert(auras, aura)
+            end
+        end
+        return token
+    end
+    
+    local token = GetAuraSlots(unit, filter)
+    while token do
+        token = ProcessAuraSlot(GetAuraSlots(unit, filter, nil, token))
+    end
+    
+    -- Also get initial batch without token
+    ProcessAuraSlot(GetAuraSlots(unit, filter))
+    
+    return auras
+end
+
+function MMF_UpdateTargetAuras()
     if not MMF_TargetFrame or not MMF_TargetFrame.BuffContainer then return end
-    if not C_UnitAuras or not C_UnitAuras.GetAuraDataByIndex then return end
+    if not C_UnitAuras then return end
 
     local unit = "target"
     local buffs, debuffs = {}, {}
-    -- Blizzard default maxes
-    local BUFF_MAX_DISPLAY, DEBUFF_MAX_DISPLAY = 32, 16
-
-    -- Gather buffs (HELPFUL)
-    for i = 1, BUFF_MAX_DISPLAY do
-        local auraData = C_UnitAuras.GetAuraDataByIndex(unit, i, "HELPFUL")
-        if not auraData then break end
-        auraData._index = i
-        table.insert(buffs, auraData)
-    end
-
-    -- Gather debuffs (HARMFUL) -- show all, not just player's
-    for i = 1, DEBUFF_MAX_DISPLAY do
-        local auraData = C_UnitAuras.GetAuraDataByIndex(unit, i, "HARMFUL")
-        if not auraData then break end
-        auraData._index = i
-        table.insert(debuffs, auraData)
+    
+    -- Use GetAuraSlots for more reliable aura fetching (handles secret values better)
+    if GetAuraSlots and GetAuraDataBySlot then
+        -- Collect buffs using slots
+        local function ProcessSlots(filter, targetTable)
+            local token
+            repeat
+                local slots = {GetAuraSlots(unit, filter, 40, token)}
+                token = table.remove(slots, 1) -- First return is the continuation token
+                for _, slot in ipairs(slots) do
+                    local aura = GetAuraDataBySlot(unit, slot)
+                    if aura then
+                        table.insert(targetTable, aura)
+                    end
+                end
+            until not token
+        end
+        
+        ProcessSlots("HELPFUL", buffs)
+        ProcessSlots("HARMFUL", debuffs)
+    else
+        -- Fallback to GetAuraDataByIndex if slot API unavailable
+        local BUFF_MAX_DISPLAY, DEBUFF_MAX_DISPLAY = 32, 16
+        
+        for i = 1, BUFF_MAX_DISPLAY do
+            local auraData = C_UnitAuras.GetAuraDataByIndex(unit, i, "HELPFUL")
+            if not auraData then break end
+            table.insert(buffs, auraData)
+        end
+        
+        for i = 1, DEBUFF_MAX_DISPLAY do
+            local auraData = C_UnitAuras.GetAuraDataByIndex(unit, i, "HARMFUL")
+            if not auraData then break end
+            table.insert(debuffs, auraData)
+        end
     end
 
     -- Note: Sorting disabled due to secret value restrictions
@@ -1064,43 +1267,50 @@ local function MMF_UpdateTargetAuras()
                 auraFrame.auraData = auraData
                 auraFrame.auraIndex = auraData._index
                 auraFrame.auraFilter = "HELPFUL"
-                -- Show stack count if >1 (handle secret values)
-                local count = auraData.applications or auraData.count
-                local showCount = false
-                local countText = ""
-                pcall(function()
-                    if count and count > 1 then
-                        showCount = true
-                        countText = tostring(count)
-                    end
-                end)
-                if showCount then
+                
+                -- Show stack count - handle secret values properly like ElvUI
+                local auraInstanceID = auraData.auraInstanceID
+                if auraFrame.count then auraFrame.count:Hide() end
+                
+                if auraInstanceID and GetAuraApplicationDisplayCount then
+                    -- GetAuraApplicationDisplayCount returns a value that can be passed directly to SetText
+                    -- It handles secret values internally - we cannot compare its result
                     if not auraFrame.count then
                         auraFrame.count = auraFrame:CreateFontString(nil, "OVERLAY")
-                        auraFrame.count:SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
-                        auraFrame.count:SetPoint("BOTTOMRIGHT", auraFrame, "BOTTOMRIGHT", -2, 2)
+                        auraFrame.count:SetPoint("BOTTOMRIGHT", auraFrame, "BOTTOMRIGHT", -1, 1)
                     end
-                    auraFrame.count:SetText(countText)
+                    -- Always update font size (allows live scaling)
+                    local scale = GetAuraTextScale()
+                    auraFrame.count:SetFont("Fonts\\FRIZQT__.TTF", math.max(6, math.floor(10 * scale)), "OUTLINE")
+                    -- Pass directly to SetText - the API handles displaying appropriately
+                    -- minCount=2 means it won't show for stacks of 1
+                    auraFrame.count:SetText(GetAuraApplicationDisplayCount(unit, auraInstanceID, 2, 999))
                     auraFrame.count:Show()
-                elseif auraFrame.count then
-                    auraFrame.count:Hide()
                 end
-                -- Show cooldown if duration > 0 (wrap entire cooldown logic in pcall for secret values)
-                local cooldownSuccess = pcall(function()
-                    if auraData.duration and auraData.duration > 0 and auraData.expirationTime then
-                        -- Do arithmetic inside pcall where secret values may cause errors
-                        local startTime = auraData.expirationTime - auraData.duration
-                        auraFrame.cooldown:SetCooldown(startTime, auraData.duration)
-                        auraFrame.cooldown:Show()
+                
+                -- Show cooldown using GetAuraDuration and SetCooldownFromDurationObject
+                -- This properly handles secret values like ElvUI does
+                -- Blizzard's cooldown frame handles the timer text automatically
+                if auraFrame.cooldown then
+                    if auraInstanceID and GetAuraDuration then
+                        local auraDuration = GetAuraDuration(unit, auraInstanceID)
+                        if auraDuration and auraFrame.cooldown.SetCooldownFromDurationObject then
+                            auraFrame.cooldown:SetCooldownFromDurationObject(auraDuration)
+                        else
+                            auraFrame.cooldown:Clear()
+                        end
                     else
-                        auraFrame.cooldown:Hide()
+                        auraFrame.cooldown:Clear()
                     end
-                end)
-                if not cooldownSuccess then
-                    auraFrame.cooldown:Hide()
+                    
+                    -- Update the cooldown's built-in timer text font (like ElvUI)
+                    if auraFrame.timerText and auraFrame.timerText.SetFont then
+                        local timerScale = GetTimerTextScale()
+                        local timerFontSize = math.max(8, math.floor(12 * timerScale))
+                        auraFrame.timerText:SetFont(STANDARD_TEXT_FONT, timerFontSize, "OUTLINE")
+                    end
                 end
-                auraFrame.timerText:Hide()  -- Disable timer text due to secret values
-                auraFrame:SetScript("OnUpdate", nil)
+                
                 auraFrame:Show()
                 idx = idx + 1
             end
@@ -1126,47 +1336,59 @@ local function MMF_UpdateTargetAuras()
                 auraFrame.auraData = auraData
                 auraFrame.auraIndex = auraData._index
                 auraFrame.auraFilter = "HARMFUL"
-                -- Show stack count if >1 (handle secret values)
-                local count = auraData.applications or auraData.count
-                local showCount = false
-                local countText = ""
-                pcall(function()
-                    if count and count > 1 then
-                        showCount = true
-                        countText = tostring(count)
-                    end
-                end)
-                if showCount then
+                
+                -- Show stack count - handle secret values properly like ElvUI
+                local auraInstanceID = auraData.auraInstanceID
+                if auraFrame.count then auraFrame.count:Hide() end
+                
+                if auraInstanceID and GetAuraApplicationDisplayCount then
+                    -- GetAuraApplicationDisplayCount returns a value that can be passed directly to SetText
+                    -- It handles secret values internally - we cannot compare its result
                     if not auraFrame.count then
                         auraFrame.count = auraFrame:CreateFontString(nil, "OVERLAY")
-                        auraFrame.count:SetFont("Fonts\\FRIZQT__.TTF", 10, "OUTLINE")
-                        auraFrame.count:SetPoint("BOTTOMRIGHT", auraFrame, "BOTTOMRIGHT", -2, 2)
+                        auraFrame.count:SetPoint("BOTTOMRIGHT", auraFrame, "BOTTOMRIGHT", -1, 1)
                     end
-                    auraFrame.count:SetText(countText)
+                    -- Always update font size (allows live scaling)
+                    local scale = GetAuraTextScale()
+                    auraFrame.count:SetFont("Fonts\\FRIZQT__.TTF", math.max(6, math.floor(10 * scale)), "OUTLINE")
+                    -- Pass directly to SetText - the API handles displaying appropriately
+                    -- minCount=2 means it won't show for stacks of 1
+                    auraFrame.count:SetText(GetAuraApplicationDisplayCount(unit, auraInstanceID, 2, 999))
                     auraFrame.count:Show()
-                elseif auraFrame.count then
-                    auraFrame.count:Hide()
                 end
-                -- Show cooldown if duration > 0 (wrap entire cooldown logic in pcall for secret values)
-                local cooldownSuccess = pcall(function()
-                    if auraData.duration and auraData.duration > 0 and auraData.expirationTime then
-                        -- Do arithmetic inside pcall where secret values may cause errors
-                        local startTime = auraData.expirationTime - auraData.duration
-                        auraFrame.cooldown:SetCooldown(startTime, auraData.duration)
-                        auraFrame.cooldown:Show()
+                
+                -- Show cooldown using GetAuraDuration and SetCooldownFromDurationObject
+                -- This properly handles secret values like ElvUI does
+                -- Blizzard's cooldown frame handles the timer text automatically
+                if auraFrame.cooldown then
+                    if auraInstanceID and GetAuraDuration then
+                        local auraDuration = GetAuraDuration(unit, auraInstanceID)
+                        if auraDuration and auraFrame.cooldown.SetCooldownFromDurationObject then
+                            auraFrame.cooldown:SetCooldownFromDurationObject(auraDuration)
+                        else
+                            auraFrame.cooldown:Clear()
+                        end
                     else
-                        auraFrame.cooldown:Hide()
+                        auraFrame.cooldown:Clear()
                     end
-                end)
-                if not cooldownSuccess then
-                    auraFrame.cooldown:Hide()
+                    
+                    -- Update the cooldown's built-in timer text font (like ElvUI)
+                    if auraFrame.timerText and auraFrame.timerText.SetFont then
+                        local timerScale = GetTimerTextScale()
+                        local timerFontSize = math.max(8, math.floor(12 * timerScale))
+                        auraFrame.timerText:SetFont(STANDARD_TEXT_FONT, timerFontSize, "OUTLINE")
+                    end
                 end
-                auraFrame.timerText:Hide()  -- Disable timer text due to secret values
-                auraFrame:SetScript("OnUpdate", nil)
-                -- Debuff border color by dispel type
+                
+                -- Debuff border color by dispel type (handle secret values)
                 if auraFrame.border then
-                    local color = DebuffTypeColor and DebuffTypeColor[auraData.dispelName or auraData.debuffType or "none"] or {r=1,g=1,b=1}
-                    auraFrame.border:SetVertexColor(color.r, color.g, color.b)
+                    local dispelName = auraData.dispelName or auraData.debuffType
+                    if NotSecretValue(dispelName) then
+                        local color = DebuffTypeColor and DebuffTypeColor[dispelName or "none"] or {r=1,g=1,b=1}
+                        auraFrame.border:SetVertexColor(color.r, color.g, color.b)
+                    else
+                        auraFrame.border:SetVertexColor(1, 1, 1) -- Default white for secret values
+                    end
                 end
                 auraFrame:Show()
                 idx = idx + 1
