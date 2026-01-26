@@ -512,7 +512,7 @@ local function CreateSecureMinimalUnitFrame(unit, frameName, width, height, poin
 
     if f.powerBarFrame then
         -- Restore saved position if it exists
-        if MattMinimalFramesDB.powerBarPositions and MattMinimalFramesDB.powerBarPositions[unit] then
+        if MattMinimalFramesDB and MattMinimalFramesDB.powerBarPositions and MattMinimalFramesDB.powerBarPositions[unit] then
             local pos = MattMinimalFramesDB.powerBarPositions[unit]
             f.powerBarFrame:ClearAllPoints()
             f.powerBarFrame:SetPoint("CENTER", f, "CENTER", pos.x, pos.y)
@@ -609,18 +609,24 @@ local function UpdateUnitFrame(frame)
     end
 
     -- Truncate target-of-target name if needed
+    -- Only update name if we have a valid name - don't clear existing name on nil/empty
+    -- This prevents names from disappearing during combat when UnitName temporarily returns nil
     if unit == "targettarget" then
         if hasValidName then
             local truncated = string.sub(unitName, 1, 8)
             if #unitName > 8 then truncated = truncated .. "…" end
             pcall(function() frame.nameText:SetText(truncated) end)
-        else
+        end
+        -- If no valid name but unit doesn't exist, clear it
+        if not UnitExists(unit) then
             pcall(function() frame.nameText:SetText("") end)
         end
     else
         if hasValidName then
             pcall(function() frame.nameText:SetText(unitName) end)
-        else
+        end
+        -- If no valid name but unit doesn't exist, clear it
+        if not UnitExists(unit) then
             pcall(function() frame.nameText:SetText("") end)
         end
         pcall(function() frame.nameText:SetWidth(frame.originalWidth - 4) end)
@@ -758,6 +764,12 @@ coreEventFrame:RegisterEvent("PLAYER_ALIVE")
 coreEventFrame:RegisterEvent("PLAYER_DEAD")
 coreEventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
 coreEventFrame:RegisterEvent("PLAYER_UPDATE_RESTING")
+-- Register events for name updates (fixes names disappearing in combat)
+coreEventFrame:RegisterEvent("UNIT_NAME_UPDATE")
+coreEventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
+coreEventFrame:RegisterEvent("PLAYER_FOCUS_CHANGED")
+coreEventFrame:RegisterEvent("UNIT_PET")
+coreEventFrame:RegisterEvent("UNIT_TARGET")
 
 -- Pending flag for lock changes
 local pendingLock = false
@@ -782,6 +794,34 @@ coreEventFrame:SetScript("OnEvent", function(self, event, unit)
             else
                 MMF_PlayerFrame.restingTexture:Hide()
             end
+        end
+    elseif event == "PLAYER_TARGET_CHANGED" then
+        -- Immediately update target and target-of-target frames when target changes
+        UpdateUnitFrame(MMF_TargetFrame)
+        UpdateUnitFrame(MMF_TargetOfTargetFrame)
+    elseif event == "PLAYER_FOCUS_CHANGED" then
+        -- Immediately update focus frame when focus changes
+        UpdateUnitFrame(MMF_FocusFrame)
+    elseif event == "UNIT_PET" then
+        -- Update pet frame when pet changes
+        UpdateUnitFrame(MMF_PetFrame)
+    elseif event == "UNIT_TARGET" then
+        -- Update target-of-target when target's target changes
+        if unit == "target" then
+            UpdateUnitFrame(MMF_TargetOfTargetFrame)
+        end
+    elseif event == "UNIT_NAME_UPDATE" then
+        -- Update the appropriate frame when a unit's name changes
+        if unit == "player" then
+            UpdateUnitFrame(MMF_PlayerFrame)
+        elseif unit == "target" then
+            UpdateUnitFrame(MMF_TargetFrame)
+        elseif unit == "targettarget" then
+            UpdateUnitFrame(MMF_TargetOfTargetFrame)
+        elseif unit == "pet" then
+            UpdateUnitFrame(MMF_PetFrame)
+        elseif unit == "focus" then
+            UpdateUnitFrame(MMF_FocusFrame)
         end
     elseif event == "UNIT_HEALTH" or event == "UNIT_POWER_UPDATE" then
         if unit == "player" then

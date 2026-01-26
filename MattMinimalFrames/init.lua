@@ -28,6 +28,19 @@ SlashCmdList["MATTMINIMALFRAMES"] = function()
 end
 
 local function Initialize()
+    -- Initialize saved variables on fresh install
+    if not MattMinimalFramesDB then
+        MattMinimalFramesDB = {}
+    end
+    -- Apply defaults for any missing values
+    if MattMinimalFrames_Defaults then
+        for key, value in pairs(MattMinimalFrames_Defaults) do
+            if MattMinimalFramesDB[key] == nil then
+                MattMinimalFramesDB[key] = value
+            end
+        end
+    end
+    
     HideBlizzardFrames()
     MMF_CreateAllMinimalFrames()
     if MattMinimalFramesDB.locked then
