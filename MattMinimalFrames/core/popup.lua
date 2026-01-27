@@ -1,6 +1,11 @@
 -- core/popup.lua
 -- Contains the MMF_ShowWelcomePopup function for MattMinimalFrames
 
+-- Version-based theming
+local Compat = _G.MMF_Compat
+local ACCENT_COLOR = Compat.IsTBC and {0.2, 0.9, 0.4} or {0.6, 0.4, 0.9}  -- Green for TBC, Purple for Retail
+local ADDON_TITLE = Compat.IsTBC and "MattMinimalFrames |cff66FF66TBC|r" or "MattMinimalFrames |cff9966FFMIDNIGHT|r"
+
 -- Define static popup dialogs at file load time (not inside functions)
 StaticPopupDialogs["MMF_RELOADUI"] = {
     text = "Reload UI to apply changes?",
@@ -28,26 +33,13 @@ StaticPopupDialogs["MMF_RESET_ALL_WARNING"] = {
             MattMinimalFramesDB[key] = value
         end
         
-        -- Physically move frames NOW before reload
-        if MMF_PlayerFrame then
-            MMF_PlayerFrame:ClearAllPoints()
-            MMF_PlayerFrame:SetPoint("CENTER", UIParent, "CENTER", -150, 0)
-        end
-        if MMF_TargetFrame then
-            MMF_TargetFrame:ClearAllPoints()
-            MMF_TargetFrame:SetPoint("CENTER", UIParent, "CENTER", 150, 0)
-        end
-        if MMF_TargetOfTargetFrame then
-            MMF_TargetOfTargetFrame:ClearAllPoints()
-            MMF_TargetOfTargetFrame:SetPoint("CENTER", UIParent, "CENTER", 0, -100)
-        end
-        if MMF_PetFrame then
-            MMF_PetFrame:ClearAllPoints()
-            MMF_PetFrame:SetPoint("CENTER", UIParent, "CENTER", -300, -100)
-        end
-        if MMF_FocusFrame then
-            MMF_FocusFrame:ClearAllPoints()
-            MMF_FocusFrame:SetPoint("CENTER", UIParent, "CENTER", 300, -100)
+        -- Physically move frames to default positions before reload
+        for _, def in ipairs(MMF_Config.FRAME_DEFINITIONS) do
+            local frame = _G[def.name]
+            if frame then
+                frame:ClearAllPoints()
+                frame:SetPoint("CENTER", UIParent, "CENTER", def.x, def.y)
+            end
         end
         
         ReloadUI()
@@ -80,7 +72,7 @@ local function CreateMinimalCheckbox(parent, label, x, y, settingKey, defaultVal
     local check = cb:CreateTexture(nil, "ARTWORK")
     check:SetSize(8, 8)
     check:SetPoint("CENTER")
-    check:SetColorTexture(0.2, 0.75, 1, 1)
+    check:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 1)
     cb.check = check
     
     local isChecked = MattMinimalFramesDB[settingKey]
@@ -122,7 +114,7 @@ local function CreateMinimalSlider(parent, label, x, y, width, settingKey, minVa
     local valueText = container:CreateFontString(nil, "OVERLAY")
     valueText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
     valueText:SetPoint("RIGHT", 0, 0)
-    valueText:SetTextColor(0.2, 0.75, 1)
+    valueText:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     valueText:SetWidth(35)
     valueText:SetJustifyH("RIGHT")
     
@@ -142,13 +134,18 @@ local function CreateMinimalSlider(parent, label, x, y, width, settingKey, minVa
     
     local thumb = slider:CreateTexture(nil, "OVERLAY")
     thumb:SetSize(8, 14)
-    thumb:SetColorTexture(0.2, 0.75, 1, 1)
+    thumb:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 1)
     slider:SetThumbTexture(thumb)
     
     local fill = slider:CreateTexture(nil, "ARTWORK")
     fill:SetHeight(8)
     fill:SetPoint("LEFT", slider, "LEFT", 0, 0)
-    fill:SetColorTexture(0.1, 0.3, 0.4, 0.8)
+    -- Light purple for Retail, white for TBC
+    if Compat.IsTBC then
+        fill:SetColorTexture(0.8, 0.8, 0.8, 0.8)
+    else
+        fill:SetColorTexture(ACCENT_COLOR[1] * 0.5, ACCENT_COLOR[2] * 0.5, ACCENT_COLOR[3] * 0.6, 0.8)
+    end
     slider.fill = fill
     
     local currentVal = MattMinimalFramesDB[settingKey] or defaultVal
@@ -247,8 +244,8 @@ function MMF_ShowWelcomePopup(forceShow)
     local title = titleBar:CreateFontString(nil, "OVERLAY")
     title:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
     title:SetPoint("LEFT", 12, 0)
-    title:SetText("MattMinimalFrames |cff80E6FFBETA|r")
-    title:SetTextColor(0.2, 0.75, 1)
+    title:SetText(ADDON_TITLE)
+    title:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
 
     local closeX = CreateFrame("Button", nil, titleBar)
     closeX:SetSize(28, 28)
@@ -297,7 +294,7 @@ function MMF_ShowWelcomePopup(forceShow)
     local buffsTitle = leftCol:CreateFontString(nil, "OVERLAY")
     buffsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
     buffsTitle:SetPoint("TOPLEFT", 12, -12)
-    buffsTitle:SetTextColor(0.2, 0.75, 1)
+    buffsTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     buffsTitle:SetText("BUFFS")
 
     local buffsCheck = CreateMinimalCheckbox(leftCol, "Enable", 12, -32, "showBuffs", true, function()
@@ -325,7 +322,7 @@ function MMF_ShowWelcomePopup(forceShow)
     local debuffsTitle = leftCol:CreateFontString(nil, "OVERLAY")
     debuffsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
     debuffsTitle:SetPoint("TOPLEFT", 12, -120)
-    debuffsTitle:SetTextColor(0.2, 0.75, 1)
+    debuffsTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     debuffsTitle:SetText("DEBUFFS")
 
     local debuffsCheck = CreateMinimalCheckbox(leftCol, "Enable", 12, -140, "showDebuffs", true, function()
@@ -353,7 +350,7 @@ function MMF_ShowWelcomePopup(forceShow)
     local generalTitle = leftCol:CreateFontString(nil, "OVERLAY")
     generalTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
     generalTitle:SetPoint("TOPLEFT", 12, -228)
-    generalTitle:SetTextColor(0.2, 0.75, 1)
+    generalTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     generalTitle:SetText("RESOURCES")
 
     local playerPowerCheck = CreateMinimalCheckbox(leftCol, "Player Power Bar", 12, -248, "showPlayerPowerBar", true, function()
@@ -382,15 +379,23 @@ function MMF_ShowWelcomePopup(forceShow)
     divider3:SetPoint("TOPLEFT", 12, -348)
     divider3:SetColorTexture(0.12, 0.12, 0.15, 1)
 
-    local runeBarCheck = CreateMinimalCheckbox(leftCol, "Show Rune Bar (DK)", 12, -360, "showRuneBar", false, function()
-        StaticPopup_Show("MMF_RELOADUI")
-    end)
+    -- DK Rune bar only shown in retail (DK doesn't exist in TBC)
+    local Compat = _G.MMF_Compat
+    local runeBarCheck, runeBarSlider
+    if Compat.HasDeathKnight then
+        runeBarCheck = CreateMinimalCheckbox(leftCol, "Show Rune Bar (DK)", 12, -360, "showRuneBar", false, function()
+            StaticPopup_Show("MMF_RELOADUI")
+        end)
 
-    local runeBarSlider = CreateMinimalSlider(leftCol, "Rune Bar", 12, -384, 206, "runeBarScale", 0.5, 2.0, 0.01, 1.0, function(value)
-        if MMF_UpdateRuneBarScale then
-            MMF_UpdateRuneBarScale(value)
-        end
-    end, false)
+        runeBarSlider = CreateMinimalSlider(leftCol, "Rune Bar", 12, -384, 206, "runeBarScale", 0.5, 2.0, 0.01, 1.0, function(value)
+            if MMF_UpdateRuneBarScale then
+                MMF_UpdateRuneBarScale(value)
+            end
+        end, false)
+    else
+        -- Hide the divider for TBC since there's nothing below it
+        divider3:Hide()
+    end
 
     ---------------------------------------------------
     -- RIGHT COLUMN: Aura Appearance
@@ -398,7 +403,7 @@ function MMF_ShowWelcomePopup(forceShow)
     local auraTitle = rightCol:CreateFontString(nil, "OVERLAY")
     auraTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
     auraTitle:SetPoint("TOPLEFT", 12, -12)
-    auraTitle:SetTextColor(0.2, 0.75, 1)
+    auraTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     auraTitle:SetText("AURA APPEARANCE")
 
     local auraIconSlider = CreateMinimalSlider(rightCol, "Icon Size", 12, -36, 206, "auraIconSize", 12, 40, 1, 18, function(value)
@@ -428,7 +433,7 @@ function MMF_ShowWelcomePopup(forceShow)
     local nameTextTitle = rightCol:CreateFontString(nil, "OVERLAY")
     nameTextTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
     nameTextTitle:SetPoint("TOPLEFT", 12, -124)
-    nameTextTitle:SetTextColor(0.2, 0.75, 1)
+    nameTextTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     nameTextTitle:SetText("FRAME TEXT")
 
     local nameTextSlider = CreateMinimalSlider(rightCol, "Name Size", 12, -148, 206, "nameTextSize", 8, 20, 1, 12, function(value)
@@ -452,19 +457,64 @@ function MMF_ShowWelcomePopup(forceShow)
     local infoTitle = rightCol:CreateFontString(nil, "OVERLAY")
     infoTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
     infoTitle:SetPoint("TOPLEFT", 12, -212)
-    infoTitle:SetTextColor(0.2, 0.75, 1)
+    infoTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     infoTitle:SetText("INFO")
 
     local showHintsCheck = CreateMinimalCheckbox(rightCol, "Show Move Hints", 12, -232, "showMoveHints", false, nil)
 
+    -- Minimap icon checkbox (uses LibDBIcon's minimap.hide structure)
+    local showMinimapContainer = CreateFrame("Frame", nil, rightCol)
+    showMinimapContainer:SetSize(200, 20)
+    showMinimapContainer:SetPoint("TOPLEFT", 12, -256)
+    
+    local showMinimapCB = CreateFrame("CheckButton", nil, showMinimapContainer)
+    showMinimapCB:SetSize(14, 14)
+    showMinimapCB:SetPoint("LEFT", 0, 0)
+    
+    local mmBg = showMinimapCB:CreateTexture(nil, "BACKGROUND")
+    mmBg:SetAllPoints()
+    mmBg:SetColorTexture(0.08, 0.08, 0.1, 1)
+    
+    local mmBorder = showMinimapCB:CreateTexture(nil, "BORDER")
+    mmBorder:SetPoint("TOPLEFT", -1, 1)
+    mmBorder:SetPoint("BOTTOMRIGHT", 1, -1)
+    mmBorder:SetColorTexture(0.25, 0.25, 0.3, 1)
+    
+    local mmCheck = showMinimapCB:CreateTexture(nil, "ARTWORK")
+    mmCheck:SetSize(8, 8)
+    mmCheck:SetPoint("CENTER")
+    mmCheck:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 1)
+    showMinimapCB.check = mmCheck
+    
+    -- Initialize: LibDBIcon uses minimap.hide (true = hidden)
+    local isHidden = MattMinimalFramesDB.minimap and MattMinimalFramesDB.minimap.hide
+    showMinimapCB:SetChecked(not isHidden)
+    mmCheck:SetShown(not isHidden)
+    
+    showMinimapCB:SetScript("OnClick", function(self)
+        local checked = self:GetChecked()
+        self.check:SetShown(checked)
+        if MMF_ToggleMinimapButton then
+            MMF_ToggleMinimapButton(checked)
+        end
+    end)
+    
+    local mmText = showMinimapContainer:CreateFontString(nil, "OVERLAY")
+    mmText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+    mmText:SetPoint("LEFT", showMinimapCB, "RIGHT", 6, 0)
+    mmText:SetTextColor(0.85, 0.85, 0.85)
+    mmText:SetText("Show Minimap Icon")
+
     local infoText = rightCol:CreateFontString(nil, "OVERLAY")
     infoText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    infoText:SetPoint("TOPLEFT", 12, -256)
+    infoText:SetPoint("TOPLEFT", 12, -280)
     infoText:SetWidth(206)
     infoText:SetJustifyH("LEFT")
     infoText:SetSpacing(3)
     infoText:SetTextColor(0.6, 0.6, 0.6)
-    infoText:SetText("Hold |cff33ccffSHIFT|r + drag frames to reposition.\n\nType |cff33ccff/mmf|r to open this panel.\n\nChanges to checkboxes require a UI reload.")
+    -- Purple highlights for Retail, cyan for TBC
+    local highlightColor = Compat.IsTBC and "|cff33ccff" or "|cff9966FF"
+    infoText:SetText("Hold " .. highlightColor .. "SHIFT|r + drag frames to reposition.\n\nType " .. highlightColor .. "/mmf|r to open this panel.\n\nChanges to checkboxes require a UI reload.")
 
     -- Footer
     local footer = CreateFrame("Frame", nil, popup)
@@ -491,7 +541,7 @@ function MMF_ShowWelcomePopup(forceShow)
     local dsCheck = dontShowCheck:CreateTexture(nil, "ARTWORK")
     dsCheck:SetSize(6, 6)
     dsCheck:SetPoint("CENTER")
-    dsCheck:SetColorTexture(0.2, 0.75, 1, 1)
+    dsCheck:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 1)
     dontShowCheck.check = dsCheck
     
     dontShowCheck:SetChecked(MattMinimalFramesDB.hideWelcomeMessage)

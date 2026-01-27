@@ -1,9 +1,10 @@
-## Interface: 120000
+## Interface: 20505
 ## Title: MattMinimalFrames
 ## Author: Seathasky
 ## Version: 3.2b
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
 ## SavedVariables: MattMinimalFramesDB
+## Notes: Minimal unit frames for TBC Anniversary
 
 # Libraries
 Libs\LibStub\LibStub.lua

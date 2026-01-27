@@ -23,15 +23,48 @@ MMF_Config = {
     TEXTURE_PATH = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Melli.tga",
     SHIELD_TEXTURE_PATH = "Interface\\AddOns\\MattMinimalFrames\\Textures\\shield.tga",
     
-    -- Frame definitions (unit, name, width, height, x, y)
+    -- Frame definitions (unit, name, width, height, x, y, label)
     FRAME_DEFINITIONS = {
-        { unit = "player",       name = "MMF_PlayerFrame",         width = 220, height = 28, x = -150, y = 0 },
-        { unit = "target",       name = "MMF_TargetFrame",         width = 220, height = 28, x = 150,  y = 0 },
-        { unit = "targettarget", name = "MMF_TargetOfTargetFrame", width = 100, height = 28, x = 0,    y = -100 },
-        { unit = "pet",          name = "MMF_PetFrame",            width = 100, height = 28, x = -300, y = -100 },
-        { unit = "focus",        name = "MMF_FocusFrame",          width = 100, height = 28, x = 300,  y = -100 },
+        { unit = "player",       name = "MMF_PlayerFrame",         width = 220, height = 28, x = -150, y = 0,    label = "Player Frame" },
+        { unit = "target",       name = "MMF_TargetFrame",         width = 220, height = 28, x = 150,  y = 0,    label = "Target Frame" },
+        { unit = "targettarget", name = "MMF_TargetOfTargetFrame", width = 100, height = 28, x = 0,    y = -100, label = "Target of Target" },
+        { unit = "pet",          name = "MMF_PetFrame",            width = 100, height = 28, x = -300, y = -100, label = "Pet Frame" },
+        { unit = "focus",        name = "MMF_FocusFrame",          width = 100, height = 28, x = 300,  y = -100, label = "Focus Frame" },
     },
 }
+
+-- Helper to get all frame objects (call after frames are created)
+function MMF_GetAllFrames()
+    return {
+        MMF_PlayerFrame,
+        MMF_TargetFrame,
+        MMF_TargetOfTargetFrame,
+        MMF_PetFrame,
+        MMF_FocusFrame
+    }
+end
+
+-- Unit-to-frame mapping (call after frames are created)
+function MMF_GetFrameForUnit(unit)
+    local map = {
+        player = MMF_PlayerFrame,
+        target = MMF_TargetFrame,
+        targettarget = MMF_TargetOfTargetFrame,
+        pet = MMF_PetFrame,
+        focus = MMF_FocusFrame,
+    }
+    return map[unit]
+end
+
+-- Get frame definition by unit
+function MMF_GetFrameDefinition(unit)
+    for _, def in ipairs(MMF_Config.FRAME_DEFINITIONS) do
+        if def.unit == unit then
+            return def
+        end
+    end
+    return nil
+end
 
 -- Utility: Format large numbers
 function MMF_FormatNumber(num)

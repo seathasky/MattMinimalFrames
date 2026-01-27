@@ -1,6 +1,7 @@
 -- core/utilities.lua
 -- Utility functions for MattMinimalFrames
 
+
 -- A hidden frame to store unwanted frames
 MMF_UIHider = CreateFrame("Frame")
 MMF_UIHider:Hide()

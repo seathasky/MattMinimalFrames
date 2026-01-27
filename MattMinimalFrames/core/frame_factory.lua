@@ -62,14 +62,16 @@ end
 
 local function CreateDragHandlers(frame, frameName)
     frame:SetScript("OnDragStart", function(self)
-        if not InCombatLockdown() and IsShiftKeyDown() then
+        if not InCombatLockdown() and IsShiftKeyDown() and self:IsMovable() then
             self:StartMoving()
         end
     end)
 
     frame:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
-        SaveFramePosition(self, frameName)
+        if self:IsMovable() then
+            self:StopMovingOrSizing()
+            SaveFramePosition(self, frameName)
+        end
     end)
 
     -- Visual feedback for movement
@@ -88,19 +90,9 @@ local function CreateDragHandlers(frame, frameName)
         self.moveOverlay:Hide()
     end)
 
-    -- Frame label and move hint
-    local frameLabel = ""
-    if frame.unit == "player" then
-        frameLabel = "Player Frame"
-    elseif frame.unit == "target" then
-        frameLabel = "Target Frame"
-    elseif frame.unit == "targettarget" then
-        frameLabel = "Target of Target"
-    elseif frame.unit == "pet" then
-        frameLabel = "Pet Frame"
-    elseif frame.unit == "focus" then
-        frameLabel = "Focus Frame"
-    end
+    -- Frame label from config
+    local frameDef = MMF_GetFrameDefinition(frame.unit)
+    local frameLabel = frameDef and frameDef.label or frame.unit
     
     frame.moveHint = frame:CreateFontString(nil, "OVERLAY")
     frame.moveHint:SetFont(cfg.FONT_PATH, 10, "OUTLINE")

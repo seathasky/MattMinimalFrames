@@ -22,12 +22,12 @@ function MMF_LockFrames()
     if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
     MattMinimalFramesDB.locked = true
     
-    local frames = { MMF_PlayerFrame, MMF_TargetFrame, MMF_TargetOfTargetFrame, MMF_PetFrame, MMF_FocusFrame }
-    for _, frm in ipairs(frames) do
+    for _, frm in ipairs(MMF_GetAllFrames()) do
         if frm then
-            frm:SetMovable(false)
+            frm:SetMovable(true)  -- Always movable for shift+drag
             frm:SetClampedToScreen(true)
             frm:EnableMouse(true)
+            frm:RegisterForDrag("LeftButton")
             frm:RegisterForClicks("AnyUp")
             if frm.titleText then
                 frm.titleText:Hide()
@@ -44,8 +44,7 @@ function MMF_UnlockFrames()
     if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
     MattMinimalFramesDB.locked = false
     
-    local frames = { MMF_PlayerFrame, MMF_TargetFrame, MMF_TargetOfTargetFrame, MMF_PetFrame, MMF_FocusFrame }
-    for _, frm in ipairs(frames) do
+    for _, frm in ipairs(MMF_GetAllFrames()) do
         if frm then
             frm:SetMovable(true)
             frm:SetClampedToScreen(false)
@@ -117,27 +116,15 @@ coreEventFrame:SetScript("OnEvent", function(self, event, unit)
         end
         
     elseif event == "UNIT_NAME_UPDATE" then
-        local frameMap = {
-            player = MMF_PlayerFrame,
-            target = MMF_TargetFrame,
-            targettarget = MMF_TargetOfTargetFrame,
-            pet = MMF_PetFrame,
-            focus = MMF_FocusFrame,
-        }
-        if frameMap[unit] then
-            MMF_UpdateUnitFrame(frameMap[unit])
+        local frame = MMF_GetFrameForUnit(unit)
+        if frame then
+            MMF_UpdateUnitFrame(frame)
         end
         
     elseif event == "UNIT_HEALTH" or event == "UNIT_POWER_UPDATE" then
-        local frameMap = {
-            player = MMF_PlayerFrame,
-            target = MMF_TargetFrame,
-            targettarget = MMF_TargetOfTargetFrame,
-            pet = MMF_PetFrame,
-            focus = MMF_FocusFrame,
-        }
-        if frameMap[unit] then
-            MMF_UpdateUnitFrame(frameMap[unit])
+        local frame = MMF_GetFrameForUnit(unit)
+        if frame then
+            MMF_UpdateUnitFrame(frame)
         end
     end
 end)

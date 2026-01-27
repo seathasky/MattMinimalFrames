@@ -27,6 +27,10 @@ SlashCmdList["MATTMINIMALFRAMES"] = function()
     MMF_ShowWelcomePopup(true)
 end
 
+-- Quick reload command
+SLASH_MMFRELOAD1 = "/rl"
+SlashCmdList["MMFRELOAD"] = ReloadUI
+
 local function Initialize()
     -- Initialize saved variables on fresh install
     if not MattMinimalFramesDB then

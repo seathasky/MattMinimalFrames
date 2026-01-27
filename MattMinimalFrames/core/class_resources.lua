@@ -1,10 +1,23 @@
 -- Class-specific resource bars
+-- Uses compat.lua for version-specific features
 
+local Compat = _G.MMF_Compat
 local _, playerClass = UnitClass("player")
 
 --------------------------------------------------
--- DEATH KNIGHT RUNE BAR
+-- DEATH KNIGHT RUNE BAR (Retail only - DK doesn't exist in TBC)
 --------------------------------------------------
+
+-- Skip DK rune bar functionality for TBC/Classic
+if not Compat.HasDeathKnight then
+    function MMF_InitializeClassResources()
+        -- No class-specific resources for TBC/Classic yet
+    end
+    function MMF_UpdateRuneBarScale(scale)
+        -- No-op for TBC
+    end
+    return
+end
 
 local MMF_RuneBar
 

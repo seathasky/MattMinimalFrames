@@ -29,6 +29,8 @@ local mmfDefaults = {
     popupPosition = nil,
     -- Move hints
     showMoveHints = false,
+    -- Minimap button (LibDBIcon format)
+    minimap = { hide = false },
 }
 
 -- Power bar configuration constants (for convenience)

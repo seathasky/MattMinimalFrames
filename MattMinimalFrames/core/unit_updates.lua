@@ -11,41 +11,29 @@ local lastUpdate = 0
 local function UpdateUnitFrame(frame)
     if not frame or not frame.unit or not frame.nameText then return end
     local unit = frame.unit
-    local unitName = ""
-    local hasValidName = false
     
-    -- Safely get unit name
-    local success, result = pcall(function()
-        local name = UnitName(unit)
-        if name and name ~= "" then
-            return name
-        end
-        return nil
-    end)
-    
-    if success and result then
-        unitName = result
-        hasValidName = true
-    end
+    -- Get unit name
+    local unitName = UnitName(unit)
+    local hasValidName = unitName and unitName ~= ""
 
     -- Update name text
     if unit == "targettarget" then
         if hasValidName then
             local truncated = string.sub(unitName, 1, 8)
             if #unitName > 8 then truncated = truncated .. "…" end
-            pcall(function() frame.nameText:SetText(truncated) end)
+            frame.nameText:SetText(truncated)
         end
         if not UnitExists(unit) then
-            pcall(function() frame.nameText:SetText("") end)
+            frame.nameText:SetText("")
         end
     else
         if hasValidName then
-            pcall(function() frame.nameText:SetText(unitName) end)
+            frame.nameText:SetText(unitName)
         end
         if not UnitExists(unit) then
-            pcall(function() frame.nameText:SetText("") end)
+            frame.nameText:SetText("")
         end
-        pcall(function() frame.nameText:SetWidth(frame.originalWidth - 4) end)
+        frame.nameText:SetWidth(frame.originalWidth - 4)
     end
 
     -- Update health bar
@@ -96,10 +84,11 @@ local function UpdateUnitFrame(frame)
     if frame.powerBar and (unit == "player" or unit == "target") then
         local powerType = UnitPowerType(unit)
         
-        -- Shaman spec handling
+        -- Shaman spec handling (uses compat layer)
+        local Compat = _G.MMF_Compat
         local useManaPowerType = false
-        if unit == "player" and UnitClass(unit) == "Shaman" then
-            local spec = GetSpecialization()
+        if unit == "player" and UnitClass(unit) == "Shaman" and Compat.HasSpecialization then
+            local spec = Compat.GetSpecialization()
             if spec == 1 or spec == 2 then
                 useManaPowerType = true
                 powerType = 0
@@ -153,15 +142,7 @@ function MMF_UpdateAll(elapsed)
     if lastUpdate < cfg.UPDATE_INTERVAL then return end
     lastUpdate = 0
 
-    local frames = {
-        MMF_PlayerFrame,
-        MMF_TargetFrame,
-        MMF_TargetOfTargetFrame,
-        MMF_PetFrame,
-        MMF_FocusFrame
-    }
-
-    for _, frame in ipairs(frames) do
+    for _, frame in ipairs(MMF_GetAllFrames()) do
         if frame and frame:IsShown() then
             UpdateUnitFrame(frame)
         end

@@ -1,25 +1,24 @@
 -- core/auras.lua
 -- Aura (buff/debuff) display for MattMinimalFrames
+-- Uses compat.lua for version-specific aura APIs
 
+local Compat = _G.MMF_Compat
 local cfg = MMF_Config
 local AURA_ICON_SPACING = cfg.AURA_ICON_SPACING
 local MAX_AURA_ICONS = cfg.MAX_AURA_ICONS
 local ROW_ICONS = cfg.AURA_ROW_ICONS
 
--- Cache aura APIs
-local GetAuraSlots = C_UnitAuras.GetAuraSlots
-local GetAuraDataBySlot = C_UnitAuras.GetAuraDataBySlot
-local GetAuraDuration = C_UnitAuras.GetAuraDuration
-local GetAuraApplicationDisplayCount = C_UnitAuras.GetAuraApplicationDisplayCount
+-- Cache compat functions
+local GetUnitAuras = Compat.GetUnitAuras
+local SetAuraCooldown = Compat.SetAuraCooldown
+local GetAuraCount = Compat.GetAuraCount
+local HasRetailAuraAPI = Compat.HasRetailAuraAPI
+
 local issecretvalue = issecretvalue
 
 --------------------------------------------------
 -- HELPER FUNCTIONS
 --------------------------------------------------
-
-local function IsSecretValue(value)
-    return issecretvalue and issecretvalue(value) or false
-end
 
 local function NotSecretValue(value)
     return not issecretvalue or not issecretvalue(value)
@@ -161,15 +160,14 @@ local function CreateAuraIcon(parent, index, isDebuff, iconSize)
     
     -- Tooltip handlers
     aura:SetScript("OnEnter", function(self)
-        if self.auraData and self.auraData.auraInstanceID then
-            GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-            if GameTooltip.SetUnitAuraByAuraInstanceID then
-                GameTooltip:SetUnitAuraByAuraInstanceID("target", self.auraData.auraInstanceID, self.auraFilter)
-            elseif self.auraIndex then
-                GameTooltip:SetUnitAura("target", self.auraIndex, self.auraFilter)
-            end
-            GameTooltip:Show()
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        -- Retail uses auraInstanceID, TBC uses index
+        if self.auraData and self.auraData.auraInstanceID and GameTooltip.SetUnitAuraByAuraInstanceID then
+            GameTooltip:SetUnitAuraByAuraInstanceID("target", self.auraData.auraInstanceID, self.auraFilter)
+        elseif self.auraIndex then
+            GameTooltip:SetUnitAura("target", self.auraIndex, self.auraFilter)
         end
+        GameTooltip:Show()
     end)
     
     aura:SetScript("OnLeave", function(self)
@@ -218,40 +216,43 @@ end
 -- AURA UPDATE
 --------------------------------------------------
 
-local function UpdateAuraIcon(auraFrame, auraData, filter, unit)
+-- Unified aura icon update (uses compat layer)
+local function UpdateAuraIcon(auraFrame, auraData, filter, unit, index)
     auraFrame.icon:SetTexture(auraData.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
     auraFrame.auraData = auraData
-    auraFrame.auraIndex = auraData._index
+    auraFrame.auraIndex = index or auraData._index
     auraFrame.auraFilter = filter
     
     local auraInstanceID = auraData.auraInstanceID
     
-    -- Stack count
+    -- Stack count - hide first, then show if needed
     if auraFrame.count then auraFrame.count:Hide() end
     
-    if auraInstanceID and GetAuraApplicationDisplayCount then
+    -- Retail: use GetAuraApplicationDisplayCount directly (avoid comparing secret values)
+    if auraInstanceID and C_UnitAuras and C_UnitAuras.GetAuraApplicationDisplayCount then
         if not auraFrame.count then
             auraFrame.count = auraFrame:CreateFontString(nil, "OVERLAY")
             auraFrame.count:SetPoint("BOTTOMRIGHT", auraFrame, "BOTTOMRIGHT", -1, 1)
         end
         local scale = MMF_GetAuraTextScale()
         auraFrame.count:SetFont("Fonts\\FRIZQT__.TTF", math.max(6, math.floor(10 * scale)), "OUTLINE")
-        auraFrame.count:SetText(GetAuraApplicationDisplayCount(unit, auraInstanceID, 2, 999))
+        auraFrame.count:SetText(C_UnitAuras.GetAuraApplicationDisplayCount(unit, auraInstanceID, 2, 999))
+        auraFrame.count:Show()
+    elseif auraData.count and auraData.count > 1 then
+        -- TBC/Classic fallback
+        if not auraFrame.count then
+            auraFrame.count = auraFrame:CreateFontString(nil, "OVERLAY")
+            auraFrame.count:SetPoint("BOTTOMRIGHT", auraFrame, "BOTTOMRIGHT", -1, 1)
+        end
+        local scale = MMF_GetAuraTextScale()
+        auraFrame.count:SetFont("Fonts\\FRIZQT__.TTF", math.max(6, math.floor(10 * scale)), "OUTLINE")
+        auraFrame.count:SetText(auraData.count)
         auraFrame.count:Show()
     end
     
-    -- Cooldown
+    -- Cooldown (uses compat layer)
     if auraFrame.cooldown then
-        if auraInstanceID and GetAuraDuration then
-            local auraDuration = GetAuraDuration(unit, auraInstanceID)
-            if auraDuration and auraFrame.cooldown.SetCooldownFromDurationObject then
-                auraFrame.cooldown:SetCooldownFromDurationObject(auraDuration)
-            else
-                auraFrame.cooldown:Clear()
-            end
-        else
-            auraFrame.cooldown:Clear()
-        end
+        SetAuraCooldown(auraFrame.cooldown, auraData, unit)
         
         if auraFrame.timerText and auraFrame.timerText.SetFont then
             local timerScale = MMF_GetTimerTextScale()
@@ -263,32 +264,14 @@ local function UpdateAuraIcon(auraFrame, auraData, filter, unit)
     auraFrame:Show()
 end
 
-local function ProcessAuraSlots(unit, filter)
-    local auras = {}
-    if not GetAuraSlots or not GetAuraDataBySlot then return auras end
-    
-    local token
-    repeat
-        local slots = {GetAuraSlots(unit, filter, 40, token)}
-        token = table.remove(slots, 1)
-        for _, slot in ipairs(slots) do
-            local aura = GetAuraDataBySlot(unit, slot)
-            if aura then
-                table.insert(auras, aura)
-            end
-        end
-    until not token
-    
-    return auras
-end
-
 function MMF_UpdateTargetAuras()
     if not MMF_TargetFrame or not MMF_TargetFrame.BuffContainer then return end
-    if not C_UnitAuras then return end
 
     local unit = "target"
-    local buffs = ProcessAuraSlots(unit, "HELPFUL")
-    local debuffs = ProcessAuraSlots(unit, "HARMFUL")
+    
+    -- Use compat layer for aura retrieval (handles both TBC and Retail)
+    local buffs = GetUnitAuras(unit, "HELPFUL")
+    local debuffs = GetUnitAuras(unit, "HARMFUL")
 
     -- Update Buffs
     local buffContainer = MMF_TargetFrame.BuffContainer
@@ -301,12 +284,10 @@ function MMF_UpdateTargetAuras()
             if aura.timerText then aura.timerText:Hide() end
         end
         
-        local idx = 1
         for i = 1, math.min(#buffs, MAX_AURA_ICONS) do
-            local auraFrame = buffContainer.auras[idx]
+            local auraFrame = buffContainer.auras[i]
             if auraFrame then
-                UpdateAuraIcon(auraFrame, buffs[i], "HELPFUL", unit)
-                idx = idx + 1
+                UpdateAuraIcon(auraFrame, buffs[i], "HELPFUL", unit, i)
             end
         end
     end
@@ -322,11 +303,10 @@ function MMF_UpdateTargetAuras()
             if aura.timerText then aura.timerText:Hide() end
         end
         
-        local idx = 1
         for i = 1, math.min(#debuffs, MAX_AURA_ICONS) do
-            local auraFrame = debuffContainer.auras[idx]
+            local auraFrame = debuffContainer.auras[i]
             if auraFrame then
-                UpdateAuraIcon(auraFrame, debuffs[i], "HARMFUL", unit)
+                UpdateAuraIcon(auraFrame, debuffs[i], "HARMFUL", unit, i)
                 
                 -- Debuff border color
                 if auraFrame.border then
@@ -338,7 +318,6 @@ function MMF_UpdateTargetAuras()
                         auraFrame.border:SetVertexColor(1, 1, 1)
                     end
                 end
-                idx = idx + 1
             end
         end
     end
