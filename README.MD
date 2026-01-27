@@ -4,8 +4,10 @@
 Clean, lightweight, and fully standalone **minimal unit frames** for World of Warcraft.  
 
 ---
+## Support
+- Currently supports Retail Midnight and TBC Anniversary 
 
-## ✨ Features  
+## Features  
 - **Minimal Design** – Sleek unit frames for *Player*, *Target*, *Target-of-Target*, *Focus*, and *Pet*  
 - **Buffs & Debuffs** – Target aura display with timers  
 - **Power Bars** – Displays mana, rage, or energy  
@@ -19,12 +21,12 @@ Clean, lightweight, and fully standalone **minimal unit frames** for World of Wa
 
 ---
 
-## ⚙️ Usage  
+## Usage  
 - **Move Frames:** Hold `SHIFT` and drag with the left mouse button *(out of combat)*  
 - **Open Settings:** Type `/mmf` or click the minimap button  
 - **Toggle Options:** Buffs, debuffs, resource bars, and minimap button visibility  
 
 ---
 
-## 📦 Installation  
+## Installation  
 👉 **[Install via CurseForge](https://www.curseforge.com/wow/addons/mattminimalframes)** 
