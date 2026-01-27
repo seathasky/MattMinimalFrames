@@ -15,7 +15,7 @@ Clean, lightweight, and fully standalone **minimal unit frames** for World of Wa
 
 ---
 
-- **WIP** – Class resources (DK Runes, Paladin Holy Power, Rogue Combo Points etc
+- **WIP** – Class resources DK Runes, Paladin Holy Power, Rogue Combo Points etc
 
 ---
 
