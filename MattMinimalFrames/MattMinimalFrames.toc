@@ -1,7 +1,7 @@
 ## Interface: 120000
 ## Title: MattMinimalFrames
 ## Author: Seathasky
-## Version: 2.5
+## Version: 3.0b
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
 ## SavedVariables: MattMinimalFramesDB
 
@@ -9,13 +9,17 @@
 Libs\LibStub\LibStub.lua
 Libs\LibCustomGlow-1.0\LibCustomGlow-1.0.lua
 
-
-# Core modules
+# Core modules - Load order matters!
 core/defaults.lua
 core/utilities.lua
+core/config.lua
+core/frame_factory.lua
+core/unit_updates.lua
+core/auras.lua
+core/events.lua
+core/frames.lua
 core/popup.lua
 
-core/frames.lua
 init.lua
 core/range_check.lua
 core/class_resources.lua

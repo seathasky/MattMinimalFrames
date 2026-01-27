@@ -3,9 +3,12 @@
 
 local mmfDefaults = {
     locked = false,
-    showPowerBars = true,
+    showPlayerPowerBar = true,
+    showTargetPowerBar = false,
     showBuffs = true,
     showDebuffs = true,
+    showRuneBar = false,
+    runeBarScale = 1.0,
     powerBarWidth = 73,
     powerBarHeight = 5,
     powerBarVerticalOffset = -24,
@@ -14,12 +17,18 @@ local mmfDefaults = {
     auraTextScale = 1.0,
     timerTextScale = 1.0,
     auraIconSize = 18,
+    nameTextSize = 12,
+    hpTextSize = 13,
     -- Buff position (relative to BOTTOMRIGHT of target frame)
     buffXOffset = -2,
     buffYOffset = -64,
     -- Debuff position (relative to TOPLEFT of target frame)
     debuffXOffset = 3,
     debuffYOffset = 27,
+    -- Popup position (nil = default center)
+    popupPosition = nil,
+    -- Move hints
+    showMoveHints = false,
 }
 
 -- Power bar configuration constants (for convenience)
