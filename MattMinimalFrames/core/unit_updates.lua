@@ -12,28 +12,32 @@ local function UpdateUnitFrame(frame)
     if not frame or not frame.unit or not frame.nameText then return end
     local unit = frame.unit
     
-    -- Get unit name
-    local unitName = UnitName(unit)
-    local hasValidName = unitName and unitName ~= ""
-
     -- Update name text
-    if unit == "targettarget" then
-        if hasValidName then
-            local truncated = string.sub(unitName, 1, 8)
-            if #unitName > 8 then truncated = truncated .. "…" end
-            frame.nameText:SetText(truncated)
-        end
-        if not UnitExists(unit) then
-            frame.nameText:SetText("")
-        end
+    -- Note: UnitName can return secret values in dungeons, but SetText can display them
+    -- We only clear the name if the unit doesn't exist
+    if not UnitExists(unit) then
+        frame.nameText:SetText("")
     else
-        if hasValidName then
+        local unitName = UnitName(unit)
+        if unit == "targettarget" then
+            -- For ToT, truncate the name (use pcall in case of secret value string operations)
+            local success, truncated = pcall(function()
+                local name = unitName or ""
+                if #name > 8 then
+                    return string.sub(name, 1, 8) .. "…"
+                end
+                return name
+            end)
+            if success then
+                frame.nameText:SetText(truncated)
+            else
+                -- If string ops fail on secret value, just set it directly
+                frame.nameText:SetText(unitName)
+            end
+        else
             frame.nameText:SetText(unitName)
+            frame.nameText:SetWidth(frame.originalWidth - 4)
         end
-        if not UnitExists(unit) then
-            frame.nameText:SetText("")
-        end
-        frame.nameText:SetWidth(frame.originalWidth - 4)
     end
 
     -- Update health bar
