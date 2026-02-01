@@ -1,4 +1,4 @@
-# MattMinimalFrames
+# Matt's Minimal Frames
 [![Minimal Unit Frames Preview](https://raw.githubusercontent.com/seathasky/MattMinimalFrames/refs/heads/main/minimal.png)](https://www.curseforge.com/wow/addons/mattminimalframes)
 
 Clean, lightweight, and fully standalone **minimal unit frames** for World of Warcraft.  
