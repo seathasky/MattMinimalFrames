@@ -47,6 +47,7 @@ local function Initialize()
     
     HideBlizzardFrames()
     MMF_CreateAllMinimalFrames()
+    MMF_ApplyAllFrameScales()
     MMF_InitializeClassResources()
     if MattMinimalFramesDB.locked then
         MMF_LockFrames()

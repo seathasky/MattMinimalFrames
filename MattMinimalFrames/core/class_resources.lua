@@ -133,7 +133,7 @@ local function UpdateRuneBar(self, elapsed)
             rune:SetValue(1)
             rune:SetAlpha(1)
         elseif start then
-            -- Rune is recharging (similar to ElvUI's approach)
+            -- Rune is recharging
             local elapsed = currentTime - start
             rune:SetMinMaxValues(0, duration)
             rune:SetValue(elapsed)

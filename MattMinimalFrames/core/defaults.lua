@@ -43,6 +43,17 @@ local mmfDefaults = {
     showMoveHints = false,
     -- Minimap button (LibDBIcon format)
     minimap = { hide = false },
+    -- Frame scale settings
+    playerFrameScaleX = 1.0,
+    playerFrameScaleY = 1.0,
+    targetFrameScaleX = 1.0,
+    targetFrameScaleY = 1.0,
+    totFrameScaleX = 1.0,
+    totFrameScaleY = 1.0,
+    focusFrameScaleX = 1.0,
+    focusFrameScaleY = 1.0,
+    petFrameScaleX = 1.0,
+    petFrameScaleY = 1.0,
 }
 
 -- Power bar configuration constants (for convenience)

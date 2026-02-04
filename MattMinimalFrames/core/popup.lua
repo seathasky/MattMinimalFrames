@@ -198,12 +198,16 @@ end
 function MMF_ShowWelcomePopup(forceShow)
     if not forceShow and MattMinimalFramesDB.hideWelcomeMessage then return end
 
-    if MMF_WelcomePopup then MMF_WelcomePopup:Hide() end
+    -- If popup already exists, just show it and return
+    if MMF_WelcomePopup then
+        MMF_WelcomePopup:Show()
+        return
+    end
 
     -- Main frame 
     local popup = CreateFrame("Frame", "MMF_WelcomePopup", UIParent, "BackdropTemplate")
     local popupHeight = Compat.IsTBC and 640 or 660
-    local popupWidth = Compat.IsTBC and 620 or 910
+    local popupWidth = Compat.IsTBC and 685 or 920
     popup:SetSize(popupWidth, popupHeight)
     
     -- Apply saved GUI scale
@@ -340,7 +344,7 @@ function MMF_ShowWelcomePopup(forceShow)
     -- Left column background
     local leftCol = CreateFrame("Frame", nil, content, "BackdropTemplate")
     local colHeight = Compat.IsTBC and 560 or 580
-    leftCol:SetSize(290, colHeight)
+    leftCol:SetSize(230, colHeight)
     leftCol:SetPoint("TOPLEFT", 10, -10)
     leftCol:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
@@ -348,31 +352,175 @@ function MMF_ShowWelcomePopup(forceShow)
         edgeSize = 1,
     })
     leftCol:SetBackdropColor(0.08, 0.08, 0.1, 1)
-    leftCol:SetBackdropBorderColor(0.08, 0.08, 0.1, 1)
+    leftCol:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.5)
 
-    -- Right column background  
+    -- Right column background (INFO column - position depends on TBC vs Retail)
     local rightCol = CreateFrame("Frame", nil, content, "BackdropTemplate")
-    rightCol:SetSize(290, colHeight)
-    rightCol:SetPoint("TOPRIGHT", -10, -10)
+    rightCol:SetSize(180, colHeight)
+    local rightColOffset = Compat.IsTBC and 460 or 695
+    rightCol:SetPoint("TOP", leftCol, "TOP", rightColOffset, 0)
     rightCol:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",
         edgeSize = 1,
     })
     rightCol:SetBackdropColor(0.08, 0.08, 0.1, 1)
-    rightCol:SetBackdropBorderColor(0.08, 0.08, 0.1, 1)
+    rightCol:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.5)
+
+    -- Unit Frames column (2nd column - for frame scaling and text)
+    local unitFramesCol = CreateFrame("Frame", nil, content, "BackdropTemplate")
+    unitFramesCol:SetSize(230, colHeight)
+    unitFramesCol:SetPoint("TOP", leftCol, "TOP", 240, 0)
+    unitFramesCol:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    unitFramesCol:SetBackdropColor(0.08, 0.08, 0.1, 1)
+    unitFramesCol:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.5)
+    
+    -- Unit frames column is shown in both Retail and TBC
+
+    ---------------------------------------------------
+    -- UNIT FRAMES COLUMN (2nd Column)
+    ---------------------------------------------------
+    local unitFramesTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    unitFramesTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
+    unitFramesTitle:SetPoint("TOPLEFT", 12, -12)
+    unitFramesTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    unitFramesTitle:SetText("UNIT FRAMES")
+
+    -- Player Frame Scale
+    local playerLabel = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    playerLabel:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "OUTLINE")
+    playerLabel:SetPoint("TOPLEFT", 12, -36)
+    playerLabel:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    playerLabel:SetText("Player")
+
+    local playerScaleXSlider = CreateMinimalSlider(unitFramesCol, "Scale X", 12, -56, 200, "playerFrameScaleX", 0.5, 3.0, 0.05, 1.0, function(value)
+        if MMF_UpdateFrameScale then
+            MMF_UpdateFrameScale("player")
+        end
+    end, false)
+
+    local playerScaleYSlider = CreateMinimalSlider(unitFramesCol, "Scale Y", 12, -80, 200, "playerFrameScaleY", 0.5, 5.0, 0.05, 1.0, function(value)
+        if MMF_UpdateFrameScale then
+            MMF_UpdateFrameScale("player")
+        end
+    end, false)
+
+    -- Target Frame Scale
+    local targetLabel = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    targetLabel:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "OUTLINE")
+    targetLabel:SetPoint("TOPLEFT", 12, -108)
+    targetLabel:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    targetLabel:SetText("Target")
+
+    local targetScaleXSlider = CreateMinimalSlider(unitFramesCol, "Scale X", 12, -128, 200, "targetFrameScaleX", 0.5, 3.0, 0.05, 1.0, function(value)
+        if MMF_UpdateFrameScale then
+            MMF_UpdateFrameScale("target")
+        end
+    end, false)
+
+    local targetScaleYSlider = CreateMinimalSlider(unitFramesCol, "Scale Y", 12, -152, 200, "targetFrameScaleY", 0.5, 5.0, 0.05, 1.0, function(value)
+        if MMF_UpdateFrameScale then
+            MMF_UpdateFrameScale("target")
+        end
+    end, false)
+
+    -- Target of Target Frame Scale
+    local totLabel = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    totLabel:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "OUTLINE")
+    totLabel:SetPoint("TOPLEFT", 12, -180)
+    totLabel:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    totLabel:SetText("Target of Target")
+
+    local totScaleXSlider = CreateMinimalSlider(unitFramesCol, "Scale X", 12, -200, 200, "totFrameScaleX", 0.5, 3.0, 0.05, 1.0, function(value)
+        if MMF_UpdateFrameScale then
+            MMF_UpdateFrameScale("targettarget")
+        end
+    end, false)
+
+    local totScaleYSlider = CreateMinimalSlider(unitFramesCol, "Scale Y", 12, -224, 200, "totFrameScaleY", 0.5, 5.0, 0.05, 1.0, function(value)
+        if MMF_UpdateFrameScale then
+            MMF_UpdateFrameScale("targettarget")
+        end
+    end, false)
+
+    -- Focus Frame Scale
+    local focusLabel = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    focusLabel:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "OUTLINE")
+    focusLabel:SetPoint("TOPLEFT", 12, -252)
+    focusLabel:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    focusLabel:SetText("Focus")
+
+    local focusScaleXSlider = CreateMinimalSlider(unitFramesCol, "Scale X", 12, -272, 200, "focusFrameScaleX", 0.5, 3.0, 0.05, 1.0, function(value)
+        if MMF_UpdateFrameScale then
+            MMF_UpdateFrameScale("focus")
+        end
+    end, false)
+
+    local focusScaleYSlider = CreateMinimalSlider(unitFramesCol, "Scale Y", 12, -296, 200, "focusFrameScaleY", 0.5, 5.0, 0.05, 1.0, function(value)
+        if MMF_UpdateFrameScale then
+            MMF_UpdateFrameScale("focus")
+        end
+    end, false)
+
+    -- Pet Frame Scale
+    local petLabel = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    petLabel:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "OUTLINE")
+    petLabel:SetPoint("TOPLEFT", 12, -324)
+    petLabel:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    petLabel:SetText("Pet")
+
+    local petScaleXSlider = CreateMinimalSlider(unitFramesCol, "Scale X", 12, -344, 200, "petFrameScaleX", 0.5, 3.0, 0.05, 1.0, function(value)
+        if MMF_UpdateFrameScale then
+            MMF_UpdateFrameScale("pet")
+        end
+    end, false)
+
+    local petScaleYSlider = CreateMinimalSlider(unitFramesCol, "Scale Y", 12, -368, 200, "petFrameScaleY", 0.5, 5.0, 0.05, 1.0, function(value)
+        if MMF_UpdateFrameScale then
+            MMF_UpdateFrameScale("pet")
+        end
+    end, false)
+
+    -- Divider before Frame Text
+    local unitFramesDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
+    unitFramesDivider:SetSize(200, 1)
+    unitFramesDivider:SetPoint("TOPLEFT", 12, -400)
+    unitFramesDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
+
+    -- Frame Text section (moved here)
+    local frameTextTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    frameTextTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
+    frameTextTitle:SetPoint("TOPLEFT", 12, -412)
+    frameTextTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    frameTextTitle:SetText("FRAME TEXT")
+
+    local nameTextSlider = CreateMinimalSlider(unitFramesCol, "Name Size", 12, -436, 200, "nameTextSize", 8, 20, 1, 12, function(value)
+        if MMF_UpdateNameTextSize then
+            MMF_UpdateNameTextSize(value)
+        end
+    end, true)
+
+    local hpTextSlider = CreateMinimalSlider(unitFramesCol, "HP Size", 12, -460, 200, "hpTextSize", 8, 20, 1, 13, function(value)
+        if MMF_UpdateHPTextSize then
+            MMF_UpdateHPTextSize(value)
+        end
+    end, true)
 
     -- Middle column for CLASS BARS (Retail only)
     local middleCol = CreateFrame("Frame", nil, content, "BackdropTemplate")
-    middleCol:SetSize(290, colHeight)
-    middleCol:SetPoint("TOP", leftCol, "TOP", 300, 0)
+    middleCol:SetSize(230, colHeight)
+    middleCol:SetPoint("TOP", leftCol, "TOP", 480, 0)
     middleCol:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",
         edgeSize = 1,
     })
     middleCol:SetBackdropColor(0.08, 0.08, 0.1, 1)
-    middleCol:SetBackdropBorderColor(0.08, 0.08, 0.1, 1)
+    middleCol:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.5)
     
     -- Hide middle column in TBC
     if Compat.IsTBC then
@@ -392,13 +540,13 @@ function MMF_ShowWelcomePopup(forceShow)
         StaticPopup_Show("MMF_RELOADUI")
     end)
 
-    local buffXSlider = CreateMinimalSlider(leftCol, "X Offset", 12, -56, 206, "buffXOffset", -200, 200, 1, -2, function(value)
+    local buffXSlider = CreateMinimalSlider(leftCol, "X Offset", 12, -56, 200, "buffXOffset", -200, 200, 1, -2, function(value)
         if MMF_UpdateBuffPosition then
             MMF_UpdateBuffPosition(value, MattMinimalFramesDB.buffYOffset or -64)
         end
     end, true)
 
-    local buffYSlider = CreateMinimalSlider(leftCol, "Y Offset", 12, -80, 206, "buffYOffset", -200, 200, 1, -64, function(value)
+    local buffYSlider = CreateMinimalSlider(leftCol, "Y Offset", 12, -80, 200, "buffYOffset", -200, 200, 1, -64, function(value)
         if MMF_UpdateBuffPosition then
             MMF_UpdateBuffPosition(MattMinimalFramesDB.buffXOffset or -2, value)
         end
@@ -406,7 +554,7 @@ function MMF_ShowWelcomePopup(forceShow)
 
     -- Divider
     local divider1 = leftCol:CreateTexture(nil, "ARTWORK")
-    divider1:SetSize(206, 1)
+    divider1:SetSize(200, 1)
     divider1:SetPoint("TOPLEFT", 12, -108)
     divider1:SetColorTexture(0.12, 0.12, 0.15, 1)
 
@@ -420,13 +568,13 @@ function MMF_ShowWelcomePopup(forceShow)
         StaticPopup_Show("MMF_RELOADUI")
     end)
 
-    local debuffXSlider = CreateMinimalSlider(leftCol, "X Offset", 12, -164, 206, "debuffXOffset", -200, 200, 1, 3, function(value)
+    local debuffXSlider = CreateMinimalSlider(leftCol, "X Offset", 12, -164, 200, "debuffXOffset", -200, 200, 1, 3, function(value)
         if MMF_UpdateDebuffPosition then
             MMF_UpdateDebuffPosition(value, MattMinimalFramesDB.debuffYOffset or 27)
         end
     end, true)
 
-    local debuffYSlider = CreateMinimalSlider(leftCol, "Y Offset", 12, -188, 206, "debuffYOffset", -200, 200, 1, 27, function(value)
+    local debuffYSlider = CreateMinimalSlider(leftCol, "Y Offset", 12, -188, 200, "debuffYOffset", -200, 200, 1, 27, function(value)
         if MMF_UpdateDebuffPosition then
             MMF_UpdateDebuffPosition(MattMinimalFramesDB.debuffXOffset or 3, value)
         end
@@ -434,7 +582,7 @@ function MMF_ShowWelcomePopup(forceShow)
 
     -- Divider 2
     local divider2 = leftCol:CreateTexture(nil, "ARTWORK")
-    divider2:SetSize(206, 1)
+    divider2:SetSize(200, 1)
     divider2:SetPoint("TOPLEFT", 12, -216)
     divider2:SetColorTexture(0.12, 0.12, 0.15, 1)
 
@@ -447,19 +595,19 @@ function MMF_ShowWelcomePopup(forceShow)
     auraTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     auraTitle:SetText("AURA APPEARANCE")
 
-    local auraIconSlider = CreateMinimalSlider(leftCol, "Icon Size", 12, -252, 206, "auraIconSize", 12, 40, 1, 18, function(value)
+    local auraIconSlider = CreateMinimalSlider(leftCol, "Icon Size", 12, -252, 200, "auraIconSize", 12, 40, 1, 18, function(value)
         if MMF_UpdateAuraIconSize then
             MMF_UpdateAuraIconSize(value)
         end
     end, true)
 
-    local auraTextSlider = CreateMinimalSlider(leftCol, "Stack Text", 12, -276, 206, "auraTextScale", 0.5, 2.0, 0.1, 1.0, function(value)
+    local auraTextSlider = CreateMinimalSlider(leftCol, "Stack Text", 12, -276, 200, "auraTextScale", 0.5, 2.0, 0.1, 1.0, function(value)
         if MMF_UpdateAuraTextScale then
             MMF_UpdateAuraTextScale(value)
         end
     end, false)
 
-    local timerTextSlider = CreateMinimalSlider(leftCol, "Timer Text", 12, -300, 206, "timerTextScale", 0.5, 2.0, 0.1, 1.0, function(value)
+    local timerTextSlider = CreateMinimalSlider(leftCol, "Timer Text", 12, -300, 200, "timerTextScale", 0.5, 2.0, 0.1, 1.0, function(value)
         if MMF_UpdateTimerTextScale then
             MMF_UpdateTimerTextScale(value)
         end
@@ -467,7 +615,7 @@ function MMF_ShowWelcomePopup(forceShow)
 
     -- Divider
     local divider4 = leftCol:CreateTexture(nil, "ARTWORK")
-    divider4:SetSize(206, 1)
+    divider4:SetSize(200, 1)
     divider4:SetPoint("TOPLEFT", 12, -328)
     divider4:SetColorTexture(0.12, 0.12, 0.15, 1)
 
@@ -485,44 +633,18 @@ function MMF_ShowWelcomePopup(forceShow)
         StaticPopup_Show("MMF_RELOADUI")
     end)
 
-    local powerBarWidthSlider = CreateMinimalSlider(leftCol, "Width", 12, -408, 206, "powerBarWidth", 30, 250, 1, 73, function(value)
+    local powerBarWidthSlider = CreateMinimalSlider(leftCol, "Width", 12, -408, 200, "powerBarWidth", 30, 250, 1, 73, function(value)
         if MMF_SetPowerBarSize then
             MMF_SetPowerBarSize(value, MattMinimalFramesDB.powerBarHeight or 5)
         end
     end, true)
 
-    local powerBarHeightSlider = CreateMinimalSlider(leftCol, "Height", 12, -432, 206, "powerBarHeight", 3, 15, 1, 5, function(value)
+    local powerBarHeightSlider = CreateMinimalSlider(leftCol, "Height", 12, -432, 200, "powerBarHeight", 3, 15, 1, 5, function(value)
         if MMF_SetPowerBarSize then
             MMF_SetPowerBarSize(MattMinimalFramesDB.powerBarWidth or 73, value)
         end
     end, true)
 
-    -- Divider
-    local divider3 = leftCol:CreateTexture(nil, "ARTWORK")
-    divider3:SetSize(206, 1)
-    divider3:SetPoint("TOPLEFT", 12, -460)
-    divider3:SetColorTexture(0.12, 0.12, 0.15, 1)
-
-    ---------------------------------------------------
-    -- FRAME TEXT (Left Column)
-    ---------------------------------------------------
-    local nameTextTitle = leftCol:CreateFontString(nil, "OVERLAY")
-    nameTextTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    nameTextTitle:SetPoint("TOPLEFT", 12, -472)
-    nameTextTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
-    nameTextTitle:SetText("FRAME TEXT")
-
-    local nameTextSlider = CreateMinimalSlider(leftCol, "Name Size", 12, -496, 206, "nameTextSize", 8, 20, 1, 12, function(value)
-        if MMF_UpdateNameTextSize then
-            MMF_UpdateNameTextSize(value)
-        end
-    end, true)
-
-    local hpTextSlider = CreateMinimalSlider(leftCol, "HP Size", 12, -520, 206, "hpTextSize", 8, 20, 1, 13, function(value)
-        if MMF_UpdateHPTextSize then
-            MMF_UpdateHPTextSize(value)
-        end
-    end, true)
 
     ---------------------------------------------------
     -- MIDDLE COLUMN: Class Bars
@@ -548,7 +670,7 @@ function MMF_ShowWelcomePopup(forceShow)
             StaticPopup_Show("MMF_RELOADUI")
         end)
 
-        runeBarSlider = CreateMinimalSlider(middleCol, "Rune Bar", 12, -76, 206, "runeBarScale", 0.5, 2.0, 0.01, 1.0, function(value)
+        runeBarSlider = CreateMinimalSlider(middleCol, "Rune Bar", 12, -76, 200, "runeBarScale", 0.5, 2.0, 0.01, 1.0, function(value)
             if MMF_UpdateRuneBarScale then
                 MMF_UpdateRuneBarScale(value)
             end
@@ -566,7 +688,7 @@ function MMF_ShowWelcomePopup(forceShow)
             StaticPopup_Show("MMF_RELOADUI")
         end)
 
-        local holyPowerBarSlider = CreateMinimalSlider(middleCol, "Holy Power", 12, -148, 206, "holyPowerBarScale", 0.5, 2.0, 0.01, 1.0, function(value)
+        local holyPowerBarSlider = CreateMinimalSlider(middleCol, "Holy Power", 12, -148, 200, "holyPowerBarScale", 0.5, 2.0, 0.01, 1.0, function(value)
             if MMF_UpdateHolyPowerBarScale then
                 MMF_UpdateHolyPowerBarScale(value)
             end
@@ -596,7 +718,7 @@ function MMF_ShowWelcomePopup(forceShow)
             StaticPopup_Show("MMF_RELOADUI")
         end)
 
-        local comboPointBarSlider = CreateMinimalSlider(middleCol, "Combo Points", 12, -220, 206, "comboPointBarScale", 0.5, 2.0, 0.01, 1.0, function(value)
+        local comboPointBarSlider = CreateMinimalSlider(middleCol, "Combo Points", 12, -220, 200, "comboPointBarScale", 0.5, 2.0, 0.01, 1.0, function(value)
             if MMF_UpdateComboPointBarScale then
                 MMF_UpdateComboPointBarScale(value)
             end
@@ -614,7 +736,7 @@ function MMF_ShowWelcomePopup(forceShow)
             StaticPopup_Show("MMF_RELOADUI")
         end)
 
-        local soulShardBarSlider = CreateMinimalSlider(middleCol, "Soul Shards", 12, -292, 206, "soulShardBarScale", 0.5, 2.0, 0.01, 1.0, function(value)
+        local soulShardBarSlider = CreateMinimalSlider(middleCol, "Soul Shards", 12, -292, 200, "soulShardBarScale", 0.5, 2.0, 0.01, 1.0, function(value)
             if MMF_UpdateSoulShardBarScale then
                 MMF_UpdateSoulShardBarScale(value)
             end
@@ -632,7 +754,7 @@ function MMF_ShowWelcomePopup(forceShow)
             StaticPopup_Show("MMF_RELOADUI")
         end)
 
-        local chiBarSlider = CreateMinimalSlider(middleCol, "Chi", 12, -364, 206, "chiBarScale", 0.5, 2.0, 0.01, 1.0, function(value)
+        local chiBarSlider = CreateMinimalSlider(middleCol, "Chi", 12, -364, 200, "chiBarScale", 0.5, 2.0, 0.01, 1.0, function(value)
             if MMF_UpdateChiBarScale then
                 MMF_UpdateChiBarScale(value)
             end
@@ -650,7 +772,7 @@ function MMF_ShowWelcomePopup(forceShow)
             StaticPopup_Show("MMF_RELOADUI")
         end)
 
-        local arcaneChargeBarSlider = CreateMinimalSlider(middleCol, "Arcane Charges", 12, -436, 206, "arcaneChargeBarScale", 0.5, 2.0, 0.01, 1.0, function(value)
+        local arcaneChargeBarSlider = CreateMinimalSlider(middleCol, "Arcane Charges", 12, -436, 200, "arcaneChargeBarScale", 0.5, 2.0, 0.01, 1.0, function(value)
             if MMF_UpdateArcaneChargeBarScale then
                 MMF_UpdateArcaneChargeBarScale(value)
             end
@@ -668,7 +790,7 @@ function MMF_ShowWelcomePopup(forceShow)
             StaticPopup_Show("MMF_RELOADUI")
         end)
 
-        local essenceBarSlider = CreateMinimalSlider(middleCol, "Essence", 12, -508, 206, "essenceBarScale", 0.5, 2.0, 0.01, 1.0, function(value)
+        local essenceBarSlider = CreateMinimalSlider(middleCol, "Essence", 12, -508, 200, "essenceBarScale", 0.5, 2.0, 0.01, 1.0, function(value)
             if MMF_UpdateEssenceBarScale then
                 MMF_UpdateEssenceBarScale(value)
             end
@@ -734,7 +856,7 @@ function MMF_ShowWelcomePopup(forceShow)
     local infoText = rightCol:CreateFontString(nil, "OVERLAY")
     infoText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
     infoText:SetPoint("TOPLEFT", 12, -130)
-    infoText:SetWidth(206)
+    infoText:SetWidth(156)
     infoText:SetJustifyH("LEFT")
     infoText:SetSpacing(3)
     infoText:SetTextColor(0.6, 0.6, 0.6)
@@ -820,6 +942,17 @@ function MMF_ShowWelcomePopup(forceShow)
         MattMinimalFramesDB.runeBarScale = 1.0
         MattMinimalFramesDB.powerBarWidth = 73
         MattMinimalFramesDB.powerBarHeight = 5
+        -- Reset frame scales
+        MattMinimalFramesDB.playerFrameScaleX = 1.0
+        MattMinimalFramesDB.playerFrameScaleY = 1.0
+        MattMinimalFramesDB.targetFrameScaleX = 1.0
+        MattMinimalFramesDB.targetFrameScaleY = 1.0
+        MattMinimalFramesDB.totFrameScaleX = 1.0
+        MattMinimalFramesDB.totFrameScaleY = 1.0
+        MattMinimalFramesDB.focusFrameScaleX = 1.0
+        MattMinimalFramesDB.focusFrameScaleY = 1.0
+        MattMinimalFramesDB.petFrameScaleX = 1.0
+        MattMinimalFramesDB.petFrameScaleY = 1.0
         StaticPopup_Show("MMF_RELOADUI")
     end)
 

@@ -206,3 +206,73 @@ function MMF_UpdateHPTextSize(size)
         end
     end
 end
+
+-- Frame scale functions
+function MMF_GetFrameScaleX(unit)
+    if not MattMinimalFramesDB then return 1.0 end
+    local key = unit:gsub("targettarget", "tot") .. "FrameScaleX"
+    return MattMinimalFramesDB[key] or 1.0
+end
+
+function MMF_GetFrameScaleY(unit)
+    if not MattMinimalFramesDB then return 1.0 end
+    local key = unit:gsub("targettarget", "tot") .. "FrameScaleY"
+    return MattMinimalFramesDB[key] or 1.0
+end
+
+function MMF_UpdateFrameScale(unit)
+    local frame = MMF_GetFrameForUnit(unit)
+    if not frame then return end
+    
+    -- Get the original dimensions from the frame definition
+    local def = MMF_GetFrameDefinition(unit)
+    if not def then return end
+    
+    local originalWidth = def.width
+    local originalHeight = def.height
+    
+    -- Get scale values
+    local scaleX = MMF_GetFrameScaleX(unit)
+    local scaleY = MMF_GetFrameScaleY(unit)
+    
+    -- Calculate new dimensions
+    local newWidth = originalWidth * scaleX
+    local newHeight = originalHeight * scaleY
+    
+    -- Apply new size
+    frame:SetSize(newWidth, newHeight)
+    
+    -- Update stored original dimensions for text width calculations
+    frame.originalWidth = newWidth
+    frame.originalHeight = newHeight
+    
+    -- Update health bar to match new frame size
+    if frame.healthBar then
+        frame.healthBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
+        frame.healthBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
+    end
+    
+    -- Update absorb bar height if present
+    if frame.absorbBar then
+        frame.absorbBar:SetHeight(frame.healthBar:GetHeight() or 20)
+    end
+    
+    -- Update name text width
+    if frame.nameText then
+        frame.nameText:SetWidth(newWidth - 4)
+    end
+    
+    -- Update cast bar if present (target frame)
+    if frame.castBarBG then
+        frame.castBarBG:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 1)
+        frame.castBarBG:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
+    end
+end
+
+-- Apply all frame scales (call on load)
+function MMF_ApplyAllFrameScales()
+    local units = {"player", "target", "targettarget", "focus", "pet"}
+    for _, unit in ipairs(units) do
+        MMF_UpdateFrameScale(unit)
+    end
+end

@@ -4,9 +4,11 @@
 
 local LDB = LibStub("LibDataBroker-1.1")
 local LDBIcon = LibStub("LibDBIcon-1.0")
+local Compat = _G.MMF_Compat
 
 local ADDON_NAME = "MattMinimalFrames"
 local ICON_PATH = "Interface\\AddOns\\MattMinimalFrames\\Images\\MMF.png"
+local ACCENT_COLOR = Compat.IsTBC and {0.2, 0.9, 0.4} or {0.6, 0.4, 0.9}
 
 --------------------------------------------------
 -- DATA BROKER OBJECT
@@ -18,12 +20,17 @@ local MMF_LDB = LDB:NewDataObject(ADDON_NAME, {
     icon = ICON_PATH,
     OnClick = function(self, button)
         if button == "LeftButton" then
-            MMF_ShowWelcomePopup(true)
+            -- Toggle the popup - hide if shown, show if hidden
+            if MMF_WelcomePopup and MMF_WelcomePopup:IsShown() then
+                MMF_WelcomePopup:Hide()
+            else
+                MMF_ShowWelcomePopup(true)
+            end
         end
     end,
     OnTooltipShow = function(tooltip)
-        tooltip:AddLine("MattMinimalFrames", 1, 1, 1)
-        tooltip:AddLine("|cff00ff00Click:|r Open settings", 0.8, 0.8, 0.8)
+        tooltip:AddLine("Matt's Minimal Frames", ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+        tooltip:AddLine("|cff00ff00Click:|r Toggle settings", 0.8, 0.8, 0.8)
         tooltip:AddLine("|cff00ff00Drag:|r Move button", 0.8, 0.8, 0.8)
     end,
 })
