@@ -502,3 +502,10 @@ MMF_CreateSecureUnitFrame = function(...)
     
     return frame
 end
+
+function MMF_SetGUIScale(scale)
+    -- Scale only the popup GUI
+    if MMF_WelcomePopup then
+        MMF_WelcomePopup:SetScale(scale)
+    end
+end
