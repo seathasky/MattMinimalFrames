@@ -325,10 +325,10 @@ function MMF_ShowWelcomePopup(forceShow)
         MattMinimalFramesDB.guiScale = value
     end)
     
-    guiScaleSlider:SetScript("OnMouseUp", function()
+    guiScaleSlider:SetScript("OnMouseUp", function(self)
         local value = MattMinimalFramesDB.guiScale or 1.0
-        if MMF_WelcomePopup then
-            MMF_WelcomePopup:SetScale(value)
+        if popup and popup:IsShown() then
+            popup:SetScale(value)
         end
     end)
 
