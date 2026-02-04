@@ -9,12 +9,12 @@ Clean, lightweight, and fully standalone **minimal unit frames** for World of Wa
 
 ## Features  
 - **Minimal Design** – Sleek unit frames for *Player*, *Target*, *Target-of-Target*, *Focus*, and *Pet*  
-- **Buffs & Debuffs** – Target aura display with timers  
+- **Buffs & Debuffs** – Target aura display with timers
+- **Class resources** DK Runes, Paladin Holy Power, Rogue Combo Points etc
 - **Power Bars** – Displays mana, rage, or energy  
 - **Range Checking** – Frames fade when units are out of range  
 - **Easy Movement** – Hold **SHIFT + Drag** to reposition frames  
 - **Standalone** – No external dependencies required  
-- **Class resources** DK Runes, Paladin Holy Power, Rogue Combo Points etc
 
 ---
 
