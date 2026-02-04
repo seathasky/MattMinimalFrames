@@ -14,10 +14,7 @@ Clean, lightweight, and fully standalone **minimal unit frames** for World of Wa
 - **Range Checking** – Frames fade when units are out of range  
 - **Easy Movement** – Hold **SHIFT + Drag** to reposition frames  
 - **Standalone** – No external dependencies required  
-
----
-
-- **WIP** – Class resources DK Runes, Paladin Holy Power, Rogue Combo Points etc
+- **Class resources** DK Runes, Paladin Holy Power, Rogue Combo Points etc
 
 ---
 
