@@ -1,26 +1,15 @@
--- core/unit_updates.lua
--- Unit frame update logic for MattMinimalFrames
-
 local cfg = MMF_Config
 local lastUpdate = 0
-
---------------------------------------------------
--- UNIT FRAME UPDATE
---------------------------------------------------
 
 local function UpdateUnitFrame(frame)
     if not frame or not frame.unit or not frame.nameText then return end
     local unit = frame.unit
-    
-    -- Update name text
-    -- Note: UnitName can return secret values in dungeons, but SetText can display them
-    -- We only clear the name if the unit doesn't exist
+
     if not UnitExists(unit) then
         frame.nameText:SetText("")
     else
         local unitName = UnitName(unit)
         if unit == "targettarget" then
-            -- For ToT, truncate the name (use pcall in case of secret value string operations)
             local success, truncated = pcall(function()
                 local name = unitName or ""
                 if #name > 8 then
@@ -31,7 +20,6 @@ local function UpdateUnitFrame(frame)
             if success then
                 frame.nameText:SetText(truncated)
             else
-                -- If string ops fail on secret value, just set it directly
                 frame.nameText:SetText(unitName)
             end
         else
@@ -40,26 +28,22 @@ local function UpdateUnitFrame(frame)
         end
     end
 
-    -- Update health bar
     local maxHP = UnitHealthMax(unit)
     local hp = UnitHealth(unit)
-    
+
     if frame.healthBar then
         frame.healthBar:SetMinMaxValues(0, maxHP)
         frame.healthBar:SetValue(hp)
     end
-    
-    -- Hide shield bars (can't calculate with secret values)
+
     if frame.shieldBarFG then frame.shieldBarFG:Hide() end
     if frame.shieldBarFG2 then frame.shieldBarFG2:Hide() end
-    
-    -- HP text
+
     if frame.hpText and (unit == "player" or unit == "target") then
         frame.hpText:SetText(hp)
         frame.hpText:Show()
     end
 
-    -- Update absorb bar
     if frame.absorbBar and (unit == "player" or unit == "target") then
         local absorb = UnitGetTotalAbsorbs(unit) or 0
         frame.absorbBar:SetMinMaxValues(0, maxHP)
@@ -70,7 +54,6 @@ local function UpdateUnitFrame(frame)
         frame.absorbBar:Hide()
     end
 
-    -- Hide HP/Power for ToT and pet
     if unit == "targettarget" or unit == "pet" then
         if frame.hpText then frame.hpText:Hide() end
         if frame.powerText then frame.powerText:Hide() end
@@ -78,17 +61,14 @@ local function UpdateUnitFrame(frame)
         if frame.powerText then frame.powerText:Hide() end
     end
 
-    -- Update health bar color
     local r, g, b = MMF_GetUnitColor(unit)
     if frame.healthBar then
         frame.healthBar:SetStatusBarColor(r, g, b, 1)
     end
 
-    -- Update power bar
     if frame.powerBar and (unit == "player" or unit == "target") then
         local powerType = UnitPowerType(unit)
-        
-        -- Shaman spec handling (uses compat layer)
+
         local Compat = _G.MMF_Compat
         local useManaPowerType = false
         if unit == "player" and UnitClass(unit) == "Shaman" and Compat.HasSpecialization then
@@ -98,7 +78,7 @@ local function UpdateUnitFrame(frame)
                 powerType = 0
             end
         end
-        
+
         local maxPower = useManaPowerType and UnitPowerMax(unit, 0) or UnitPowerMax(unit)
         local power = useManaPowerType and UnitPower(unit, 0) or UnitPower(unit)
 
@@ -108,21 +88,21 @@ local function UpdateUnitFrame(frame)
                 hasPower = true
             end
         end)
-        
+
         if hasPower then
             frame.powerBar:SetMinMaxValues(0, maxPower)
             frame.powerBar:SetValue(power)
-            
+
             local powerColor = PowerBarColor[powerType]
             local r, g, b = 1, 1, 1
             if powerType == 0 then
-                r, g, b = 0.2, 0.7, 1  -- Light blue for mana
+                r, g, b = 0.2, 0.7, 1
             elseif powerColor then
                 r, g, b = powerColor.r, powerColor.g, powerColor.b
             end
-            
+
             frame.powerBar:SetStatusBarColor(r, g, b, 1)
-            
+
             if frame.powerBarBorder then frame.powerBarBorder:Show() end
             frame.powerBarBG:Show()
             frame.powerBar:Show()
@@ -134,12 +114,7 @@ local function UpdateUnitFrame(frame)
     end
 end
 
--- Export for use by other modules
 MMF_UpdateUnitFrame = UpdateUnitFrame
-
---------------------------------------------------
--- UPDATE ALL FRAMES
---------------------------------------------------
 
 function MMF_UpdateAll(elapsed)
     lastUpdate = lastUpdate + (elapsed or 0)
@@ -153,13 +128,9 @@ function MMF_UpdateAll(elapsed)
     end
 end
 
---------------------------------------------------
--- POWER BAR UTILITIES
---------------------------------------------------
-
 function MMF_SetPowerBarSize(width, height)
     if not width or not height then return end
-    
+
     local frames = { MMF_PlayerFrame, MMF_TargetFrame }
     for _, frame in ipairs(frames) do
         if frame and frame.powerBarFrame then
@@ -171,7 +142,7 @@ function MMF_SetPowerBarSize(width, height)
             frame.powerBarFG:SetHeight(height)
         end
     end
-    
+
     if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
     MattMinimalFramesDB.powerBarWidth = width
     MattMinimalFramesDB.powerBarHeight = height
@@ -180,7 +151,7 @@ end
 function MMF_SetPowerBarOffset(verticalOffset, horizontalOffset)
     if not verticalOffset then return end
     horizontalOffset = horizontalOffset or cfg.POWER_BAR_HORIZONTAL_OFFSET
-    
+
     local frames = { MMF_PlayerFrame, MMF_TargetFrame }
     for _, frame in ipairs(frames) do
         if frame and frame.powerBarBorder then
@@ -194,24 +165,20 @@ function MMF_SetPowerBarOffset(verticalOffset, horizontalOffset)
             end
         end
     end
-    
+
     if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
     MattMinimalFramesDB.powerBarVerticalOffset = verticalOffset
     MattMinimalFramesDB.powerBarHorizontalOffset = horizontalOffset
 end
 
 function MMF_UpdatePowerBarVisibility()
-    -- Player power bar
     if MMF_PlayerFrame and MMF_PlayerFrame.powerBarFrame then
         MMF_PlayerFrame.powerBarFrame:SetShown(MattMinimalFramesDB.showPlayerPowerBar ~= false)
         MMF_PlayerFrame.powerText:SetShown(MattMinimalFramesDB.showPlayerPowerBar ~= false)
     end
-    
-    -- Target power bar
+
     if MMF_TargetFrame and MMF_TargetFrame.powerBarFrame then
         MMF_TargetFrame.powerBarFrame:SetShown(MattMinimalFramesDB.showTargetPowerBar ~= false)
         MMF_TargetFrame.powerText:SetShown(MattMinimalFramesDB.showTargetPowerBar ~= false)
     end
 end
-
-

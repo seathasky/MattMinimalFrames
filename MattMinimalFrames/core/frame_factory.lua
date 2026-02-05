@@ -1,7 +1,12 @@
--- core/frame_factory.lua
--- Factory module for creating unit frames
-
 local cfg = MMF_Config
+local Compat = _G.MMF_Compat
+
+local function NotSecretValue(value)
+    if issecretvalue and issecretvalue(value) then
+        return false
+    end
+    return true
+end
 
 --------------------------------------------------
 -- FRAME POSITIONING
@@ -74,7 +79,6 @@ local function CreateDragHandlers(frame, frameName)
         end
     end)
 
-    -- Visual feedback for movement
     frame.moveOverlay = frame:CreateTexture(nil, "OVERLAY")
     frame.moveOverlay:SetAllPoints()
     frame.moveOverlay:SetColorTexture(1, 1, 1, 0.3)
@@ -90,7 +94,6 @@ local function CreateDragHandlers(frame, frameName)
         self.moveOverlay:Hide()
     end)
 
-    -- Frame label from config
     local frameDef = MMF_GetFrameDefinition(frame.unit)
     local frameLabel = frameDef and frameDef.label or frame.unit
     
@@ -125,12 +128,10 @@ end
 --------------------------------------------------
 
 local function CreateHealthBar(frame)
-    -- Background
     frame.healthBarBG = frame:CreateTexture(nil, "BACKGROUND")
     frame.healthBarBG:SetAllPoints(frame)
     frame.healthBarBG:SetColorTexture(0, 0, 0, 0.5)
 
-    -- Health bar as StatusBar
     frame.healthBar = CreateFrame("StatusBar", nil, frame)
     frame.healthBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
     frame.healthBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
@@ -191,7 +192,6 @@ local function SetupPowerBar(frame, unit)
         MattMinimalFramesDB.powerBarPositions[unit] = { x = x - px, y = y - py }
     end)
 
-    -- Tooltip on mouse over
     frame.powerBarFrame:SetScript("OnEnter", function(self)
         GameTooltip_SetDefaultAnchor(GameTooltip, UIParent)
         if unit == "player" then
@@ -207,23 +207,19 @@ local function SetupPowerBar(frame, unit)
         GameTooltip:Hide()
     end)
 
-    -- Border
     frame.powerBarBorder = frame.powerBarFrame:CreateTexture(nil, "ARTWORK", nil, 0)
     frame.powerBarBorder:SetColorTexture(0, 0, 0, 0.5)
     frame.powerBarBorder:SetAllPoints()
 
-    -- Background
     frame.powerBarBG:SetHeight(DEFAULT_HEIGHT)
     frame.powerBarBG:SetWidth(DEFAULT_WIDTH)
     frame.powerBarBG:SetPoint("CENTER", frame.powerBarBorder, "CENTER", 0, 0)
 
-    -- Power bar
     frame.powerBar:SetHeight(DEFAULT_HEIGHT)
     frame.powerBar:SetWidth(DEFAULT_WIDTH)
     frame.powerBar:SetPoint("CENTER", frame.powerBarBorder, "CENTER", 0, 0)
     frame.powerBar:SetAlpha(0.5)
 
-    -- Restore saved position
     if MattMinimalFramesDB and MattMinimalFramesDB.powerBarPositions and MattMinimalFramesDB.powerBarPositions[unit] then
         local pos = MattMinimalFramesDB.powerBarPositions[unit]
         frame.powerBarFrame:ClearAllPoints()
@@ -275,7 +271,6 @@ local function CreateNameText(frame, unit)
     frame.nameText:SetShadowOffset(1, -1)
     frame.nameText:SetShadowColor(0, 0, 0, 0.9)
     
-    -- Position based on unit
     local positions = {
         player = { point = "LEFT", relPoint = "TOPLEFT", x = 2, y = 0, justify = "LEFT" },
         target = { point = "RIGHT", relPoint = "TOPRIGHT", x = -2, y = 0, justify = "RIGHT" },
@@ -329,7 +324,7 @@ local function CreatePlayerIndicators(frame)
     frame.combatTexture:SetTexture("Interface\\CharacterFrame\\UI-StateIcon")
     frame.combatTexture:SetTexCoord(0.5, 1, 0, 0.49)
     frame.combatTexture:SetSize(22, 22)
-    frame.combatTexture:SetPoint("CENTER", frame, "CENTER", 0, 0)
+    frame.combatTexture:SetPoint("CENTER", frame, "CENTER", 0, 12)
     frame.combatTexture:SetDrawLayer("OVERLAY", 7)
     frame.combatTexture:Hide()
 
@@ -343,84 +338,272 @@ local function CreatePlayerIndicators(frame)
 end
 
 --------------------------------------------------
--- CAST BAR (Target only)
+-- CAST BAR (Player and Target)
 --------------------------------------------------
 
-local function CreateCastBar(frame)
-    frame.castBarBG = frame:CreateTexture(nil, "ARTWORK", nil, 1)
-    frame.castBarBG:SetColorTexture(0, 0, 0, 0.5)
-    frame.castBarBG:SetHeight(3)
-    frame.castBarBG:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 1)
-    frame.castBarBG:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
-    frame.castBarBG:Hide()
-
-    frame.castBarFG = frame:CreateTexture(nil, "ARTWORK", nil, 2)
-    frame.castBarFG:SetHeight(3)
-    frame.castBarFG:SetPoint("BOTTOMLEFT", frame.castBarBG, "BOTTOMLEFT", 0, 0)
-    frame.castBarFG:Hide()
-    
-    frame.UpdateCastBar = function(self, elapsed)
-        if not self.casting then return end
-        
-        local duration = GetTime() - self.castStart
-        if duration > self.castDuration then
-            self.casting = false
-            self.castBarBG:Hide()
-            self.castBarFG:Hide()
-            self:SetScript("OnUpdate", nil)
-            return
-        end
-        
-        local width = self.originalWidth - 2
-        local progress = duration / self.castDuration
-        self.castBarFG:SetWidth(width * progress)
+local function CreateCastBar(frame, unit)
+    local settingKey = (unit == "player") and "showPlayerCastBar" or "showTargetCastBar"
+    local showCastBar = MattMinimalFramesDB and MattMinimalFramesDB[settingKey]
+    if showCastBar == nil then
+        showCastBar = true
     end
-
-    -- Register cast events
-    frame:RegisterEvent("UNIT_SPELLCAST_START")
-    frame:RegisterEvent("UNIT_SPELLCAST_STOP")
-    frame:RegisterEvent("UNIT_SPELLCAST_FAILED")
-    frame:RegisterEvent("UNIT_SPELLCAST_INTERRUPTED")
+    if not showCastBar then return end
     
-    frame:HookScript("OnEvent", function(self, event, ...)
-        local eventUnit = ...
-        if eventUnit ~= self.unit then return end
-        
-        if event == "UNIT_SPELLCAST_START" then
-            local name, text, texture, startTime, endTime, isTradeSkill, castID, notInterruptible = UnitCastingInfo(self.unit)
-            if name then
-                local success, duration = pcall(function()
-                    return (endTime - startTime) / 1000
-                end)
-                
-                if success and duration then
-                    self.casting = true
-                    self.castStart = GetTime()
-                    self.castDuration = duration
-                    
-                    if notInterruptible then
-                        self.castBarFG:SetColorTexture(0.7, 0.7, 0.7, 1)
-                    else
-                        self.castBarFG:SetColorTexture(1, 1, 1, 1)
-                    end
-                    
-                    self.castBarBG:Show()
-                    self.castBarFG:Show()
-                    self:SetScript("OnUpdate", self.UpdateCastBar)
-                else
-                    self.casting = false
-                    self.castBarBG:Hide()
-                    self.castBarFG:Hide()
-                    self:SetScript("OnUpdate", nil)
+    frame.castBarFrame = CreateFrame("Frame", nil, frame)
+    frame.castBarFrame:SetFrameLevel(frame.healthBar:GetFrameLevel() + 5)
+    frame.castBarFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 1)
+    frame.castBarFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
+    frame.castBarFrame:SetHeight(8)
+    
+    frame.castBarBG = frame.castBarFrame:CreateTexture(nil, "BACKGROUND")
+    frame.castBarBG:SetAllPoints(frame.castBarFrame)
+    frame.castBarBG:SetColorTexture(0, 0, 0, 0.5)
+
+    frame.castBar = CreateFrame("StatusBar", nil, frame.castBarFrame)
+    frame.castBar:SetAllPoints(frame.castBarFrame)
+    frame.castBar:SetMinMaxValues(0, 1)
+    frame.castBar:SetValue(0)
+    frame.castBar:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
+    frame.castBar:SetStatusBarColor(1, 1, 1, 1)
+    
+    frame.castBarTextOverlay = CreateFrame("Frame", nil, frame.castBarFrame)
+    frame.castBarTextOverlay:SetFrameLevel(frame.castBar:GetFrameLevel() + 2)
+    frame.castBarTextOverlay:SetAllPoints(frame.castBarFrame)
+    frame.castBarTextOverlay:EnableMouse(false)
+    
+    frame.castBarText = frame.castBarTextOverlay:CreateFontString(nil, "OVERLAY")
+    frame.castBarText:SetFont(cfg.FONT_PATH, 9, "OUTLINE")
+    frame.castBarText:SetTextColor(0.9, 0.9, 0.9, 1)
+    frame.castBarText:SetWordWrap(false)
+    
+    frame.castBarText:SetPoint("CENTER", frame.castBarTextOverlay, "CENTER", 0, 0)
+    frame.castBarText:SetJustifyH("CENTER")
+    frame.castBarText:SetWidth(frame.originalWidth - 8)
+    frame.castBarFrame:Hide()
+    
+    frame.castInfo = {
+        casting = false,
+        channeling = false,
+        castID = nil,  
+        startTimeMs = nil,  -- TBC only: from UnitCastingInfo/UnitChannelInfo (ms)
+        endTimeMs = nil,    -- TBC only
+    }
+    
+    local function ShowCastBar(spellName, notInterruptible, startTimeMs, endTimeMs)
+        local r, g, b = MMF_Config.GetCastBarColor(MattMinimalFramesDB and MattMinimalFramesDB.castBarColor or "yellow")
+        if unit == "target" then
+            frame.castBar:SetStatusBarColor(r, g, b, 1)
+        else
+            local isUninterruptible = (NotSecretValue(notInterruptible) and notInterruptible == true)
+            if isUninterruptible then
+                frame.castBar:SetStatusBarColor(0.7, 0.7, 0.7, 1)
+            else
+                frame.castBar:SetStatusBarColor(r, g, b, 1)
+            end
+        end
+        if spellName then
+            local ok = pcall(function() frame.castBarText:SetText(spellName) end)
+            if not ok then frame.castBarText:SetText("") end
+        else
+            frame.castBarText:SetText("")
+        end
+        if Compat.IsTBC and startTimeMs and endTimeMs then
+            frame.castInfo.startTimeMs = startTimeMs
+            frame.castInfo.endTimeMs = endTimeMs
+            local maxVal = (endTimeMs - startTimeMs) / 1000
+            frame.castBar:SetMinMaxValues(0, maxVal)
+            if frame.castInfo.casting then
+                frame.castBar:SetValue(GetTime() - startTimeMs / 1000)
+            else
+                frame.castBar:SetValue(endTimeMs / 1000 - GetTime())
+            end
+        end
+        frame.castBarFrame:Show()
+    end
+    
+    local function HideCastBar()
+        frame.castInfo.casting = false
+        frame.castInfo.channeling = false
+        frame.castInfo.startTimeMs = nil
+        frame.castInfo.endTimeMs = nil
+        frame.castBarFrame:Hide()
+    end
+    
+    -- OnUpdate: TBC uses manual timing (no SetTimerDuration/UnitCastingDuration); Retail uses SetTimerDuration
+    if Compat.IsTBC then
+        frame.castBarFrame:SetScript("OnUpdate", function(self, elapsed)
+            local info = frame.castInfo
+            if info.casting and info.startTimeMs and info.endTimeMs then
+                local now = GetTime()
+                local startSec = info.startTimeMs / 1000
+                local endSec = info.endTimeMs / 1000
+                local maxVal = endSec - startSec
+                local val = now - startSec
+                if val >= maxVal then
+                    frame.castBar:SetMinMaxValues(0, maxVal)
+                    frame.castBar:SetValue(maxVal)
+                    HideCastBar()
+                    return
+                end
+                frame.castBar:SetMinMaxValues(0, maxVal)
+                frame.castBar:SetValue(val)
+            elseif info.channeling and info.startTimeMs and info.endTimeMs then
+                local now = GetTime()
+                local endSec = info.endTimeMs / 1000
+                local startSec = info.startTimeMs / 1000
+                local maxVal = endSec - startSec
+                local val = endSec - now
+                if val <= 0 then
+                    HideCastBar()
+                    return
+                end
+                frame.castBar:SetMinMaxValues(0, maxVal)
+                frame.castBar:SetValue(val)
+            end
+        end)
+    else
+        local StatusBarTimerDirection = Enum.StatusBarTimerDirection
+        local StatusBarInterpolation = Enum.StatusBarInterpolation
+        frame.castBarFrame:SetScript("OnUpdate", function(self, elapsed)
+            local info = frame.castInfo
+            if info.casting then
+                local name = UnitCastingInfo(unit)
+                if not name then
+                    HideCastBar()
+                    return
+                end
+                local duration = UnitCastingDuration(unit)
+                if duration then
+                    frame.castBar:SetTimerDuration(duration, StatusBarInterpolation.Immediate, StatusBarTimerDirection.ElapsedTime)
+                end
+            elseif info.channeling then
+                local name = UnitChannelInfo(unit)
+                if not name then
+                    HideCastBar()
+                    return
+                end
+                local duration = UnitChannelDuration(unit)
+                if duration then
+                    frame.castBar:SetTimerDuration(duration, StatusBarInterpolation.Immediate, StatusBarTimerDirection.RemainingTime)
                 end
             end
-        elseif event == "UNIT_SPELLCAST_STOP" or 
-               event == "UNIT_SPELLCAST_FAILED" or 
-               event == "UNIT_SPELLCAST_INTERRUPTED" then
-            self.casting = false
-            self.castBarBG:Hide()
-            self.castBarFG:Hide()
-            self:SetScript("OnUpdate", nil)
+        end)
+    end
+
+    -- Create a separate event frame to avoid conflicts
+    local eventFrame = CreateFrame("Frame")
+    eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_START", unit)
+    eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_STOP", unit)
+    eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_FAILED", unit)
+    eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_INTERRUPTED", unit)
+    eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_START", unit)
+    eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_STOP", unit)
+    if unit == "target" then
+        eventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
+    end
+    if Compat.IsTBC then
+        eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_DELAYED", unit)
+        eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_UPDATE", unit)
+    end
+    
+    eventFrame:SetScript("OnEvent", function(self, event, ...)
+        if event == "PLAYER_TARGET_CHANGED" then
+            local name, _, _, startTime, endTime, _, castID, notInterruptible = UnitCastingInfo(unit)
+            if name then
+                frame.castInfo.casting = true
+                frame.castInfo.channeling = false
+                frame.castInfo.castID = (unit == "player" and NotSecretValue(castID) and castID) or nil
+                ShowCastBar(name, notInterruptible, Compat.IsTBC and startTime or nil, Compat.IsTBC and endTime or nil)
+                return
+            end
+            name, _, _, startTime, endTime, _, notInterruptible = UnitChannelInfo(unit)
+            if name then
+                frame.castInfo.casting = false
+                frame.castInfo.channeling = true
+                frame.castInfo.castID = nil
+                ShowCastBar(name, notInterruptible, Compat.IsTBC and startTime or nil, Compat.IsTBC and endTime or nil)
+                return
+            end
+            HideCastBar()
+            
+        elseif event == "UNIT_SPELLCAST_START" then
+            local name, _, _, startTime, endTime, _, castID, notInterruptible = UnitCastingInfo(unit)
+            if name then
+                frame.castInfo.casting = true
+                frame.castInfo.channeling = false
+                frame.castInfo.castID = (unit == "player" and NotSecretValue(castID) and castID) or nil
+                ShowCastBar(name, notInterruptible, Compat.IsTBC and startTime or nil, Compat.IsTBC and endTime or nil)
+            end
+            
+        elseif event == "UNIT_SPELLCAST_CHANNEL_START" then
+            -- TBC: name, text, texture, startTime, endTime, isTradeSkill, notInterruptible, spellID
+            local name, _, _, startTime, endTime, _, notInterruptible = UnitChannelInfo(unit)
+            if name then
+                frame.castInfo.casting = false
+                frame.castInfo.channeling = true
+                frame.castInfo.castID = nil
+                ShowCastBar(name, notInterruptible, Compat.IsTBC and startTime or nil, Compat.IsTBC and endTime or nil)
+            end
+        
+        elseif Compat.IsTBC and event == "UNIT_SPELLCAST_DELAYED" then
+            if frame.castInfo.casting then
+                local name, _, _, startTime, endTime = UnitCastingInfo(unit)
+                if name and startTime and endTime then
+                    frame.castInfo.startTimeMs = startTime
+                    frame.castInfo.endTimeMs = endTime
+                end
+            end
+        
+        elseif Compat.IsTBC and event == "UNIT_SPELLCAST_CHANNEL_UPDATE" then
+            if frame.castInfo.channeling then
+                local name, _, _, startTime, endTime = UnitChannelInfo(unit)
+                if name and startTime and endTime then
+                    frame.castInfo.startTimeMs = startTime
+                    frame.castInfo.endTimeMs = endTime
+                end
+            end
+            
+        elseif event == "UNIT_SPELLCAST_STOP" then
+            if not frame.castInfo.casting then return end
+            -- For target, castID is secret - use API instead of comparing
+            if unit == "target" then
+                if not UnitCastingInfo(unit) then
+                    frame.castInfo.casting = false
+                    frame.castInfo.castID = nil
+                    HideCastBar()
+                end
+            else
+                local _, eventCastID = ...
+                if NotSecretValue(eventCastID) and NotSecretValue(frame.castInfo.castID) and eventCastID == frame.castInfo.castID then
+                    frame.castInfo.casting = false
+                    frame.castInfo.castID = nil
+                    HideCastBar()
+                end
+            end
+            
+        elseif event == "UNIT_SPELLCAST_CHANNEL_STOP" then
+            if frame.castInfo.channeling then
+                frame.castInfo.channeling = false
+                HideCastBar()
+            end
+            
+        elseif event == "UNIT_SPELLCAST_FAILED" or event == "UNIT_SPELLCAST_INTERRUPTED" then
+            if not frame.castInfo.casting then return end
+            if unit == "target" then
+                if not UnitCastingInfo(unit) then
+                    frame.castInfo.casting = false
+                    frame.castInfo.castID = nil
+                    HideCastBar()
+                end
+            else
+                local _, eventCastID = ...
+                if NotSecretValue(eventCastID) and NotSecretValue(frame.castInfo.castID) and eventCastID == frame.castInfo.castID then
+                    frame.castInfo.casting = false
+                    frame.castInfo.castID = nil
+                    HideCastBar()
+                end
+            end
+            
         end
     end)
 end
@@ -430,7 +613,6 @@ end
 --------------------------------------------------
 
 function MMF_CreateSecureUnitFrame(unit, frameName, width, height, point, relPoint, xOfs, yOfs)
-    -- Create secure button
     local f = CreateFrame("Button", frameName, UIParent, "SecureUnitButtonTemplate")
     f:SetMovable(true)
     f:EnableMouse(true)
@@ -441,56 +623,40 @@ function MMF_CreateSecureUnitFrame(unit, frameName, width, height, point, relPoi
     f.originalHeight = height
     f.unit = unit
 
-    -- Secure attributes
     MMF_ResetSecureAttributes(f)
-
-    -- Tooltip handlers
     CreateTooltipHandlers(f)
-    
-    -- Position
     RestoreFramePosition(f, frameName, point, relPoint, xOfs, yOfs)
-
-    -- Drag handlers
     CreateDragHandlers(f, frameName)
-
-    -- Health bar
     CreateHealthBar(f)
 
-    -- Power bar (player and target only)
     if unit == "player" or unit == "target" then
         CreatePowerBarContainer(f, unit)
         CreateAbsorbBar(f)
     end
 
-    -- Highlight texture
     f.highlightTexture = f:CreateTexture(nil, "OVERLAY")
     f.highlightTexture:SetAllPoints(f)
     f.highlightTexture:SetColorTexture(1, 1, 1, 0.15)
     f.highlightTexture:Hide()
 
-    -- Text elements
     CreateNameText(f, unit)
     CreateResourceText(f, unit)
 
-    -- Setup power bar layout (player/target)
     if unit == "player" or unit == "target" then
         SetupPowerBar(f, unit)
     end
 
-    -- Player-specific indicators
     if unit == "player" then
         CreatePlayerIndicators(f)
     end
 
-    -- Target-specific cast bar
-    if unit == "target" then
-        CreateCastBar(f)
+    if unit == "player" or unit == "target" then
+        CreateCastBar(f, unit)
     end
 
     return f
 end
 
--- Wrapper with initial visibility setup
 local originalCreate = MMF_CreateSecureUnitFrame
 MMF_CreateSecureUnitFrame = function(...)
     local frame = originalCreate(...)
@@ -504,7 +670,6 @@ MMF_CreateSecureUnitFrame = function(...)
 end
 
 function MMF_SetGUIScale(scale)
-    -- Scale only the popup GUI
     if MMF_WelcomePopup then
         MMF_WelcomePopup:SetScale(scale)
     end

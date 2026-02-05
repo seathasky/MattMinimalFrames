@@ -1,10 +1,4 @@
--- core/events.lua
--- Event handling for MattMinimalFrames
-
--- Initialize LibCustomGlow
 local LibCustomGlow = LibStub("LibCustomGlow-1.0")
-
--- Pending flag for lock changes
 local pendingLock = false
 
 --------------------------------------------------
@@ -24,7 +18,7 @@ function MMF_LockFrames()
     
     for _, frm in ipairs(MMF_GetAllFrames()) do
         if frm then
-            frm:SetMovable(true)  -- Always movable for shift+drag
+            frm:SetMovable(true)
             frm:SetClampedToScreen(true)
             frm:EnableMouse(true)
             frm:RegisterForDrag("LeftButton")
@@ -129,7 +123,6 @@ coreEventFrame:SetScript("OnEvent", function(self, event, unit)
     end
 end)
 
--- OnUpdate for throttled updates
 coreEventFrame:SetScript("OnUpdate", function(self, elapsed)
     MMF_UpdateAll(elapsed)
 end)

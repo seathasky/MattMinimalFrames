@@ -1,7 +1,3 @@
--- core/popup.lua
--- Contains the MMF_ShowWelcomePopup function for MattMinimalFrames
-
--- Version-based theming
 local Compat = _G.MMF_Compat
 local ACCENT_COLOR = Compat.IsTBC and {0.2, 0.9, 0.4} or {0.6, 0.4, 0.9}  -- Green for TBC, Purple for Retail
 local ADDON_TITLE = Compat.IsTBC and "|cffffffffMatt's Minimal Frames |cff66FF66TBC|r" or "|cffffffffMatt's Minimal Frames |cff9966FFMIDNIGHT|r"
@@ -206,7 +202,7 @@ function MMF_ShowWelcomePopup(forceShow)
 
     -- Main frame 
     local popup = CreateFrame("Frame", "MMF_WelcomePopup", UIParent, "BackdropTemplate")
-    local popupHeight = Compat.IsTBC and 640 or 660
+    local popupHeight = Compat.IsTBC and 680 or 705
     local popupWidth = Compat.IsTBC and 685 or 920
     popup:SetSize(popupWidth, popupHeight)
     
@@ -336,14 +332,16 @@ function MMF_ShowWelcomePopup(forceShow)
         end
     end)
 
-    -- Content area
+    -- Content area (between title bar and footer)
     local content = CreateFrame("Frame", nil, popup)
     content:SetPoint("TOPLEFT", 0, -28)
     content:SetPoint("BOTTOMRIGHT", 0, 40)
 
+    -- Column height matches content (popup - title - footer - top/bottom padding)
+    local colHeight = popupHeight - 28 - 40 - 10  -- 10 = 5 top + 5 bottom padding
+
     -- Left column background
     local leftCol = CreateFrame("Frame", nil, content, "BackdropTemplate")
-    local colHeight = Compat.IsTBC and 560 or 580
     leftCol:SetSize(230, colHeight)
     leftCol:SetPoint("TOPLEFT", 10, -10)
     leftCol:SetBackdrop({
@@ -509,6 +507,150 @@ function MMF_ShowWelcomePopup(forceShow)
             MMF_UpdateHPTextSize(value)
         end
     end, true)
+
+    -- Divider before Cast Bars
+    local castBarsDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
+    castBarsDivider:SetSize(200, 1)
+    castBarsDivider:SetPoint("TOPLEFT", 12, -488)
+    castBarsDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
+
+    -- Cast Bars section
+    local castBarsTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    castBarsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
+    castBarsTitle:SetPoint("TOPLEFT", 12, -500)
+    castBarsTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    castBarsTitle:SetText("CAST BARS")
+
+    local playerCastBarCheck = CreateMinimalCheckbox(unitFramesCol, "Player Cast Bar", 12, -524, "showPlayerCastBar", true, function()
+        StaticPopup_Show("MMF_RELOADUI")
+    end)
+
+    local targetCastBarCheck = CreateMinimalCheckbox(unitFramesCol, "Target Cast Bar", 12, -548, "showTargetCastBar", true, function()
+        StaticPopup_Show("MMF_RELOADUI")
+    end)
+
+    -- Cast bar color dropdown (minimal style: same row layout as sliders)
+    local castBarColorContainer = CreateFrame("Frame", "MMF_CastBarColorDropdown", unitFramesCol)
+    castBarColorContainer:SetSize(200, 24)
+    castBarColorContainer:SetPoint("TOPLEFT", 12, -572)
+
+    local castBarColorLabel = castBarColorContainer:CreateFontString(nil, "OVERLAY")
+    castBarColorLabel:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+    castBarColorLabel:SetPoint("LEFT", 0, 0)
+    castBarColorLabel:SetTextColor(0.8, 0.8, 0.8)
+    castBarColorLabel:SetText("Cast Bar Color")
+    castBarColorLabel:SetWidth(95)
+    castBarColorLabel:SetJustifyH("LEFT")
+
+    local castBarColorButton = CreateFrame("Button", nil, castBarColorContainer, "BackdropTemplate")
+    castBarColorButton:SetSize(105, 20)
+    castBarColorButton:SetPoint("LEFT", 105, 0)
+    castBarColorButton:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    castBarColorButton:SetBackdropColor(0.06, 0.06, 0.08, 1)
+    castBarColorButton:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+    castBarColorButton:SetScript("OnEnter", function(self)
+        self:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.6)
+    end)
+    castBarColorButton:SetScript("OnLeave", function(self)
+        self:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+    end)
+
+    local castBarColorButtonText = castBarColorButton:CreateFontString(nil, "OVERLAY")
+    castBarColorButtonText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+    castBarColorButtonText:SetPoint("LEFT", 4, 0)
+    castBarColorButtonText:SetJustifyH("LEFT")
+    castBarColorButtonText:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+
+    local function UpdateCastBarColorButtonText()
+        local key = MattMinimalFramesDB and MattMinimalFramesDB.castBarColor or "yellow"
+        for _, opt in ipairs(MMF_Config.CAST_BAR_COLORS) do
+            if opt.value == key then
+                castBarColorButtonText:SetText(opt.label)
+                return
+            end
+        end
+        castBarColorButtonText:SetText("Yellow")
+    end
+    UpdateCastBarColorButtonText()
+
+    -- Minimal-style dropdown list (no Blizzard UIDropDownMenu)
+    local castBarColorList = CreateFrame("Frame", nil, unitFramesCol, "BackdropTemplate")
+    castBarColorList:SetSize(105, 22 * #MMF_Config.CAST_BAR_COLORS)
+    castBarColorList:SetPoint("TOPLEFT", castBarColorButton, "BOTTOMLEFT", 0, -2)
+    castBarColorList:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    castBarColorList:SetBackdropColor(0.06, 0.06, 0.08, 1)
+    castBarColorList:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+    castBarColorList:SetFrameStrata("DIALOG")
+    castBarColorList:SetFrameLevel(1000)
+    castBarColorList:Hide()
+
+    for i, opt in ipairs(MMF_Config.CAST_BAR_COLORS) do
+        local row = CreateFrame("Button", nil, castBarColorList, "BackdropTemplate")
+        row:SetSize(105, 20)
+        row:SetPoint("TOPLEFT", 1, -1 - (i - 1) * 22)
+        row:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8x8",
+        })
+        row:SetBackdropColor(0, 0, 0, 0)
+        row:SetScript("OnEnter", function(self)
+            self.bg:SetColorTexture(ACCENT_COLOR[1] * 0.2, ACCENT_COLOR[2] * 0.2, ACCENT_COLOR[3] * 0.2, 0.6)
+            self.text:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+        end)
+        row:SetScript("OnLeave", function(self)
+            self.bg:SetColorTexture(0, 0, 0, 0)
+            self.text:SetTextColor(0.9, 0.9, 0.9)
+        end)
+        row.bg = row:CreateTexture(nil, "BACKGROUND")
+        row.bg:SetAllPoints()
+        row.bg:SetColorTexture(0, 0, 0, 0)
+        local text = row:CreateFontString(nil, "OVERLAY")
+        text:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+        text:SetPoint("LEFT", 4, 0)
+        text:SetJustifyH("LEFT")
+        text:SetTextColor(0.9, 0.9, 0.9)
+        text:SetText(opt.label)
+        row.text = text
+        row:SetScript("OnClick", function()
+            if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
+            MattMinimalFramesDB.castBarColor = opt.value
+            UpdateCastBarColorButtonText()
+            castBarColorList:Hide()
+            if castBarColorList.clickCatcher then
+                castBarColorList.clickCatcher:Hide()
+            end
+            StaticPopup_Show("MMF_RELOADUI")
+        end)
+    end
+
+    castBarColorButton:SetScript("OnClick", function(self)
+        if castBarColorList:IsShown() then
+            castBarColorList:Hide()
+            if castBarColorList.clickCatcher then castBarColorList.clickCatcher:Hide() end
+            return
+        end
+        castBarColorList:Show()
+        -- Click-outside to close: transparent overlay on popup (list has higher frame level so list clicks work)
+        if not castBarColorList.clickCatcher then
+            local catcher = CreateFrame("Button", nil, popup)
+            catcher:SetAllPoints(popup)
+            catcher:SetFrameLevel(popup:GetFrameLevel() + 100)
+            catcher:SetScript("OnClick", function()
+                catcher:Hide()
+                castBarColorList:Hide()
+            end)
+            castBarColorList.clickCatcher = catcher
+        end
+        castBarColorList.clickCatcher:SetFrameLevel(popup:GetFrameLevel() + 100)
+        castBarColorList.clickCatcher:Show()
+    end)
 
     -- Middle column for CLASS BARS (Retail only)
     local middleCol = CreateFrame("Frame", nil, content, "BackdropTemplate")
@@ -796,7 +938,7 @@ function MMF_ShowWelcomePopup(forceShow)
             end
         end, false)
     else
-        -- No additional class bars for TBC
+
     end
 
     ---------------------------------------------------

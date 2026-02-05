@@ -1,5 +1,3 @@
--- MattMinimalFrames_Init.lua
-
 local function HideBlizzardFrames()
     local framesToHide = {
         PlayerFrame,
@@ -27,16 +25,13 @@ SlashCmdList["MATTMINIMALFRAMES"] = function()
     MMF_ShowWelcomePopup(true)
 end
 
--- Quick reload command
 SLASH_MMFRELOAD1 = "/rl"
 SlashCmdList["MMFRELOAD"] = ReloadUI
 
 local function Initialize()
-    -- Initialize saved variables on fresh install
     if not MattMinimalFramesDB then
         MattMinimalFramesDB = {}
     end
-    -- Apply defaults for any missing values
     if MattMinimalFrames_Defaults then
         for key, value in pairs(MattMinimalFrames_Defaults) do
             if MattMinimalFramesDB[key] == nil then

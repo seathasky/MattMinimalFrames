@@ -1,6 +1,3 @@
--- core/defaults.lua
--- Contains default settings for MattMinimalFrames
-
 local mmfDefaults = {
     locked = false,
     showPlayerPowerBar = true,
@@ -54,6 +51,10 @@ local mmfDefaults = {
     focusFrameScaleY = 1.0,
     petFrameScaleX = 1.0,
     petFrameScaleY = 1.0,
+    -- Cast bar settings
+    showPlayerCastBar = true,
+    showTargetCastBar = true,
+    castBarColor = "yellow",  -- key for MMF_Config.CAST_BAR_COLORS
 }
 
 -- Power bar configuration constants (for convenience)

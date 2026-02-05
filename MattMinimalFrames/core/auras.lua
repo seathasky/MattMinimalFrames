@@ -1,14 +1,8 @@
--- core/auras.lua
--- Aura (buff/debuff) display for MattMinimalFrames
--- Uses compat.lua for version-specific aura APIs
-
 local Compat = _G.MMF_Compat
 local cfg = MMF_Config
 local AURA_ICON_SPACING = cfg.AURA_ICON_SPACING
 local MAX_AURA_ICONS = cfg.MAX_AURA_ICONS
 local ROW_ICONS = cfg.AURA_ROW_ICONS
-
--- Cache compat functions
 local GetUnitAuras = Compat.GetUnitAuras
 local SetAuraCooldown = Compat.SetAuraCooldown
 local GetAuraCount = Compat.GetAuraCount
@@ -87,13 +81,9 @@ function MMF_UpdateAuraIconSize(size)
             aura:SetPoint(anchorPoint, container, anchorPoint, getX(col, size), getY(row, size))
         end
     end
-    
-    -- Buffs: anchor TOPRIGHT, grow left
     updateContainer(MMF_TargetFrame.BuffContainer, "TOPRIGHT",
         function(col, s) return -col * (s + AURA_ICON_SPACING) end,
         function(row, s) return -row * (s + AURA_ICON_SPACING) end)
-    
-    -- Debuffs: anchor TOPLEFT, grow right
     updateContainer(MMF_TargetFrame.DebuffContainer, "TOPLEFT",
         function(col, s) return col * (s + AURA_ICON_SPACING) end,
         function(row, s) return row * (s + AURA_ICON_SPACING) end)
@@ -131,37 +121,26 @@ local function CreateAuraIcon(parent, index, isDebuff, iconSize)
             -col * (iconSize + AURA_ICON_SPACING),
             -row * (iconSize + AURA_ICON_SPACING))
     end
-    
-    -- Icon texture
     aura.icon = aura:CreateTexture(nil, "ARTWORK")
     aura.icon:SetAllPoints(aura)
     aura.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-    
-    -- Cooldown frame
     aura.cooldown = CreateFrame("Cooldown", nil, aura, "CooldownFrameTemplate")
     aura.cooldown:SetAllPoints(aura)
     aura.cooldown:SetDrawEdge(false)
     aura.cooldown:SetHideCountdownNumbers(false)
-    
-    -- Timer text from cooldown
     aura.timerText = aura.cooldown:GetRegions()
     if aura.timerText and aura.timerText.SetFont then
         aura.timerText:SetFont(STANDARD_TEXT_FONT, 12, "OUTLINE")
         aura.timerText:ClearAllPoints()
         aura.timerText:SetPoint("CENTER", aura.cooldown, "CENTER", 0, 0)
     end
-    
-    -- Debuff border
     if isDebuff then
         aura.border = aura:CreateTexture(nil, "OVERLAY")
         aura.border:SetTexture("Interface\\Buttons\\UI-Debuff-Border")
         aura.border:SetAllPoints(aura)
     end
-    
-    -- Tooltip handlers
     aura:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        -- Retail uses auraInstanceID, TBC uses index
         if self.auraData and self.auraData.auraInstanceID and GameTooltip.SetUnitAuraByAuraInstanceID then
             GameTooltip:SetUnitAuraByAuraInstanceID("target", self.auraData.auraInstanceID, self.auraFilter)
         elseif self.auraIndex then
@@ -216,7 +195,6 @@ end
 -- AURA UPDATE
 --------------------------------------------------
 
--- Unified aura icon update (uses compat layer)
 local function UpdateAuraIcon(auraFrame, auraData, filter, unit, index)
     auraFrame.icon:SetTexture(auraData.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
     auraFrame.auraData = auraData
@@ -224,11 +202,7 @@ local function UpdateAuraIcon(auraFrame, auraData, filter, unit, index)
     auraFrame.auraFilter = filter
     
     local auraInstanceID = auraData.auraInstanceID
-    
-    -- Stack count - hide first, then show if needed
     if auraFrame.count then auraFrame.count:Hide() end
-    
-    -- Retail: use GetAuraApplicationDisplayCount directly (avoid comparing secret values)
     if auraInstanceID and C_UnitAuras and C_UnitAuras.GetAuraApplicationDisplayCount then
         if not auraFrame.count then
             auraFrame.count = auraFrame:CreateFontString(nil, "OVERLAY")
@@ -239,7 +213,6 @@ local function UpdateAuraIcon(auraFrame, auraData, filter, unit, index)
         auraFrame.count:SetText(C_UnitAuras.GetAuraApplicationDisplayCount(unit, auraInstanceID, 2, 999))
         auraFrame.count:Show()
     elseif auraData.count and auraData.count > 1 then
-        -- TBC/Classic fallback
         if not auraFrame.count then
             auraFrame.count = auraFrame:CreateFontString(nil, "OVERLAY")
             auraFrame.count:SetPoint("BOTTOMRIGHT", auraFrame, "BOTTOMRIGHT", -1, 1)
@@ -249,8 +222,6 @@ local function UpdateAuraIcon(auraFrame, auraData, filter, unit, index)
         auraFrame.count:SetText(auraData.count)
         auraFrame.count:Show()
     end
-    
-    -- Cooldown (uses compat layer)
     if auraFrame.cooldown then
         SetAuraCooldown(auraFrame.cooldown, auraData, unit)
         
@@ -268,12 +239,8 @@ function MMF_UpdateTargetAuras()
     if not MMF_TargetFrame or not MMF_TargetFrame.BuffContainer then return end
 
     local unit = "target"
-    
-    -- Use compat layer for aura retrieval (handles both TBC and Retail)
     local buffs = GetUnitAuras(unit, "HELPFUL")
     local debuffs = GetUnitAuras(unit, "HARMFUL")
-
-    -- Update Buffs
     local buffContainer = MMF_TargetFrame.BuffContainer
     if MattMinimalFramesDB.showBuffs == false then
         buffContainer:Hide()
@@ -291,8 +258,6 @@ function MMF_UpdateTargetAuras()
             end
         end
     end
-
-    -- Update Debuffs
     local debuffContainer = MMF_TargetFrame.DebuffContainer
     if MattMinimalFramesDB.showDebuffs == false then
         debuffContainer:Hide()
@@ -307,8 +272,6 @@ function MMF_UpdateTargetAuras()
             local auraFrame = debuffContainer.auras[i]
             if auraFrame then
                 UpdateAuraIcon(auraFrame, debuffs[i], "HARMFUL", unit, i)
-                
-                -- Debuff border color
                 if auraFrame.border then
                     local dispelName = debuffs[i].dispelName or debuffs[i].debuffType
                     if NotSecretValue(dispelName) then

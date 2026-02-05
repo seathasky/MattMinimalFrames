@@ -1,6 +1,3 @@
--- core/compat.lua
--- Centralized compatibility layer for Retail and TBC Anniversary
-
 local _, MMF = ...
 MMF = MMF or {}
 
@@ -16,8 +13,6 @@ MMF.IsRetail = (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE)
 MMF.IsTBC = (WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC)
 MMF.IsClassic = (WOW_PROJECT_ID == WOW_PROJECT_CLASSIC)
 MMF.IsClassicEra = MMF.IsClassic or MMF.IsTBC
-
--- Export to global for easy access
 MMF_IsRetail = MMF.IsRetail
 MMF_IsTBC = MMF.IsTBC
 MMF_IsClassic = MMF.IsClassic
@@ -27,7 +22,6 @@ MMF_IsClassicEra = MMF.IsClassicEra
 -- API COMPATIBILITY
 --------------------------------------------------
 
--- GetSpellInfo: Works differently in retail vs classic
 function MMF.GetSpellName(spellID)
     if _G.GetSpellInfo then
         local name = _G.GetSpellInfo(spellID)
@@ -40,13 +34,11 @@ function MMF.GetSpellName(spellID)
     return nil
 end
 
--- IsSpellInRange: Different API location
 MMF.IsSpellInRange = _G.IsSpellInRange
 if C_Spell and C_Spell.IsSpellInRange then
     MMF.IsSpellInRange = C_Spell.IsSpellInRange
 end
 
--- GetSpecialization: Only exists in retail
 function MMF.GetSpecialization()
     if MMF.IsRetail and _G.GetSpecialization then
         return _G.GetSpecialization()
@@ -58,58 +50,55 @@ end
 -- RANGE CHECK SPELL TABLES
 --------------------------------------------------
 
--- Retail spells (includes all modern classes)
 MMF.FriendSpells_Retail = {
-    DEATHKNIGHT = 47541,  -- Death Coil
-    DRUID       = 8936,   -- Regrowth
-    EVOKER      = 355913, -- Emerald Blossom
-    MAGE        = 1459,   -- Arcane Intellect
-    MONK        = 116670, -- Vivify
-    PALADIN     = 19750,  -- Flash of Light
-    PRIEST      = 2061,   -- Flash Heal
-    SHAMAN      = 8004,   -- Healing Surge
-    WARLOCK     = 5697,   -- Unending Breath
+    DEATHKNIGHT = 47541,
+    DRUID       = 8936,
+    EVOKER      = 355913,
+    MAGE        = 1459,
+    MONK        = 116670,
+    PALADIN     = 19750,
+    PRIEST      = 2061,
+    SHAMAN      = 8004,
+    WARLOCK     = 5697,
 }
 
 MMF.HarmSpells_Retail = {
-    DEATHKNIGHT = 49998,  -- Death Strike
-    DEMONHUNTER = 185123, -- Throw Glaive
-    DRUID       = 5176,   -- Wrath
-    EVOKER      = 362969, -- Azure Strike
-    HUNTER      = 75,     -- Auto Shot
-    MAGE        = 116,    -- Frostbolt
-    MONK        = 117952, -- Crackling Jade Lightning
-    PALADIN     = 20271,  -- Judgment
-    PRIEST      = 589,    -- Shadow Word: Pain
-    ROGUE       = 1752,   -- Sinister Strike
-    SHAMAN      = 188196, -- Lightning Bolt
-    WARLOCK     = 234153, -- Drain Life
-    WARRIOR     = 355,    -- Taunt
+    DEATHKNIGHT = 49998,
+    DEMONHUNTER = 185123,
+    DRUID       = 5176,
+    EVOKER      = 362969,
+    HUNTER      = 75,
+    MAGE        = 116,
+    MONK        = 117952,
+    PALADIN     = 20271,
+    PRIEST      = 589,
+    ROGUE       = 1752,
+    SHAMAN      = 188196,
+    WARLOCK     = 234153,
+    WARRIOR     = 355,
 }
 
--- TBC spells (only classes that exist in TBC)
 MMF.FriendSpells_TBC = {
-    DRUID   = 8936,  -- Regrowth (40 yd)
-    MAGE    = 1459,  -- Arcane Intellect (30 yd)
-    PALADIN = 19750, -- Flash of Light (40 yd)
-    PRIEST  = 2061,  -- Flash Heal (40 yd)
-    SHAMAN  = 331,   -- Healing Wave (40 yd)
-    WARLOCK = 5697,  -- Unending Breath (30 yd)
+    DRUID   = 8936,
+    MAGE    = 1459,
+    PALADIN = 19750,
+    PRIEST  = 2061,
+    SHAMAN  = 331,
+    WARLOCK = 5697,
 }
 
 MMF.HarmSpells_TBC = {
-    DRUID   = 5176,  -- Wrath (30 yd)
-    HUNTER  = 75,    -- Auto Shot
-    MAGE    = 116,   -- Frostbolt (30 yd)
-    PALADIN = 20271, -- Judgment (10 yd)
-    PRIEST  = 589,   -- Shadow Word: Pain (30 yd)
-    ROGUE   = 1752,  -- Sinister Strike (melee)
-    SHAMAN  = 403,   -- Lightning Bolt (30 yd)
-    WARLOCK = 686,   -- Shadow Bolt (30 yd)
-    WARRIOR = 355,   -- Taunt (25 yd)
+    DRUID   = 5176,
+    HUNTER  = 75,
+    MAGE    = 116,
+    PALADIN = 20271,
+    PRIEST  = 589,
+    ROGUE   = 1752,
+    SHAMAN  = 403,
+    WARLOCK = 686,
+    WARRIOR = 355,
 }
 
--- Select appropriate tables based on version
 MMF.FriendSpells = MMF.IsTBC and MMF.FriendSpells_TBC or MMF.FriendSpells_Retail
 MMF.HarmSpells = MMF.IsTBC and MMF.HarmSpells_TBC or MMF.HarmSpells_Retail
 
@@ -117,16 +106,13 @@ MMF.HarmSpells = MMF.IsTBC and MMF.HarmSpells_TBC or MMF.HarmSpells_Retail
 -- AURA API COMPATIBILITY
 --------------------------------------------------
 
--- Check if we have retail aura API
 MMF.HasRetailAuraAPI = (C_UnitAuras ~= nil) and not MMF.IsTBC
 
--- Process auras - returns a normalized table regardless of API
 function MMF.GetUnitAuras(unit, filter)
     local auras = {}
     local isHelpful = (filter == "HELPFUL")
     
     if MMF.HasRetailAuraAPI then
-        -- Retail: Use C_UnitAuras
         local GetAuraSlots = C_UnitAuras.GetAuraSlots
         local GetAuraDataBySlot = C_UnitAuras.GetAuraDataBySlot
         
@@ -142,7 +128,6 @@ function MMF.GetUnitAuras(unit, filter)
             end
         until not token
     else
-        -- TBC/Classic: Use AuraUtil or UnitBuff/UnitDebuff
         if AuraUtil and AuraUtil.ForEachAura then
             local filterString = isHelpful and "HELPFUL" or "HARMFUL"
             AuraUtil.ForEachAura(unit, filterString, 40, function(name, icon, count, debuffType, duration, expirationTime, source, isStealable, _, spellId, ...)
@@ -161,7 +146,6 @@ function MMF.GetUnitAuras(unit, filter)
                 return #auras >= 40
             end)
         else
-            -- Fallback to UnitBuff/UnitDebuff
             local auraFunc = isHelpful and UnitBuff or UnitDebuff
             for i = 1, 40 do
                 local name, icon, count, debuffType, duration, expirationTime, source, _, _, spellId = auraFunc(unit, i)
@@ -183,12 +167,10 @@ function MMF.GetUnitAuras(unit, filter)
     return auras
 end
 
--- Set cooldown on aura icon (different APIs)
 function MMF.SetAuraCooldown(cooldownFrame, auraData, unit)
     if not cooldownFrame then return end
     
     if MMF.HasRetailAuraAPI and auraData.auraInstanceID then
-        -- Retail: Use duration object
         local GetAuraDuration = C_UnitAuras.GetAuraDuration
         local auraDuration = GetAuraDuration(unit, auraData.auraInstanceID)
         if auraDuration and cooldownFrame.SetCooldownFromDurationObject then
@@ -196,8 +178,6 @@ function MMF.SetAuraCooldown(cooldownFrame, auraData, unit)
             return
         end
     end
-    
-    -- TBC/Classic: Use CooldownFrame_Set
     if auraData.duration and auraData.duration > 0 and auraData.expirationTime then
         CooldownFrame_Set(cooldownFrame, auraData.expirationTime - auraData.duration, auraData.duration, true)
     else
@@ -205,23 +185,19 @@ function MMF.SetAuraCooldown(cooldownFrame, auraData, unit)
     end
 end
 
--- Get aura stack count
 function MMF.GetAuraCount(auraData, unit)
     if MMF.HasRetailAuraAPI and auraData.auraInstanceID then
         local GetAuraApplicationDisplayCount = C_UnitAuras.GetAuraApplicationDisplayCount
         if GetAuraApplicationDisplayCount then
             local count = GetAuraApplicationDisplayCount(unit, auraData.auraInstanceID, 2, 999)
-            -- Retail API can return empty string or non-number; ensure we always return a number
             if type(count) == "number" then
                 return count
             end
         end
-        -- Fallback to applications field in retail aura data
         if auraData.applications and type(auraData.applications) == "number" then
             return auraData.applications
         end
     end
-    -- TBC/Classic fallback
     return (auraData.count and type(auraData.count) == "number" and auraData.count) or 0
 end
 
@@ -229,13 +205,8 @@ end
 -- FEATURE FLAGS
 --------------------------------------------------
 
--- Death Knight features (doesn't exist in TBC)
 MMF.HasDeathKnight = MMF.IsRetail
-
--- Focus frame (exists in TBC)
 MMF.HasFocusFrame = true
-
--- Specialization system
 MMF.HasSpecialization = MMF.IsRetail
 
 --------------------------------------------------
@@ -251,5 +222,4 @@ function MMF.PrintVersion()
     print("MattMinimalFrames running on: " .. version)
 end
 
--- Make MMF table globally accessible
 _G.MMF_Compat = MMF

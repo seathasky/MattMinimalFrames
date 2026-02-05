@@ -1,6 +1,3 @@
--- Class-specific resource bars
--- Uses compat.lua for version-specific features
-
 local Compat = _G.MMF_Compat
 local _, playerClass = UnitClass("player")
 
@@ -8,13 +5,10 @@ local _, playerClass = UnitClass("player")
 -- DEATH KNIGHT RUNE BAR (Retail only)
 --------------------------------------------------
 
--- Skip DK rune bar functionality for TBC/Classic
 if not Compat.HasDeathKnight then
     function MMF_InitializeClassResources()
-        -- No class-specific resources for TBC/Classic yet
     end
     function MMF_UpdateRuneBarScale(scale)
-        -- No-op for TBC
     end
     return
 end
@@ -31,13 +25,9 @@ local function CreateRuneBar()
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
     frame:SetClampedToScreen(true)
-    
-    -- Background
     frame.bg = frame:CreateTexture(nil, "BACKGROUND")
     frame.bg:SetAllPoints()
     frame.bg:SetColorTexture(0, 0, 0, 0.5)
-    
-    -- Individual runes as StatusBars
     frame.runes = {}
     local runeWidth = 30
     local runeSpacing = 4
@@ -50,19 +40,12 @@ local function CreateRuneBar()
         rune:SetMinMaxValues(0, 1)
         rune:SetValue(1)
         rune:SetOrientation("HORIZONTAL")
-        
-        -- Rune background
         rune.bg = rune:CreateTexture(nil, "BACKGROUND")
         rune.bg:SetAllPoints()
         rune.bg:SetColorTexture(0.1, 0.1, 0.1, 0.8)
-        
-        -- Default DK rune color (cyan/blue)
         rune:SetStatusBarColor(0.3, 0.8, 1, 1)
-        
         frame.runes[i] = rune
     end
-    
-    -- Drag handlers
     frame:SetScript("OnDragStart", function(self)
         if IsShiftKeyDown() then
             self:StartMoving()
@@ -78,8 +61,6 @@ local function CreateRuneBar()
             MattMinimalFramesDB.runeBarPosition = { left = left, top = top }
         end
     end)
-    
-    -- Move hint
     frame.moveHint = frame:CreateFontString(nil, "OVERLAY")
     frame.moveHint:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "OUTLINE")
     frame.moveHint:SetText("Rune Bar")
@@ -104,8 +85,6 @@ local function CreateRuneBar()
         self.moveHint:Hide()
         self.moveSubtext:Hide()
     end)
-    
-    -- Restore saved position
     if MattMinimalFramesDB and MattMinimalFramesDB.runeBarPosition then
         local pos = MattMinimalFramesDB.runeBarPosition
         frame:ClearAllPoints()
@@ -128,12 +107,10 @@ local function UpdateRuneBar(self, elapsed)
         if not rune then break end
         
         if runeReady then
-            -- Rune is ready
             rune:SetMinMaxValues(0, 1)
             rune:SetValue(1)
             rune:SetAlpha(1)
         elseif start then
-            -- Rune is recharging
             local elapsed = currentTime - start
             rune:SetMinMaxValues(0, duration)
             rune:SetValue(elapsed)
@@ -163,13 +140,9 @@ local function CreateHolyPowerBar()
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
     frame:SetClampedToScreen(true)
-    
-    -- Background
     frame.bg = frame:CreateTexture(nil, "BACKGROUND")
     frame.bg:SetAllPoints()
     frame.bg:SetColorTexture(0, 0, 0, 0.5)
-    
-    -- Individual holy power runes as StatusBars (matching DK style)
     frame.runes = {}
     local runeWidth = 30
     local runeSpacing = 4
@@ -182,25 +155,17 @@ local function CreateHolyPowerBar()
         rune:SetMinMaxValues(0, 1)
         rune:SetValue(0)
         rune:SetOrientation("HORIZONTAL")
-        
-        -- Rune background
         rune.bg = rune:CreateTexture(nil, "BACKGROUND")
         rune.bg:SetAllPoints()
         rune.bg:SetColorTexture(0.1, 0.1, 0.1, 0.8)
-        
-        -- Paladin holy power color (golden yellow)
         rune:SetStatusBarColor(0.95, 0.9, 0.2, 1)
-        
         frame.runes[i] = rune
     end
-    
-    -- Drag handlers
     frame:SetScript("OnDragStart", function(self)
         if IsShiftKeyDown() then
             self:StartMoving()
         end
     end)
-    
     frame:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
         local left = self:GetLeft()
@@ -210,8 +175,6 @@ local function CreateHolyPowerBar()
             MattMinimalFramesDB.holyPowerBarPosition = { left = left, top = top }
         end
     end)
-    
-    -- Move hint
     frame.moveHint = frame:CreateFontString(nil, "OVERLAY")
     frame.moveHint:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "OUTLINE")
     frame.moveHint:SetText("Holy Power Bar")
@@ -236,8 +199,6 @@ local function CreateHolyPowerBar()
         self.moveHint:Hide()
         self.moveSubtext:Hide()
     end)
-    
-    -- Restore saved position
     if MattMinimalFramesDB and MattMinimalFramesDB.holyPowerBarPosition then
         local pos = MattMinimalFramesDB.holyPowerBarPosition
         frame:ClearAllPoints()
@@ -264,13 +225,9 @@ local function CreateClassResourceBar(barName, resourceType, maxValue, color, nu
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
     frame:SetClampedToScreen(true)
-    
-    -- Background
     frame.bg = frame:CreateTexture(nil, "BACKGROUND")
     frame.bg:SetAllPoints()
     frame.bg:SetColorTexture(0, 0, 0, 0.5)
-    
-    -- Individual resource nodes as StatusBars
     frame.runes = {}
     for i = 1, numRunes do
         local rune = CreateFrame("StatusBar", nil, frame)
@@ -280,25 +237,18 @@ local function CreateClassResourceBar(barName, resourceType, maxValue, color, nu
         rune:SetMinMaxValues(0, 1)
         rune:SetValue(0)
         rune:SetOrientation("HORIZONTAL")
-        
-        -- Rune background
         rune.bg = rune:CreateTexture(nil, "BACKGROUND")
         rune.bg:SetAllPoints()
         rune.bg:SetColorTexture(0.1, 0.1, 0.1, 0.8)
-        
-        -- Set color
         rune:SetStatusBarColor(color[1], color[2], color[3], 1)
         
         frame.runes[i] = rune
     end
-    
-    -- Drag handlers
     frame:SetScript("OnDragStart", function(self)
         if IsShiftKeyDown() then
             self:StartMoving()
         end
     end)
-    
     frame:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
         local left = self:GetLeft()
@@ -308,8 +258,6 @@ local function CreateClassResourceBar(barName, resourceType, maxValue, color, nu
             MattMinimalFramesDB[barName .. "Position"] = { left = left, top = top }
         end
     end)
-    
-    -- Move hint
     frame.moveHint = frame:CreateFontString(nil, "OVERLAY")
     frame.moveHint:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "OUTLINE")
     frame.moveHint:SetText(barName:gsub("MMF_", ""):gsub("Bar", ""))
@@ -334,8 +282,6 @@ local function CreateClassResourceBar(barName, resourceType, maxValue, color, nu
         self.moveHint:Hide()
         self.moveSubtext:Hide()
     end)
-    
-    -- Restore saved position
     if MattMinimalFramesDB and MattMinimalFramesDB[barName .. "Position"] then
         local pos = MattMinimalFramesDB[barName .. "Position"]
         frame:ClearAllPoints()
@@ -353,7 +299,6 @@ end
 local MMF_ComboPointBar
 
 local function CreateComboPointBar()
-    -- Create with max possible combo points (7 to handle all talents), show/hide dynamically
     return CreateClassResourceBar("MMF_ComboPointBar", Enum.PowerType.ComboPoints, 9, {1, 0.8, 0.2}, 7)
 end
 
@@ -362,14 +307,10 @@ local function UpdateComboPointBar(self)
     
     local numComboPoints = UnitPower("player", Enum.PowerType.ComboPoints)
     local maxComboPoints = UnitPowerMax("player", Enum.PowerType.ComboPoints)
-    
-    -- Resize bar based on max combo points (handles Deeper Stratagem dynamically)
     local runeWidth = 30
     local runeSpacing = 4
     local totalWidth = (runeWidth * maxComboPoints) + (runeSpacing * (maxComboPoints - 1)) + 2
     MMF_ComboPointBar:SetWidth(totalWidth)
-    
-    -- Show/hide runes based on max combo points
     for i = 1, 7 do
         local rune = MMF_ComboPointBar.runes[i]
         if rune then
@@ -509,23 +450,16 @@ end
 
 local function UpdateHolyPowerBar(self, event, unit)
     if not MMF_HolyPowerBar or not MMF_HolyPowerBar:IsShown() then return end
-    
-    -- Only update for player unit
     if event and unit and unit ~= "player" then return end
-    
     local numHolyPower = UnitPower("player", Enum.PowerType.HolyPower)
     local maxHolyPower = UnitPowerMax("player", Enum.PowerType.HolyPower)
-    
-    -- Update each rune based on current holy power
     for i = 1, maxHolyPower do
         local rune = MMF_HolyPowerBar.runes[i]
         if rune then
             if i <= numHolyPower then
-                -- Holy power is active
                 rune:SetValue(1)
                 rune:SetAlpha(1)
             else
-                -- Holy power is inactive
                 rune:SetValue(0)
                 rune:SetAlpha(0.4)
             end

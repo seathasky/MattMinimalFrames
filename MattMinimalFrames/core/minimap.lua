@@ -1,7 +1,3 @@
--- core/minimap.lua
--- Minimap button for MattMinimalFrames using LibDBIcon
--- Works on both Retail and TBC
-
 local LDB = LibStub("LibDataBroker-1.1")
 local LDBIcon = LibStub("LibDBIcon-1.0")
 local Compat = _G.MMF_Compat
@@ -10,9 +6,7 @@ local ADDON_NAME = "MattMinimalFrames"
 local ICON_PATH = "Interface\\AddOns\\MattMinimalFrames\\Images\\MMF.png"
 local ACCENT_COLOR = Compat.IsTBC and {0.2, 0.9, 0.4} or {0.6, 0.4, 0.9}
 
---------------------------------------------------
--- DATA BROKER OBJECT
---------------------------------------------------
+local pendingOpenAfterCombat = false
 
 local MMF_LDB = LDB:NewDataObject(ADDON_NAME, {
     type = "launcher",
@@ -20,7 +14,11 @@ local MMF_LDB = LDB:NewDataObject(ADDON_NAME, {
     icon = ICON_PATH,
     OnClick = function(self, button)
         if button == "LeftButton" then
-            -- Toggle the popup - hide if shown, show if hidden
+            if InCombatLockdown() then
+                print("|cff00ff00Matt's Minimal Frames|r: Settings will open when combat ends.")
+                pendingOpenAfterCombat = true
+                return
+            end
             if MMF_WelcomePopup and MMF_WelcomePopup:IsShown() then
                 MMF_WelcomePopup:Hide()
             else
@@ -35,15 +33,11 @@ local MMF_LDB = LDB:NewDataObject(ADDON_NAME, {
     end,
 })
 
---------------------------------------------------
--- TOGGLE FUNCTION
---------------------------------------------------
-
 function MMF_ToggleMinimapButton(show)
     if not MattMinimalFramesDB.minimap then
         MattMinimalFramesDB.minimap = {}
     end
-    
+
     if show then
         MattMinimalFramesDB.minimap.hide = false
         LDBIcon:Show(ADDON_NAME)
@@ -53,28 +47,30 @@ function MMF_ToggleMinimapButton(show)
     end
 end
 
---------------------------------------------------
--- INITIALIZATION
---------------------------------------------------
-
 local function InitializeMinimapButton()
     if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
     if not MattMinimalFramesDB.minimap then
         MattMinimalFramesDB.minimap = { hide = false }
     end
-    
-    -- Register with LibDBIcon
+
     LDBIcon:Register(ADDON_NAME, MMF_LDB, MattMinimalFramesDB.minimap)
 end
 
---------------------------------------------------
--- EVENT FRAME
---------------------------------------------------
-
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("PLAYER_LOGIN")
+eventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+eventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 eventFrame:SetScript("OnEvent", function(self, event)
     if event == "PLAYER_LOGIN" then
         InitializeMinimapButton()
+    elseif event == "PLAYER_REGEN_ENABLED" then
+        if pendingOpenAfterCombat then
+            pendingOpenAfterCombat = false
+            MMF_ShowWelcomePopup(true)
+        end
+    elseif event == "PLAYER_REGEN_DISABLED" then
+        if MMF_WelcomePopup and MMF_WelcomePopup:IsShown() then
+            MMF_WelcomePopup:Hide()
+        end
     end
 end)
