@@ -390,10 +390,18 @@ local function UpdateChiBar(self)
 end
 
 --------------------------------------------------
--- ARCANE CHARGES (Arcane Mage)
+-- ARCANE CHARGES (Arcane Mage only)
 --------------------------------------------------
 
 local MMF_ArcaneChargeBar
+
+-- Only show arcane charge bar when Mage is Arcane spec (never Fire or Frost).
+local function IsArcaneSpec()
+    if playerClass ~= "MAGE" then return false end
+    local spec = Compat.GetSpecialization()
+    local arcaneSpec = (_G.SPEC_MAGE_ARCANE ~= nil) and _G.SPEC_MAGE_ARCANE or 1
+    return spec == arcaneSpec
+end
 
 local function CreateArcaneChargeBar()
     return CreateClassResourceBar("MMF_ArcaneChargeBar", Enum.PowerType.ArcaneCharges, 4, {0.4, 0.7, 1}, 4)
@@ -401,9 +409,10 @@ end
 
 local function UpdateArcaneChargeBar(self)
     if not MMF_ArcaneChargeBar or not MMF_ArcaneChargeBar:IsShown() then return end
-    
+    if not IsArcaneSpec() then return end
+
     local numCharges = UnitPower("player", Enum.PowerType.ArcaneCharges)
-    
+
     for i = 1, 4 do
         local rune = MMF_ArcaneChargeBar.runes[i]
         if rune then
@@ -415,6 +424,17 @@ local function UpdateArcaneChargeBar(self)
                 rune:SetAlpha(0.4)
             end
         end
+    end
+end
+
+local function ArcaneChargeBar_OnSpecChange()
+    if not MMF_ArcaneChargeBar then return end
+    if not (MattMinimalFramesDB and MattMinimalFramesDB.showArcaneChargeBar) then return end
+    if IsArcaneSpec() then
+        MMF_ArcaneChargeBar:Show()
+        UpdateArcaneChargeBar(MMF_ArcaneChargeBar)
+    else
+        MMF_ArcaneChargeBar:Hide()
     end
 end
 
@@ -575,12 +595,23 @@ function MMF_InitializeClassResources()
             MMF_ArcaneChargeBar = CreateArcaneChargeBar()
             local scale = (MattMinimalFramesDB and MattMinimalFramesDB.arcaneChargeBarScale) or 1.0
             MMF_ArcaneChargeBar:SetScale(scale)
-            MMF_ArcaneChargeBar:Show()
-            
+            if IsArcaneSpec() then
+                MMF_ArcaneChargeBar:Show()
+            else
+                MMF_ArcaneChargeBar:Hide()
+            end
+
             MMF_ArcaneChargeBar:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
             MMF_ArcaneChargeBar:RegisterEvent("PLAYER_ENTERING_WORLD")
-            MMF_ArcaneChargeBar:SetScript("OnEvent", UpdateArcaneChargeBar)
-            
+            MMF_ArcaneChargeBar:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+            MMF_ArcaneChargeBar:SetScript("OnEvent", function(self, event)
+                if event == "PLAYER_SPECIALIZATION_CHANGED" then
+                    ArcaneChargeBar_OnSpecChange()
+                else
+                    UpdateArcaneChargeBar(self)
+                end
+            end)
+
             UpdateArcaneChargeBar(MMF_ArcaneChargeBar)
         end
     elseif playerClass == "EVOKER" then
