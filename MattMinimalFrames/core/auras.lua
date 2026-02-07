@@ -128,6 +128,7 @@ local function CreateAuraIcon(parent, index, isDebuff, iconSize)
     aura.cooldown:SetAllPoints(aura)
     aura.cooldown:SetDrawEdge(false)
     aura.cooldown:SetHideCountdownNumbers(false)
+    aura.cooldown:EnableMouse(false)
     aura.timerText = aura.cooldown:GetRegions()
     if aura.timerText and aura.timerText.SetFont then
         aura.timerText:SetFont(STANDARD_TEXT_FONT, 12, "OUTLINE")

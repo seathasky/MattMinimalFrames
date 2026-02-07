@@ -1076,25 +1076,35 @@ function MMF_ShowWelcomePopup(forceShow)
         resetScaleBtnText:SetTextColor(0.8, 0.8, 0.8)
     end)
     resetScaleBtn:SetScript("OnClick", function()
-        MattMinimalFramesDB.auraTextScale = 1.0
-        MattMinimalFramesDB.timerTextScale = 1.0
-        MattMinimalFramesDB.auraIconSize = 18
-        MattMinimalFramesDB.nameTextSize = 12
-        MattMinimalFramesDB.hpTextSize = 13
-        MattMinimalFramesDB.runeBarScale = 1.0
-        MattMinimalFramesDB.powerBarWidth = 73
-        MattMinimalFramesDB.powerBarHeight = 5
-        -- Reset frame scales
-        MattMinimalFramesDB.playerFrameScaleX = 1.0
-        MattMinimalFramesDB.playerFrameScaleY = 1.0
-        MattMinimalFramesDB.targetFrameScaleX = 1.0
-        MattMinimalFramesDB.targetFrameScaleY = 1.0
-        MattMinimalFramesDB.totFrameScaleX = 1.0
-        MattMinimalFramesDB.totFrameScaleY = 1.0
-        MattMinimalFramesDB.focusFrameScaleX = 1.0
-        MattMinimalFramesDB.focusFrameScaleY = 1.0
-        MattMinimalFramesDB.petFrameScaleX = 1.0
-        MattMinimalFramesDB.petFrameScaleY = 1.0
+        local d = MattMinimalFrames_Defaults
+        -- Text/aura scales
+        MattMinimalFramesDB.auraTextScale = d.auraTextScale
+        MattMinimalFramesDB.timerTextScale = d.timerTextScale
+        MattMinimalFramesDB.auraIconSize = d.auraIconSize
+        MattMinimalFramesDB.nameTextSize = d.nameTextSize
+        MattMinimalFramesDB.hpTextSize = d.hpTextSize
+        -- Power bar size
+        MattMinimalFramesDB.powerBarWidth = d.powerBarWidth
+        MattMinimalFramesDB.powerBarHeight = d.powerBarHeight
+        -- Class resource bar scales
+        MattMinimalFramesDB.runeBarScale = d.runeBarScale
+        MattMinimalFramesDB.holyPowerBarScale = d.holyPowerBarScale
+        MattMinimalFramesDB.comboPointBarScale = d.comboPointBarScale
+        MattMinimalFramesDB.soulShardBarScale = d.soulShardBarScale
+        MattMinimalFramesDB.chiBarScale = d.chiBarScale
+        MattMinimalFramesDB.arcaneChargeBarScale = d.arcaneChargeBarScale
+        MattMinimalFramesDB.essenceBarScale = d.essenceBarScale
+        -- Frame scales
+        MattMinimalFramesDB.playerFrameScaleX = d.playerFrameScaleX
+        MattMinimalFramesDB.playerFrameScaleY = d.playerFrameScaleY
+        MattMinimalFramesDB.targetFrameScaleX = d.targetFrameScaleX
+        MattMinimalFramesDB.targetFrameScaleY = d.targetFrameScaleY
+        MattMinimalFramesDB.totFrameScaleX = d.totFrameScaleX
+        MattMinimalFramesDB.totFrameScaleY = d.totFrameScaleY
+        MattMinimalFramesDB.focusFrameScaleX = d.focusFrameScaleX
+        MattMinimalFramesDB.focusFrameScaleY = d.focusFrameScaleY
+        MattMinimalFramesDB.petFrameScaleX = d.petFrameScaleX
+        MattMinimalFramesDB.petFrameScaleY = d.petFrameScaleY
         StaticPopup_Show("MMF_RELOADUI")
     end)
 

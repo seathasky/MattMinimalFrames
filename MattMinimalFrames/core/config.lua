@@ -121,7 +121,7 @@ function MMF_GetAuraTextScale()
 end
 
 function MMF_GetTimerTextScale()
-    return (MattMinimalFramesDB and MattMinimalFramesDB.timerTextScale) or 1.0
+    return (MattMinimalFramesDB and MattMinimalFramesDB.timerTextScale) or 0.8
 end
 
 function MMF_GetBuffXOffset()
