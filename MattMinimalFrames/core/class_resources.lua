@@ -605,9 +605,10 @@ function MMF_InitializeClassResources()
             MMF_ArcaneChargeBar:RegisterEvent("PLAYER_ENTERING_WORLD")
             MMF_ArcaneChargeBar:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
             MMF_ArcaneChargeBar:SetScript("OnEvent", function(self, event)
-                if event == "PLAYER_SPECIALIZATION_CHANGED" then
+                if event == "PLAYER_SPECIALIZATION_CHANGED" or event == "PLAYER_ENTERING_WORLD" then
                     ArcaneChargeBar_OnSpecChange()
-                else
+                end
+                if event ~= "PLAYER_SPECIALIZATION_CHANGED" then
                     UpdateArcaneChargeBar(self)
                 end
             end)
