@@ -787,6 +787,9 @@ function MMF_ShowWelcomePopup(forceShow)
         end
     end, true)
 
+    local healPredictionCheck = CreateMinimalCheckbox(leftCol, "Heal Prediction", 12, -460, "showHealPrediction", true, nil)
+
+    local absorbBarCheck = CreateMinimalCheckbox(leftCol, "Absorb Bar", 12, -484, "showAbsorbBar", true, nil)
 
     ---------------------------------------------------
     -- MIDDLE COLUMN: Class Bars

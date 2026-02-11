@@ -229,7 +229,7 @@ function MMF_UpdateFrameScale(unit)
         frame.healthBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
     end
     if frame.absorbBar then
-        frame.absorbBar:SetHeight(frame.healthBar:GetHeight() or 20)
+        frame.absorbBar:ClearAllPoints()
     end
     if frame.nameText then
         frame.nameText:SetWidth(newWidth - 4)

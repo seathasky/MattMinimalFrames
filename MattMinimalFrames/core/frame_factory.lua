@@ -232,24 +232,42 @@ end
 --------------------------------------------------
 
 local function CreateAbsorbBar(frame)
-    frame.absorbBar = CreateFrame("StatusBar", nil, frame)
-    frame.absorbBar:SetStatusBarTexture(cfg.SHIELD_TEXTURE_PATH)
-    frame.absorbBar:SetMinMaxValues(0, 1)
-    frame.absorbBar:SetValue(0)
-    frame.absorbBar:SetStatusBarColor(0, 1, 1, 1.0)
-    frame.absorbBar:SetReverseFill(true)
-    
-    local texture = frame.absorbBar:GetStatusBarTexture()
-    if texture then
-        texture:SetHorizTile(true)
-        texture:SetVertTile(true)
-    end
-    
+    frame.absorbBar = CreateFrame("StatusBar", nil, frame.healPredictionClip)
+    frame.absorbBar:SetStatusBarTexture(cfg.TEXTURE_PATH)
+    frame.absorbBar:GetStatusBarTexture():SetVertexColor(1, 1, 1, 0.4)
+    frame.absorbBar:SetFrameLevel(frame.healthBar:GetFrameLevel() + 1)
     frame.absorbBar:Hide()
-    frame.absorbBar:SetWidth(46)
-    frame.absorbBar:SetPoint("RIGHT", frame.healthBar, "RIGHT", 0, 0)
-    frame.absorbBar:SetHeight(frame.healthBar:GetHeight() or 20)
-    frame.absorbBar:SetFrameLevel(frame.healthBar:GetFrameLevel() + 2)
+end
+
+--------------------------------------------------
+-- HEAL PREDICTION BAR CREATION
+--------------------------------------------------
+
+local function CreateHealPredictionBar(frame)
+    local Compat = _G.MMF_Compat
+
+    -- Clip frame prevents prediction bars from extending past health bar
+    frame.healPredictionClip = CreateFrame("Frame", nil, frame.healthBar)
+    frame.healPredictionClip:SetAllPoints(frame.healthBar)
+    frame.healPredictionClip:SetClipsChildren(true)
+    frame.healPredictionClip:SetFrameLevel(frame.healthBar:GetFrameLevel() + 1)
+
+    frame.myHealPrediction = CreateFrame("StatusBar", nil, frame.healPredictionClip)
+    frame.myHealPrediction:SetStatusBarTexture(cfg.TEXTURE_PATH)
+    frame.myHealPrediction:GetStatusBarTexture():SetVertexColor(0, 0.827, 0.765, 0.7)
+    frame.myHealPrediction:SetFrameLevel(frame.healthBar:GetFrameLevel() + 1)
+    frame.myHealPrediction:Hide()
+
+    frame.otherHealPrediction = CreateFrame("StatusBar", nil, frame.healPredictionClip)
+    frame.otherHealPrediction:SetStatusBarTexture(cfg.TEXTURE_PATH)
+    frame.otherHealPrediction:GetStatusBarTexture():SetVertexColor(0, 0.631, 0.557, 0.7)
+    frame.otherHealPrediction:SetFrameLevel(frame.healthBar:GetFrameLevel() + 1)
+    frame.otherHealPrediction:Hide()
+
+    -- Retail: detailed heal prediction calculator
+    if Compat.IsRetail and CreateUnitHealPredictionCalculator then
+        frame.healPredictionCalculator = CreateUnitHealPredictionCalculator()
+    end
 end
 
 --------------------------------------------------
@@ -631,6 +649,10 @@ function MMF_CreateSecureUnitFrame(unit, frameName, width, height, point, relPoi
 
     if unit == "player" or unit == "target" then
         CreatePowerBarContainer(f, unit)
+    end
+
+    if unit == "player" or unit == "target" or unit == "targettarget" then
+        CreateHealPredictionBar(f)
         CreateAbsorbBar(f)
     end
 

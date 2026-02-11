@@ -1,5 +1,121 @@
 local cfg = MMF_Config
+local Compat = _G.MMF_Compat
 local lastUpdate = 0
+
+--------------------------------------------------
+-- HEAL PREDICTION UPDATE
+--------------------------------------------------
+
+local function UpdateHealPrediction(frame)
+    if not frame or not frame.myHealPrediction then return end
+
+    local unit = frame.unit
+    if not unit or not UnitExists(unit) then
+        frame.myHealPrediction:Hide()
+        frame.otherHealPrediction:Hide()
+        return
+    end
+
+    if MattMinimalFramesDB and MattMinimalFramesDB.showHealPrediction == false then
+        frame.myHealPrediction:Hide()
+        frame.otherHealPrediction:Hide()
+        return
+    end
+
+    local maxHealth = UnitHealthMax(unit)
+    local healthTexture = frame.healthBar:GetStatusBarTexture()
+    local barWidth = frame.healthBar:GetWidth()
+
+    -- Position my heals bar starting at health fill edge, clipped by parent
+    frame.myHealPrediction:ClearAllPoints()
+    frame.myHealPrediction:SetPoint("TOPLEFT", healthTexture, "TOPRIGHT", 0, 0)
+    frame.myHealPrediction:SetPoint("BOTTOMLEFT", healthTexture, "BOTTOMRIGHT", 0, 0)
+    frame.myHealPrediction:SetWidth(barWidth)
+    frame.myHealPrediction:SetMinMaxValues(0, maxHealth)
+
+    -- Position other heals bar starting at my heals fill edge
+    local myHealTexture = frame.myHealPrediction:GetStatusBarTexture()
+    frame.otherHealPrediction:ClearAllPoints()
+    frame.otherHealPrediction:SetPoint("TOPLEFT", myHealTexture, "TOPRIGHT", 0, 0)
+    frame.otherHealPrediction:SetPoint("BOTTOMLEFT", myHealTexture, "BOTTOMRIGHT", 0, 0)
+    frame.otherHealPrediction:SetWidth(barWidth)
+    frame.otherHealPrediction:SetMinMaxValues(0, maxHealth)
+
+    if Compat.IsRetail and frame.healPredictionCalculator and UnitGetDetailedHealPrediction then
+        -- Retail: pass calculator values directly to SetValue (no comparisons on secret values)
+        pcall(function()
+            UnitGetDetailedHealPrediction(unit, "player", frame.healPredictionCalculator)
+            local _, playerHeal, otherHeal = frame.healPredictionCalculator:GetIncomingHeals()
+            frame.myHealPrediction:SetValue(playerHeal or 0)
+            frame.otherHealPrediction:SetValue(otherHeal or 0)
+        end)
+    elseif UnitGetIncomingHeals then
+        -- TBC/Classic: UnitGetIncomingHeals
+        local myHeal = UnitGetIncomingHeals(unit, "player") or 0
+        local allHeal = UnitGetIncomingHeals(unit) or 0
+        frame.myHealPrediction:SetValue(myHeal)
+        local otherHeal = 0
+        pcall(function() otherHeal = allHeal - myHeal end)
+        frame.otherHealPrediction:SetValue(otherHeal)
+    end
+
+    frame.myHealPrediction:Show()
+    frame.otherHealPrediction:Show()
+end
+
+--------------------------------------------------
+-- ABSORB BAR UPDATE
+--------------------------------------------------
+
+local function UpdateAbsorbBar(frame)
+    if not frame or not frame.absorbBar then return end
+
+    local unit = frame.unit
+    if not unit or not UnitExists(unit) then
+        frame.absorbBar:Hide()
+        return
+    end
+
+    if MattMinimalFramesDB and MattMinimalFramesDB.showAbsorbBar == false then
+        frame.absorbBar:Hide()
+        return
+    end
+
+    if not UnitGetTotalAbsorbs then
+        frame.absorbBar:Hide()
+        return
+    end
+
+    local maxHealth = UnitHealthMax(unit)
+    local barWidth = frame.healthBar:GetWidth()
+
+    -- Anchor after heal prediction chain or directly after health fill
+    local anchorTexture
+    if frame.otherHealPrediction and frame.otherHealPrediction:IsShown() then
+        anchorTexture = frame.otherHealPrediction:GetStatusBarTexture()
+    elseif frame.myHealPrediction and frame.myHealPrediction:IsShown() then
+        anchorTexture = frame.myHealPrediction:GetStatusBarTexture()
+    else
+        anchorTexture = frame.healthBar:GetStatusBarTexture()
+    end
+
+    frame.absorbBar:ClearAllPoints()
+    frame.absorbBar:SetPoint("TOPLEFT", anchorTexture, "TOPRIGHT", 0, 0)
+    frame.absorbBar:SetPoint("BOTTOMLEFT", anchorTexture, "BOTTOMRIGHT", 0, 0)
+    frame.absorbBar:SetWidth(barWidth)
+    frame.absorbBar:SetMinMaxValues(0, maxHealth)
+
+    pcall(function()
+        local totalAbsorb = UnitGetTotalAbsorbs(unit) or 0
+        frame.absorbBar:SetValue(totalAbsorb)
+    end)
+
+    frame.absorbBar:Show()
+end
+
+--------------------------------------------------
+-- UNIT FRAME UPDATE
+--------------------------------------------------
 
 local function UpdateUnitFrame(frame)
     if not frame or not frame.unit or not frame.nameText then return end
@@ -36,23 +152,13 @@ local function UpdateUnitFrame(frame)
         frame.healthBar:SetValue(hp)
     end
 
-    if frame.shieldBarFG then frame.shieldBarFG:Hide() end
-    if frame.shieldBarFG2 then frame.shieldBarFG2:Hide() end
-
     if frame.hpText and (unit == "player" or unit == "target") then
         frame.hpText:SetText(hp)
         frame.hpText:Show()
     end
 
-    if frame.absorbBar and (unit == "player" or unit == "target") then
-        local absorb = UnitGetTotalAbsorbs(unit) or 0
-        frame.absorbBar:SetMinMaxValues(0, maxHP)
-        frame.absorbBar:SetValue(absorb)
-        frame.absorbBar:SetAlpha(1.0)
-        frame.absorbBar:Show()
-    elseif frame.absorbBar then
-        frame.absorbBar:Hide()
-    end
+    UpdateHealPrediction(frame)
+    UpdateAbsorbBar(frame)
 
     if unit == "targettarget" or unit == "pet" then
         if frame.hpText then frame.hpText:Hide() end

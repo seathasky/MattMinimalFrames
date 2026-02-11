@@ -74,6 +74,8 @@ coreEventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
 coreEventFrame:RegisterEvent("PLAYER_FOCUS_CHANGED")
 coreEventFrame:RegisterEvent("UNIT_PET")
 coreEventFrame:RegisterEvent("UNIT_TARGET")
+coreEventFrame:RegisterEvent("UNIT_HEAL_PREDICTION")
+coreEventFrame:RegisterEvent("UNIT_ABSORB_AMOUNT_CHANGED")
 
 coreEventFrame:SetScript("OnEvent", function(self, event, unit)
     if event == "PLAYER_REGEN_ENABLED" then
@@ -116,6 +118,12 @@ coreEventFrame:SetScript("OnEvent", function(self, event, unit)
         end
         
     elseif event == "UNIT_HEALTH" or event == "UNIT_POWER_UPDATE" then
+        local frame = MMF_GetFrameForUnit(unit)
+        if frame then
+            MMF_UpdateUnitFrame(frame)
+        end
+        
+    elseif event == "UNIT_HEAL_PREDICTION" or event == "UNIT_ABSORB_AMOUNT_CHANGED" then
         local frame = MMF_GetFrameForUnit(unit)
         if frame then
             MMF_UpdateUnitFrame(frame)

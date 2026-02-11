@@ -51,6 +51,9 @@ local mmfDefaults = {
     focusFrameScaleY = 1.0,
     petFrameScaleX = 1.0,
     petFrameScaleY = 1.0,
+    -- Heal prediction / absorb
+    showHealPrediction = true,
+    showAbsorbBar = true,
     -- Cast bar settings
     showPlayerCastBar = true,
     showTargetCastBar = true,
