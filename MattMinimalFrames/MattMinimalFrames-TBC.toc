@@ -1,7 +1,7 @@
 ## Interface: 20505
 ## Title: Matt's Minimal Frames
 ## Author: Seathasky
-## Version: 4.9
+## Version: 4.9.1
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
 ## SavedVariables: MattMinimalFramesDB
 ## Notes: Minimal unit frames for TBC Anniversary
@@ -29,3 +29,4 @@ core/minimap.lua
 init.lua
 core/range_check.lua
 core/class_resources.lua
+core/clique_support.lua
