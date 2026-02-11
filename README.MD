@@ -10,7 +10,7 @@ Currently supports Retail Midnight and TBC Anniversary
 
 ## Features
 
-**Minimal Design** - Clean unit frames for Player, Target, Target-of-Target, Focus, and Pet
+**Minimal Design** - Clean unit frames for Player, Target, Target-of-Target, Focus, and Pet. Cast bars, heal prediction and absorb bars.
 
 **Buffs & Debuffs** - Target aura display with timers
 
