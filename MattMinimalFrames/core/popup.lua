@@ -998,9 +998,17 @@ function MMF_ShowWelcomePopup(forceShow)
     mmText:SetTextColor(0.85, 0.85, 0.85)
     mmText:SetText("Show Minimap Icon")
 
+    -- Alignment grid (session-only, resets each time popup is created)
+    if MattMinimalFramesDB then MattMinimalFramesDB.showAlignmentGrid = false end
+    local alignGridCheck = CreateMinimalCheckbox(rightCol, "Alignment Grid", 12, -80, "showAlignmentGrid", false, function(checked)
+        if MMF_ToggleAlignmentGrid then
+            MMF_ToggleAlignmentGrid(checked)
+        end
+    end)
+
     local infoText = rightCol:CreateFontString(nil, "OVERLAY")
     infoText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    infoText:SetPoint("TOPLEFT", 12, -130)
+    infoText:SetPoint("TOPLEFT", 12, -152)
     infoText:SetWidth(156)
     infoText:SetJustifyH("LEFT")
     infoText:SetSpacing(3)
