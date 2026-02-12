@@ -233,8 +233,15 @@ end
 
 local function CreateAbsorbBar(frame)
     frame.absorbBar = CreateFrame("StatusBar", nil, frame.healPredictionClip)
-    frame.absorbBar:SetStatusBarTexture(cfg.TEXTURE_PATH)
-    frame.absorbBar:GetStatusBarTexture():SetVertexColor(1, 1, 1, 0.4)
+    frame.absorbBar:SetStatusBarTexture("Interface\\AddOns\\MattMinimalFrames\\Textures\\shield.tga")
+    frame.absorbBar:SetStatusBarColor(0.62, 0.84, 1, 1)
+    frame.absorbBar:GetStatusBarTexture():SetVertexColor(0.62, 0.84, 1, 1)
+
+    local absorbTex = frame.absorbBar:GetStatusBarTexture()
+    absorbTex:SetHorizTile(true)
+    absorbTex:SetVertTile(true)
+    absorbTex:SetTexCoord(0, 8, 0, 1)
+
     frame.absorbBar:SetFrameLevel(frame.healthBar:GetFrameLevel() + 1)
     frame.absorbBar:Hide()
 end
@@ -246,7 +253,6 @@ end
 local function CreateHealPredictionBar(frame)
     local Compat = _G.MMF_Compat
 
-    -- Clip frame prevents prediction bars from extending past health bar
     frame.healPredictionClip = CreateFrame("Frame", nil, frame.healthBar)
     frame.healPredictionClip:SetAllPoints(frame.healthBar)
     frame.healPredictionClip:SetClipsChildren(true)
@@ -264,7 +270,6 @@ local function CreateHealPredictionBar(frame)
     frame.otherHealPrediction:SetFrameLevel(frame.healthBar:GetFrameLevel() + 1)
     frame.otherHealPrediction:Hide()
 
-    -- Retail: detailed heal prediction calculator
     if Compat.IsRetail and CreateUnitHealPredictionCalculator then
         frame.healPredictionCalculator = CreateUnitHealPredictionCalculator()
     end
