@@ -85,3 +85,131 @@ function MMF_ToggleAlignmentGrid(show)
 
     alignmentGrid:Show()
 end
+
+--------------------------------------------------
+-- STATUSBAR TEXTURE
+--------------------------------------------------
+
+function MMF_ApplyStatusBarTexture()
+    local texturePath = MMF_GetStatusBarTexturePath and MMF_GetStatusBarTexturePath()
+    if not texturePath then return end
+
+    local frames = MMF_GetAllFrames and MMF_GetAllFrames() or {}
+    for _, frame in ipairs(frames) do
+        if frame then
+            if frame.healthBar then
+                frame.healthBar:SetStatusBarTexture(texturePath)
+            end
+            if frame.powerBar then
+                frame.powerBar:SetStatusBarTexture(texturePath)
+            end
+            if frame.myHealPrediction then
+                frame.myHealPrediction:SetStatusBarTexture(texturePath)
+            end
+            if frame.otherHealPrediction then
+                frame.otherHealPrediction:SetStatusBarTexture(texturePath)
+            end
+            if frame.castBar then
+                frame.castBar:SetStatusBarTexture(texturePath)
+            end
+        end
+    end
+
+    local classBars = {
+        _G.MMF_RuneBar,
+        _G.MMF_HolyPowerBar,
+        _G.MMF_ComboPointBar,
+        _G.MMF_SoulShardBar,
+        _G.MMF_ChiBar,
+        _G.MMF_ArcaneChargeBar,
+        _G.MMF_EssenceBar,
+    }
+
+    for _, bar in ipairs(classBars) do
+        if bar and bar.runes then
+            for _, rune in ipairs(bar.runes) do
+                if rune and rune.SetStatusBarTexture then
+                    rune:SetStatusBarTexture(texturePath)
+                end
+            end
+        end
+    end
+end
+
+function MMF_SetStatusBarTexture(textureName)
+    if not textureName or textureName == "" then return end
+    if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
+    MattMinimalFramesDB.statusBarTexture = textureName
+    MMF_ApplyStatusBarTexture()
+end
+
+--------------------------------------------------
+-- GLOBAL FONT
+--------------------------------------------------
+
+local function ApplyFontToPopupTree(frame, fontPath)
+    if not frame or not fontPath then return end
+
+    local function ApplyToRegion(region)
+        if not region or not region.GetObjectType or region:GetObjectType() ~= "FontString" then
+            return
+        end
+        local _, size, flags = region:GetFont()
+        if size then
+            region:SetFont(fontPath, size, flags or "")
+        end
+    end
+
+    local regions = { frame:GetRegions() }
+    for _, region in ipairs(regions) do
+        ApplyToRegion(region)
+    end
+
+    local children = { frame:GetChildren() }
+    for _, child in ipairs(children) do
+        ApplyFontToPopupTree(child, fontPath)
+    end
+end
+
+function MMF_ApplyGlobalFont()
+    local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or (MMF_Config and MMF_Config.FONT_PATH)
+    if not fontPath then return end
+    if MMF_Config then
+        MMF_Config.FONT_PATH = fontPath
+    end
+
+    local nameSize = (MMF_GetNameTextSize and MMF_GetNameTextSize()) or 12
+    local hpSize = (MMF_GetHPTextSize and MMF_GetHPTextSize()) or 13
+
+    local frames = MMF_GetAllFrames and MMF_GetAllFrames() or {}
+    for _, frame in ipairs(frames) do
+        if frame then
+            if frame.nameText then frame.nameText:SetFont(fontPath, nameSize, "OUTLINE") end
+            if frame.hpText then frame.hpText:SetFont(fontPath, hpSize, "OUTLINE") end
+            if frame.powerText then frame.powerText:SetFont(fontPath, 13, "OUTLINE") end
+            if frame.castBarText then frame.castBarText:SetFont(fontPath, 9, "OUTLINE") end
+            if frame.moveHint then frame.moveHint:SetFont(fontPath, 10, "OUTLINE") end
+            if frame.moveSubtext then frame.moveSubtext:SetFont(fontPath, 9, "OUTLINE") end
+        end
+    end
+
+    local classBars = {
+        _G.MMF_RuneBar,
+        _G.MMF_HolyPowerBar,
+        _G.MMF_ComboPointBar,
+        _G.MMF_SoulShardBar,
+        _G.MMF_ChiBar,
+        _G.MMF_ArcaneChargeBar,
+        _G.MMF_EssenceBar,
+    }
+    for _, bar in ipairs(classBars) do
+        if bar then
+            if bar.moveHint then bar.moveHint:SetFont(fontPath, 10, "OUTLINE") end
+            if bar.moveSubtext then bar.moveSubtext:SetFont(fontPath, 9, "OUTLINE") end
+        end
+    end
+
+    if MMF_WelcomePopup then
+        ApplyFontToPopupTree(MMF_WelcomePopup, fontPath)
+    end
+end

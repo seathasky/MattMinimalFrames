@@ -4,7 +4,19 @@ local Compat = _G.MMF_Compat
 
 local ADDON_NAME = "MattMinimalFrames"
 local ICON_PATH = "Interface\\AddOns\\MattMinimalFrames\\Images\\MMF.png"
-local ACCENT_COLOR = Compat.IsTBC and {0.2, 0.9, 0.4} or {0.6, 0.4, 0.9}
+local function GetPlayerClassAccent()
+    local _, classToken = UnitClass("player")
+    local classColors = RAID_CLASS_COLORS
+    local classColor = classToken and classColors and classColors[classToken]
+    if classColor then
+        return classColor.r, classColor.g, classColor.b
+    end
+    if Compat.IsTBC then
+        return 0.2, 0.9, 0.4
+    end
+    return 0.6, 0.4, 0.9
+end
+local ACCENT_COLOR = { GetPlayerClassAccent() }
 
 local pendingOpenAfterCombat = false
 

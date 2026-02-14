@@ -1,11 +1,198 @@
 local cfg = MMF_Config
 local Compat = _G.MMF_Compat
 
+local function GetStatusBarTexturePath()
+    if MMF_GetStatusBarTexturePath then
+        return MMF_GetStatusBarTexturePath()
+    end
+    return cfg.TEXTURE_PATH
+end
+
 local function NotSecretValue(value)
     if issecretvalue and issecretvalue(value) then
         return false
     end
     return true
+end
+
+local function GetPlayerFrameIconMode()
+    local mode = MattMinimalFramesDB and MattMinimalFramesDB.playerFrameIconMode or nil
+    if mode == "off" or mode == "class" or mode == "portrait" then
+        return mode
+    end
+    if MattMinimalFramesDB and MattMinimalFramesDB.showPlayerClassIcon ~= nil then
+        if MattMinimalFramesDB.showPlayerClassIcon then
+            return "class"
+        end
+        return "off"
+    end
+    return "off"
+end
+
+local function GetTargetFrameIconMode()
+    local mode = MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconMode or nil
+    if mode == "off" or mode == "class" or mode == "portrait" then
+        return mode
+    end
+    if MattMinimalFramesDB and MattMinimalFramesDB.showTargetFrameIcon ~= nil then
+        if MattMinimalFramesDB.showTargetFrameIcon then
+            return "class"
+        end
+        return "off"
+    end
+    return "off"
+end
+
+local function ApplyPlayerFrameIconMode(frame, mode)
+    if not frame or not frame.classIcon then return end
+
+    mode = mode or GetPlayerFrameIconMode()
+    local icon = frame.classIcon
+    if mode == "off" then
+        icon:Hide()
+        return
+    end
+
+    if mode == "portrait" then
+        if SetPortraitTexture then
+            SetPortraitTexture(icon, "player")
+        else
+            icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+        end
+        icon:SetTexCoord(0, 1, 0, 1)
+        icon:Show()
+        return
+    end
+
+    local _, classFile = UnitClass("player")
+    local coords = classFile and CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[classFile]
+    if not coords then
+        icon:Hide()
+        return
+    end
+    icon:SetTexture("Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES")
+    local inset = 0.02
+    icon:SetTexCoord(coords[1] + inset, coords[2] - inset, coords[3] + inset, coords[4] - inset)
+    icon:Show()
+end
+
+local function ApplyTargetFrameIconMode(frame, mode)
+    if not frame or not frame.targetIcon then return end
+
+    mode = mode or GetTargetFrameIconMode()
+    local icon = frame.targetIcon
+    if mode == "off" then
+        icon:Hide()
+        return
+    end
+
+    if not UnitExists("target") then
+        icon:Hide()
+        return
+    end
+
+    if mode == "portrait" then
+        if SetPortraitTexture then
+            SetPortraitTexture(icon, "target")
+        else
+            icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+        end
+        icon:SetTexCoord(0, 1, 0, 1)
+        icon:Show()
+        return
+    end
+
+    if UnitIsPlayer("target") then
+        local _, classFile = UnitClass("target")
+        local coords = classFile and CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[classFile]
+        if coords then
+            icon:SetTexture("Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES")
+            local inset = 0.02
+            icon:SetTexCoord(coords[1] + inset, coords[2] - inset, coords[3] + inset, coords[4] - inset)
+            icon:Show()
+            return
+        end
+    end
+
+    -- NPC fallback for "class icon" mode: show skull raid marker.
+    icon:SetTexture("Interface\\TargetingFrame\\UI-RaidTargetingIcons")
+    if SetRaidTargetIconTexture then
+        local ok = pcall(SetRaidTargetIconTexture, icon, 8)
+        if ok then
+            icon:Show()
+            return
+        end
+    end
+    -- Fallback if API is unavailable.
+    icon:SetTexture("Interface\\TargetingFrame\\UI-RaidTargetingIcons")
+    icon:SetTexCoord(0.75, 1.0, 0.5, 1.0)
+    icon:Show()
+end
+
+local function ApplyRaidMarkerTexture(texture, index)
+    if not texture or not index then return false end
+
+    if SetRaidTargetIconTexture then
+        local ok = pcall(SetRaidTargetIconTexture, texture, index)
+        if ok then
+            return true
+        end
+    end
+
+    if not NotSecretValue(index) then return false end
+    if type(index) ~= "number" then return false end
+    local validIndex = nil
+    pcall(function()
+        if index >= 1 and index <= 8 then
+            validIndex = index
+        end
+    end)
+    if not validIndex then return false end
+
+    texture:SetTexture("Interface\\TargetingFrame\\UI-RaidTargetingIcons")
+    local col = (validIndex - 1) % 4
+    local row = math.floor((validIndex - 1) / 4)
+    local left = col * 0.25
+    local right = left + 0.25
+    local top = row * 0.5
+    local bottom = top + 0.5
+    texture:SetTexCoord(left, right, top, bottom)
+    return true
+end
+
+local function UpdateFrameTargetMarker(frame)
+    if not frame or not frame.targetMarker then return end
+    if not MattMinimalFramesDB or MattMinimalFramesDB.showTargetMarkers ~= true then
+        frame.targetMarker:Hide()
+        return
+    end
+    if not frame.unit or not UnitExists(frame.unit) then
+        frame.targetMarker:Hide()
+        return
+    end
+    local index = GetRaidTargetIndex(frame.unit)
+    if not index then
+        frame.targetMarker:Hide()
+        return
+    end
+    local applied = ApplyRaidMarkerTexture(frame.targetMarker, index)
+    if not applied then
+        frame.targetMarker:Hide()
+        return
+    end
+    frame.targetMarker:Show()
+end
+
+local function CreateTargetMarker(frame)
+    if not frame or frame.targetMarker or not frame.nameOverlay then return end
+    local marker = frame.nameOverlay:CreateTexture(nil, "OVERLAY", nil, 7)
+    marker:SetTexture("Interface\\TargetingFrame\\UI-RaidTargetingIcons")
+    local markerSize = math.max(10, math.floor((frame:GetHeight() or frame.originalHeight or 28) * 0.75))
+    marker:SetSize(markerSize, markerSize)
+    marker:SetPoint("CENTER", frame, "CENTER", 0, 0)
+    marker:Hide()
+    frame.targetMarker = marker
+    UpdateFrameTargetMarker(frame)
 end
 
 --------------------------------------------------
@@ -135,7 +322,7 @@ local function CreateHealthBar(frame)
     frame.healthBar = CreateFrame("StatusBar", nil, frame)
     frame.healthBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
     frame.healthBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
-    frame.healthBar:SetStatusBarTexture(cfg.TEXTURE_PATH)
+    frame.healthBar:SetStatusBarTexture(GetStatusBarTexturePath())
     frame.healthBar:SetMinMaxValues(0, 1)
     frame.healthBar:SetValue(1)
     frame.healthBarFG = frame.healthBar:GetStatusBarTexture()
@@ -153,7 +340,7 @@ local function CreatePowerBarContainer(frame, unit)
     frame.powerBarBG:SetColorTexture(0, 0, 0, 0.25)
     
     frame.powerBar = CreateFrame("StatusBar", nil, frame.powerBarFrame)
-    frame.powerBar:SetStatusBarTexture(cfg.TEXTURE_PATH)
+    frame.powerBar:SetStatusBarTexture(GetStatusBarTexturePath())
     frame.powerBar:SetMinMaxValues(0, 1)
     frame.powerBar:SetValue(1)
     frame.powerBarFG = frame.powerBar:GetStatusBarTexture()
@@ -259,13 +446,13 @@ local function CreateHealPredictionBar(frame)
     frame.healPredictionClip:SetFrameLevel(frame.healthBar:GetFrameLevel() + 1)
 
     frame.myHealPrediction = CreateFrame("StatusBar", nil, frame.healPredictionClip)
-    frame.myHealPrediction:SetStatusBarTexture(cfg.TEXTURE_PATH)
+    frame.myHealPrediction:SetStatusBarTexture(GetStatusBarTexturePath())
     frame.myHealPrediction:GetStatusBarTexture():SetVertexColor(0, 0.827, 0.765, 0.7)
     frame.myHealPrediction:SetFrameLevel(frame.healthBar:GetFrameLevel() + 1)
     frame.myHealPrediction:Hide()
 
     frame.otherHealPrediction = CreateFrame("StatusBar", nil, frame.healPredictionClip)
-    frame.otherHealPrediction:SetStatusBarTexture(cfg.TEXTURE_PATH)
+    frame.otherHealPrediction:SetStatusBarTexture(GetStatusBarTexturePath())
     frame.otherHealPrediction:GetStatusBarTexture():SetVertexColor(0, 0.631, 0.557, 0.7)
     frame.otherHealPrediction:SetFrameLevel(frame.healthBar:GetFrameLevel() + 1)
     frame.otherHealPrediction:Hide()
@@ -289,6 +476,8 @@ local function CreateNameText(frame, unit)
     frame.nameText = frame.nameOverlay:CreateFontString(nil, "OVERLAY", nil, 7)
     
     local fontSize = MMF_GetNameTextSize()
+    local nameX = MMF_GetNameTextXOffset and MMF_GetNameTextXOffset(unit) or 0
+    local nameY = MMF_GetNameTextYOffset and MMF_GetNameTextYOffset(unit) or 0
     frame.nameText:SetFont(fontPath, fontSize, "OUTLINE")
     frame.nameText:SetTextColor(1, 1, 1, 1)
     frame.nameText:SetShadowOffset(1, -1)
@@ -303,7 +492,7 @@ local function CreateNameText(frame, unit)
     }
     
     local pos = positions[unit] or positions.focus
-    frame.nameText:SetPoint(pos.point, frame, pos.relPoint, pos.x, pos.y)
+    frame.nameText:SetPoint(pos.point, frame, pos.relPoint, pos.x + nameX, pos.y + nameY)
     frame.nameText:SetJustifyH(pos.justify)
     frame.nameText:SetWidth(frame.originalWidth - 4)
 end
@@ -311,6 +500,8 @@ end
 local function CreateResourceText(frame, unit)
     local fontPath = cfg.FONT_PATH
     local hpSize = MMF_GetHPTextSize and MMF_GetHPTextSize() or 13
+    local hpX = MMF_GetHPTextXOffset and MMF_GetHPTextXOffset(unit) or 0
+    local hpY = MMF_GetHPTextYOffset and MMF_GetHPTextYOffset(unit) or 0
     
     frame.hpText = frame.nameOverlay:CreateFontString(nil, "OVERLAY")
     frame.hpText:SetFont(fontPath, hpSize, "OUTLINE")
@@ -321,19 +512,19 @@ local function CreateResourceText(frame, unit)
     frame.powerText:SetTextColor(1, 1, 1)
     
     if unit == "player" then
-        frame.hpText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, -14.5)
+        frame.hpText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0 + hpX, -14.5 + hpY)
         frame.powerText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
     elseif unit == "target" then
-        frame.hpText:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 2, -14.5)
+        frame.hpText:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 2 + hpX, -14.5 + hpY)
         frame.powerText:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0)
     elseif unit == "targettarget" or unit == "pet" then
-        frame.hpText:SetPoint("BOTTOM", frame, "BOTTOM", 0, 0)
+        frame.hpText:SetPoint("BOTTOM", frame, "BOTTOM", 0 + hpX, 0 + hpY)
         frame.powerText:SetPoint("BOTTOM", frame, "BOTTOM", 0, 0)
     elseif unit == "focus" then
         frame.hpText:Hide()
         frame.powerText:Hide()
     else
-        frame.hpText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -3, 3)
+        frame.hpText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -3 + hpX, 3 + hpY)
         frame.powerText:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 3, 3)
     end
 end
@@ -358,6 +549,32 @@ local function CreatePlayerIndicators(frame)
     frame.restingTexture:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -5, 10)
     frame.restingTexture:SetDrawLayer("OVERLAY", 7)
     frame.restingTexture:SetShown(IsResting())
+end
+
+local function CreatePlayerClassIcon(frame)
+    if not frame or frame.classIcon then return end
+    if not frame.nameOverlay then return end
+
+    local classIcon = frame.nameOverlay:CreateTexture(nil, "OVERLAY", nil, 7)
+    local iconSize = math.max(8, (frame:GetHeight() or frame.originalHeight or 28))
+    classIcon:SetSize(iconSize, iconSize)
+    classIcon:SetPoint("RIGHT", frame, "LEFT", 0, 0)
+    frame.classIcon = classIcon
+
+    ApplyPlayerFrameIconMode(frame, GetPlayerFrameIconMode())
+end
+
+local function CreateTargetFrameIcon(frame)
+    if not frame or frame.targetIcon then return end
+    if not frame.nameOverlay then return end
+
+    local targetIcon = frame.nameOverlay:CreateTexture(nil, "OVERLAY", nil, 7)
+    local iconSize = math.max(8, (frame:GetHeight() or frame.originalHeight or 28))
+    targetIcon:SetSize(iconSize, iconSize)
+    targetIcon:SetPoint("LEFT", frame, "RIGHT", 0, 0)
+    frame.targetIcon = targetIcon
+
+    ApplyTargetFrameIconMode(frame, GetTargetFrameIconMode())
 end
 
 --------------------------------------------------
@@ -668,13 +885,17 @@ function MMF_CreateSecureUnitFrame(unit, frameName, width, height, point, relPoi
 
     CreateNameText(f, unit)
     CreateResourceText(f, unit)
+    CreateTargetMarker(f)
 
     if unit == "player" or unit == "target" then
         SetupPowerBar(f, unit)
     end
 
     if unit == "player" then
+        CreatePlayerClassIcon(f)
         CreatePlayerIndicators(f)
+    elseif unit == "target" then
+        CreateTargetFrameIcon(f)
     end
 
     if unit == "player" or unit == "target" then
@@ -700,4 +921,103 @@ function MMF_SetGUIScale(scale)
     if MMF_WelcomePopup then
         MMF_WelcomePopup:SetScale(scale)
     end
+end
+
+function MMF_UpdatePlayerClassIconVisibility(enabled)
+    if not MMF_PlayerFrame or not MMF_PlayerFrame.classIcon then return end
+    local mode = enabled
+    if type(mode) == "boolean" then
+        mode = mode and "class" or "off"
+    end
+    if mode == nil then
+        mode = GetPlayerFrameIconMode()
+    end
+    if mode ~= "off" and mode ~= "class" and mode ~= "portrait" then
+        mode = "off"
+    end
+    if MattMinimalFramesDB then
+        MattMinimalFramesDB.playerFrameIconMode = mode
+        MattMinimalFramesDB.showPlayerClassIcon = (mode == "class")
+    end
+    ApplyPlayerFrameIconMode(MMF_PlayerFrame, mode)
+end
+
+function MMF_GetPlayerFrameIconMode()
+    return GetPlayerFrameIconMode()
+end
+
+function MMF_UpdateTargetFrameIconVisibility(enabled)
+    if not MMF_TargetFrame or not MMF_TargetFrame.targetIcon then return end
+    local mode = enabled
+    if type(mode) == "boolean" then
+        mode = mode and "class" or "off"
+    end
+    if mode == nil then
+        mode = GetTargetFrameIconMode()
+    end
+    if mode ~= "off" and mode ~= "class" and mode ~= "portrait" then
+        mode = "off"
+    end
+    if MattMinimalFramesDB then
+        MattMinimalFramesDB.targetFrameIconMode = mode
+        MattMinimalFramesDB.showTargetFrameIcon = (mode == "class")
+    end
+    ApplyTargetFrameIconMode(MMF_TargetFrame, mode)
+end
+
+function MMF_GetTargetFrameIconMode()
+    return GetTargetFrameIconMode()
+end
+
+function MMF_UpdateTargetMarkers()
+    local frames = {
+        MMF_PlayerFrame,
+        MMF_TargetFrame,
+        MMF_TargetOfTargetFrame,
+        MMF_PetFrame,
+        MMF_FocusFrame,
+    }
+    for _, frame in ipairs(frames) do
+        UpdateFrameTargetMarker(frame)
+    end
+end
+
+function MMF_UpdateTargetMarkerVisibility(enabled)
+    if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
+    if enabled == nil then
+        enabled = MattMinimalFramesDB.showTargetMarkers == true
+    end
+    MattMinimalFramesDB.showTargetMarkers = enabled and true or false
+    MMF_UpdateTargetMarkers()
+end
+
+do
+    local iconEventFrame = CreateFrame("Frame")
+    iconEventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    iconEventFrame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "player")
+    iconEventFrame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "target")
+    iconEventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
+    iconEventFrame:SetScript("OnEvent", function(_, _, unit)
+        if (not unit or unit == "player") and MMF_GetPlayerFrameIconMode and MMF_GetPlayerFrameIconMode() == "portrait" then
+            MMF_UpdatePlayerClassIconVisibility("portrait")
+        end
+        if (not unit or unit == "target") and MMF_GetTargetFrameIconMode and MMF_GetTargetFrameIconMode() ~= "off" then
+            MMF_UpdateTargetFrameIconVisibility(MMF_GetTargetFrameIconMode())
+        end
+    end)
+end
+
+do
+    local markerEventFrame = CreateFrame("Frame")
+    markerEventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    markerEventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
+    markerEventFrame:RegisterEvent("PLAYER_FOCUS_CHANGED")
+    markerEventFrame:RegisterEvent("RAID_TARGET_UPDATE")
+    markerEventFrame:RegisterEvent("UNIT_TARGET")
+    markerEventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+    markerEventFrame:SetScript("OnEvent", function()
+        if MMF_UpdateTargetMarkers then
+            MMF_UpdateTargetMarkers()
+        end
+    end)
 end

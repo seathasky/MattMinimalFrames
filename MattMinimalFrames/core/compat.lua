@@ -181,11 +181,19 @@ function MMF.SetAuraCooldown(cooldownFrame, auraData, unit)
     
     -- Check if duration is a secret value to avoid taint
     local isSecretDuration = issecretvalue and issecretvalue(auraData.duration)
-    if not isSecretDuration and auraData.duration and auraData.duration > 0 and auraData.expirationTime then
-        CooldownFrame_Set(cooldownFrame, auraData.expirationTime - auraData.duration, auraData.duration, true)
-    else
-        cooldownFrame:Clear()
+    if not isSecretDuration then
+        local ok, startTime, duration = pcall(function()
+            if auraData.duration and auraData.duration > 0 and auraData.expirationTime then
+                return auraData.expirationTime - auraData.duration, auraData.duration
+            end
+            return nil, nil
+        end)
+        if ok and startTime and duration then
+            CooldownFrame_Set(cooldownFrame, startTime, duration, true)
+            return
+        end
     end
+    cooldownFrame:Clear()
 end
 
 function MMF.GetAuraCount(auraData, unit)

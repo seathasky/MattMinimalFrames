@@ -1,9 +1,9 @@
 ## Interface: 120000
 ## Title: Matt's Minimal Frames
 ## Author: Seathasky
-## Version: 4.9.4
+## Version: 5.0.0
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
-## SavedVariables: MattMinimalFramesDB
+## SavedVariables: MattMinimalFramesDB, MattMinimalFramesProfilesDB
 
 # Libraries
 Libs\LibStub\LibStub.lua
@@ -11,18 +11,30 @@ Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
 Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
 Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
 Libs\LibCustomGlow-1.0\LibCustomGlow-1.0.lua
+Libs\SharedMedia\libs\LibSharedMedia-3.0\LibSharedMedia-3.0.lua
 
 # Core modules
 core/compat.lua
 core/defaults.lua
+core/profiles.lua
 core/utilities.lua
 core/config.lua
 core/frame_factory.lua
 core/unit_updates.lua
+core/combat_queue.lua
+core/update_dispatcher.lua
 core/auras.lua
 core/events.lua
 core/frames.lua
-core/popup.lua
+core/popup/popup_constants.lua
+core/popup/popup_widgets.lua
+core/popup/popup_dialogs.lua
+core/popup/popup_page_unit_frames.lua
+core/popup/popup_page_tools.lua
+core/popup/popup_page_profiles.lua
+core/popup/popup_page_auras_class.lua
+core/popup/popup_footer.lua
+core/popup/popup.lua
 core/minimap.lua
 
 init.lua

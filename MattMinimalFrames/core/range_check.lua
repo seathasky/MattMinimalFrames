@@ -11,6 +11,17 @@ local UnitCanAttack = UnitCanAttack
 local GetTime = GetTime
 
 local playerClass = UnitClassBase("player")
+local friendSpellID = friendSpells[playerClass]
+local harmSpellID = harmSpells[playerClass]
+local friendSpellName
+local harmSpellName
+
+local function RefreshRangeSpellNames()
+    friendSpellName = friendSpellID and GetSpellName(friendSpellID) or nil
+    harmSpellName = harmSpellID and GetSpellName(harmSpellID) or nil
+end
+
+RefreshRangeSpellNames()
 
 local function IsUnitInRange(unit)
     if not UnitExists(unit) then
@@ -24,14 +35,11 @@ local function IsUnitInRange(unit)
     local isFriendly = UnitCanAssist("player", unit)
     local isHostile = UnitCanAttack("player", unit)
 
-    local spell = isFriendly and friendSpells[playerClass] or isHostile and harmSpells[playerClass]
+    local spellName = isFriendly and friendSpellName or isHostile and harmSpellName
 
-    if spell then
-        local spellName = GetSpellName(spell)
-        if spellName then
-            local inRange = IsSpellInRange(spellName, unit)
-            return (inRange == 1 or inRange == true)
-        end
+    if spellName then
+        local inRange = IsSpellInRange(spellName, unit)
+        return (inRange == 1 or inRange == true)
     end
 
     return true
@@ -62,20 +70,35 @@ local function UpdateFrameRange(frame, unit)
 
         if not frame.fadeTimer then
             frame.fadeTimer = CreateFrame("Frame")
-            frame.fadeTimer:SetScript("OnUpdate", function(self, elapsed)
-                local parent = self:GetParent()
-                if not parent.fadeInfo then return end
-
-                local progress = (GetTime() - parent.fadeInfo.startTime) / parent.fadeInfo.duration
-                if progress >= 1 then
-                    parent:SetAlpha(parent.fadeInfo.targetAlpha)
-                    parent.fadeInfo = nil
-                else
-                    local newAlpha = Lerp(parent.fadeInfo.startAlpha, parent.fadeInfo.targetAlpha, progress)
-                    parent:SetAlpha(newAlpha)
-                end
-            end)
             frame.fadeTimer:SetParent(frame)
+        end
+
+        frame.fadeTimer:SetScript("OnUpdate", function(self)
+            local parent = self:GetParent()
+            if not parent or not parent.fadeInfo then
+                self:SetScript("OnUpdate", nil)
+                return
+            end
+
+            local progress = (GetTime() - parent.fadeInfo.startTime) / parent.fadeInfo.duration
+            if progress >= 1 then
+                parent:SetAlpha(parent.fadeInfo.targetAlpha)
+                parent.fadeInfo = nil
+                self:SetScript("OnUpdate", nil)
+            else
+                local newAlpha = Lerp(parent.fadeInfo.startAlpha, parent.fadeInfo.targetAlpha, progress)
+                parent:SetAlpha(newAlpha)
+            end
+        end)
+    end
+end
+
+local function ResetFrameAlpha(frame)
+    if frame then
+        frame:SetAlpha(1)
+        frame.fadeInfo = nil
+        if frame.fadeTimer then
+            frame.fadeTimer:SetScript("OnUpdate", nil)
         end
     end
 end
@@ -83,14 +106,10 @@ end
 local function UpdateAllFrames()
     UpdateFrameRange(MMF_TargetFrame, "target")
 
-    if UnitExists("target") then
-        if UnitExists("targettarget") then
-            UpdateFrameRange(MMF_TargetOfTargetFrame, "targettarget")
-        else
-            if MMF_TargetOfTargetFrame then
-                MMF_TargetOfTargetFrame:SetAlpha(1)
-            end
-        end
+    if UnitExists("targettarget") then
+        UpdateFrameRange(MMF_TargetOfTargetFrame, "targettarget")
+    else
+        ResetFrameAlpha(MMF_TargetOfTargetFrame)
     end
 
     UpdateFrameRange(MMF_FocusFrame, "focus")
@@ -105,7 +124,11 @@ eventFrame:RegisterEvent("UNIT_AURA")
 eventFrame:RegisterEvent("PLAYER_FOCUS_CHANGED")
 eventFrame:RegisterEvent("UNIT_TARGET")
 
-eventFrame:SetScript("OnEvent", function(self, event, unit)
+eventFrame:SetScript("OnEvent", function(_, event, unit)
+    if event == "PLAYER_LOGIN" or event == "SPELLS_CHANGED" then
+        RefreshRangeSpellNames()
+    end
+
     if event == "PLAYER_TARGET_CHANGED" or
        event == "PLAYER_FOCUS_CHANGED" or
        event == "UNIT_TARGET" or
@@ -119,7 +142,7 @@ end)
 
 local updateThrottle = 0
 local rangeUpdater = CreateFrame("Frame")
-rangeUpdater:SetScript("OnUpdate", function(self, elapsed)
+rangeUpdater:SetScript("OnUpdate", function(_, elapsed)
     updateThrottle = updateThrottle + elapsed
     if updateThrottle >= 0.2 then
         updateThrottle = 0

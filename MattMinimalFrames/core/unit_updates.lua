@@ -2,6 +2,28 @@ local cfg = MMF_Config
 local Compat = _G.MMF_Compat
 local lastUpdate = 0
 
+local UnitExists = UnitExists
+local UnitHealthMax = UnitHealthMax
+local UnitHealth = UnitHealth
+local UnitName = UnitName
+local UnitPowerType = UnitPowerType
+local UnitPowerMax = UnitPowerMax
+local UnitPower = UnitPower
+local UnitClassBase = UnitClassBase
+local UnitGetIncomingHeals = UnitGetIncomingHeals
+local UnitGetDetailedHealPrediction = UnitGetDetailedHealPrediction
+local UnitGetTotalAbsorbs = UnitGetTotalAbsorbs
+local PowerBarColor = PowerBarColor
+
+local IS_PLAYER_SHAMAN = (UnitClassBase("player") == "SHAMAN")
+
+local function SafeEq(a, b)
+    local ok, result = pcall(function()
+        return a == b
+    end)
+    return ok and result or false
+end
+
 --------------------------------------------------
 -- HEAL PREDICTION UPDATE
 --------------------------------------------------
@@ -26,14 +48,12 @@ local function UpdateHealPrediction(frame)
     local healthTexture = frame.healthBar:GetStatusBarTexture()
     local barWidth = frame.healthBar:GetWidth()
 
-    -- Position my heals bar starting at health fill edge, clipped by parent
     frame.myHealPrediction:ClearAllPoints()
     frame.myHealPrediction:SetPoint("TOPLEFT", healthTexture, "TOPRIGHT", 0, 0)
     frame.myHealPrediction:SetPoint("BOTTOMLEFT", healthTexture, "BOTTOMRIGHT", 0, 0)
     frame.myHealPrediction:SetWidth(barWidth)
     frame.myHealPrediction:SetMinMaxValues(0, maxHealth)
 
-    -- Position other heals bar starting at my heals fill edge
     local myHealTexture = frame.myHealPrediction:GetStatusBarTexture()
     frame.otherHealPrediction:ClearAllPoints()
     frame.otherHealPrediction:SetPoint("TOPLEFT", myHealTexture, "TOPRIGHT", 0, 0)
@@ -42,7 +62,6 @@ local function UpdateHealPrediction(frame)
     frame.otherHealPrediction:SetMinMaxValues(0, maxHealth)
 
     if Compat.IsRetail and frame.healPredictionCalculator and UnitGetDetailedHealPrediction then
-        -- Retail: pass calculator values directly to SetValue (no comparisons on secret values)
         pcall(function()
             UnitGetDetailedHealPrediction(unit, "player", frame.healPredictionCalculator)
             local _, playerHeal, otherHeal = frame.healPredictionCalculator:GetIncomingHeals()
@@ -50,12 +69,13 @@ local function UpdateHealPrediction(frame)
             frame.otherHealPrediction:SetValue(otherHeal or 0)
         end)
     elseif UnitGetIncomingHeals then
-        -- TBC/Classic: UnitGetIncomingHeals
         local myHeal = UnitGetIncomingHeals(unit, "player") or 0
         local allHeal = UnitGetIncomingHeals(unit) or 0
         frame.myHealPrediction:SetValue(myHeal)
         local otherHeal = 0
-        pcall(function() otherHeal = allHeal - myHeal end)
+        pcall(function()
+            otherHeal = allHeal - myHeal
+        end)
         frame.otherHealPrediction:SetValue(otherHeal)
     end
 
@@ -89,7 +109,6 @@ local function UpdateAbsorbBar(frame)
     local maxHealth = UnitHealthMax(unit)
     local barWidth = frame.healthBar:GetWidth()
 
-    -- Anchor after heal prediction chain or directly after health fill
     local anchorTexture
     if frame.otherHealPrediction and frame.otherHealPrediction:IsShown() then
         anchorTexture = frame.otherHealPrediction:GetStatusBarTexture()
@@ -126,18 +145,11 @@ local function UpdateUnitFrame(frame)
     else
         local unitName = UnitName(unit)
         if unit == "targettarget" then
-            local success, truncated = pcall(function()
-                local name = unitName or ""
-                if #name > 8 then
-                    return string.sub(name, 1, 8) .. "…"
-                end
-                return name
-            end)
-            if success then
-                frame.nameText:SetText(truncated)
-            else
-                frame.nameText:SetText(unitName)
+            local name = unitName or ""
+            if #name > 8 then
+                name = string.sub(name, 1, 8) .. "..."
             end
+            frame.nameText:SetText(name)
         else
             frame.nameText:SetText(unitName)
             frame.nameText:SetWidth(frame.originalWidth - 4)
@@ -175,11 +187,10 @@ local function UpdateUnitFrame(frame)
     if frame.powerBar and (unit == "player" or unit == "target") then
         local powerType = UnitPowerType(unit)
 
-        local Compat = _G.MMF_Compat
         local useManaPowerType = false
-        if unit == "player" and UnitClass(unit) == "Shaman" and Compat.HasSpecialization then
+        if unit == "player" and IS_PLAYER_SHAMAN and Compat.HasSpecialization then
             local spec = Compat.GetSpecialization()
-            if spec == 1 or spec == 2 then
+            if SafeEq(spec, 1) or SafeEq(spec, 2) then
                 useManaPowerType = true
                 powerType = 0
             end
@@ -187,27 +198,31 @@ local function UpdateUnitFrame(frame)
 
         local maxPower = useManaPowerType and UnitPowerMax(unit, 0) or UnitPowerMax(unit)
         local power = useManaPowerType and UnitPower(unit, 0) or UnitPower(unit)
-
         local hasPower = false
         pcall(function()
-            if maxPower and maxPower > 0 then
-                hasPower = true
-            end
+            hasPower = (maxPower and maxPower > 0) and true or false
         end)
 
         if hasPower then
             frame.powerBar:SetMinMaxValues(0, maxPower)
             frame.powerBar:SetValue(power)
 
-            local powerColor = PowerBarColor[powerType]
-            local r, g, b = 1, 1, 1
-            if powerType == 0 then
-                r, g, b = 0.2, 0.7, 1
+            local powerColor
+            pcall(function()
+                powerColor = PowerBarColor[powerType]
+            end)
+            local pr, pg, pb = 1, 1, 1
+            local isManaPowerType = false
+            pcall(function()
+                isManaPowerType = (powerType == 0)
+            end)
+            if isManaPowerType then
+                pr, pg, pb = 0.2, 0.7, 1
             elseif powerColor then
-                r, g, b = powerColor.r, powerColor.g, powerColor.b
+                pr, pg, pb = powerColor.r, powerColor.g, powerColor.b
             end
 
-            frame.powerBar:SetStatusBarColor(r, g, b, 1)
+            frame.powerBar:SetStatusBarColor(pr, pg, pb, 1)
 
             if frame.powerBarBorder then frame.powerBarBorder:Show() end
             frame.powerBarBG:Show()
@@ -227,7 +242,8 @@ function MMF_UpdateAll(elapsed)
     if lastUpdate < cfg.UPDATE_INTERVAL then return end
     lastUpdate = 0
 
-    for _, frame in ipairs(MMF_GetAllFrames()) do
+    local allFrames = MMF_GetAllFrames()
+    for _, frame in ipairs(allFrames) do
         if frame and frame:IsShown() then
             UpdateUnitFrame(frame)
         end

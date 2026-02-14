@@ -27,6 +27,121 @@ MMF_Config = {
     },
 }
 
+local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
+local STATUSBAR = LSM and LSM.MediaType and LSM.MediaType.STATUSBAR or "statusbar"
+local FONT = LSM and LSM.MediaType and LSM.MediaType.FONT or "font"
+local MMF_STATUSBAR_DEFAULT = "MMF Melli"
+local MMF_FONT_DEFAULT = "MMF Naowh"
+local MMF_STATUSBAR_REGISTRY = {
+    { name = "MMF Melli", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Melli.tga" },
+    { name = "MMF Melli Dark", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\MelliDark.tga" },
+    { name = "MMF Melli Dark Rough", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\MelliDarkRough.tga" },
+    { name = "MMF Flat", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Flat.tga" },
+    { name = "MMF Smooth", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Smooth.tga" },
+    { name = "MMF Smooth v2", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Smoothv2.tga" },
+    { name = "MMF Glaze", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Glaze.tga" },
+    { name = "MMF Graphite", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Graphite.tga" },
+    { name = "MMF Charcoal", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Charcoal.tga" },
+    { name = "MMF Steel", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Steel.tga" },
+    { name = "MMF Tube", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Tube.tga" },
+    { name = "MMF Outline", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Outline.tga" },
+    { name = "MMF Minimalist", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Minimalist.tga" },
+    { name = "MMF Wglass", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Wglass.tga" },
+}
+local MMF_FONT_REGISTRY = {
+    { name = MMF_FONT_DEFAULT, path = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf" },
+}
+
+function MMF_RegisterStatusBarMedia()
+    if not LSM then return end
+    for _, media in ipairs(MMF_STATUSBAR_REGISTRY) do
+        if not LSM:IsValid(STATUSBAR, media.name) then
+            LSM:Register(STATUSBAR, media.name, media.path)
+        end
+    end
+end
+
+function MMF_RegisterFontMedia()
+    if not LSM then return end
+    for _, media in ipairs(MMF_FONT_REGISTRY) do
+        if not LSM:IsValid(FONT, media.name) then
+            LSM:Register(FONT, media.name, media.path)
+        end
+    end
+end
+
+function MMF_GetStatusBarTextureOptions()
+    local list = {}
+    if LSM then
+        local names = LSM:List(STATUSBAR) or {}
+        for _, name in ipairs(names) do
+            list[#list + 1] = name
+        end
+    else
+        for _, media in ipairs(MMF_STATUSBAR_REGISTRY) do
+            list[#list + 1] = media.name
+        end
+    end
+    table.sort(list, function(a, b) return tostring(a):lower() < tostring(b):lower() end)
+    return list
+end
+
+function MMF_GetStatusBarTexturePath()
+    local selected = (MattMinimalFramesDB and MattMinimalFramesDB.statusBarTexture) or MMF_STATUSBAR_DEFAULT
+    if LSM then
+        local fetched = LSM:Fetch(STATUSBAR, selected, true)
+        if fetched then
+            return fetched
+        end
+        local fallback = LSM:Fetch(STATUSBAR, MMF_STATUSBAR_DEFAULT, true)
+        if fallback then
+            return fallback
+        end
+    end
+    return MMF_Config.TEXTURE_PATH
+end
+
+function MMF_GetFontOptions()
+    local list = {}
+    if LSM then
+        local names = LSM:List(FONT) or {}
+        for _, name in ipairs(names) do
+            list[#list + 1] = name
+        end
+    else
+        for _, media in ipairs(MMF_FONT_REGISTRY) do
+            list[#list + 1] = media.name
+        end
+    end
+    table.sort(list, function(a, b) return tostring(a):lower() < tostring(b):lower() end)
+    return list
+end
+
+function MMF_GetGlobalFontPath()
+    local selected = (MattMinimalFramesDB and MattMinimalFramesDB.globalFont) or MMF_FONT_DEFAULT
+    if LSM then
+        local fetched = LSM:Fetch(FONT, selected, true)
+        if fetched then
+            return fetched
+        end
+        local fallback = LSM:Fetch(FONT, MMF_FONT_DEFAULT, true)
+        if fallback then
+            return fallback
+        end
+    end
+    return MMF_Config.FONT_PATH
+end
+
+function MMF_SetGlobalFont(fontName)
+    if not fontName or fontName == "" then return end
+    if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
+    MattMinimalFramesDB.globalFont = fontName
+    MMF_Config.FONT_PATH = MMF_GetGlobalFontPath() or MMF_Config.FONT_PATH
+    if MMF_ApplyGlobalFont then
+        MMF_ApplyGlobalFont()
+    end
+end
+
 function MMF_Config.GetCastBarColor(key)
     for _, opt in ipairs(MMF_Config.CAST_BAR_COLORS) do
         if opt.value == key then
@@ -35,6 +150,9 @@ function MMF_Config.GetCastBarColor(key)
     end
     return 1, 1, 1
 end
+
+MMF_RegisterStatusBarMedia()
+MMF_RegisterFontMedia()
 
 function MMF_GetAllFrames()
     return {
@@ -148,6 +266,100 @@ function MMF_GetHPTextSize()
     return (MattMinimalFramesDB and MattMinimalFramesDB.hpTextSize) or 13
 end
 
+local function GetUnitPrefix(unit)
+    if unit == "targettarget" then return "tot" end
+    return unit
+end
+
+function MMF_GetNameTextXOffset(unit)
+    if not MattMinimalFramesDB then return 0 end
+    local prefix = GetUnitPrefix(unit or "player")
+    local key = prefix .. "NameTextXOffset"
+    if MattMinimalFramesDB[key] ~= nil then
+        return MattMinimalFramesDB[key]
+    end
+    return MattMinimalFramesDB.nameTextXOffset or 0
+end
+
+function MMF_GetNameTextYOffset(unit)
+    if not MattMinimalFramesDB then return 0 end
+    local prefix = GetUnitPrefix(unit or "player")
+    local key = prefix .. "NameTextYOffset"
+    if MattMinimalFramesDB[key] ~= nil then
+        return MattMinimalFramesDB[key]
+    end
+    return MattMinimalFramesDB.nameTextYOffset or 0
+end
+
+function MMF_GetHPTextXOffset(unit)
+    if not MattMinimalFramesDB then return 0 end
+    local prefix = GetUnitPrefix(unit or "player")
+    local key = prefix .. "HPTextXOffset"
+    if MattMinimalFramesDB[key] ~= nil then
+        return MattMinimalFramesDB[key]
+    end
+    return MattMinimalFramesDB.hpTextXOffset or 0
+end
+
+function MMF_GetHPTextYOffset(unit)
+    if not MattMinimalFramesDB then return 0 end
+    local prefix = GetUnitPrefix(unit or "player")
+    local key = prefix .. "HPTextYOffset"
+    if MattMinimalFramesDB[key] ~= nil then
+        return MattMinimalFramesDB[key]
+    end
+    return MattMinimalFramesDB.hpTextYOffset or 0
+end
+
+local function ApplyFrameTextOffsets(frame)
+    if not frame then return end
+    local unit = frame.unit
+    local nameX = MMF_GetNameTextXOffset(unit)
+    local nameY = MMF_GetNameTextYOffset(unit)
+    local hpX = MMF_GetHPTextXOffset(unit)
+    local hpY = MMF_GetHPTextYOffset(unit)
+
+    if frame.nameText then
+        local positions = {
+            player = { point = "LEFT", relPoint = "TOPLEFT", x = 2, y = 0, justify = "LEFT" },
+            target = { point = "RIGHT", relPoint = "TOPRIGHT", x = -2, y = 0, justify = "RIGHT" },
+            targettarget = { point = "CENTER", relPoint = "TOP", x = 0, y = 0, justify = "CENTER" },
+            pet = { point = "CENTER", relPoint = "TOP", x = 0, y = 0, justify = "CENTER" },
+            focus = { point = "CENTER", relPoint = "TOP", x = 0, y = 0, justify = "CENTER" },
+        }
+        local pos = positions[unit] or positions.focus
+        frame.nameText:ClearAllPoints()
+        frame.nameText:SetPoint(pos.point, frame, pos.relPoint, pos.x + nameX, pos.y + nameY)
+        frame.nameText:SetJustifyH(pos.justify)
+    end
+
+    if frame.hpText then
+        frame.hpText:ClearAllPoints()
+        if frame.unit == "player" then
+            frame.hpText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0 + hpX, -14.5 + hpY)
+        elseif frame.unit == "target" then
+            frame.hpText:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 2 + hpX, -14.5 + hpY)
+        elseif frame.unit == "targettarget" or frame.unit == "pet" then
+            frame.hpText:SetPoint("BOTTOM", frame, "BOTTOM", 0 + hpX, 0 + hpY)
+        elseif frame.unit ~= "focus" then
+            frame.hpText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -3 + hpX, 3 + hpY)
+        end
+    end
+end
+
+function MMF_UpdateFrameTextOffsets()
+    local frames = {
+        MMF_PlayerFrame,
+        MMF_TargetFrame,
+        MMF_TargetOfTargetFrame,
+        MMF_PetFrame,
+        MMF_FocusFrame
+    }
+    for _, frame in ipairs(frames) do
+        ApplyFrameTextOffsets(frame)
+    end
+end
+
 function MMF_UpdateNameTextSize(size)
     local frames = {
         MMF_PlayerFrame,
@@ -157,7 +369,7 @@ function MMF_UpdateNameTextSize(size)
         MMF_FocusFrame
     }
     
-    local fontPath = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
+    local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or MMF_Config.FONT_PATH
     for _, frame in ipairs(frames) do
         if frame and frame.nameText then
             frame.nameText:SetFont(fontPath, size, "OUTLINE")
@@ -179,7 +391,7 @@ function MMF_UpdateHPTextSize(size)
         MMF_FocusFrame
     }
     
-    local fontPath = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
+    local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or MMF_Config.FONT_PATH
     for _, frame in ipairs(frames) do
         if frame and frame.hpText then
             frame.hpText:SetFont(fontPath, size, "OUTLINE")
@@ -234,6 +446,7 @@ function MMF_UpdateFrameScale(unit)
     if frame.nameText then
         frame.nameText:SetWidth(newWidth - 4)
     end
+    ApplyFrameTextOffsets(frame)
     if frame.castBarFrame then
         frame.castBarFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 1)
         frame.castBarFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
@@ -244,6 +457,30 @@ function MMF_UpdateFrameScale(unit)
                 frame.castBarText:SetWidth(newWidth - 2)
             end
         end
+    end
+    if frame.classIcon then
+        local iconSize = math.max(8, newHeight)
+        frame.classIcon:SetSize(iconSize, iconSize)
+        frame.classIcon:ClearAllPoints()
+        frame.classIcon:SetPoint("RIGHT", frame, "LEFT", 0, 0)
+    end
+    if frame.targetIcon then
+        local iconSize = math.max(8, newHeight)
+        frame.targetIcon:SetSize(iconSize, iconSize)
+        frame.targetIcon:ClearAllPoints()
+        frame.targetIcon:SetPoint("LEFT", frame, "RIGHT", 0, 0)
+    end
+    if frame.targetMarker then
+        local markerSize = math.max(10, math.floor(newHeight * 0.75))
+        frame.targetMarker:SetSize(markerSize, markerSize)
+        frame.targetMarker:ClearAllPoints()
+        frame.targetMarker:SetPoint("CENTER", frame, "CENTER", 0, 0)
+    end
+    if MMF_UpdateTargetMarkers then
+        MMF_UpdateTargetMarkers()
+    end
+    if MMF_UpdateTargetFrameIconVisibility and unit == "target" then
+        MMF_UpdateTargetFrameIconVisibility()
     end
 end
 
