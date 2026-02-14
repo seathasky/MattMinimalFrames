@@ -8,6 +8,13 @@ local function GetStatusBarTexturePath()
     return "Interface\\AddOns\\MattMinimalFrames\\Textures\\Melli.tga"
 end
 
+local function GetClassBarColor(classColor)
+    if MMF_IsClassColorGUIEnabled and not MMF_IsClassColorGUIEnabled() then
+        return { 0.85, 0.85, 0.85 }
+    end
+    return classColor
+end
+
 if not Compat.HasDeathKnight then
     function MMF_InitializeClassResources() end
     function MMF_GetCurrentClassBarConfig() return nil end
@@ -400,49 +407,49 @@ end
 
 local function CreateRuneBar()
     if MMF_RuneBar then return MMF_RuneBar end
-    MMF_RuneBar = CreateBaseResourceBar("MMF_RuneBar", "runeBar", "Rune Bar", {0.3, 0.8, 1.0}, 6, 1)
+    MMF_RuneBar = CreateBaseResourceBar("MMF_RuneBar", "runeBar", "Rune Bar", GetClassBarColor({0.3, 0.8, 1.0}), 6, 1)
     _G.MMF_RuneBar = MMF_RuneBar
     return MMF_RuneBar
 end
 
 local function CreateHolyPowerBar()
     if MMF_HolyPowerBar then return MMF_HolyPowerBar end
-    MMF_HolyPowerBar = CreateBaseResourceBar("MMF_HolyPowerBar", "holyPowerBar", "Holy Power Bar", {0.95, 0.9, 0.2}, 5, 0)
+    MMF_HolyPowerBar = CreateBaseResourceBar("MMF_HolyPowerBar", "holyPowerBar", "Holy Power Bar", GetClassBarColor({0.95, 0.9, 0.2}), 5, 0)
     _G.MMF_HolyPowerBar = MMF_HolyPowerBar
     return MMF_HolyPowerBar
 end
 
 local function CreateComboPointBar()
     if MMF_ComboPointBar then return MMF_ComboPointBar end
-    MMF_ComboPointBar = CreateBaseResourceBar("MMF_ComboPointBar", "comboPointBar", "Combo Point", {1, 0.8, 0.2}, 7, 0)
+    MMF_ComboPointBar = CreateBaseResourceBar("MMF_ComboPointBar", "comboPointBar", "Combo Point", GetClassBarColor({1, 0.8, 0.2}), 7, 0)
     _G.MMF_ComboPointBar = MMF_ComboPointBar
     return MMF_ComboPointBar
 end
 
 local function CreateSoulShardBar()
     if MMF_SoulShardBar then return MMF_SoulShardBar end
-    MMF_SoulShardBar = CreateBaseResourceBar("MMF_SoulShardBar", "soulShardBar", "Soul Shard", {0.9, 0.5, 1}, 5, 0)
+    MMF_SoulShardBar = CreateBaseResourceBar("MMF_SoulShardBar", "soulShardBar", "Soul Shard", GetClassBarColor({0.9, 0.5, 1}), 5, 0)
     _G.MMF_SoulShardBar = MMF_SoulShardBar
     return MMF_SoulShardBar
 end
 
 local function CreateChiBar()
     if MMF_ChiBar then return MMF_ChiBar end
-    MMF_ChiBar = CreateBaseResourceBar("MMF_ChiBar", "chiBar", "Chi", {0.2, 1, 0.8}, 6, 0)
+    MMF_ChiBar = CreateBaseResourceBar("MMF_ChiBar", "chiBar", "Chi", GetClassBarColor({0.2, 1, 0.8}), 6, 0)
     _G.MMF_ChiBar = MMF_ChiBar
     return MMF_ChiBar
 end
 
 local function CreateArcaneChargeBar()
     if MMF_ArcaneChargeBar then return MMF_ArcaneChargeBar end
-    MMF_ArcaneChargeBar = CreateBaseResourceBar("MMF_ArcaneChargeBar", "arcaneChargeBar", "Arcane Charge", {0.4, 0.7, 1}, 4, 0)
+    MMF_ArcaneChargeBar = CreateBaseResourceBar("MMF_ArcaneChargeBar", "arcaneChargeBar", "Arcane Charge", GetClassBarColor({0.4, 0.7, 1}), 4, 0)
     _G.MMF_ArcaneChargeBar = MMF_ArcaneChargeBar
     return MMF_ArcaneChargeBar
 end
 
 local function CreateEssenceBar()
     if MMF_EssenceBar then return MMF_EssenceBar end
-    MMF_EssenceBar = CreateBaseResourceBar("MMF_EssenceBar", "essenceBar", "Essence", {1, 0.5, 0.7}, 5, 0)
+    MMF_EssenceBar = CreateBaseResourceBar("MMF_EssenceBar", "essenceBar", "Essence", GetClassBarColor({1, 0.5, 0.7}), 5, 0)
     _G.MMF_EssenceBar = MMF_EssenceBar
     return MMF_EssenceBar
 end

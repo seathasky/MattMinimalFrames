@@ -1,7 +1,5 @@
 local Compat = _G.MMF_Compat
 
-local ACCENT_COLOR = (MMF_GetPopupAccentColor and MMF_GetPopupAccentColor()) or { 0.6, 0.4, 0.9 }
-local ACCENT_HEX_PREFIX = (MMF_RGBToHexPrefix and MMF_RGBToHexPrefix(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])) or "|cff9966e6"
 local POPUP_LAYOUT = (MMF_GetPopupLayout and MMF_GetPopupLayout()) or {
     width = Compat.IsTBC and 600 or 620,
     height = Compat.IsTBC and 616 or 620,
@@ -31,6 +29,9 @@ end
 local CreateProfilesPage = MMF_CreateProfilesPage
 
 function MMF_ShowWelcomePopup(forceShow)
+    local ACCENT_COLOR = (MMF_GetPopupAccentColor and MMF_GetPopupAccentColor()) or { 0.6, 0.4, 0.9 }
+    local ACCENT_HEX_PREFIX = (MMF_RGBToHexPrefix and MMF_RGBToHexPrefix(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])) or "|cff9966e6"
+
     if not forceShow and MattMinimalFramesDB.hideWelcomeMessage then return end
 
     -- If popup already exists, just show it and return
@@ -102,7 +103,7 @@ function MMF_ShowWelcomePopup(forceShow)
     versionSuffix:SetPoint("LEFT", title, "RIGHT", 2, 2)
     if Compat.IsTBC then
         versionSuffix:SetText("TBC EDITION")
-        versionSuffix:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+        versionSuffix:SetTextColor(0.2, 0.9, 0.4)
     else
         versionSuffix:SetText("MIDNIGHT EDITION")
         versionSuffix:SetTextColor(0.6, 0.4, 0.9)

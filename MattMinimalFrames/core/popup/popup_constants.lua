@@ -33,6 +33,9 @@ function MMF_GetPopupLayout()
 end
 
 local function GetPlayerClassAccent()
+    if MattMinimalFramesDB and MattMinimalFramesDB.classColorGUI == false then
+        return 0.72, 0.74, 0.78
+    end
     local _, classToken = UnitClass("player")
     local classColors = RAID_CLASS_COLORS
     local classColor = classToken and classColors and classColors[classToken]
@@ -48,6 +51,13 @@ end
 function MMF_GetPopupAccentColor()
     local r, g, b = GetPlayerClassAccent()
     return { r, g, b }
+end
+
+function MMF_IsClassColorGUIEnabled()
+    if not MattMinimalFramesDB then
+        return true
+    end
+    return MattMinimalFramesDB.classColorGUI ~= false
 end
 
 function MMF_RGBToHexPrefix(r, g, b)

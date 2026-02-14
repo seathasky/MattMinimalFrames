@@ -56,6 +56,7 @@ function MMF_CreatePopupFooter(popup, popupWidth, accentColor, footerHeight)
 
     local playerName = UnitName("player")
     local _, classToken = UnitClass("player")
+    local classColor = classToken and RAID_CLASS_COLORS and RAID_CLASS_COLORS[classToken]
     if classToken then
         classIcon:SetTexture("Interface\\ICONS\\ClassIcon_" .. classToken)
         classIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
@@ -69,6 +70,10 @@ function MMF_CreatePopupFooter(popup, popupWidth, accentColor, footerHeight)
     classNameText:SetWidth(96)
     classNameText:SetJustifyH("RIGHT")
     classNameText:SetText(playerName or "Player")
-    classNameText:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    if classColor then
+        classNameText:SetTextColor(classColor.r, classColor.g, classColor.b)
+    else
+        classNameText:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    end
 
 end
