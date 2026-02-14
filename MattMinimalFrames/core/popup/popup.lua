@@ -50,7 +50,8 @@ function MMF_ShowWelcomePopup(forceShow)
     popup:SetSize(popupWidth, popupHeight)
     
     -- Apply saved GUI scale
-    local guiScale = MattMinimalFramesDB.guiScale or 1.0
+    local guiScale = (MMF_ClampGUIScale and MMF_ClampGUIScale(MattMinimalFramesDB.guiScale)) or 1.0
+    MattMinimalFramesDB.guiScale = guiScale
     popup:SetScale(guiScale)
     
     -- Restore saved position or use default
@@ -165,7 +166,7 @@ function MMF_ShowWelcomePopup(forceShow)
     guiScaleThumb:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 1)
     guiScaleSlider:SetThumbTexture(guiScaleThumb)
     
-    local currentScale = MattMinimalFramesDB.guiScale or 1.0
+    local currentScale = (MMF_ClampGUIScale and MMF_ClampGUIScale(MattMinimalFramesDB.guiScale)) or 1.0
     guiScaleSlider:SetValue(currentScale)
     scaleValue:SetText(string.format("%.1f", currentScale))
 
@@ -183,9 +184,7 @@ function MMF_ShowWelcomePopup(forceShow)
             self:SetText(string.format("%.1f", guiScaleSlider:GetValue()))
             return
         end
-        if num < 0.5 then num = 0.5 end
-        if num > 1.5 then num = 1.5 end
-        num = math.floor(num * 10 + 0.5) / 10
+        num = (MMF_ClampGUIScale and MMF_ClampGUIScale(num)) or num
         guiScaleSlider:SetValue(num)
         MattMinimalFramesDB.guiScale = num
         if popup and popup:IsShown() then popup:SetScale(num) end
@@ -199,13 +198,14 @@ function MMF_ShowWelcomePopup(forceShow)
     end)
 
     guiScaleSlider:SetScript("OnValueChanged", function(self, value)
-        value = math.floor(value * 10 + 0.5) / 10
+        value = (MMF_ClampGUIScale and MMF_ClampGUIScale(value)) or value
         scaleValue:SetText(string.format("%.1f", value))
         MattMinimalFramesDB.guiScale = value
     end)
     
     guiScaleSlider:SetScript("OnMouseUp", function(self)
-        local value = MattMinimalFramesDB.guiScale or 1.0
+        local value = (MMF_ClampGUIScale and MMF_ClampGUIScale(MattMinimalFramesDB.guiScale)) or 1.0
+        MattMinimalFramesDB.guiScale = value
         if popup and popup:IsShown() then
             popup:SetScale(value)
         end

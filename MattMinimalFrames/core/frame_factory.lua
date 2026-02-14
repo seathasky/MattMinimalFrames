@@ -285,13 +285,21 @@ local function CreateDragHandlers(frame, frameName)
     local frameLabel = frameDef and frameDef.label or frame.unit
     
     frame.moveHint = frame:CreateFontString(nil, "OVERLAY")
-    frame.moveHint:SetFont(cfg.FONT_PATH, 10, "OUTLINE")
+    if MMF_SetFontSafe then
+        MMF_SetFontSafe(frame.moveHint, cfg.FONT_PATH, 10, "OUTLINE")
+    else
+        frame.moveHint:SetFont(cfg.FONT_PATH, 10, "OUTLINE")
+    end
     frame.moveHint:SetText(frameLabel)
     frame.moveHint:SetPoint("BOTTOM", frame, "TOP", 0, 2)
     frame.moveHint:Hide()
     
     frame.moveSubtext = frame:CreateFontString(nil, "OVERLAY")
-    frame.moveSubtext:SetFont(cfg.FONT_PATH, 9, "OUTLINE")
+    if MMF_SetFontSafe then
+        MMF_SetFontSafe(frame.moveSubtext, cfg.FONT_PATH, 9, "OUTLINE")
+    else
+        frame.moveSubtext:SetFont(cfg.FONT_PATH, 9, "OUTLINE")
+    end
     frame.moveSubtext:SetText("Shift+Drag to move")
     frame.moveSubtext:SetPoint("TOP", frame.moveHint, "BOTTOM", 0, -2)
     frame.moveSubtext:SetTextColor(0.7, 0.7, 0.7)
@@ -478,7 +486,11 @@ local function CreateNameText(frame, unit)
     local fontSize = MMF_GetNameTextSize()
     local nameX = MMF_GetNameTextXOffset and MMF_GetNameTextXOffset(unit) or 0
     local nameY = MMF_GetNameTextYOffset and MMF_GetNameTextYOffset(unit) or 0
-    frame.nameText:SetFont(fontPath, fontSize, "OUTLINE")
+    if MMF_SetFontSafe then
+        MMF_SetFontSafe(frame.nameText, fontPath, fontSize, "OUTLINE")
+    else
+        frame.nameText:SetFont(fontPath, fontSize, "OUTLINE")
+    end
     frame.nameText:SetTextColor(1, 1, 1, 1)
     frame.nameText:SetShadowOffset(1, -1)
     frame.nameText:SetShadowColor(0, 0, 0, 0.9)
@@ -504,11 +516,19 @@ local function CreateResourceText(frame, unit)
     local hpY = MMF_GetHPTextYOffset and MMF_GetHPTextYOffset(unit) or 0
     
     frame.hpText = frame.nameOverlay:CreateFontString(nil, "OVERLAY")
-    frame.hpText:SetFont(fontPath, hpSize, "OUTLINE")
+    if MMF_SetFontSafe then
+        MMF_SetFontSafe(frame.hpText, fontPath, hpSize, "OUTLINE")
+    else
+        frame.hpText:SetFont(fontPath, hpSize, "OUTLINE")
+    end
     frame.hpText:SetTextColor(1, 1, 1)
     
     frame.powerText = frame.nameOverlay:CreateFontString(nil, "OVERLAY")
-    frame.powerText:SetFont(fontPath, 13, "OUTLINE")
+    if MMF_SetFontSafe then
+        MMF_SetFontSafe(frame.powerText, fontPath, 13, "OUTLINE")
+    else
+        frame.powerText:SetFont(fontPath, 13, "OUTLINE")
+    end
     frame.powerText:SetTextColor(1, 1, 1)
     
     if unit == "player" then
@@ -612,7 +632,11 @@ local function CreateCastBar(frame, unit)
     frame.castBarTextOverlay:EnableMouse(false)
     
     frame.castBarText = frame.castBarTextOverlay:CreateFontString(nil, "OVERLAY")
-    frame.castBarText:SetFont(cfg.FONT_PATH, 9, "OUTLINE")
+    if MMF_SetFontSafe then
+        MMF_SetFontSafe(frame.castBarText, cfg.FONT_PATH, 9, "OUTLINE")
+    else
+        frame.castBarText:SetFont(cfg.FONT_PATH, 9, "OUTLINE")
+    end
     frame.castBarText:SetTextColor(0.9, 0.9, 0.9, 1)
     frame.castBarText:SetWordWrap(false)
     
@@ -918,8 +942,12 @@ MMF_CreateSecureUnitFrame = function(...)
 end
 
 function MMF_SetGUIScale(scale)
+    local normalized = (MMF_ClampGUIScale and MMF_ClampGUIScale(scale)) or scale
+    if MattMinimalFramesDB then
+        MattMinimalFramesDB.guiScale = normalized
+    end
     if MMF_WelcomePopup then
-        MMF_WelcomePopup:SetScale(scale)
+        MMF_WelcomePopup:SetScale(normalized)
     end
 end
 

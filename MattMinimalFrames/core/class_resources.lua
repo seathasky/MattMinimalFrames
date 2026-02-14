@@ -375,13 +375,21 @@ local function CreateBaseResourceBar(frameName, prefix, moveLabel, color, numRun
     end)
 
     frame.moveHint = frame:CreateFontString(nil, "OVERLAY")
-    frame.moveHint:SetFont((MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "OUTLINE")
+    if MMF_SetFontSafe then
+        MMF_SetFontSafe(frame.moveHint, (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "OUTLINE")
+    else
+        frame.moveHint:SetFont((MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "OUTLINE")
+    end
     frame.moveHint:SetText(moveLabel)
     frame.moveHint:SetPoint("BOTTOM", frame, "TOP", 0, 2)
     frame.moveHint:Hide()
 
     frame.moveSubtext = frame:CreateFontString(nil, "OVERLAY")
-    frame.moveSubtext:SetFont((MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "OUTLINE")
+    if MMF_SetFontSafe then
+        MMF_SetFontSafe(frame.moveSubtext, (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "OUTLINE")
+    else
+        frame.moveSubtext:SetFont((MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "OUTLINE")
+    end
     frame.moveSubtext:SetText("Shift+Drag to move")
     frame.moveSubtext:SetPoint("TOP", frame.moveHint, "BOTTOM", 0, -2)
     frame.moveSubtext:SetTextColor(0.7, 0.7, 0.7)

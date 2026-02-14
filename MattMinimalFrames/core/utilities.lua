@@ -12,6 +12,64 @@ local function NormalizeMediaName(value)
     return trimmed
 end
 
+local function IsFiniteNumber(value)
+    return type(value) == "number" and value == value and value > -math.huge and value < math.huge
+end
+
+local function SafeSetFont(region, fontPath, size, flags)
+    if not region or not region.SetFont then
+        return false
+    end
+    if not IsFiniteNumber(size) or size <= 0 then
+        return false
+    end
+
+    local fallbackPath = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
+    local requestedPath = fontPath
+    if type(requestedPath) ~= "string" or requestedPath == "" then
+        requestedPath = fallbackPath
+    end
+
+    local requestedFlags = flags or ""
+    local ok, applied = pcall(region.SetFont, region, requestedPath, size, requestedFlags)
+    if ok and applied ~= false then
+        return true
+    end
+
+    if requestedFlags ~= "" then
+        ok, applied = pcall(region.SetFont, region, requestedPath, size, "")
+        if ok and applied ~= false then
+            return true
+        end
+    end
+
+    ok, applied = pcall(region.SetFont, region, fallbackPath, size, requestedFlags)
+    if ok and applied ~= false then
+        return true
+    end
+
+    ok, applied = pcall(region.SetFont, region, fallbackPath, size, "")
+    return ok and applied ~= false
+end
+
+function MMF_SetFontSafe(region, fontPath, size, flags)
+    return SafeSetFont(region, fontPath, size, flags)
+end
+
+function MMF_ClampGUIScale(value)
+    local scale = tonumber(value)
+    if not IsFiniteNumber(scale) then
+        return 1.0
+    end
+    if scale < 0.5 then
+        return 0.5
+    end
+    if scale > 1.5 then
+        return 1.5
+    end
+    return math.floor(scale * 10 + 0.5) / 10
+end
+
 function MMF_AddEditModeHighlight(frame, name)
     if frame and name then
         frame.editModeHighlight = frame:CreateTexture(nil, "OVERLAY")
@@ -167,8 +225,8 @@ local function ApplyFontToPopupTree(frame, fontPath)
             return
         end
         local _, size, flags = region:GetFont()
-        if size then
-            region:SetFont(fontPath, size, flags or "")
+        if IsFiniteNumber(size) and size > 0 then
+            SafeSetFont(region, fontPath, size, flags or "")
         end
     end
 
@@ -196,12 +254,12 @@ function MMF_ApplyGlobalFont()
     local frames = MMF_GetAllFrames and MMF_GetAllFrames() or {}
     for _, frame in ipairs(frames) do
         if frame then
-            if frame.nameText then frame.nameText:SetFont(fontPath, nameSize, "OUTLINE") end
-            if frame.hpText then frame.hpText:SetFont(fontPath, hpSize, "OUTLINE") end
-            if frame.powerText then frame.powerText:SetFont(fontPath, 13, "OUTLINE") end
-            if frame.castBarText then frame.castBarText:SetFont(fontPath, 9, "OUTLINE") end
-            if frame.moveHint then frame.moveHint:SetFont(fontPath, 10, "OUTLINE") end
-            if frame.moveSubtext then frame.moveSubtext:SetFont(fontPath, 9, "OUTLINE") end
+            if frame.nameText then SafeSetFont(frame.nameText, fontPath, nameSize, "OUTLINE") end
+            if frame.hpText then SafeSetFont(frame.hpText, fontPath, hpSize, "OUTLINE") end
+            if frame.powerText then SafeSetFont(frame.powerText, fontPath, 13, "OUTLINE") end
+            if frame.castBarText then SafeSetFont(frame.castBarText, fontPath, 9, "OUTLINE") end
+            if frame.moveHint then SafeSetFont(frame.moveHint, fontPath, 10, "OUTLINE") end
+            if frame.moveSubtext then SafeSetFont(frame.moveSubtext, fontPath, 9, "OUTLINE") end
         end
     end
 
@@ -216,8 +274,8 @@ function MMF_ApplyGlobalFont()
     }
     for _, bar in ipairs(classBars) do
         if bar then
-            if bar.moveHint then bar.moveHint:SetFont(fontPath, 10, "OUTLINE") end
-            if bar.moveSubtext then bar.moveSubtext:SetFont(fontPath, 9, "OUTLINE") end
+            if bar.moveHint then SafeSetFont(bar.moveHint, fontPath, 10, "OUTLINE") end
+            if bar.moveSubtext then SafeSetFont(bar.moveSubtext, fontPath, 9, "OUTLINE") end
         end
     end
 

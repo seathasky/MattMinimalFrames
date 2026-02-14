@@ -32,7 +32,10 @@ local STATUSBAR = LSM and LSM.MediaType and LSM.MediaType.STATUSBAR or "statusba
 local FONT = LSM and LSM.MediaType and LSM.MediaType.FONT or "font"
 local MMF_STATUSBAR_DEFAULT = "MMF Melli"
 local MMF_FONT_DEFAULT = "MMF Naowh"
+local MMF_FONT_DEFAULT_PATH = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
 local fontApplyToken = 0
+local fontValidationString = nil
+local fontUsabilityCache = {}
 
 local function NormalizeMediaName(value)
     if type(value) ~= "string" then
@@ -43,6 +46,64 @@ local function NormalizeMediaName(value)
         return nil
     end
     return trimmed
+end
+
+local function GetFontValidationString()
+    if fontValidationString then
+        return fontValidationString
+    end
+    local parent = UIParent or _G.UIParent
+    if not parent then
+        return nil
+    end
+    local probe = parent:CreateFontString(nil, "OVERLAY")
+    probe:Hide()
+    fontValidationString = probe
+    return fontValidationString
+end
+
+local function IsUsableFontPath(fontPath)
+    if type(fontPath) ~= "string" or fontPath == "" then
+        return false
+    end
+    local probe = GetFontValidationString()
+    if not probe then
+        return false
+    end
+    local ok, applied = pcall(probe.SetFont, probe, fontPath, 12, "OUTLINE")
+    if ok and applied ~= false then
+        return true
+    end
+    ok, applied = pcall(probe.SetFont, probe, fontPath, 12, "")
+    return ok and applied ~= false
+end
+
+local function IsUsableFontName(fontName)
+    local normalized = NormalizeMediaName(fontName)
+    if not normalized then
+        return false
+    end
+    if fontUsabilityCache[normalized] ~= nil then
+        return fontUsabilityCache[normalized]
+    end
+
+    local usable = false
+    if LSM then
+        local fetched = LSM:Fetch(FONT, normalized, true)
+        if fetched then
+            usable = IsUsableFontPath(fetched)
+        end
+    else
+        for _, media in ipairs(MMF_FONT_REGISTRY) do
+            if NormalizeMediaName(media.name) == normalized then
+                usable = IsUsableFontPath(media.path)
+                break
+            end
+        end
+    end
+
+    fontUsabilityCache[normalized] = usable
+    return usable
 end
 local MMF_STATUSBAR_REGISTRY = {
     { name = "MMF Melli", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Melli.tga" },
@@ -137,6 +198,9 @@ function MMF_GetFontOptions()
             end
         end
     end
+    if #list == 0 then
+        list[#list + 1] = MMF_FONT_DEFAULT
+    end
     table.sort(list, function(a, b) return tostring(a):lower() < tostring(b):lower() end)
     return list
 end
@@ -145,35 +209,38 @@ function MMF_GetGlobalFontPath()
     local selected = NormalizeMediaName(MattMinimalFramesDB and MattMinimalFramesDB.globalFont) or MMF_FONT_DEFAULT
     if LSM then
         local fetched = LSM:Fetch(FONT, selected, true)
-        if fetched then
+        if fetched and IsUsableFontPath(fetched) then
             return fetched
         end
         local fallback = LSM:Fetch(FONT, MMF_FONT_DEFAULT, true)
-        if fallback then
+        if fallback and IsUsableFontPath(fallback) then
             return fallback
         end
     end
-    return MMF_Config.FONT_PATH
+    return MMF_FONT_DEFAULT_PATH
 end
 
 local function GetGlobalFontPathByName(fontName)
     local selected = (type(fontName) == "string" and fontName ~= "" and fontName) or MMF_FONT_DEFAULT
     if LSM then
         local fetched = LSM:Fetch(FONT, selected, true)
-        if fetched then
+        if fetched and IsUsableFontPath(fetched) then
             return fetched, true
         end
         local fallback = LSM:Fetch(FONT, MMF_FONT_DEFAULT, true)
-        if fallback then
+        if fallback and IsUsableFontPath(fallback) then
             return fallback, false
         end
     end
-    return MMF_Config.FONT_PATH, selected == MMF_FONT_DEFAULT
+    return MMF_FONT_DEFAULT_PATH, selected == MMF_FONT_DEFAULT
 end
 
 function MMF_SetGlobalFont(fontName)
     fontName = NormalizeMediaName(fontName)
     if not fontName then return end
+    if not IsUsableFontName(fontName) then
+        fontName = MMF_FONT_DEFAULT
+    end
     if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
     MattMinimalFramesDB.globalFont = fontName
     local resolvedPath, matched = GetGlobalFontPathByName(fontName)
@@ -226,6 +293,9 @@ if LSM and LSM.RegisterCallback then
         if eventName ~= "LibSharedMedia_Registered" then return end
         if not MattMinimalFramesDB then return end
         local normalizedKey = NormalizeMediaName(mediaKey)
+        if mediaType == FONT and normalizedKey then
+            fontUsabilityCache[normalizedKey] = nil
+        end
 
         if mediaType == FONT and normalizedKey and normalizedKey == NormalizeMediaName(MattMinimalFramesDB.globalFont) then
             MMF_Config.FONT_PATH = MMF_GetGlobalFontPath() or MMF_Config.FONT_PATH
@@ -472,7 +542,11 @@ function MMF_UpdateNameTextSize(size)
     local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or MMF_Config.FONT_PATH
     for _, frame in ipairs(frames) do
         if frame and frame.nameText then
-            frame.nameText:SetFont(fontPath, size, "OUTLINE")
+            if MMF_SetFontSafe then
+                MMF_SetFontSafe(frame.nameText, fontPath, size, "OUTLINE")
+            else
+                frame.nameText:SetFont(fontPath, size, "OUTLINE")
+            end
             if frame.unit and UnitExists(frame.unit) then
                 local currentText = frame.nameText:GetText()
                 frame.nameText:SetText("")
@@ -494,7 +568,11 @@ function MMF_UpdateHPTextSize(size)
     local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or MMF_Config.FONT_PATH
     for _, frame in ipairs(frames) do
         if frame and frame.hpText then
-            frame.hpText:SetFont(fontPath, size, "OUTLINE")
+            if MMF_SetFontSafe then
+                MMF_SetFontSafe(frame.hpText, fontPath, size, "OUTLINE")
+            else
+                frame.hpText:SetFont(fontPath, size, "OUTLINE")
+            end
             pcall(function()
                 if frame.unit and UnitExists(frame.unit) then
                     local currentText = frame.hpText:GetText()

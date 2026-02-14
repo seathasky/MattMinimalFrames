@@ -62,6 +62,13 @@ local function NormalizeLegacyIconModes(db)
     end
 end
 
+local function NormalizeGUIScaleSetting()
+    if not MattMinimalFramesDB or not MMF_ClampGUIScale then
+        return
+    end
+    MattMinimalFramesDB.guiScale = MMF_ClampGUIScale(MattMinimalFramesDB.guiScale)
+end
+
 function MMF_ApplyActiveProfileLive()
     if not MattMinimalFramesDB then return end
 
@@ -184,7 +191,8 @@ function MMF_ApplyActiveProfileLive()
     end
 
     if MMF_WelcomePopup then
-        MMF_WelcomePopup:SetScale(MattMinimalFramesDB.guiScale or 1.0)
+        local guiScale = (MMF_ClampGUIScale and MMF_ClampGUIScale(MattMinimalFramesDB.guiScale)) or 1.0
+        MMF_WelcomePopup:SetScale(guiScale)
     end
 end
 
@@ -203,6 +211,7 @@ local function Initialize()
             ApplyDefaultsSafe(MattMinimalFramesDB, MattMinimalFrames_Defaults)
         end
     end
+    NormalizeGUIScaleSetting()
     
     HideBlizzardFrames()
     MMF_CreateAllMinimalFrames()
