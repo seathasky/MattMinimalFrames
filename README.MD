@@ -8,37 +8,22 @@ Minimal unit frames for World of Warcraft. Clean, lightweight, and standalone.
 - Retail (Midnight)
 - TBC Anniversary
 
-## Features
-- Minimal Unit Frames: Player, Target, Target of Target, Focus, and Pet
-- Cast Bars + Heal Prediction + Absorb Bars
-- Target Buffs & Debuffs with timers
-- Resource Bars: mana, rage, energy, and class/secondary resources
-- Current Class Resource Controls (Retail)
-- Range Checking: fades frames when out of range
-- Easy Movement: hold **SHIFT + drag** to reposition (out of combat)
-- SharedMedia Styling:
-  - Global unit frame texture dropdown
-  - Global font dropdown
-- Text Controls:
-  - Name/HP font size
-  - Per-unit text offsets
-- Frame Icons & Markers:
-  - Player/Target icon modes (`Off`, `Portrait`, `Class Icon`)
-  - Target marker display toggle
-- Profiles:
-  - Create, switch, copy, delete, and reset profiles
-  - Auto-saves changes to the active profile
-- Tools:
-  - Move hints, minimap button toggle, alignment grid
-  - Reset actions and optional UI sounds
+Clean, minimal unit frames for WoW (Retail Midnight + TBC Anniversary).
 
-## Usage
-- **Move Frames:** Hold **SHIFT** + left-drag (out of combat)
-- **Open Settings:** Type `/mmf` or click the minimap icon
-- **Customize:** Tabs for Unit Frames, Auras/Power, Current Class (Retail), Profiles, and Tools
+## Highlights
+- Player, Target, ToT, Focus, and Pet frames
+- Cast bars, heal prediction, and absorb bars
+- Target buffs/debuffs with timers
+- Class/resource bars (Retail) + power bars
+- SharedMedia texture + global font styling
+- Range fade and SHIFT+drag frame movement
+- Tools panel with alignment grid, minimap toggle, and reset actions
+
+## Command
+- `/mmf` to open settings
 
 ## Notes
-- Designed to be clean and lightweight.
+- Designed to be clean and extremely lightweight.
 - No external setup required (all required libraries are bundled).
 
 
