@@ -1,6 +1,17 @@
 MMF_UIHider = CreateFrame("Frame")
 MMF_UIHider:Hide()
 
+local function NormalizeMediaName(value)
+    if type(value) ~= "string" then
+        return nil
+    end
+    local trimmed = value:match("^%s*(.-)%s*$")
+    if not trimmed or trimmed == "" then
+        return nil
+    end
+    return trimmed
+end
+
 function MMF_AddEditModeHighlight(frame, name)
     if frame and name then
         frame.editModeHighlight = frame:CreateTexture(nil, "OVERLAY")
@@ -137,7 +148,8 @@ function MMF_ApplyStatusBarTexture()
 end
 
 function MMF_SetStatusBarTexture(textureName)
-    if not textureName or textureName == "" then return end
+    textureName = NormalizeMediaName(textureName)
+    if not textureName then return end
     if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
     MattMinimalFramesDB.statusBarTexture = textureName
     MMF_ApplyStatusBarTexture()

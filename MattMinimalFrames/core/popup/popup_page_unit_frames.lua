@@ -9,8 +9,11 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local unitFontList
     local playerIconModeList
     local targetIconModeList
+    local scaleUnitList
     local nameTextUnitList
     local hpTextUnitList
+    local hideNameTextUnitList
+    local hideHPTextUnitList
     local UpdatePlayerIconModeButtonText = function() end
 
     -- UNIT FRAMES COLUMN (2nd Column)
@@ -23,14 +26,14 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     -- Right-side style column for unit frame texture selection
     local unitFramesSplit = unitFramesCol:CreateTexture(nil, "ARTWORK")
-    unitFramesSplit:SetPoint("TOPLEFT", 228, -36)
-    unitFramesSplit:SetPoint("BOTTOMLEFT", 228, 12)
+    unitFramesSplit:SetPoint("TOPLEFT", 264, -36)
+    unitFramesSplit:SetPoint("BOTTOMLEFT", 264, 12)
     unitFramesSplit:SetWidth(1)
     unitFramesSplit:SetColorTexture(0.12, 0.12, 0.15, 1)
 
     local textOffsetsTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     textOffsetsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    textOffsetsTitle:SetPoint("TOPLEFT", 244, -36)
+    textOffsetsTitle:SetPoint("TOPLEFT", 12, -338)
     textOffsetsTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     textOffsetsTitle:SetText("TEXT OFFSETS")
 
@@ -66,12 +69,12 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local nameUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
-        x = 244,
-        y = -60,
-        width = 300,
-        labelWidth = 95,
-        buttonOffset = 104,
-        buttonWidth = 180,
+        x = 12,
+        y = -362,
+        width = 220,
+        labelWidth = 74,
+        buttonOffset = 78,
+        buttonWidth = 142,
         visibleRows = #nameUnitOptions,
         label = "Name Unit",
         options = nameUnitOptions,
@@ -88,10 +91,10 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local nameYSliders = {}
     for _, opt in ipairs(nameUnitOptions) do
         local prefix = opt.value == "targettarget" and "tot" or opt.value
-        nameXSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Name X Offset", 244, -86, 300, prefix .. "NameTextXOffset", -60, 60, 1, 0, function()
+        nameXSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Name X Offset", 12, -386, 220, prefix .. "NameTextXOffset", -60, 60, 1, 0, function()
             if MMF_UpdateFrameTextOffsets then MMF_UpdateFrameTextOffsets() end
         end, true)
-        nameYSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Name Y Offset", 244, -110, 300, prefix .. "NameTextYOffset", -60, 60, 1, 0, function()
+        nameYSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Name Y Offset", 12, -410, 220, prefix .. "NameTextYOffset", -60, 60, 1, 0, function()
             if MMF_UpdateFrameTextOffsets then MMF_UpdateFrameTextOffsets() end
         end, true)
         nameXSliders[opt.value]:Hide()
@@ -115,12 +118,12 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local hpUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
-        x = 244,
-        y = -142,
-        width = 300,
-        labelWidth = 95,
-        buttonOffset = 104,
-        buttonWidth = 180,
+        x = 12,
+        y = -442,
+        width = 220,
+        labelWidth = 74,
+        buttonOffset = 78,
+        buttonWidth = 142,
         visibleRows = #hpUnitOptions,
         label = "HP Unit",
         options = hpUnitOptions,
@@ -137,10 +140,10 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local hpYSliders = {}
     for _, opt in ipairs(hpUnitOptions) do
         local prefix = opt.value == "targettarget" and "tot" or opt.value
-        hpXSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "HP X Offset", 244, -168, 300, prefix .. "HPTextXOffset", -60, 60, 1, 0, function()
+        hpXSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "HP X Offset", 12, -466, 220, prefix .. "HPTextXOffset", -60, 60, 1, 0, function()
             if MMF_UpdateFrameTextOffsets then MMF_UpdateFrameTextOffsets() end
         end, true)
-        hpYSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "HP Y Offset", 244, -192, 300, prefix .. "HPTextYOffset", -60, 60, 1, 0, function()
+        hpYSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "HP Y Offset", 12, -490, 220, prefix .. "HPTextYOffset", -60, 60, 1, 0, function()
             if MMF_UpdateFrameTextOffsets then MMF_UpdateFrameTextOffsets() end
         end, true)
         hpXSliders[opt.value]:Hide()
@@ -168,32 +171,32 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     UpdateVisibleHPOffsetSliders()
 
     local offsetsDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
-    offsetsDivider:SetSize(300, 1)
-    offsetsDivider:SetPoint("TOPLEFT", 244, -220)
+    offsetsDivider:SetSize(220, 1)
+    offsetsDivider:SetPoint("TOPLEFT", 12, -326)
     offsetsDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
 
     local castBarsTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     castBarsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    castBarsTitle:SetPoint("TOPLEFT", 244, -232)
+    castBarsTitle:SetPoint("TOPLEFT", 280, -36)
     castBarsTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     castBarsTitle:SetText("CAST BARS")
 
-    local playerCastBarCheck = CreateMinimalCheckbox(unitFramesCol, "Player Cast Bar", 244, -256, "showPlayerCastBar", true, function()
+    local playerCastBarCheck = CreateMinimalCheckbox(unitFramesCol, "Player Cast Bar", 280, -60, "showPlayerCastBar", true, function()
         StaticPopup_Show("MMF_RELOADUI")
     end)
 
-    local targetCastBarCheck = CreateMinimalCheckbox(unitFramesCol, "Target Cast Bar", 244, -280, "showTargetCastBar", true, function()
+    local targetCastBarCheck = CreateMinimalCheckbox(unitFramesCol, "Target Cast Bar", 280, -84, "showTargetCastBar", true, function()
         StaticPopup_Show("MMF_RELOADUI")
     end)
 
     local castBarColorDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
-        x = 244,
-        y = -304,
-        width = 300,
+        x = 280,
+        y = -108,
+        width = 252,
         labelWidth = 95,
         buttonOffset = 104,
-        buttonWidth = 180,
+        buttonWidth = 148,
         visibleRows = #MMF_Config.CAST_BAR_COLORS,
         label = "Cast Bar Color",
         options = MMF_Config.CAST_BAR_COLORS,
@@ -208,23 +211,28 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     })
     castBarColorList = castBarColorDropdown.list
 
+    local castStyleDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
+    castStyleDivider:SetSize(252, 1)
+    castStyleDivider:SetPoint("TOPLEFT", 280, -148)
+    castStyleDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
+
     local styleTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     styleTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    styleTitle:SetPoint("TOPLEFT", 244, -356)
+    styleTitle:SetPoint("TOPLEFT", 280, -160)
     styleTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     styleTitle:SetText("STYLE")
 
     local styleSubtext = unitFramesCol:CreateFontString(nil, "OVERLAY")
     styleSubtext:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    styleSubtext:SetPoint("TOPLEFT", 244, -376)
+    styleSubtext:SetPoint("TOPLEFT", 280, -180)
     styleSubtext:SetTextColor(0.65, 0.65, 0.7)
     styleSubtext:SetText("SharedMedia unit frame textures and fonts")
 
     local unitTextureDropdown
 
     local texturePreviewBG = CreateFrame("Frame", nil, unitFramesCol, "BackdropTemplate")
-    texturePreviewBG:SetSize(222, 16)
-    texturePreviewBG:SetPoint("TOPLEFT", 308, -434)
+    texturePreviewBG:SetSize(194, 16)
+    texturePreviewBG:SetPoint("TOPLEFT", 338, -238)
     texturePreviewBG:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -241,7 +249,10 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     texturePreview:SetStatusBarColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 1)
 
     local textureOptions = MMF_GetStatusBarTextureOptions and MMF_GetStatusBarTextureOptions() or { "MMF Melli" }
-    local selectedTexture = MattMinimalFramesDB.statusBarTexture or "MMF Melli"
+
+    local function GetSelectedTexture()
+        return (MattMinimalFramesDB and MattMinimalFramesDB.statusBarTexture) or "MMF Melli"
+    end
 
     local function HasTextureOption(name)
         for _, optName in ipairs(textureOptions) do
@@ -254,19 +265,20 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local function EnsureValidSelectedTexture()
         textureOptions = MMF_GetStatusBarTextureOptions and MMF_GetStatusBarTextureOptions() or { "MMF Melli" }
+        local selectedTexture = GetSelectedTexture()
         for _, name in ipairs(textureOptions) do
             if name == selectedTexture then
                 return
             end
         end
+        if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
         if HasTextureOption("MMF Melli") then
-            selectedTexture = "MMF Melli"
+            MattMinimalFramesDB.statusBarTexture = "MMF Melli"
         else
-            selectedTexture = textureOptions[1] or "MMF Melli"
+            MattMinimalFramesDB.statusBarTexture = textureOptions[1] or "MMF Melli"
         end
     end
     EnsureValidSelectedTexture()
-    MattMinimalFramesDB.statusBarTexture = selectedTexture
 
     local function UpdateUnitTexturePreview()
         local texturePath = MMF_GetStatusBarTexturePath and MMF_GetStatusBarTexturePath()
@@ -285,31 +297,31 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     end
 
     local function ApplySelectedTexture(name)
-        selectedTexture = name
         if MMF_SetStatusBarTexture then
             MMF_SetStatusBarTexture(name)
         else
             MattMinimalFramesDB.statusBarTexture = name
         end
+        EnsureValidSelectedTexture()
         UpdateUnitTexturePreview()
         if unitTextureDropdown then
-            unitTextureDropdown.SetSelectedValue(selectedTexture)
+            unitTextureDropdown.SetSelectedValue(GetSelectedTexture())
         end
     end
 
     unitTextureDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
-        x = 244,
-        y = -400,
-        width = 300,
-        labelWidth = 62,
-        buttonOffset = 64,
-        buttonWidth = 220,
+        x = 280,
+        y = -204,
+        width = 252,
+        labelWidth = 56,
+        buttonOffset = 58,
+        buttonWidth = 194,
         visibleRows = 9,
         label = "Texture",
         options = BuildTextureDropdownOptions(),
         getValue = function()
-            return selectedTexture
+            return GetSelectedTexture()
         end,
         optionsProvider = function()
             EnsureValidSelectedTexture()
@@ -318,6 +330,9 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         onOpen = function()
             EnsureValidSelectedTexture()
             UpdateUnitTexturePreview()
+            if unitTextureDropdown then
+                unitTextureDropdown.SetSelectedValue(GetSelectedTexture())
+            end
         end,
         onSelect = function(value)
             ApplySelectedTexture(value)
@@ -326,19 +341,23 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     unitTextureList = unitTextureDropdown.list
 
     local fontOptions = MMF_GetFontOptions and MMF_GetFontOptions() or { "MMF Naowh" }
-    local selectedFont = MattMinimalFramesDB.globalFont or "MMF Naowh"
+
+    local function GetSelectedFont()
+        return (MattMinimalFramesDB and MattMinimalFramesDB.globalFont) or "MMF Naowh"
+    end
 
     local function EnsureValidSelectedFont()
         fontOptions = MMF_GetFontOptions and MMF_GetFontOptions() or { "MMF Naowh" }
+        local selectedFont = GetSelectedFont()
         for _, name in ipairs(fontOptions) do
             if name == selectedFont then
                 return
             end
         end
-        selectedFont = fontOptions[1] or "MMF Naowh"
+        if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
+        MattMinimalFramesDB.globalFont = fontOptions[1] or "MMF Naowh"
     end
     EnsureValidSelectedFont()
-    MattMinimalFramesDB.globalFont = selectedFont
 
     local function BuildFontDropdownOptions()
         local out = {}
@@ -351,38 +370,50 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local unitFontDropdown
     unitFontDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
-        x = 244,
-        y = -470,
-        width = 300,
-        labelWidth = 62,
-        buttonOffset = 64,
-        buttonWidth = 220,
+        x = 280,
+        y = -274,
+        width = 252,
+        labelWidth = 56,
+        buttonOffset = 58,
+        buttonWidth = 194,
         visibleRows = 9,
         label = "Font",
         options = BuildFontDropdownOptions(),
         getValue = function()
-            return selectedFont
+            return GetSelectedFont()
         end,
         optionsProvider = function()
             EnsureValidSelectedFont()
             return BuildFontDropdownOptions()
         end,
+        onOpen = function()
+            EnsureValidSelectedFont()
+            if unitFontDropdown then
+                unitFontDropdown.SetSelectedValue(GetSelectedFont())
+            end
+        end,
         onSelect = function(value)
-            selectedFont = value
             if MMF_SetGlobalFont then
                 MMF_SetGlobalFont(value)
             else
                 MattMinimalFramesDB.globalFont = value
             end
-            unitFontDropdown.SetSelectedValue(selectedFont)
+            EnsureValidSelectedFont()
+            unitFontDropdown.SetSelectedValue(GetSelectedFont())
         end,
     })
     unitFontList = unitFontDropdown.list
 
     local styleDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
-    styleDivider:SetSize(300, 1)
-    styleDivider:SetPoint("TOPLEFT", 244, -494)
+    styleDivider:SetSize(252, 1)
+    styleDivider:SetPoint("TOPLEFT", 280, -302)
     styleDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
+
+    local frameOptionsTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    frameOptionsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
+    frameOptionsTitle:SetPoint("TOPLEFT", 280, -314)
+    frameOptionsTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    frameOptionsTitle:SetText("FRAME OPTIONS")
 
     local iconModeOptions = {
         { value = "off", label = "Off" },
@@ -391,12 +422,12 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     }
     local playerIconModeDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
-        x = 244,
-        y = -506,
-        width = 300,
+        x = 280,
+        y = -338,
+        width = 252,
         labelWidth = 95,
         buttonOffset = 104,
-        buttonWidth = 180,
+        buttonWidth = 148,
         visibleRows = #iconModeOptions,
         label = "Player Frame Icon",
         options = iconModeOptions,
@@ -422,12 +453,12 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local targetIconModeDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
-        x = 244,
-        y = -530,
-        width = 300,
+        x = 280,
+        y = -362,
+        width = 252,
         labelWidth = 95,
         buttonOffset = 104,
-        buttonWidth = 180,
+        buttonWidth = 148,
         visibleRows = #iconModeOptions,
         label = "Target Frame Icon",
         options = iconModeOptions,
@@ -445,131 +476,297 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     })
     targetIconModeList = targetIconModeDropdown.list
 
-    local targetMarkersCheck = CreateMinimalCheckbox(unitFramesCol, "Target Markers", 244, -554, "showTargetMarkers", false, function(checked)
+    local targetMarkersCheck = CreateMinimalCheckbox(unitFramesCol, "Target Markers", 280, -394, "showTargetMarkers", false, function(checked)
         if MMF_UpdateTargetMarkerVisibility then
             MMF_UpdateTargetMarkerVisibility(checked)
         end
     end)
 
-    -- Player Frame Scale
-    local playerLabel = unitFramesCol:CreateFontString(nil, "OVERLAY")
-    playerLabel:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "OUTLINE")
-    playerLabel:SetPoint("TOPLEFT", 12, -36)
-    playerLabel:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
-    playerLabel:SetText("Player")
+    -- Tiny raid-marker preview so users immediately recognize the toggle.
+    local markerPreviewText = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    markerPreviewText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+    markerPreviewText:SetPoint("LEFT", targetMarkersCheck, "LEFT", 116, 0)
+    markerPreviewText:SetText(
+        "|TInterface\\TargetingFrame\\UI-RaidTargetingIcons:14:14:0:0:256:256:0:64:0:64|t" ..
+        "|TInterface\\TargetingFrame\\UI-RaidTargetingIcons:14:14:0:0:256:256:64:128:0:64|t" ..
+        "|TInterface\\TargetingFrame\\UI-RaidTargetingIcons:14:14:0:0:256:256:128:192:0:64|t"
+    )
 
-    local playerScaleXSlider = CreateMinimalSlider(unitFramesCol, "Scale X", 12, -56, 200, "playerFrameScaleX", 0.5, 3.0, 0.05, 1.0, function(value)
-        if MMF_UpdateFrameScale then
-            MMF_UpdateFrameScale("player")
+    local function RefreshPredictionVisuals()
+        if MMF_RequestAllFramesUpdate then
+            MMF_RequestAllFramesUpdate()
+            return
         end
-    end, false)
-
-    local playerScaleYSlider = CreateMinimalSlider(unitFramesCol, "Scale Y", 12, -80, 200, "playerFrameScaleY", 0.5, 5.0, 0.05, 1.0, function(value)
-        if MMF_UpdateFrameScale then
-            MMF_UpdateFrameScale("player")
+        if MMF_GetAllFrames and MMF_UpdateUnitFrame then
+            for _, frame in ipairs(MMF_GetAllFrames()) do
+                if frame then
+                    MMF_UpdateUnitFrame(frame)
+                end
+            end
         end
-    end, false)
+    end
 
-    -- Target Frame Scale
-    local targetLabel = unitFramesCol:CreateFontString(nil, "OVERLAY")
-    targetLabel:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "OUTLINE")
-    targetLabel:SetPoint("TOPLEFT", 12, -108)
-    targetLabel:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
-    targetLabel:SetText("Target")
+    local frameOptionsDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
+    frameOptionsDivider:SetSize(252, 1)
+    frameOptionsDivider:SetPoint("TOPLEFT", 280, -418)
+    frameOptionsDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
 
-    local targetScaleXSlider = CreateMinimalSlider(unitFramesCol, "Scale X", 12, -128, 200, "targetFrameScaleX", 0.5, 3.0, 0.05, 1.0, function(value)
-        if MMF_UpdateFrameScale then
-            MMF_UpdateFrameScale("target")
+    local healOverlaysTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    healOverlaysTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
+    healOverlaysTitle:SetPoint("TOPLEFT", 280, -430)
+    healOverlaysTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    healOverlaysTitle:SetText("HEAL OVERLAYS")
+
+    local healPredictionCheck = CreateMinimalCheckbox(unitFramesCol, "Heal Prediction", 280, -454, "showHealPrediction", true, function()
+        RefreshPredictionVisuals()
+    end)
+
+    local absorbBarCheck = CreateMinimalCheckbox(unitFramesCol, "Absorb Bar", 280, -478, "showAbsorbBar", true, function()
+        RefreshPredictionVisuals()
+    end)
+
+    local scaleUnitOptions = {
+        { value = "player", label = "Player" },
+        { value = "target", label = "Target" },
+        { value = "targettarget", label = "Target of Target" },
+        { value = "pet", label = "Pet" },
+        { value = "focus", label = "Focus" },
+    }
+    MattMinimalFramesDB.frameScaleUnit = MattMinimalFramesDB.frameScaleUnit or "player"
+
+    local function EnsureScaleUnitSelection()
+        local valid = false
+        for _, opt in ipairs(scaleUnitOptions) do
+            if opt.value == MattMinimalFramesDB.frameScaleUnit then
+                valid = true
+                break
+            end
         end
-    end, false)
-
-    local targetScaleYSlider = CreateMinimalSlider(unitFramesCol, "Scale Y", 12, -152, 200, "targetFrameScaleY", 0.5, 5.0, 0.05, 1.0, function(value)
-        if MMF_UpdateFrameScale then
-            MMF_UpdateFrameScale("target")
+        if not valid then
+            MattMinimalFramesDB.frameScaleUnit = "player"
         end
-    end, false)
+    end
+    EnsureScaleUnitSelection()
 
-    -- Target of Target Frame Scale
-    local totLabel = unitFramesCol:CreateFontString(nil, "OVERLAY")
-    totLabel:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "OUTLINE")
-    totLabel:SetPoint("TOPLEFT", 12, -180)
-    totLabel:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
-    totLabel:SetText("Target of Target")
+    local scaleXSliders = {}
+    local scaleYSliders = {}
+    for _, opt in ipairs(scaleUnitOptions) do
+        local prefix = (opt.value == "targettarget") and "tot" or opt.value
+        scaleXSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Scale X", 12, -62, 220, prefix .. "FrameScaleX", 0.5, 3.0, 0.05, 1.0, function()
+            if MMF_UpdateFrameScale then
+                MMF_UpdateFrameScale(opt.value)
+            end
+        end, false)
+        scaleYSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Scale Y", 12, -86, 220, prefix .. "FrameScaleY", 0.5, 5.0, 0.05, 1.0, function()
+            if MMF_UpdateFrameScale then
+                MMF_UpdateFrameScale(opt.value)
+            end
+        end, false)
+        scaleXSliders[opt.value]:Hide()
+        scaleYSliders[opt.value]:Hide()
+    end
 
-    local totScaleXSlider = CreateMinimalSlider(unitFramesCol, "Scale X", 12, -200, 200, "totFrameScaleX", 0.5, 3.0, 0.05, 1.0, function(value)
-        if MMF_UpdateFrameScale then
-            MMF_UpdateFrameScale("targettarget")
+    local function UpdateVisibleScaleSliders()
+        local current = MattMinimalFramesDB.frameScaleUnit
+        for _, opt in ipairs(scaleUnitOptions) do
+            local show = (opt.value == current)
+            scaleXSliders[opt.value]:SetShown(show)
+            scaleYSliders[opt.value]:SetShown(show)
         end
-    end, false)
+    end
 
-    local totScaleYSlider = CreateMinimalSlider(unitFramesCol, "Scale Y", 12, -224, 200, "totFrameScaleY", 0.5, 5.0, 0.05, 1.0, function(value)
-        if MMF_UpdateFrameScale then
-            MMF_UpdateFrameScale("targettarget")
-        end
-    end, false)
-
-    -- Focus Frame Scale
-    local focusLabel = unitFramesCol:CreateFontString(nil, "OVERLAY")
-    focusLabel:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "OUTLINE")
-    focusLabel:SetPoint("TOPLEFT", 12, -252)
-    focusLabel:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
-    focusLabel:SetText("Focus")
-
-    local focusScaleXSlider = CreateMinimalSlider(unitFramesCol, "Scale X", 12, -272, 200, "focusFrameScaleX", 0.5, 3.0, 0.05, 1.0, function(value)
-        if MMF_UpdateFrameScale then
-            MMF_UpdateFrameScale("focus")
-        end
-    end, false)
-
-    local focusScaleYSlider = CreateMinimalSlider(unitFramesCol, "Scale Y", 12, -296, 200, "focusFrameScaleY", 0.5, 5.0, 0.05, 1.0, function(value)
-        if MMF_UpdateFrameScale then
-            MMF_UpdateFrameScale("focus")
-        end
-    end, false)
-
-    -- Pet Frame Scale
-    local petLabel = unitFramesCol:CreateFontString(nil, "OVERLAY")
-    petLabel:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "OUTLINE")
-    petLabel:SetPoint("TOPLEFT", 12, -324)
-    petLabel:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
-    petLabel:SetText("Pet")
-
-    local petScaleXSlider = CreateMinimalSlider(unitFramesCol, "Scale X", 12, -344, 200, "petFrameScaleX", 0.5, 3.0, 0.05, 1.0, function(value)
-        if MMF_UpdateFrameScale then
-            MMF_UpdateFrameScale("pet")
-        end
-    end, false)
-
-    local petScaleYSlider = CreateMinimalSlider(unitFramesCol, "Scale Y", 12, -368, 200, "petFrameScaleY", 0.5, 5.0, 0.05, 1.0, function(value)
-        if MMF_UpdateFrameScale then
-            MMF_UpdateFrameScale("pet")
-        end
-    end, false)
+    local scaleUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
+        accentColor = ACCENT_COLOR,
+        x = 12,
+        y = -36,
+        width = 220,
+        labelWidth = 74,
+        buttonOffset = 78,
+        buttonWidth = 142,
+        visibleRows = #scaleUnitOptions,
+        label = "Scale Unit",
+        options = scaleUnitOptions,
+        getValue = function()
+            return MattMinimalFramesDB.frameScaleUnit
+        end,
+        onSelect = function(value)
+            MattMinimalFramesDB.frameScaleUnit = value
+            UpdateVisibleScaleSliders()
+        end,
+    })
+    scaleUnitList = scaleUnitDropdown.list
+    UpdateVisibleScaleSliders()
 
     -- Divider before Frame Text
     local unitFramesDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
-    unitFramesDivider:SetSize(200, 1)
-    unitFramesDivider:SetPoint("TOPLEFT", 12, -400)
+    unitFramesDivider:SetSize(220, 1)
+    unitFramesDivider:SetPoint("TOPLEFT", 12, -108)
     unitFramesDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
 
     -- Frame Text section (moved here)
     local frameTextTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     frameTextTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    frameTextTitle:SetPoint("TOPLEFT", 12, -412)
+    frameTextTitle:SetPoint("TOPLEFT", 12, -120)
     frameTextTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     frameTextTitle:SetText("FRAME TEXT")
 
-    local nameTextSlider = CreateMinimalSlider(unitFramesCol, "Name Size", 12, -436, 200, "nameTextSize", 8, 20, 1, 12, function(value)
+    local nameTextSlider = CreateMinimalSlider(unitFramesCol, "Name Size", 12, -144, 220, "nameTextSize", 8, 20, 1, 12, function(value)
         if MMF_UpdateNameTextSize then
             MMF_UpdateNameTextSize(value)
         end
     end, true)
 
-    local hpTextSlider = CreateMinimalSlider(unitFramesCol, "HP Size", 12, -460, 200, "hpTextSize", 8, 20, 1, 13, function(value)
+    local hpTextSlider = CreateMinimalSlider(unitFramesCol, "HP Size", 12, -168, 220, "hpTextSize", 8, 20, 1, 13, function(value)
         if MMF_UpdateHPTextSize then
             MMF_UpdateHPTextSize(value)
         end
     end, true)
+
+    local textVisibilityDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
+    textVisibilityDivider:SetSize(220, 1)
+    textVisibilityDivider:SetPoint("TOPLEFT", 12, -192)
+    textVisibilityDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
+
+    local textVisibilityTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    textVisibilityTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
+    textVisibilityTitle:SetPoint("TOPLEFT", 12, -204)
+    textVisibilityTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    textVisibilityTitle:SetText("TEXT VISIBILITY")
+
+    local textHideUnitOptions = {
+        { value = "player", label = "Player" },
+        { value = "target", label = "Target" },
+        { value = "targettarget", label = "Target of Target" },
+        { value = "pet", label = "Pet" },
+        { value = "focus", label = "Focus" },
+    }
+
+    MattMinimalFramesDB.textHideNameUnit = MattMinimalFramesDB.textHideNameUnit or "player"
+    MattMinimalFramesDB.textHideHPUnit = MattMinimalFramesDB.textHideHPUnit or "player"
+
+    local function GetUnitPrefix(unit)
+        if unit == "targettarget" then return "tot" end
+        return unit
+    end
+
+    local function IsValidTextHideUnit(value)
+        for _, opt in ipairs(textHideUnitOptions) do
+            if opt.value == value then
+                return true
+            end
+        end
+        return false
+    end
+
+    local function EnsureValidTextHideUnits()
+        if not IsValidTextHideUnit(MattMinimalFramesDB.textHideNameUnit) then
+            MattMinimalFramesDB.textHideNameUnit = "player"
+        end
+        if not IsValidTextHideUnit(MattMinimalFramesDB.textHideHPUnit) then
+            MattMinimalFramesDB.textHideHPUnit = "player"
+        end
+    end
+
+    local function ApplyTextVisibilityForUnit(unit)
+        if not unit then return end
+        if MMF_GetFrameForUnit and MMF_UpdateUnitFrame then
+            local frame = MMF_GetFrameForUnit(unit)
+            if frame then
+                MMF_UpdateUnitFrame(frame)
+            end
+        end
+    end
+
+    local function BuildTextHideUnitOptions()
+        local out = {}
+        for _, option in ipairs(textHideUnitOptions) do
+            out[#out + 1] = { value = option.value, label = option.label }
+        end
+        return out
+    end
+
+    local hideNameTextCheckbox
+    local hideHPTextCheckbox
+
+    local function SetHideNameCheckboxFromDB()
+        if not hideNameTextCheckbox then return end
+        local prefix = GetUnitPrefix(MattMinimalFramesDB.textHideNameUnit)
+        local key = prefix .. "HideNameText"
+        hideNameTextCheckbox.checkbox:SetChecked(MattMinimalFramesDB[key] == true)
+        hideNameTextCheckbox.checkbox.check:SetShown(hideNameTextCheckbox.checkbox:GetChecked())
+    end
+
+    local function SetHideHPCheckboxFromDB()
+        if not hideHPTextCheckbox then return end
+        local prefix = GetUnitPrefix(MattMinimalFramesDB.textHideHPUnit)
+        local key = prefix .. "HideHPText"
+        hideHPTextCheckbox.checkbox:SetChecked(MattMinimalFramesDB[key] == true)
+        hideHPTextCheckbox.checkbox.check:SetShown(hideHPTextCheckbox.checkbox:GetChecked())
+    end
+
+    EnsureValidTextHideUnits()
+
+    local hideNameUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
+        accentColor = ACCENT_COLOR,
+        x = 12,
+        y = -226,
+        width = 220,
+        labelWidth = 74,
+        buttonOffset = 78,
+        buttonWidth = 142,
+        visibleRows = #textHideUnitOptions,
+        label = "Name Unit",
+        options = BuildTextHideUnitOptions(),
+        getValue = function()
+            return MattMinimalFramesDB.textHideNameUnit
+        end,
+        onSelect = function(value)
+            MattMinimalFramesDB.textHideNameUnit = value
+            SetHideNameCheckboxFromDB()
+        end,
+    })
+    hideNameTextUnitList = hideNameUnitDropdown.list
+
+    hideNameTextCheckbox = CreateMinimalCheckbox(unitFramesCol, "Hide Name Text", 12, -250, "__tempHideNameText", false, function(checked)
+        local unit = MattMinimalFramesDB.textHideNameUnit
+        local prefix = GetUnitPrefix(unit)
+        MattMinimalFramesDB[prefix .. "HideNameText"] = checked and true or false
+        MattMinimalFramesDB.__tempHideNameText = nil
+        ApplyTextVisibilityForUnit(unit)
+    end)
+    MattMinimalFramesDB.__tempHideNameText = nil
+    SetHideNameCheckboxFromDB()
+
+    local hideHPUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
+        accentColor = ACCENT_COLOR,
+        x = 12,
+        y = -280,
+        width = 220,
+        labelWidth = 74,
+        buttonOffset = 78,
+        buttonWidth = 142,
+        visibleRows = #textHideUnitOptions,
+        label = "HP Unit",
+        options = BuildTextHideUnitOptions(),
+        getValue = function()
+            return MattMinimalFramesDB.textHideHPUnit
+        end,
+        onSelect = function(value)
+            MattMinimalFramesDB.textHideHPUnit = value
+            SetHideHPCheckboxFromDB()
+        end,
+    })
+    hideHPTextUnitList = hideHPUnitDropdown.list
+
+    hideHPTextCheckbox = CreateMinimalCheckbox(unitFramesCol, "Hide HP Text", 12, -304, "__tempHideHPText", false, function(checked)
+        local unit = MattMinimalFramesDB.textHideHPUnit
+        local prefix = GetUnitPrefix(unit)
+        MattMinimalFramesDB[prefix .. "HideHPText"] = checked and true or false
+        MattMinimalFramesDB.__tempHideHPText = nil
+        ApplyTextVisibilityForUnit(unit)
+    end)
+    MattMinimalFramesDB.__tempHideHPText = nil
+    SetHideHPCheckboxFromDB()
 
     ---------------------------------------------------
 
@@ -579,8 +776,11 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         unitFontList = unitFontList,
         playerIconModeList = playerIconModeList,
         targetIconModeList = targetIconModeList,
+        scaleUnitList = scaleUnitList,
         nameTextUnitList = nameTextUnitList,
         hpTextUnitList = hpTextUnitList,
+        hideNameTextUnitList = hideNameTextUnitList,
+        hideHPTextUnitList = hideHPTextUnitList,
         UpdatePlayerIconModeButtonText = UpdatePlayerIconModeButtonText,
     }
 end

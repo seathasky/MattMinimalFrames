@@ -139,10 +139,17 @@ end
 local function UpdateUnitFrame(frame)
     if not frame or not frame.unit or not frame.nameText then return end
     local unit = frame.unit
+    local hideNameText = MMF_IsNameTextHidden and MMF_IsNameTextHidden(unit)
+    local hideHPText = MMF_IsHPTextHidden and MMF_IsHPTextHidden(unit)
 
-    if not UnitExists(unit) then
+    if hideNameText then
         frame.nameText:SetText("")
+        frame.nameText:Hide()
+    elseif not UnitExists(unit) then
+        frame.nameText:SetText("")
+        frame.nameText:Show()
     else
+        frame.nameText:Show()
         local unitName = UnitName(unit)
         if unit == "targettarget" then
             local name = unitName or ""
@@ -165,8 +172,13 @@ local function UpdateUnitFrame(frame)
     end
 
     if frame.hpText and (unit == "player" or unit == "target") then
-        frame.hpText:SetText(hp)
-        frame.hpText:Show()
+        if hideHPText then
+            frame.hpText:SetText("")
+            frame.hpText:Hide()
+        else
+            frame.hpText:SetText(hp)
+            frame.hpText:Show()
+        end
     end
 
     UpdateHealPrediction(frame)

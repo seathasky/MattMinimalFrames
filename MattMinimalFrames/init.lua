@@ -233,11 +233,29 @@ local function Initialize()
     end)
 end
 
+local function ReapplySharedMediaSelections()
+    if MMF_ApplyStatusBarTexture then
+        MMF_ApplyStatusBarTexture()
+    end
+    if MMF_ApplyGlobalFont then
+        MMF_ApplyGlobalFont()
+    end
+end
+
 local initFrame = CreateFrame("Frame")
 initFrame:RegisterEvent("ADDON_LOADED")
+initFrame:RegisterEvent("PLAYER_LOGIN")
+local isInitialized = false
 initFrame:SetScript("OnEvent", function(self, event, addonName)
-    if addonName == "MattMinimalFrames" then
+    if event == "ADDON_LOADED" and addonName == "MattMinimalFrames" then
         Initialize()
+        isInitialized = true
         self:UnregisterEvent("ADDON_LOADED")
+        return
+    end
+
+    if event == "PLAYER_LOGIN" and isInitialized then
+        -- Apply selected SharedMedia again after all addons have loaded.
+        ReapplySharedMediaSelections()
     end
 end)

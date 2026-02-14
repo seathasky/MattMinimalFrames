@@ -2,17 +2,17 @@ local Compat = _G.MMF_Compat or {}
 
 MMF_POPUP_LAYOUT = {
     TITLE_HEIGHT = 28,
-    FOOTER_HEIGHT = 40,
+    FOOTER_HEIGHT = 32,
     TAB_HEIGHT = 24,
     TAB_SPACING = 4,
     CONTENT_SIDE_PADDING = 10,
     CONTENT_TOP_OFFSET = -4,
     PAGE_GAP = 4,
     DEFAULT_CENTER_Y = 50,
-    WIDTH_TBC = 620,
-    WIDTH_RETAIL = 640,
-    HEIGHT_TBC = 684,
-    HEIGHT_RETAIL = 688,
+    WIDTH_TBC = 600,
+    WIDTH_RETAIL = 620,
+    HEIGHT_TBC = 616,
+    HEIGHT_RETAIL = 620,
 }
 
 function MMF_GetPopupLayout()
@@ -20,15 +20,15 @@ function MMF_GetPopupLayout()
     local isTBC = Compat and Compat.IsTBC
     return {
         titleHeight = layout.TITLE_HEIGHT or 28,
-        footerHeight = layout.FOOTER_HEIGHT or 40,
+        footerHeight = layout.FOOTER_HEIGHT or 32,
         tabHeight = layout.TAB_HEIGHT or 24,
         tabSpacing = layout.TAB_SPACING or 4,
         contentSidePadding = layout.CONTENT_SIDE_PADDING or 10,
         contentTopOffset = layout.CONTENT_TOP_OFFSET or -4,
         pageGap = layout.PAGE_GAP or 4,
         centerY = layout.DEFAULT_CENTER_Y or 50,
-        width = isTBC and (layout.WIDTH_TBC or 620) or (layout.WIDTH_RETAIL or 640),
-        height = isTBC and (layout.HEIGHT_TBC or 684) or (layout.HEIGHT_RETAIL or 688),
+        width = isTBC and (layout.WIDTH_TBC or 600) or (layout.WIDTH_RETAIL or 620),
+        height = isTBC and (layout.HEIGHT_TBC or 616) or (layout.HEIGHT_RETAIL or 620),
     }
 end
 

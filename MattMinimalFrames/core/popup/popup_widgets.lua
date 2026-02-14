@@ -241,15 +241,36 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
 
     local function NormalizeOptions(raw)
         local out = {}
+        local function NormalizeString(value)
+            if type(value) ~= "string" then
+                return nil
+            end
+            local trimmed = value:match("^%s*(.-)%s*$")
+            if not trimmed or trimmed == "" then
+                return nil
+            end
+            return trimmed
+        end
         for _, opt in ipairs(raw or {}) do
             if type(opt) == "table" then
                 local value = opt.value
                 local label = opt.label
-                if value ~= nil and type(label) == "string" then
-                    out[#out + 1] = { value = value, label = label }
+                local normalizedLabel = NormalizeString(label)
+                if value ~= nil and normalizedLabel then
+                    if type(value) == "string" then
+                        local normalizedValue = NormalizeString(value)
+                        if normalizedValue then
+                            out[#out + 1] = { value = normalizedValue, label = normalizedLabel }
+                        end
+                    else
+                        out[#out + 1] = { value = value, label = normalizedLabel }
+                    end
                 end
             elseif type(opt) == "string" then
-                out[#out + 1] = { value = opt, label = opt }
+                local normalized = NormalizeString(opt)
+                if normalized then
+                    out[#out + 1] = { value = normalized, label = normalized }
+                end
             end
         end
         return out
@@ -283,20 +304,29 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
     })
     button:SetBackdropColor(0.06, 0.06, 0.08, 1)
     button:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
-    button:SetScript("OnEnter", function(self)
-        self:SetBackdropBorderColor(accent[1], accent[2], accent[3], 0.6)
-    end)
-    button:SetScript("OnLeave", function(self)
-        self:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
-    end)
-
     local buttonText = button:CreateFontString(nil, "OVERLAY")
     buttonText:SetFont(fontPath, 10, "")
     buttonText:SetPoint("LEFT", 6, 0)
     buttonText:SetJustifyH("LEFT")
-    buttonText:SetWidth(buttonWidth - 14)
+    buttonText:SetWidth(buttonWidth - 24)
 
-    local list = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    local arrowText = button:CreateFontString(nil, "OVERLAY")
+    arrowText:SetFont(fontPath, 9, "")
+    arrowText:SetPoint("RIGHT", -6, 0)
+    arrowText:SetTextColor(0.92, 0.92, 0.92)
+    arrowText:SetText("v")
+
+    button:SetScript("OnEnter", function(self)
+        self:SetBackdropBorderColor(accent[1], accent[2], accent[3], 0.6)
+        arrowText:SetTextColor(1, 1, 1)
+    end)
+    button:SetScript("OnLeave", function(self)
+        self:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+        arrowText:SetTextColor(0.92, 0.92, 0.92)
+    end)
+
+    local listParent = popup or parent
+    local list = CreateFrame("Frame", nil, listParent, "BackdropTemplate")
     list:SetSize(buttonWidth, (visibleRows * rowHeight) + listPadding)
     list:SetPoint("TOPLEFT", button, "BOTTOMLEFT", 0, -2)
     list:SetBackdrop({
@@ -347,6 +377,14 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
             buttonText:SetText(selectedOpt.label)
             return
         end
+        if selectedValue ~= nil then
+            local fallbackText = tostring(selectedValue)
+            if fallbackText ~= "" then
+                buttonText:SetTextColor(0.75, 0.75, 0.75)
+                buttonText:SetText(fallbackText)
+                return
+            end
+        end
         buttonText:SetTextColor(0.6, 0.6, 0.6)
         buttonText:SetText(placeholderText)
     end
@@ -396,8 +434,8 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
 
     function dropdown.SetOptions(newOptions)
         options = NormalizeOptions(newOptions)
-        if not GetOptionByValue(selectedValue) then
-            selectedValue = nil
+        if selectedValue == nil and #options > 0 then
+            selectedValue = options[1].value
         end
         UpdateButtonTextFromSelection()
         RefreshRows()
@@ -486,7 +524,7 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
         RefreshRows()
         list:Show()
         if not list.clickCatcher then
-            local anchor = popup or parent
+            local anchor = listParent
             local catcher = CreateFrame("Button", nil, anchor)
             catcher:SetAllPoints(anchor)
             catcher:SetScript("OnClick", function()
@@ -494,7 +532,7 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
             end)
             list.clickCatcher = catcher
         end
-        local levelAnchor = popup or parent
+        local levelAnchor = listParent
         list.clickCatcher:SetFrameLevel(levelAnchor:GetFrameLevel() + 100)
         list.clickCatcher:Show()
     end
@@ -520,6 +558,7 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
     dropdown.label = label
     dropdown.button = button
     dropdown.buttonText = buttonText
+    dropdown.arrowText = arrowText
     dropdown.list = list
     dropdown.scrollBar = scrollBar
     dropdown.RefreshRows = RefreshRows

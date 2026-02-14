@@ -184,6 +184,10 @@ local function GetPowerMaxCountSafe(powerType, fallbackMax)
     pcall(function()
         raw = UnitPowerMax("player", powerType) or fallbackMax
     end)
+    raw = tonumber(raw) or fallbackMax
+    if raw < 1 then
+        raw = fallbackMax
+    end
     local count = 1
     for i = 1, fallbackMax do
         if SafeLe(i, raw) then
@@ -223,6 +227,13 @@ local function SaveCenterOffsets(frame, prefix)
     if cx and cy and ux and uy then
         MattMinimalFramesDB[prefix .. "X"] = RoundInt(cx - ux)
         MattMinimalFramesDB[prefix .. "Y"] = RoundInt(cy - uy)
+    end
+
+    -- Keep an absolute fallback point like unit frames for extra persistence safety.
+    local left, top = frame:GetLeft(), frame:GetTop()
+    local frameName = frame:GetName()
+    if frameName and left and top then
+        MattMinimalFramesDB[frameName] = { left = left, top = top }
     end
 end
 
@@ -276,8 +287,33 @@ local function ApplyLayout(frame, prefix, visibleRunes)
     end
 
     frame:ClearAllPoints()
-    frame:SetPoint("CENTER", UIParent, "CENTER", x, y)
+    local usedAbsoluteFallback = false
+    if MattMinimalFramesDB then
+        local frameName = frame:GetName()
+        local pos = frameName and MattMinimalFramesDB[frameName]
+        local savedX = MattMinimalFramesDB[prefix .. "X"]
+        local savedY = MattMinimalFramesDB[prefix .. "Y"]
+        local hasCustomCenter = type(savedX) == "number" and type(savedY) == "number" and (savedX ~= d.x or savedY ~= d.y)
+        if (not hasCustomCenter) and type(pos) == "table" and type(pos.left) == "number" and type(pos.top) == "number" then
+            frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.left, pos.top)
+            usedAbsoluteFallback = true
+        end
+    end
+    if not usedAbsoluteFallback then
+        frame:SetPoint("CENTER", UIParent, "CENTER", x, y)
+    end
     frame.mmfVisibleRunes = visible
+end
+
+local function ApplyLegacyScale(frame, prefix)
+    if not frame or not prefix then return end
+    local scale = 1
+    if MattMinimalFramesDB and type(MattMinimalFramesDB[prefix .. "Scale"]) == "number" then
+        scale = MattMinimalFramesDB[prefix .. "Scale"]
+    end
+    if scale < 0.5 then scale = 0.5 end
+    if scale > 3.0 then scale = 3.0 end
+    frame:SetScale(scale)
 end
 
 local function MigrateLegacyPosition(frame, prefix)
@@ -695,6 +731,7 @@ function MMF_InitializeClassResources()
     if playerClass == "DEATHKNIGHT" then
         if MattMinimalFramesDB and MattMinimalFramesDB.showRuneBar then
             local frame = CreateRuneBar()
+            ApplyLegacyScale(frame, "runeBar")
             frame:Show()
             frame:RegisterEvent("RUNE_POWER_UPDATE")
             frame:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -711,24 +748,33 @@ function MMF_InitializeClassResources()
     elseif playerClass == "PALADIN" then
         if MattMinimalFramesDB and MattMinimalFramesDB.showHolyPowerBar then
             local frame = CreateHolyPowerBar()
+            ApplyLegacyScale(frame, "holyPowerBar")
             frame:Show()
             frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
+            frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
             frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+            frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+            frame:RegisterEvent("PLAYER_TALENT_UPDATE")
             frame:SetScript("OnEvent", UpdateHolyPowerBar)
             UpdateHolyPowerBar(frame)
         end
     elseif playerClass == "ROGUE" or playerClass == "DRUID" then
         if MattMinimalFramesDB and MattMinimalFramesDB.showComboPointBar then
             local frame = CreateComboPointBar()
+            ApplyLegacyScale(frame, "comboPointBar")
             frame:Show()
             frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
+            frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
             frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+            frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+            frame:RegisterEvent("PLAYER_TALENT_UPDATE")
             frame:SetScript("OnEvent", UpdateComboPointBar)
             UpdateComboPointBar(frame)
         end
     elseif playerClass == "WARLOCK" then
         if MattMinimalFramesDB and MattMinimalFramesDB.showSoulShardBar then
             local frame = CreateSoulShardBar()
+            ApplyLegacyScale(frame, "soulShardBar")
             frame:Show()
             frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
             frame:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -738,15 +784,20 @@ function MMF_InitializeClassResources()
     elseif playerClass == "MONK" then
         if MattMinimalFramesDB and MattMinimalFramesDB.showChiBar then
             local frame = CreateChiBar()
+            ApplyLegacyScale(frame, "chiBar")
             frame:Show()
             frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
+            frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
             frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+            frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+            frame:RegisterEvent("PLAYER_TALENT_UPDATE")
             frame:SetScript("OnEvent", UpdateChiBar)
             UpdateChiBar(frame)
         end
     elseif playerClass == "MAGE" then
         if MattMinimalFramesDB and MattMinimalFramesDB.showArcaneChargeBar then
             local frame = CreateArcaneChargeBar()
+            ApplyLegacyScale(frame, "arcaneChargeBar")
             if IsArcaneSpec() then
                 frame:Show()
             else
@@ -768,9 +819,13 @@ function MMF_InitializeClassResources()
     elseif playerClass == "EVOKER" then
         if MattMinimalFramesDB and MattMinimalFramesDB.showEssenceBar then
             local frame = CreateEssenceBar()
+            ApplyLegacyScale(frame, "essenceBar")
             frame:Show()
             frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
+            frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
             frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+            frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+            frame:RegisterEvent("PLAYER_TALENT_UPDATE")
             frame:SetScript("OnEvent", UpdateEssenceBar)
             UpdateEssenceBar(frame)
         end

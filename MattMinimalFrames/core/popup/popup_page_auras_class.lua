@@ -1,88 +1,125 @@
-function MMF_CreateAurasPowerSection(leftCol, accentColor, createMinimalCheckbox, createMinimalSlider)
+function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalCheckbox, createMinimalSlider)
     local ACCENT_COLOR = accentColor or { 0.6, 0.4, 0.9 }
     local CreateMinimalCheckbox = createMinimalCheckbox or MMF_CreateMinimalCheckbox
     local CreateMinimalSlider = createMinimalSlider or MMF_CreateMinimalSlider
 
     -- LEFT COLUMN: Buffs & Debuffs
     ---------------------------------------------------
-    local buffsTitle = leftCol:CreateFontString(nil, "OVERLAY")
-    buffsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    buffsTitle:SetPoint("TOPLEFT", 12, -12)
-    buffsTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
-    buffsTitle:SetText("BUFFS")
+    local aurasTitle = leftCol:CreateFontString(nil, "OVERLAY")
+    aurasTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
+    aurasTitle:SetPoint("TOPLEFT", 12, -12)
+    aurasTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    aurasTitle:SetText("TARGET AURA POSITION")
 
-    local buffsCheck = CreateMinimalCheckbox(leftCol, "Enable", 12, -32, "showBuffs", true, function()
+    local buffsCheck = CreateMinimalCheckbox(leftCol, "Buffs", 12, -32, "showBuffs", true, function()
         StaticPopup_Show("MMF_RELOADUI")
     end)
 
-    local buffXSlider = CreateMinimalSlider(leftCol, "X Offset", 12, -56, 200, "buffXOffset", -200, 200, 1, -2, function(value)
-        if MMF_UpdateBuffPosition then
-            MMF_UpdateBuffPosition(value, MattMinimalFramesDB.buffYOffset or -64)
+    local debuffsCheck = CreateMinimalCheckbox(leftCol, "Debuffs", 112, -32, "showDebuffs", true, function()
+        StaticPopup_Show("MMF_RELOADUI")
+    end)
+
+    local auraTypeOptions = {
+        { value = "buff", label = "Target Buffs" },
+        { value = "debuff", label = "Target Debuffs" },
+    }
+    MattMinimalFramesDB.auraOffsetType = MattMinimalFramesDB.auraOffsetType or "buff"
+    if MattMinimalFramesDB.auraOffsetType ~= "buff" and MattMinimalFramesDB.auraOffsetType ~= "debuff" then
+        MattMinimalFramesDB.auraOffsetType = "buff"
+    end
+
+    local SyncAuraOffsetSliders = function() end
+
+    local auraTypeDropdown = MMF_CreateMinimalDropdown(leftCol, popup, {
+        accentColor = ACCENT_COLOR,
+        x = 12,
+        y = -56,
+        width = 200,
+        labelWidth = 74,
+        buttonOffset = 78,
+        buttonWidth = 122,
+        visibleRows = #auraTypeOptions,
+        label = "Aura Type",
+        options = auraTypeOptions,
+        getValue = function()
+            return MattMinimalFramesDB.auraOffsetType
+        end,
+        onSelect = function(value)
+            MattMinimalFramesDB.auraOffsetType = value
+            SyncAuraOffsetSliders()
+        end,
+    })
+
+    local function GetAuraOffsetKeys()
+        if MattMinimalFramesDB.auraOffsetType == "debuff" then
+            return "debuffXOffset", "debuffYOffset", 3, 27
+        end
+        return "buffXOffset", "buffYOffset", -2, -64
+    end
+
+    local auraXSlider = CreateMinimalSlider(leftCol, "X Offset", 12, -80, 200, "__tempAuraOffsetX", -200, 200, 1, -2, function(value)
+        local xKey, yKey = GetAuraOffsetKeys()
+        MattMinimalFramesDB[xKey] = value
+        if xKey == "debuffXOffset" then
+            if MMF_UpdateDebuffPosition then
+                MMF_UpdateDebuffPosition(value, MattMinimalFramesDB[yKey] or 27)
+            end
+        else
+            if MMF_UpdateBuffPosition then
+                MMF_UpdateBuffPosition(value, MattMinimalFramesDB[yKey] or -64)
+            end
         end
     end, true)
 
-    local buffYSlider = CreateMinimalSlider(leftCol, "Y Offset", 12, -80, 200, "buffYOffset", -200, 200, 1, -64, function(value)
-        if MMF_UpdateBuffPosition then
-            MMF_UpdateBuffPosition(MattMinimalFramesDB.buffXOffset or -2, value)
+    local auraYSlider = CreateMinimalSlider(leftCol, "Y Offset", 12, -104, 200, "__tempAuraOffsetY", -200, 200, 1, -64, function(value)
+        local xKey, yKey = GetAuraOffsetKeys()
+        MattMinimalFramesDB[yKey] = value
+        if yKey == "debuffYOffset" then
+            if MMF_UpdateDebuffPosition then
+                MMF_UpdateDebuffPosition(MattMinimalFramesDB[xKey] or 3, value)
+            end
+        else
+            if MMF_UpdateBuffPosition then
+                MMF_UpdateBuffPosition(MattMinimalFramesDB[xKey] or -2, value)
+            end
         end
     end, true)
+
+    SyncAuraOffsetSliders = function()
+        local xKey, yKey, defaultX, defaultY = GetAuraOffsetKeys()
+        auraXSlider.slider:SetValue(MattMinimalFramesDB[xKey] or defaultX)
+        auraYSlider.slider:SetValue(MattMinimalFramesDB[yKey] or defaultY)
+    end
+    SyncAuraOffsetSliders()
 
     -- Divider
     local divider1 = leftCol:CreateTexture(nil, "ARTWORK")
     divider1:SetSize(200, 1)
-    divider1:SetPoint("TOPLEFT", 12, -108)
+    divider1:SetPoint("TOPLEFT", 12, -132)
     divider1:SetColorTexture(0.12, 0.12, 0.15, 1)
-
-    local debuffsTitle = leftCol:CreateFontString(nil, "OVERLAY")
-    debuffsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    debuffsTitle:SetPoint("TOPLEFT", 12, -120)
-    debuffsTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
-    debuffsTitle:SetText("DEBUFFS")
-
-    local debuffsCheck = CreateMinimalCheckbox(leftCol, "Enable", 12, -140, "showDebuffs", true, function()
-        StaticPopup_Show("MMF_RELOADUI")
-    end)
-
-    local debuffXSlider = CreateMinimalSlider(leftCol, "X Offset", 12, -164, 200, "debuffXOffset", -200, 200, 1, 3, function(value)
-        if MMF_UpdateDebuffPosition then
-            MMF_UpdateDebuffPosition(value, MattMinimalFramesDB.debuffYOffset or 27)
-        end
-    end, true)
-
-    local debuffYSlider = CreateMinimalSlider(leftCol, "Y Offset", 12, -188, 200, "debuffYOffset", -200, 200, 1, 27, function(value)
-        if MMF_UpdateDebuffPosition then
-            MMF_UpdateDebuffPosition(MattMinimalFramesDB.debuffXOffset or 3, value)
-        end
-    end, true)
-
-    -- Divider 2
-    local divider2 = leftCol:CreateTexture(nil, "ARTWORK")
-    divider2:SetSize(200, 1)
-    divider2:SetPoint("TOPLEFT", 12, -216)
-    divider2:SetColorTexture(0.12, 0.12, 0.15, 1)
 
     ---------------------------------------------------
     -- AURA APPEARANCE (Left Column)
     ---------------------------------------------------
     local auraTitle = leftCol:CreateFontString(nil, "OVERLAY")
     auraTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    auraTitle:SetPoint("TOPLEFT", 12, -228)
+    auraTitle:SetPoint("TOPLEFT", 12, -144)
     auraTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
-    auraTitle:SetText("AURA APPEARANCE")
+    auraTitle:SetText("TARGET AURA APPEARANCE")
 
-    local auraIconSlider = CreateMinimalSlider(leftCol, "Icon Size", 12, -252, 200, "auraIconSize", 12, 40, 1, 18, function(value)
+    local auraIconSlider = CreateMinimalSlider(leftCol, "Icon Size", 12, -168, 200, "auraIconSize", 12, 40, 1, 18, function(value)
         if MMF_UpdateAuraIconSize then
             MMF_UpdateAuraIconSize(value)
         end
     end, true)
 
-    local auraTextSlider = CreateMinimalSlider(leftCol, "Stack Text", 12, -276, 200, "auraTextScale", 0.5, 2.0, 0.1, 1.0, function(value)
+    local auraTextSlider = CreateMinimalSlider(leftCol, "Stack Text", 12, -192, 200, "auraTextScale", 0.5, 2.0, 0.1, 1.0, function(value)
         if MMF_UpdateAuraTextScale then
             MMF_UpdateAuraTextScale(value)
         end
     end, false)
 
-    local timerTextSlider = CreateMinimalSlider(leftCol, "Timer Text", 12, -300, 200, "timerTextScale", 0.5, 2.0, 0.1, 1.0, function(value)
+    local timerTextSlider = CreateMinimalSlider(leftCol, "Timer Text", 12, -216, 200, "timerTextScale", 0.5, 2.0, 0.1, 1.0, function(value)
         if MMF_UpdateTimerTextScale then
             MMF_UpdateTimerTextScale(value)
         end
@@ -91,40 +128,42 @@ function MMF_CreateAurasPowerSection(leftCol, accentColor, createMinimalCheckbox
     -- Divider
     local divider4 = leftCol:CreateTexture(nil, "ARTWORK")
     divider4:SetSize(200, 1)
-    divider4:SetPoint("TOPLEFT", 12, -328)
+    divider4:SetPoint("TOPLEFT", 12, -244)
     divider4:SetColorTexture(0.12, 0.12, 0.15, 1)
 
     local generalTitle = leftCol:CreateFontString(nil, "OVERLAY")
     generalTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    generalTitle:SetPoint("TOPLEFT", 12, -340)
+    generalTitle:SetPoint("TOPLEFT", 12, -256)
     generalTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     generalTitle:SetText("RESOURCES")
 
-    local playerPowerCheck = CreateMinimalCheckbox(leftCol, "Player Power Bar", 12, -360, "showPlayerPowerBar", true, function()
+    local playerPowerCheck = CreateMinimalCheckbox(leftCol, "Player Power Bar", 12, -276, "showPlayerPowerBar", true, function()
         StaticPopup_Show("MMF_RELOADUI")
     end)
 
-    local targetPowerCheck = CreateMinimalCheckbox(leftCol, "Target Power Bar", 12, -384, "showTargetPowerBar", false, function()
+    local targetPowerCheck = CreateMinimalCheckbox(leftCol, "Target Power Bar", 12, -300, "showTargetPowerBar", false, function()
         StaticPopup_Show("MMF_RELOADUI")
     end)
 
-    local powerBarWidthSlider = CreateMinimalSlider(leftCol, "Width", 12, -408, 200, "powerBarWidth", 30, 250, 1, 73, function(value)
+    local powerBarWidthSlider = CreateMinimalSlider(leftCol, "Width", 12, -324, 200, "powerBarWidth", 30, 250, 1, 73, function(value)
         if MMF_SetPowerBarSize then
             MMF_SetPowerBarSize(value, MattMinimalFramesDB.powerBarHeight or 5)
         end
     end, true)
 
-    local powerBarHeightSlider = CreateMinimalSlider(leftCol, "Height", 12, -432, 200, "powerBarHeight", 3, 15, 1, 5, function(value)
+    local powerBarHeightSlider = CreateMinimalSlider(leftCol, "Height", 12, -348, 200, "powerBarHeight", 3, 15, 1, 5, function(value)
         if MMF_SetPowerBarSize then
             MMF_SetPowerBarSize(MattMinimalFramesDB.powerBarWidth or 73, value)
         end
     end, true)
 
-    local healPredictionCheck = CreateMinimalCheckbox(leftCol, "Heal Prediction", 12, -460, "showHealPrediction", true, nil)
-
-    local absorbBarCheck = CreateMinimalCheckbox(leftCol, "Absorb Bar", 12, -484, "showAbsorbBar", true, nil)
+    MattMinimalFramesDB.__tempAuraOffsetX = nil
+    MattMinimalFramesDB.__tempAuraOffsetY = nil
 
     ---------------------------------------------------
+    return {
+        auraTypeList = auraTypeDropdown.list,
+    }
 end
 
 function MMF_CreateCurrentClassSection(middleCol, accentColor, createMinimalCheckbox, createMinimalSlider, updatePlayerIconModeButtonText, getCurrentPlayerIconModeValue)

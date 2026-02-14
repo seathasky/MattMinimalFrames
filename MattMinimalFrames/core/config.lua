@@ -32,6 +32,18 @@ local STATUSBAR = LSM and LSM.MediaType and LSM.MediaType.STATUSBAR or "statusba
 local FONT = LSM and LSM.MediaType and LSM.MediaType.FONT or "font"
 local MMF_STATUSBAR_DEFAULT = "MMF Melli"
 local MMF_FONT_DEFAULT = "MMF Naowh"
+local fontApplyToken = 0
+
+local function NormalizeMediaName(value)
+    if type(value) ~= "string" then
+        return nil
+    end
+    local trimmed = value:match("^%s*(.-)%s*$")
+    if not trimmed or trimmed == "" then
+        return nil
+    end
+    return trimmed
+end
 local MMF_STATUSBAR_REGISTRY = {
     { name = "MMF Melli", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Melli.tga" },
     { name = "MMF Melli Dark", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\MelliDark.tga" },
@@ -75,11 +87,17 @@ function MMF_GetStatusBarTextureOptions()
     if LSM then
         local names = LSM:List(STATUSBAR) or {}
         for _, name in ipairs(names) do
-            list[#list + 1] = name
+            local normalized = NormalizeMediaName(name)
+            if normalized then
+                list[#list + 1] = normalized
+            end
         end
     else
         for _, media in ipairs(MMF_STATUSBAR_REGISTRY) do
-            list[#list + 1] = media.name
+            local normalized = NormalizeMediaName(media.name)
+            if normalized then
+                list[#list + 1] = normalized
+            end
         end
     end
     table.sort(list, function(a, b) return tostring(a):lower() < tostring(b):lower() end)
@@ -87,7 +105,7 @@ function MMF_GetStatusBarTextureOptions()
 end
 
 function MMF_GetStatusBarTexturePath()
-    local selected = (MattMinimalFramesDB and MattMinimalFramesDB.statusBarTexture) or MMF_STATUSBAR_DEFAULT
+    local selected = NormalizeMediaName(MattMinimalFramesDB and MattMinimalFramesDB.statusBarTexture) or MMF_STATUSBAR_DEFAULT
     if LSM then
         local fetched = LSM:Fetch(STATUSBAR, selected, true)
         if fetched then
@@ -106,11 +124,17 @@ function MMF_GetFontOptions()
     if LSM then
         local names = LSM:List(FONT) or {}
         for _, name in ipairs(names) do
-            list[#list + 1] = name
+            local normalized = NormalizeMediaName(name)
+            if normalized then
+                list[#list + 1] = normalized
+            end
         end
     else
         for _, media in ipairs(MMF_FONT_REGISTRY) do
-            list[#list + 1] = media.name
+            local normalized = NormalizeMediaName(media.name)
+            if normalized then
+                list[#list + 1] = normalized
+            end
         end
     end
     table.sort(list, function(a, b) return tostring(a):lower() < tostring(b):lower() end)
@@ -118,7 +142,7 @@ function MMF_GetFontOptions()
 end
 
 function MMF_GetGlobalFontPath()
-    local selected = (MattMinimalFramesDB and MattMinimalFramesDB.globalFont) or MMF_FONT_DEFAULT
+    local selected = NormalizeMediaName(MattMinimalFramesDB and MattMinimalFramesDB.globalFont) or MMF_FONT_DEFAULT
     if LSM then
         local fetched = LSM:Fetch(FONT, selected, true)
         if fetched then
@@ -132,13 +156,56 @@ function MMF_GetGlobalFontPath()
     return MMF_Config.FONT_PATH
 end
 
+local function GetGlobalFontPathByName(fontName)
+    local selected = (type(fontName) == "string" and fontName ~= "" and fontName) or MMF_FONT_DEFAULT
+    if LSM then
+        local fetched = LSM:Fetch(FONT, selected, true)
+        if fetched then
+            return fetched, true
+        end
+        local fallback = LSM:Fetch(FONT, MMF_FONT_DEFAULT, true)
+        if fallback then
+            return fallback, false
+        end
+    end
+    return MMF_Config.FONT_PATH, selected == MMF_FONT_DEFAULT
+end
+
 function MMF_SetGlobalFont(fontName)
-    if not fontName or fontName == "" then return end
+    fontName = NormalizeMediaName(fontName)
+    if not fontName then return end
     if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
     MattMinimalFramesDB.globalFont = fontName
-    MMF_Config.FONT_PATH = MMF_GetGlobalFontPath() or MMF_Config.FONT_PATH
+    local resolvedPath, matched = GetGlobalFontPathByName(fontName)
+    MMF_Config.FONT_PATH = resolvedPath or MMF_Config.FONT_PATH
+    fontApplyToken = fontApplyToken + 1
+    local thisToken = fontApplyToken
     if MMF_ApplyGlobalFont then
         MMF_ApplyGlobalFont()
+    end
+
+    -- Some SharedMedia fonts can register slightly later on reload/login.
+    -- Retry briefly so a single selection applies immediately and persists.
+    if not matched and C_Timer and C_Timer.After then
+        local attempts = 0
+        local function RetryApply()
+            attempts = attempts + 1
+            if thisToken ~= fontApplyToken then return end
+            if not MattMinimalFramesDB or MattMinimalFramesDB.globalFont ~= fontName then return end
+
+            local retryPath, retryMatched = GetGlobalFontPathByName(fontName)
+            if retryPath then
+                MMF_Config.FONT_PATH = retryPath
+            end
+            if MMF_ApplyGlobalFont then
+                MMF_ApplyGlobalFont()
+            end
+
+            if (not retryMatched) and attempts < 12 then
+                C_Timer.After(0.2, RetryApply)
+            end
+        end
+        C_Timer.After(0.2, RetryApply)
     end
 end
 
@@ -153,6 +220,25 @@ end
 
 MMF_RegisterStatusBarMedia()
 MMF_RegisterFontMedia()
+
+if LSM and LSM.RegisterCallback then
+    LSM.RegisterCallback("MMF_SHARED_MEDIA_WATCHER", "LibSharedMedia_Registered", function(eventName, mediaType, mediaKey)
+        if eventName ~= "LibSharedMedia_Registered" then return end
+        if not MattMinimalFramesDB then return end
+        local normalizedKey = NormalizeMediaName(mediaKey)
+
+        if mediaType == FONT and normalizedKey and normalizedKey == NormalizeMediaName(MattMinimalFramesDB.globalFont) then
+            MMF_Config.FONT_PATH = MMF_GetGlobalFontPath() or MMF_Config.FONT_PATH
+            if MMF_ApplyGlobalFont then
+                MMF_ApplyGlobalFont()
+            end
+        elseif mediaType == STATUSBAR and normalizedKey and normalizedKey == NormalizeMediaName(MattMinimalFramesDB.statusBarTexture) then
+            if MMF_ApplyStatusBarTexture then
+                MMF_ApplyStatusBarTexture()
+            end
+        end
+    end)
+end
 
 function MMF_GetAllFrames()
     return {
@@ -309,6 +395,20 @@ function MMF_GetHPTextYOffset(unit)
         return MattMinimalFramesDB[key]
     end
     return MattMinimalFramesDB.hpTextYOffset or 0
+end
+
+function MMF_IsNameTextHidden(unit)
+    if not MattMinimalFramesDB then return false end
+    local prefix = GetUnitPrefix(unit or "player")
+    local key = prefix .. "HideNameText"
+    return MattMinimalFramesDB[key] == true
+end
+
+function MMF_IsHPTextHidden(unit)
+    if not MattMinimalFramesDB then return false end
+    local prefix = GetUnitPrefix(unit or "player")
+    local key = prefix .. "HideHPText"
+    return MattMinimalFramesDB[key] == true
 end
 
 local function ApplyFrameTextOffsets(frame)

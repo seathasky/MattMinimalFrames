@@ -3,10 +3,10 @@ local Compat = _G.MMF_Compat
 local ACCENT_COLOR = (MMF_GetPopupAccentColor and MMF_GetPopupAccentColor()) or { 0.6, 0.4, 0.9 }
 local ACCENT_HEX_PREFIX = (MMF_RGBToHexPrefix and MMF_RGBToHexPrefix(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])) or "|cff9966e6"
 local POPUP_LAYOUT = (MMF_GetPopupLayout and MMF_GetPopupLayout()) or {
-    width = Compat.IsTBC and 620 or 640,
-    height = Compat.IsTBC and 684 or 688,
+    width = Compat.IsTBC and 600 or 620,
+    height = Compat.IsTBC and 616 or 620,
     titleHeight = 28,
-    footerHeight = 40,
+    footerHeight = 32,
     tabHeight = 24,
     tabSpacing = 4,
     contentSidePadding = 10,
@@ -36,6 +36,9 @@ function MMF_ShowWelcomePopup(forceShow)
     -- If popup already exists, just show it and return
     if MMF_WelcomePopup then
         MMF_WelcomePopup:Show()
+        if MMF_ApplyGlobalFont then
+            MMF_ApplyGlobalFont()
+        end
         return
     end
 
@@ -211,10 +214,12 @@ function MMF_ShowWelcomePopup(forceShow)
     local content = CreateFrame("Frame", nil, popup)
     content:SetPoint("TOPLEFT", 0, -POPUP_LAYOUT.titleHeight)
     content:SetPoint("BOTTOMRIGHT", 0, POPUP_LAYOUT.footerHeight)
+    content:SetClipsChildren(true)
 
     local tabContainer = CreateFrame("Frame", nil, content)
     tabContainer:SetPoint("TOPLEFT", POPUP_LAYOUT.contentSidePadding, POPUP_LAYOUT.contentTopOffset)
     tabContainer:SetPoint("BOTTOMRIGHT", -POPUP_LAYOUT.contentSidePadding, 0)
+    tabContainer:SetClipsChildren(true)
 
     local tabBar = CreateFrame("Frame", nil, tabContainer)
     tabBar:SetPoint("TOPLEFT", 0, 0)
@@ -224,11 +229,13 @@ function MMF_ShowWelcomePopup(forceShow)
     local pageContainer = CreateFrame("Frame", nil, tabContainer)
     pageContainer:SetPoint("TOPLEFT", tabBar, "BOTTOMLEFT", 0, -POPUP_LAYOUT.pageGap)
     pageContainer:SetPoint("BOTTOMRIGHT", 0, 0)
+    pageContainer:SetClipsChildren(true)
 
     local function CreatePageFrame(parent)
         local page = CreateFrame("Frame", nil, parent, "BackdropTemplate")
         page:SetPoint("TOPLEFT", 0, 0)
         page:SetPoint("BOTTOMRIGHT", 0, 0)
+        page:SetClipsChildren(true)
         page:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8x8",
             edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -250,8 +257,12 @@ function MMF_ShowWelcomePopup(forceShow)
     local unitFontList
     local playerIconModeList
     local targetIconModeList
+    local scaleUnitList
     local nameTextUnitList
     local hpTextUnitList
+    local hideNameTextUnitList
+    local hideHPTextUnitList
+    local auraTypeList
     local profileSelectList
     local deleteProfileSelectList
     local closableLists = {}
@@ -417,8 +428,11 @@ function MMF_ShowWelcomePopup(forceShow)
     unitFontList = unitFramesState.unitFontList
     playerIconModeList = unitFramesState.playerIconModeList
     targetIconModeList = unitFramesState.targetIconModeList
+    scaleUnitList = unitFramesState.scaleUnitList
     nameTextUnitList = unitFramesState.nameTextUnitList
     hpTextUnitList = unitFramesState.hpTextUnitList
+    hideNameTextUnitList = unitFramesState.hideNameTextUnitList
+    hideHPTextUnitList = unitFramesState.hideHPTextUnitList
     if unitFramesState.UpdatePlayerIconModeButtonText then
         UpdatePlayerIconModeButtonText = unitFramesState.UpdatePlayerIconModeButtonText
     end
@@ -427,10 +441,17 @@ function MMF_ShowWelcomePopup(forceShow)
     RegisterClosableList(unitFontList)
     RegisterClosableList(playerIconModeList)
     RegisterClosableList(targetIconModeList)
+    RegisterClosableList(scaleUnitList)
     RegisterClosableList(nameTextUnitList)
     RegisterClosableList(hpTextUnitList)
+    RegisterClosableList(hideNameTextUnitList)
+    RegisterClosableList(hideHPTextUnitList)
 
-    MMF_CreateAurasPowerSection(leftCol, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider)
+    local aurasState = MMF_CreateAurasPowerSection(leftCol, popup, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider)
+    if type(aurasState) == "table" then
+        auraTypeList = aurasState.auraTypeList
+    end
+    RegisterClosableList(auraTypeList)
 
     MMF_CreateCurrentClassSection(middleCol, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider, UpdatePlayerIconModeButtonText, GetCurrentPlayerIconModeValue)
 
@@ -455,4 +476,7 @@ function MMF_ShowWelcomePopup(forceShow)
     MMF_CreatePopupFooter(popup, popupWidth, ACCENT_COLOR, POPUP_LAYOUT.footerHeight)
 
     popup:Show()
+    if MMF_ApplyGlobalFont then
+        MMF_ApplyGlobalFont()
+    end
 end
