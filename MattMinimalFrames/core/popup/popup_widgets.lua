@@ -282,6 +282,11 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
     local rows = {}
     local selectedValue = nil
 
+    local function EscapeDisplayText(text)
+        local value = tostring(text or "")
+        return value:gsub("|", "||")
+    end
+
     local container = CreateFrame("Frame", nil, parent)
     container:SetSize(width, 24)
     container:SetPoint((config and config.anchor) or "TOPLEFT", (config and config.x) or 0, (config and config.y) or 0)
@@ -373,20 +378,20 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
     local function UpdateButtonTextFromSelection()
         local selectedOpt = GetOptionByValue(selectedValue)
         if selectedOpt then
-            buttonText:SetTextColor(accent[1], accent[2], accent[3])
-            buttonText:SetText(selectedOpt.label)
+            buttonText:SetTextColor(0.92, 0.92, 0.92)
+            buttonText:SetText(EscapeDisplayText(selectedOpt.label))
             return
         end
         if selectedValue ~= nil then
             local fallbackText = tostring(selectedValue)
             if fallbackText ~= "" then
                 buttonText:SetTextColor(0.75, 0.75, 0.75)
-                buttonText:SetText(fallbackText)
+                buttonText:SetText(EscapeDisplayText(fallbackText))
                 return
             end
         end
         buttonText:SetTextColor(0.6, 0.6, 0.6)
-        buttonText:SetText(placeholderText)
+        buttonText:SetText(EscapeDisplayText(placeholderText))
     end
 
     local function ClampOffset()
@@ -409,7 +414,7 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
             local row = rows[rowIndex]
             if option then
                 row.option = option
-                row.text:SetText(option.label)
+                row.text:SetText(EscapeDisplayText(option.label))
                 row:Show()
             else
                 row.option = nil

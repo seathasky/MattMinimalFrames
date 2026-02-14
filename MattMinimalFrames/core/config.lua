@@ -35,7 +35,6 @@ local MMF_FONT_DEFAULT = "MMF Naowh"
 local MMF_FONT_DEFAULT_PATH = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
 local fontApplyToken = 0
 local fontValidationString = nil
-local fontUsabilityCache = {}
 
 local function NormalizeMediaName(value)
     if type(value) ~= "string" then
@@ -66,45 +65,21 @@ local function IsUsableFontPath(fontPath)
     if type(fontPath) ~= "string" or fontPath == "" then
         return false
     end
+
     local probe = GetFontValidationString()
     if not probe then
         return false
     end
+
     local ok, applied = pcall(probe.SetFont, probe, fontPath, 12, "OUTLINE")
     if ok and applied ~= false then
         return true
     end
+
     ok, applied = pcall(probe.SetFont, probe, fontPath, 12, "")
     return ok and applied ~= false
 end
 
-local function IsUsableFontName(fontName)
-    local normalized = NormalizeMediaName(fontName)
-    if not normalized then
-        return false
-    end
-    if fontUsabilityCache[normalized] ~= nil then
-        return fontUsabilityCache[normalized]
-    end
-
-    local usable = false
-    if LSM then
-        local fetched = LSM:Fetch(FONT, normalized, true)
-        if fetched then
-            usable = IsUsableFontPath(fetched)
-        end
-    else
-        for _, media in ipairs(MMF_FONT_REGISTRY) do
-            if NormalizeMediaName(media.name) == normalized then
-                usable = IsUsableFontPath(media.path)
-                break
-            end
-        end
-    end
-
-    fontUsabilityCache[normalized] = usable
-    return usable
-end
 local MMF_STATUSBAR_REGISTRY = {
     { name = "MMF Melli", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Melli.tga" },
     { name = "MMF Melli Dark", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\MelliDark.tga" },
@@ -221,7 +196,7 @@ function MMF_GetGlobalFontPath()
 end
 
 local function GetGlobalFontPathByName(fontName)
-    local selected = (type(fontName) == "string" and fontName ~= "" and fontName) or MMF_FONT_DEFAULT
+    local selected = NormalizeMediaName(fontName) or MMF_FONT_DEFAULT
     if LSM then
         local fetched = LSM:Fetch(FONT, selected, true)
         if fetched and IsUsableFontPath(fetched) then
@@ -238,9 +213,6 @@ end
 function MMF_SetGlobalFont(fontName)
     fontName = NormalizeMediaName(fontName)
     if not fontName then return end
-    if not IsUsableFontName(fontName) then
-        fontName = MMF_FONT_DEFAULT
-    end
     if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
     MattMinimalFramesDB.globalFont = fontName
     local resolvedPath, matched = GetGlobalFontPathByName(fontName)
@@ -268,7 +240,7 @@ function MMF_SetGlobalFont(fontName)
                 MMF_ApplyGlobalFont()
             end
 
-            if (not retryMatched) and attempts < 12 then
+            if (not retryMatched) and attempts < 40 then
                 C_Timer.After(0.2, RetryApply)
             end
         end
@@ -293,9 +265,6 @@ if LSM and LSM.RegisterCallback then
         if eventName ~= "LibSharedMedia_Registered" then return end
         if not MattMinimalFramesDB then return end
         local normalizedKey = NormalizeMediaName(mediaKey)
-        if mediaType == FONT and normalizedKey then
-            fontUsabilityCache[normalizedKey] = nil
-        end
 
         if mediaType == FONT and normalizedKey and normalizedKey == NormalizeMediaName(MattMinimalFramesDB.globalFont) then
             MMF_Config.FONT_PATH = MMF_GetGlobalFontPath() or MMF_Config.FONT_PATH

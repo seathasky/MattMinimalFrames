@@ -16,6 +16,17 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local hideHPTextUnitList
     local UpdatePlayerIconModeButtonText = function() end
 
+    local function NormalizeSelectionValue(value, fallback)
+        if type(value) ~= "string" then
+            return fallback
+        end
+        local trimmed = value:match("^%s*(.-)%s*$")
+        if not trimmed or trimmed == "" then
+            return fallback
+        end
+        return trimmed
+    end
+
     -- UNIT FRAMES COLUMN (2nd Column)
     ---------------------------------------------------
     local unitFramesTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
@@ -251,32 +262,11 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local textureOptions = MMF_GetStatusBarTextureOptions and MMF_GetStatusBarTextureOptions() or { "MMF Melli" }
 
     local function GetSelectedTexture()
-        return (MattMinimalFramesDB and MattMinimalFramesDB.statusBarTexture) or "MMF Melli"
-    end
-
-    local function HasTextureOption(name)
-        for _, optName in ipairs(textureOptions) do
-            if optName == name then
-                return true
-            end
-        end
-        return false
+        return NormalizeSelectionValue(MattMinimalFramesDB and MattMinimalFramesDB.statusBarTexture, "MMF Melli")
     end
 
     local function EnsureValidSelectedTexture()
         textureOptions = MMF_GetStatusBarTextureOptions and MMF_GetStatusBarTextureOptions() or { "MMF Melli" }
-        local selectedTexture = GetSelectedTexture()
-        for _, name in ipairs(textureOptions) do
-            if name == selectedTexture then
-                return
-            end
-        end
-        if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
-        if HasTextureOption("MMF Melli") then
-            MattMinimalFramesDB.statusBarTexture = "MMF Melli"
-        else
-            MattMinimalFramesDB.statusBarTexture = textureOptions[1] or "MMF Melli"
-        end
     end
     EnsureValidSelectedTexture()
 
@@ -343,19 +333,11 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local fontOptions = MMF_GetFontOptions and MMF_GetFontOptions() or { "MMF Naowh" }
 
     local function GetSelectedFont()
-        return (MattMinimalFramesDB and MattMinimalFramesDB.globalFont) or "MMF Naowh"
+        return NormalizeSelectionValue(MattMinimalFramesDB and MattMinimalFramesDB.globalFont, "MMF Naowh")
     end
 
     local function EnsureValidSelectedFont()
         fontOptions = MMF_GetFontOptions and MMF_GetFontOptions() or { "MMF Naowh" }
-        local selectedFont = GetSelectedFont()
-        for _, name in ipairs(fontOptions) do
-            if name == selectedFont then
-                return
-            end
-        end
-        if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
-        MattMinimalFramesDB.globalFont = fontOptions[1] or "MMF Naowh"
     end
     EnsureValidSelectedFont()
 
