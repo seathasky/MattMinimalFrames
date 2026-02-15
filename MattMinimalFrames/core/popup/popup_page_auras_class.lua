@@ -1,4 +1,9 @@
+local Compat = _G.MMF_Compat or {}
+
 function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalCheckbox, createMinimalSlider)
+    local _, playerClass = UnitClass("player")
+    local isComboClass = (playerClass == "ROGUE" or playerClass == "DRUID")
+    local isTBCComboClass = Compat.IsTBC and isComboClass
     local ACCENT_COLOR = accentColor or { 0.6, 0.4, 0.9 }
     local CreateMinimalCheckbox = createMinimalCheckbox or MMF_CreateMinimalCheckbox
     local CreateMinimalSlider = createMinimalSlider or MMF_CreateMinimalSlider
@@ -145,13 +150,53 @@ function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalC
         StaticPopup_Show("MMF_RELOADUI")
     end)
 
-    local powerBarWidthSlider = CreateMinimalSlider(leftCol, "Width", 12, -324, 200, "powerBarWidth", 30, 250, 1, 73, function(value)
+    local widthSliderY = -324
+    local heightSliderY = -348
+
+    if isTBCComboClass then
+        local comboDivider = leftCol:CreateTexture(nil, "ARTWORK")
+        comboDivider:SetSize(200, 1)
+        comboDivider:SetPoint("TOPLEFT", 12, -376)
+        comboDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
+
+        local comboTitle = leftCol:CreateFontString(nil, "OVERLAY")
+        comboTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
+        comboTitle:SetPoint("TOPLEFT", 12, -388)
+        comboTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+        comboTitle:SetText("COMBO POINTS")
+
+        CreateMinimalCheckbox(leftCol, "Enable Combo Point Bar", 12, -408, "showComboPointBar", true, function(checked)
+            if checked then
+                if MMF_InitializeClassResources then
+                    MMF_InitializeClassResources()
+                end
+            else
+                if _G.MMF_ComboPointBar then
+                    _G.MMF_ComboPointBar:Hide()
+                end
+            end
+        end)
+
+        CreateMinimalSlider(leftCol, "Point Width", 12, -432, 200, "comboPointBarWidth", 6, 80, 1, 30, function()
+            if MMF_UpdateClassBarLayout then
+                MMF_UpdateClassBarLayout("comboPointBar")
+            end
+        end, true)
+
+        CreateMinimalSlider(leftCol, "Point Height", 12, -456, 200, "comboPointBarHeight", 4, 30, 1, 10, function()
+            if MMF_UpdateClassBarLayout then
+                MMF_UpdateClassBarLayout("comboPointBar")
+            end
+        end, true)
+    end
+
+    local powerBarWidthSlider = CreateMinimalSlider(leftCol, "Width", 12, widthSliderY, 200, "powerBarWidth", 30, 250, 1, 73, function(value)
         if MMF_SetPowerBarSize then
             MMF_SetPowerBarSize(value, MattMinimalFramesDB.powerBarHeight or 5)
         end
     end, true)
 
-    local powerBarHeightSlider = CreateMinimalSlider(leftCol, "Height", 12, -348, 200, "powerBarHeight", 3, 15, 1, 5, function(value)
+    local powerBarHeightSlider = CreateMinimalSlider(leftCol, "Height", 12, heightSliderY, 200, "powerBarHeight", 3, 15, 1, 5, function(value)
         if MMF_SetPowerBarSize then
             MMF_SetPowerBarSize(MattMinimalFramesDB.powerBarWidth or 73, value)
         end

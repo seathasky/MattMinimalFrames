@@ -15,7 +15,11 @@ local function GetClassBarColor(classColor)
     return classColor
 end
 
-if not Compat.HasDeathKnight then
+local isComboClass = (playerClass == "ROGUE" or playerClass == "DRUID")
+local hasResourceSupport = (Compat and Compat.IsRetail) or isComboClass
+local isClassicComboMode = Compat and Compat.IsClassicEra and isComboClass
+
+if not hasResourceSupport then
     function MMF_InitializeClassResources() end
     function MMF_GetCurrentClassBarConfig() return nil end
     function MMF_UpdateClassBarLayout() end
@@ -38,7 +42,7 @@ end
 local BAR_LAYOUT_DEFAULTS = {
     runeBar = { width = 30, height = 10, spacing = 4, x = 0, y = 48, maxRunes = 6, legacyPosKey = "runeBarPosition" },
     holyPowerBar = { width = 30, height = 10, spacing = 4, x = 0, y = 48, maxRunes = 5, legacyPosKey = "holyPowerBarPosition" },
-    comboPointBar = { width = 30, height = 10, spacing = 4, x = 0, y = 48, maxRunes = 7, legacyPosKey = "MMF_ComboPointBarPosition" },
+    comboPointBar = { width = 30, height = 10, spacing = 4, x = 0, y = 48, maxRunes = isClassicComboMode and 5 or 7, legacyPosKey = "MMF_ComboPointBarPosition" },
     soulShardBar = { width = 30, height = 10, spacing = 4, x = 0, y = 48, maxRunes = 5, legacyPosKey = "MMF_SoulShardBarPosition" },
     chiBar = { width = 30, height = 10, spacing = 4, x = 0, y = 48, maxRunes = 6, legacyPosKey = "MMF_ChiBarPosition" },
     arcaneChargeBar = { width = 30, height = 10, spacing = 4, x = 0, y = 48, maxRunes = 4, legacyPosKey = "MMF_ArcaneChargeBarPosition" },
@@ -124,6 +128,7 @@ local MMF_EssenceBar
 local SafeEq
 local SafeNe
 local SafeLe
+local GetComboPointState
 
 local function IsArcaneSpec()
     if playerClass ~= "MAGE" then return false end
@@ -249,7 +254,8 @@ local function GetVisibleRunes(prefix)
     if not d then return 1 end
 
     if prefix == "comboPointBar" then
-        return GetPowerMaxCountSafe(Enum.PowerType.ComboPoints, d.maxRunes)
+        local _, maxComboPoints = GetComboPointState()
+        return maxComboPoints
     end
     if prefix == "chiBar" then
         return GetPowerMaxCountSafe(Enum.PowerType.Chi, d.maxRunes)
@@ -261,6 +267,44 @@ local function GetVisibleRunes(prefix)
         return GetPowerMaxCountSafe(Enum.PowerType.Essence, d.maxRunes)
     end
     return d.maxRunes
+end
+
+GetComboPointState = function()
+    if isClassicComboMode then
+        local comboUnit = "player"
+        if UnitHasVehicleUI and UnitIgnoresVehicleComboPoints and UnitHasVehicleUI("player") and not UnitIgnoresVehicleComboPoints("player") then
+            comboUnit = "vehicle"
+        end
+
+        local points = 0
+        pcall(function()
+            points = GetComboPoints(comboUnit, "target") or 0
+        end)
+
+        local maxPoints = 5
+        pcall(function()
+            local comboPowerType = Enum and Enum.PowerType and Enum.PowerType.ComboPoints or 4
+            maxPoints = UnitPowerMax(comboUnit, comboPowerType) or 5
+        end)
+
+        maxPoints = math.max(1, math.min(5, tonumber(maxPoints) or 5))
+        points = math.max(0, math.min(maxPoints, tonumber(points) or 0))
+        return points, maxPoints
+    end
+
+    local comboPowerType = Enum and Enum.PowerType and Enum.PowerType.ComboPoints
+    if not comboPowerType then
+        local points = 0
+        pcall(function()
+            points = GetComboPoints("player", "target") or 0
+        end)
+        points = math.max(0, math.min(5, tonumber(points) or 0))
+        return points, 5
+    end
+
+    local count = GetPowerCountSafe(comboPowerType, BAR_LAYOUT_DEFAULTS.comboPointBar.maxRunes)
+    local maxCount = GetPowerMaxCountSafe(comboPowerType, BAR_LAYOUT_DEFAULTS.comboPointBar.maxRunes)
+    return count, maxCount
 end
 
 local function ApplyLayout(frame, prefix, visibleRunes)
@@ -429,7 +473,14 @@ end
 
 local function CreateComboPointBar()
     if MMF_ComboPointBar then return MMF_ComboPointBar end
-    MMF_ComboPointBar = CreateBaseResourceBar("MMF_ComboPointBar", "comboPointBar", "Combo Point", GetClassBarColor({1, 0.8, 0.2}), 7, 0)
+    MMF_ComboPointBar = CreateBaseResourceBar(
+        "MMF_ComboPointBar",
+        "comboPointBar",
+        "Combo Point",
+        GetClassBarColor({1, 0.8, 0.2}),
+        BAR_LAYOUT_DEFAULTS.comboPointBar.maxRunes,
+        0
+    )
     _G.MMF_ComboPointBar = MMF_ComboPointBar
     return MMF_ComboPointBar
 end
@@ -577,8 +628,7 @@ end
 local function UpdateComboPointBar()
     if not MMF_ComboPointBar or not MMF_ComboPointBar:IsShown() then return end
 
-    local numComboPoints = GetPowerCountSafe(Enum.PowerType.ComboPoints, MMF_ComboPointBar.mmfMaxRunes)
-    local maxComboPoints = GetPowerMaxCountSafe(Enum.PowerType.ComboPoints, MMF_ComboPointBar.mmfMaxRunes)
+    local numComboPoints, maxComboPoints = GetComboPointState()
     if SafeNe(MMF_ComboPointBar.mmfVisibleRunes, maxComboPoints) then
         ApplyLayout(MMF_ComboPointBar, "comboPointBar", maxComboPoints)
     end
@@ -778,11 +828,20 @@ function MMF_InitializeClassResources()
             local frame = CreateComboPointBar()
             ApplyLegacyScale(frame, "comboPointBar")
             frame:Show()
-            frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
-            frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
             frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-            frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
-            frame:RegisterEvent("PLAYER_TALENT_UPDATE")
+            if isClassicComboMode then
+                frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
+                frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
+                frame:RegisterEvent("PLAYER_TARGET_CHANGED")
+                frame:RegisterEvent("COMBO_TARGET_CHANGED")
+                frame:RegisterUnitEvent("UNIT_ENTERED_VEHICLE", "player")
+                frame:RegisterUnitEvent("UNIT_EXITED_VEHICLE", "player")
+            else
+                frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
+                frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
+                frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+                frame:RegisterEvent("PLAYER_TALENT_UPDATE")
+            end
             frame:SetScript("OnEvent", UpdateComboPointBar)
             UpdateComboPointBar(frame)
         end

@@ -82,20 +82,70 @@ end
 
 local MMF_STATUSBAR_REGISTRY = {
     { name = "MMF Melli", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Melli.tga" },
-    { name = "MMF Melli Dark", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\MelliDark.tga" },
-    { name = "MMF Melli Dark Rough", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\MelliDarkRough.tga" },
-    { name = "MMF Flat", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Flat.tga" },
-    { name = "MMF Smooth", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Smooth.tga" },
-    { name = "MMF Smooth v2", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Smoothv2.tga" },
-    { name = "MMF Glaze", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Glaze.tga" },
-    { name = "MMF Graphite", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Graphite.tga" },
-    { name = "MMF Charcoal", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Charcoal.tga" },
-    { name = "MMF Steel", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Steel.tga" },
-    { name = "MMF Tube", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Tube.tga" },
-    { name = "MMF Outline", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Outline.tga" },
-    { name = "MMF Minimalist", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Minimalist.tga" },
-    { name = "MMF Wglass", path = "Interface\\AddOns\\MattMinimalFrames\\Libs\\SharedMedia\\statusbar\\Wglass.tga" },
+    { name = "MMF Melli Dark", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\MelliDark.tga" },
+    { name = "MMF Melli Dark Rough", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\MelliDarkRough.tga" },
+    { name = "MMF Flat", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Flat.tga" },
+    { name = "MMF Smooth", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Smooth.tga" },
+    { name = "MMF Smooth v2", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Smoothv2.tga" },
+    { name = "MMF Glaze", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Glaze.tga" },
+    { name = "MMF Graphite", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Graphite.tga" },
+    { name = "MMF Charcoal", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Charcoal.tga" },
+    { name = "MMF Steel", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Steel.tga" },
+    { name = "MMF Tube", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Tube.tga" },
+    { name = "MMF Outline", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Outline.tga" },
+    { name = "MMF Minimalist", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Minimalist.tga" },
+    { name = "MMF Wglass", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Wglass.tga" },
+    { name = "MMF Aluminium", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Aluminium.tga" },
+    { name = "MMF Armory", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Armory.tga" },
+    { name = "MMF BantoBar", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\BantoBar.tga" },
+    { name = "MMF Bars", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Bars.tga" },
+    { name = "MMF Bumps", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Bumps.tga" },
+    { name = "MMF Button", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Button.tga" },
+    { name = "MMF Cilo", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Cilo.tga" },
+    { name = "MMF Cloud", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Cloud.tga" },
+    { name = "MMF Comet", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Comet.tga" },
+    { name = "MMF Dabs", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Dabs.tga" },
+    { name = "MMF DarkBottom", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\DarkBottom.tga" },
+    { name = "MMF Diagonal", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Diagonal.tga" },
+    { name = "MMF Falumn", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Falumn.tga" },
+    { name = "MMF Fifths", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Fifths.tga" },
+    { name = "MMF Fourths", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Fourths.tga" },
+    { name = "MMF Frost", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Frost.tga" },
+    { name = "MMF Glamour", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Glamour.tga" },
+    { name = "MMF Glamour2", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Glamour2.tga" },
+    { name = "MMF Glamour3", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Glamour3.tga" },
+    { name = "MMF Glamour4", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Glamour4.tga" },
+    { name = "MMF Glamour5", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Glamour5.tga" },
+    { name = "MMF Glamour6", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Glamour6.tga" },
+    { name = "MMF Glamour7", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Glamour7.tga" },
+    { name = "MMF Glass", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Glass.tga" },
+    { name = "MMF Glaze2", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Glaze2.tga" },
+    { name = "MMF Gloss", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Gloss.tga" },
+    { name = "MMF Hatched", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Hatched.tga" },
+    { name = "MMF Healbot", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Healbot.tga" },
+    { name = "MMF LiteStep", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\LiteStep.tga" },
+    { name = "MMF LiteStepLite", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\LiteStepLite.tga" },
+    { name = "MMF Lyfe", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Lyfe.tga" },
+    { name = "MMF NormTex", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\NormTex.tga" },
+    { name = "MMF NormTex2", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\NormTex2.tga" },
+    { name = "MMF NormTex3", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\NormTex3.tga" },
+    { name = "MMF Otravi", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Otravi.tga" },
+    { name = "MMF Perl", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Perl.tga" },
+    { name = "MMF Perl2", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Perl2.tga" },
+    { name = "MMF Pill", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Pill.tga" },
+    { name = "MMF Rain", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Rain.tga" },
+    { name = "MMF Rocks", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Rocks.tga" },
+    { name = "MMF Round", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Round.tga" },
+    { name = "MMF Ruben", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Ruben.tga" },
+    { name = "MMF Runes", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Runes.tga" },
+    { name = "MMF Skewed", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Skewed.tga" },
+    { name = "MMF Smudge", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Smudge.tga" },
+    { name = "MMF Striped", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Striped.tga" },
+    { name = "MMF Water", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Water.tga" },
+    { name = "MMF Wisps", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Wisps.tga" },
+    { name = "MMF Xeon", path = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Xeon.tga" },
 }
+local MMF_LEGACY_STATUSBAR_ALIASES = {}
 local MMF_FONT_REGISTRY = {
     { name = MMF_FONT_DEFAULT, path = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf" },
 }
@@ -140,8 +190,27 @@ function MMF_GetStatusBarTextureOptions()
     return list
 end
 
+function MMF_EnsureStatusBarTextureSelection()
+    if not MattMinimalFramesDB then
+        MattMinimalFramesDB = {}
+    end
+
+    local selected = NormalizeMediaName(MattMinimalFramesDB.statusBarTexture) or MMF_STATUSBAR_DEFAULT
+    local legacyAlias = MMF_LEGACY_STATUSBAR_ALIASES[selected]
+    if legacyAlias then
+        selected = legacyAlias
+    end
+
+    if LSM and not LSM:IsValid(STATUSBAR, selected) then
+        selected = MMF_STATUSBAR_DEFAULT
+    end
+
+    MattMinimalFramesDB.statusBarTexture = selected
+    return selected
+end
+
 function MMF_GetStatusBarTexturePath()
-    local selected = NormalizeMediaName(MattMinimalFramesDB and MattMinimalFramesDB.statusBarTexture) or MMF_STATUSBAR_DEFAULT
+    local selected = MMF_EnsureStatusBarTextureSelection and MMF_EnsureStatusBarTextureSelection() or MMF_STATUSBAR_DEFAULT
     if LSM then
         local fetched = LSM:Fetch(STATUSBAR, selected, true)
         if fetched then

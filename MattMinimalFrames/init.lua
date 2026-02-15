@@ -17,6 +17,24 @@ local function HideBlizzardFrames()
         TargetFrameToT:SetScript("OnShow", function(self) self:Hide() end)
         MMF_HideFrame(TargetFrameToT)
     end
+
+    local compat = _G.MMF_Compat
+    if compat and compat.IsClassicEra then
+        local comboFrames = {
+            _G.ComboFrame,
+            _G.ComboPointPlayerFrame,
+            _G.PlayerFrameComboPoints,
+        }
+        for _, frame in ipairs(comboFrames) do
+            if frame then
+                if frame.UnregisterAllEvents then
+                    frame:UnregisterAllEvents()
+                end
+                frame:SetScript("OnShow", function(self) self:Hide() end)
+                MMF_HideFrame(frame)
+            end
+        end
+    end
 end
 
 
@@ -212,6 +230,9 @@ local function Initialize()
         end
     end
     NormalizeGUIScaleSetting()
+    if MMF_EnsureStatusBarTextureSelection then
+        MMF_EnsureStatusBarTextureSelection()
+    end
     
     HideBlizzardFrames()
     MMF_CreateAllMinimalFrames()
