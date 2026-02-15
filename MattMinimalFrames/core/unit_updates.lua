@@ -152,11 +152,10 @@ local function UpdateUnitFrame(frame)
         frame.nameText:Show()
         local unitName = UnitName(unit)
         if unit == "targettarget" then
-            local name = unitName or ""
-            if #name > 8 then
-                name = string.sub(name, 1, 8) .. "..."
-            end
-            frame.nameText:SetText(name)
+            -- Avoid string ops on unit names: in some restricted contexts (e.g. dungeons)
+            -- Blizzard may provide a protected "secret string" that errors on Lua manipulation.
+            frame.nameText:SetText(unitName or "")
+            frame.nameText:SetWidth(frame.originalWidth - 4)
         else
             frame.nameText:SetText(unitName)
             frame.nameText:SetWidth(frame.originalWidth - 4)
