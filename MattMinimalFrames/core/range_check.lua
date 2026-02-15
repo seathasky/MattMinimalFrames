@@ -11,6 +11,7 @@ local UnitCanAttack = UnitCanAttack
 local UnitIsUnit = UnitIsUnit
 local UnitInRange = UnitInRange
 local CheckInteractDistance = CheckInteractDistance
+local InCombatLockdown = InCombatLockdown
 local GetTime = GetTime
 
 local playerClass = UnitClassBase("player")
@@ -68,9 +69,10 @@ local function IsUnitInRange(unit)
         end
     end
 
-    if CheckInteractDistance then
-        local interact = CheckInteractDistance(unit, 4)
-        if interact ~= nil then
+    -- Avoid protected-function taint in combat; this fallback is optional.
+    if CheckInteractDistance and (not InCombatLockdown or not InCombatLockdown()) then
+        local ok, interact = pcall(CheckInteractDistance, unit, 4)
+        if ok and interact ~= nil then
             return interact and true or false
         end
     end
@@ -159,7 +161,8 @@ eventFrame:RegisterEvent("PLAYER_FOCUS_CHANGED")
 eventFrame:RegisterEvent("UNIT_TARGET")
 
 eventFrame:SetScript("OnEvent", function(_, event, unit)
-    if event == "PLAYER_LOGIN" or event == "SPELLS_CHANGED" then
+    if event == "PLAYER_LOGIN" or
+       event == "SPELLS_CHANGED" then
         RefreshRangeSpellNames()
     end
 
