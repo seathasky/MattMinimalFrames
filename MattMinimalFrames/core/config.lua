@@ -195,17 +195,24 @@ function MMF_EnsureStatusBarTextureSelection()
         MattMinimalFramesDB = {}
     end
 
-    local selected = NormalizeMediaName(MattMinimalFramesDB.statusBarTexture) or MMF_STATUSBAR_DEFAULT
+    local selected = NormalizeMediaName(MattMinimalFramesDB.statusBarTexture)
+    if not selected then
+        selected = MMF_STATUSBAR_DEFAULT
+        MattMinimalFramesDB.statusBarTexture = selected
+    end
+
     local legacyAlias = MMF_LEGACY_STATUSBAR_ALIASES[selected]
     if legacyAlias then
         selected = legacyAlias
+        MattMinimalFramesDB.statusBarTexture = selected
     end
 
+    -- Do not clobber a valid user selection just because another addon
+    -- registers its SharedMedia entry later in the loading sequence.
     if LSM and not LSM:IsValid(STATUSBAR, selected) then
-        selected = MMF_STATUSBAR_DEFAULT
+        return selected
     end
 
-    MattMinimalFramesDB.statusBarTexture = selected
     return selected
 end
 

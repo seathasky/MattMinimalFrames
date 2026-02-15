@@ -1,7 +1,7 @@
 ## Interface: 20505
 ## Title: Matt's Minimal Frames
 ## Author: Seathasky
-## Version: 5.0.7
+## Version: 5.0.8
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
 ## SavedVariables: MattMinimalFramesDB, MattMinimalFramesProfilesDB
 ## Notes: Minimal unit frames for TBC Anniversary

@@ -8,6 +8,9 @@ local harmSpells = Compat.HarmSpells
 local UnitExists = UnitExists
 local UnitCanAssist = UnitCanAssist
 local UnitCanAttack = UnitCanAttack
+local UnitIsUnit = UnitIsUnit
+local UnitInRange = UnitInRange
+local CheckInteractDistance = CheckInteractDistance
 local GetTime = GetTime
 
 local playerClass = UnitClassBase("player")
@@ -23,12 +26,23 @@ end
 
 RefreshRangeSpellNames()
 
+local function NormalizeRangeResult(value)
+    if value == 1 or value == true then
+        return true
+    end
+    if value == 0 or value == false then
+        return false
+    end
+    return nil
+end
+
 local function IsUnitInRange(unit)
     if not UnitExists(unit) then
         return false
     end
 
-    if unit == "player" then
+    -- Self-target can be represented as "target"; never treat self as out of range.
+    if unit == "player" or (UnitIsUnit and UnitIsUnit(unit, "player")) then
         return true
     end
 
@@ -37,11 +51,31 @@ local function IsUnitInRange(unit)
 
     local spellName = isFriendly and friendSpellName or isHostile and harmSpellName
 
-    if spellName then
-        local inRange = IsSpellInRange(spellName, unit)
-        return (inRange == 1 or inRange == true)
+    if spellName and IsSpellInRange then
+        local ok, rawRange = pcall(IsSpellInRange, spellName, unit)
+        if ok then
+            local inRange = NormalizeRangeResult(rawRange)
+            if inRange ~= nil then
+                return inRange
+            end
+        end
     end
 
+    if isFriendly and UnitInRange then
+        local partyRange = NormalizeRangeResult(UnitInRange(unit))
+        if partyRange ~= nil then
+            return partyRange
+        end
+    end
+
+    if CheckInteractDistance then
+        local interact = CheckInteractDistance(unit, 4)
+        if interact ~= nil then
+            return interact and true or false
+        end
+    end
+
+    -- If no API can determine range for this unit type, avoid false dimming.
     return true
 end
 

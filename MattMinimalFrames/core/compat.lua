@@ -35,7 +35,7 @@ function MMF.GetSpellName(spellID)
 end
 
 MMF.IsSpellInRange = _G.IsSpellInRange
-if C_Spell and C_Spell.IsSpellInRange then
+if MMF.IsRetail and C_Spell and C_Spell.IsSpellInRange then
     MMF.IsSpellInRange = C_Spell.IsSpellInRange
 end
 
@@ -99,8 +99,8 @@ MMF.HarmSpells_TBC = {
     WARRIOR = 355,
 }
 
-MMF.FriendSpells = MMF.IsTBC and MMF.FriendSpells_TBC or MMF.FriendSpells_Retail
-MMF.HarmSpells = MMF.IsTBC and MMF.HarmSpells_TBC or MMF.HarmSpells_Retail
+MMF.FriendSpells = MMF.IsClassicEra and MMF.FriendSpells_TBC or MMF.FriendSpells_Retail
+MMF.HarmSpells = MMF.IsClassicEra and MMF.HarmSpells_TBC or MMF.HarmSpells_Retail
 
 --------------------------------------------------
 -- AURA API COMPATIBILITY
