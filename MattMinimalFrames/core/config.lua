@@ -386,14 +386,30 @@ function MMF_GetFrameDefinition(unit)
 end
 
 function MMF_FormatNumber(num)
-    if type(num) ~= "number" then return "0" end
-    if num >= 1e6 then
-        return string.format("%.1fM", num / 1e6)
-    elseif num >= 1e3 then
-        return string.format("%.1fK", num / 1e3)
-    else
-        return tostring(num)
+    if num == nil then return "0" end
+
+    if type(AbbreviateLargeNumbers) == "function" then
+        local ok, text = pcall(AbbreviateLargeNumbers, num)
+        if ok and text then
+            return text
+        end
     end
+
+    if type(BreakUpLargeNumbers) == "function" then
+        local ok, text = pcall(BreakUpLargeNumbers, num)
+        if ok and text then
+            return text
+        end
+    end
+
+    local ok, text = pcall(function()
+        return tostring(num)
+    end)
+    if ok and text then
+        return text
+    end
+
+    return "0"
 end
 
 function MMF_GetUnitColor(unit)

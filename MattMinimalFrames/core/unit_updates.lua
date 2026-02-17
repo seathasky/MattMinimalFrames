@@ -5,6 +5,7 @@ local lastUpdate = 0
 local UnitExists = UnitExists
 local UnitHealthMax = UnitHealthMax
 local UnitHealth = UnitHealth
+local UnitHealthPercent = UnitHealthPercent
 local UnitName = UnitName
 local UnitPowerType = UnitPowerType
 local UnitPowerMax = UnitPowerMax
@@ -16,6 +17,7 @@ local UnitGetTotalAbsorbs = UnitGetTotalAbsorbs
 local PowerBarColor = PowerBarColor
 
 local IS_PLAYER_SHAMAN = (UnitClassBase("player") == "SHAMAN")
+local SCALE_TO_100 = CurveConstants and CurveConstants.ScaleTo100
 
 local function IsCheckedFlag(value)
     return value == true or value == 1
@@ -26,6 +28,87 @@ local function SafeEq(a, b)
         return a == b
     end)
     return ok and result or false
+end
+
+local function SafeFormatValue(value, useShortValue)
+    if value == nil then
+        return "0"
+    end
+
+    if useShortValue then
+        if type(AbbreviateLargeNumbers) == "function" then
+            local ok, text = pcall(AbbreviateLargeNumbers, value)
+            if ok and text then
+                return text
+            end
+        end
+    end
+
+    if type(BreakUpLargeNumbers) == "function" then
+        local ok, text = pcall(BreakUpLargeNumbers, value)
+        if ok and text then
+            return text
+        end
+    end
+
+    local ok, text = pcall(function()
+        return tostring(value)
+    end)
+    if ok and text then
+        return text
+    end
+
+    return "0"
+end
+
+local function GetHealthPercentText(unit, current, maximum)
+    if not unit then
+        return "0%"
+    end
+
+    if UnitHealthPercent then
+        if SCALE_TO_100 then
+            local okCurve, percentText = pcall(function()
+                return string.format("%d%%", UnitHealthPercent(unit, true, SCALE_TO_100))
+            end)
+            if okCurve and percentText then
+                return percentText
+            end
+        else
+            local okScaled, percentText = pcall(function()
+                local pct = UnitHealthPercent(unit, true)
+                if pct == nil then
+                    pct = UnitHealthPercent(unit)
+                end
+                return string.format("%.0f%%", pct * 100)
+            end)
+            if okScaled and percentText then
+                return percentText
+            end
+        end
+    end
+
+    local okFallback, fallbackText = pcall(function()
+        local pct = math.floor(((current / maximum) * 100) + 0.5)
+        return string.format("%d%%", pct)
+    end)
+    if okFallback and fallbackText then
+        return fallbackText
+    end
+
+    return "0%"
+end
+
+local function FormatPercentAndValue(current, showPercent, useShortValue, percentText)
+    local absolute = SafeFormatValue(current, useShortValue)
+
+    if not showPercent then
+        return absolute
+    end
+
+    local displayPercent = percentText or "0%"
+
+    return string.format("%s | %s", displayPercent, absolute)
 end
 
 local function GetNameTruncationSettings()
@@ -301,8 +384,9 @@ end
 local function UpdateUnitFrame(frame)
     if not frame or not frame.unit or not frame.nameText then return end
     local unit = frame.unit
-    local manualTruncateEnabled = IsCheckedFlag(MattMinimalFramesDB and MattMinimalFramesDB.enableNameTruncation)
-    local autoResizeEnabled = IsCheckedFlag(MattMinimalFramesDB and MattMinimalFramesDB.autoResizeTextOnLongName)
+    local db = MattMinimalFramesDB or {}
+    local manualTruncateEnabled = IsCheckedFlag(db.enableNameTruncation)
+    local autoResizeEnabled = IsCheckedFlag(db.autoResizeTextOnLongName)
     local forceSingleLine = manualTruncateEnabled or autoResizeEnabled
     pcall(function()
         frame.nameText:SetWordWrap(not forceSingleLine)
@@ -319,11 +403,11 @@ local function UpdateUnitFrame(frame)
     if hideNameText then
         frame.nameText:SetText("")
         frame.nameText:Hide()
-        ApplyNameTextFontSize(frame, tonumber(MattMinimalFramesDB and MattMinimalFramesDB.nameTextSize) or 12)
+        ApplyNameTextFontSize(frame, tonumber(db.nameTextSize) or 12)
     elseif not UnitExists(unit) then
         frame.nameText:SetText("")
         frame.nameText:Show()
-        ApplyNameTextFontSize(frame, tonumber(MattMinimalFramesDB and MattMinimalFramesDB.nameTextSize) or 12)
+        ApplyNameTextFontSize(frame, tonumber(db.nameTextSize) or 12)
     else
         frame.nameText:Show()
         local unitName = UnitName(unit)
@@ -351,7 +435,10 @@ local function UpdateUnitFrame(frame)
             frame.hpText:SetText("")
             frame.hpText:Hide()
         else
-            frame.hpText:SetText(hp)
+            local hpPercentText = GetHealthPercentText(unit, hp, maxHP)
+            local showHPPercentText = (db.showHPPercentText ~= false)
+            local useShortHPValue = (db.hpTextUseShortValue ~= false)
+            frame.hpText:SetText(FormatPercentAndValue(hp, showHPPercentText, useShortHPValue, hpPercentText))
             frame.hpText:Show()
         end
     end
@@ -359,10 +446,8 @@ local function UpdateUnitFrame(frame)
     UpdateHealPrediction(frame)
     UpdateAbsorbBar(frame)
 
-    if unit == "targettarget" or unit == "pet" then
+    if unit ~= "player" and unit ~= "target" then
         if frame.hpText then frame.hpText:Hide() end
-        if frame.powerText then frame.powerText:Hide() end
-    else
         if frame.powerText then frame.powerText:Hide() end
     end
 
@@ -414,10 +499,13 @@ local function UpdateUnitFrame(frame)
             if frame.powerBarBorder then frame.powerBarBorder:Show() end
             frame.powerBarBG:Show()
             frame.powerBar:Show()
+
+            if frame.powerText then frame.powerText:Hide() end
         else
             if frame.powerBarBorder then frame.powerBarBorder:Hide() end
             frame.powerBarBG:Hide()
             frame.powerBar:Hide()
+            if frame.powerText then frame.powerText:Hide() end
         end
     end
 end
