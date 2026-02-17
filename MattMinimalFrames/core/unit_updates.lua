@@ -30,6 +30,103 @@ local function SafeEq(a, b)
     return ok and result or false
 end
 
+local function SafeIsGreater(a, b)
+    local ok, result = pcall(function()
+        return a > b
+    end)
+    return ok and result or false
+end
+
+local function SafeIsLessOrEqual(a, b)
+    local ok, result = pcall(function()
+        return a <= b
+    end)
+    return ok and result or false
+end
+
+local function SafeToNumber(value, fallback)
+    local ok, numberValue = pcall(tonumber, value)
+    if ok and type(numberValue) == "number" then
+        return numberValue
+    end
+    return fallback
+end
+
+local function SafeAdd(a, b, fallback)
+    local ok, result = pcall(function()
+        return a + b
+    end)
+    if ok and type(result) == "number" then
+        return result
+    end
+    return fallback
+end
+
+local function SafeSubtract(a, b, fallback)
+    local ok, result = pcall(function()
+        return a - b
+    end)
+    if ok and type(result) == "number" then
+        return result
+    end
+    return fallback
+end
+
+local function SafeMultiply(a, b, fallback)
+    local ok, result = pcall(function()
+        return a * b
+    end)
+    if ok and type(result) == "number" then
+        return result
+    end
+    return fallback
+end
+
+local function SafeDivide(a, b, fallback)
+    local ok, result = pcall(function()
+        return a / b
+    end)
+    if ok and type(result) == "number" then
+        return result
+    end
+    return fallback
+end
+
+local function SafeStringLen(value)
+    local ok, length = pcall(string.len, value)
+    if ok and type(length) == "number" then
+        return length
+    end
+    return nil
+end
+
+local function SafeGetRegionWidth(region, fallback)
+    if not region then
+        return fallback
+    end
+    local ok, width = pcall(region.GetWidth, region)
+    if not ok then
+        return fallback
+    end
+    return SafeToNumber(width, fallback)
+end
+
+local function SafeGetNameTextBaseWidth(frame)
+    local baseWidth = SafeToNumber(frame and frame.originalWidth, nil)
+    if type(baseWidth) ~= "number" then
+        baseWidth = SafeGetRegionWidth(frame, 0)
+    end
+    return baseWidth or 0
+end
+
+local function SafeGetNameTextMaxWidth(frame)
+    local maxWidth = SafeSubtract(SafeGetNameTextBaseWidth(frame), 4, 0)
+    if SafeIsGreater(maxWidth, 0) then
+        return maxWidth
+    end
+    return 0
+end
+
 local function SafeFormatValue(value, useShortValue)
     if value == nil then
         return "0"
@@ -146,11 +243,8 @@ local function GetDisplayUnitName(unit, unitName)
         return unitName
     end
 
-    local shouldTruncate = false
-    local lengthOk = pcall(function()
-        shouldTruncate = #unitName > truncLength
-    end)
-    if not lengthOk or not shouldTruncate then
+    local unitNameLength = SafeStringLen(unitName)
+    if not unitNameLength or not SafeIsGreater(unitNameLength, truncLength) then
         return unitName
     end
 
@@ -180,92 +274,135 @@ end
 
 local function GetNameTextWidthNoWrap(nameText)
     if not nameText then return 0 end
-    local currentWidth = nameText:GetWidth() or 0
-    local probeWidth = 4096
-    if currentWidth <= 0 then
-        currentWidth = 1
+    local okUnbounded, unboundedWidth = pcall(nameText.GetUnboundedStringWidth, nameText)
+    if okUnbounded and type(unboundedWidth) == "number" then
+        return unboundedWidth
     end
-    nameText:SetWidth(probeWidth)
-    local width = nameText:GetStringWidth() or 0
-    nameText:SetWidth(currentWidth)
-    return width
+
+    local restoreWidth = 1
+    local okCurrent, currentWidth = pcall(nameText.GetWidth, nameText)
+    if okCurrent and type(currentWidth) == "number" then
+        local okPositive, isPositive = pcall(function()
+            return currentWidth > 0
+        end)
+        if okPositive and isPositive then
+            restoreWidth = currentWidth
+        end
+    end
+
+    pcall(nameText.SetWidth, nameText, 4096)
+    local okWidth, measuredWidth = pcall(nameText.GetStringWidth, nameText)
+    pcall(nameText.SetWidth, nameText, restoreWidth)
+    if okWidth and type(measuredWidth) == "number" then
+        return measuredWidth
+    end
+    return 0
 end
 
 local function ApplyAutoResizeNameText(frame, unit, displayName)
     if not frame or not frame.nameText then return end
     local baseSize = tonumber(MattMinimalFramesDB and MattMinimalFramesDB.nameTextSize) or 12
     local autoEnabled = IsAutoResizeNameTextEnabled()
-    local maxWidth = (frame.originalWidth or frame:GetWidth() or 0) - 4
+    local maxWidth = SafeGetNameTextMaxWidth(frame)
 
     ApplyNameTextFontSize(frame, baseSize)
 
-    if not autoEnabled or unit == "targettarget" or not displayName or displayName == "" then
+    local hasDisplayName = false
+    if displayName then
+        local displayNameLen = SafeStringLen(displayName)
+        hasDisplayName = displayNameLen and SafeIsGreater(displayNameLen, 0) or false
+    end
+
+    if not autoEnabled or unit == "targettarget" or not hasDisplayName then
         return
     end
-    if maxWidth <= 0 then
+    if not SafeIsGreater(maxWidth, 0) then
         return
     end
 
     local minSize = 6
     local size = math.floor(baseSize + 0.5)
-    while size > minSize and GetNameTextWidthNoWrap(frame.nameText) > maxWidth do
+    while size > minSize do
+        local widthNow = GetNameTextWidthNoWrap(frame.nameText)
+        if not SafeIsGreater(widthNow, maxWidth) then
+            break
+        end
         size = size - 1
         ApplyNameTextFontSize(frame, size)
     end
 
     local textWidth = GetNameTextWidthNoWrap(frame.nameText)
-    if textWidth <= maxWidth then
+    if SafeIsLessOrEqual(textWidth, maxWidth) then
         return
     end
 
     -- Allow a little overflow before truncating in auto mode (about 5 chars worth).
-    local lengthOk, totalChars = pcall(function()
-        return #displayName
-    end)
-    if lengthOk and totalChars and totalChars > 0 then
-        local avgCharWidth = textWidth / totalChars
-        if avgCharWidth > 0 then
-            local overflowBudgetPx = avgCharWidth * 5
-            if textWidth <= (maxWidth + overflowBudgetPx) then
+    local totalChars = SafeStringLen(displayName)
+    if totalChars and SafeIsGreater(totalChars, 0) then
+        local avgCharWidth = SafeDivide(textWidth, totalChars, 0)
+        if SafeIsGreater(avgCharWidth, 0) then
+            local overflowBudgetPx = SafeMultiply(avgCharWidth, 5, 0)
+            local allowedWidth = SafeAdd(maxWidth, overflowBudgetPx, maxWidth)
+            if SafeIsLessOrEqual(textWidth, allowedWidth) then
                 return
             end
         end
     end
 
     -- Prefer removing whole trailing words first.
-    local trimmed = tostring(displayName):gsub("%s+$", "")
+    local okTrimmed, trimmed = pcall(string.gsub, displayName, "%s+$", "")
+    if not okTrimmed or type(trimmed) ~= "string" then
+        return
+    end
     local guard = 0
     while guard < 64 do
-        local withoutLastWord = trimmed:match("^(.*)%s+[^%s]+$")
-        if not withoutLastWord or withoutLastWord == "" then
+        local okMatch, withoutLastWord = pcall(string.match, trimmed, "^(.*)%s+[^%s]+$")
+        if not okMatch or type(withoutLastWord) ~= "string" then
             break
         end
-        trimmed = withoutLastWord:gsub("%s+$", "")
+        local okWordLen, wordLen = pcall(string.len, withoutLastWord)
+        if not okWordLen or type(wordLen) ~= "number" or not SafeIsGreater(wordLen, 0) then
+            break
+        end
+        local okStrip, stripped = pcall(string.gsub, withoutLastWord, "%s+$", "")
+        if not okStrip or type(stripped) ~= "string" then
+            break
+        end
+        trimmed = stripped
         frame.nameText:SetText(trimmed .. "...")
-        if GetNameTextWidthNoWrap(frame.nameText) <= maxWidth then
+        if SafeIsLessOrEqual(GetNameTextWidthNoWrap(frame.nameText), maxWidth) then
             return
         end
         guard = guard + 1
     end
 
     -- Fallback for single long words: character trim to force fit.
-    local okCount, charCount = pcall(function()
-        return #displayName
-    end)
-    if not okCount or not charCount or charCount < 2 then
+    local charCount = SafeStringLen(displayName)
+    if not charCount or not SafeIsGreater(charCount, 1) then
         return
     end
-    local keepChars = charCount - 1
-    while keepChars > 1 do
+    local keepChars = SafeSubtract(charCount, 1, nil)
+    if not keepChars then
+        return
+    end
+    while SafeIsGreater(keepChars, 1) do
         local okSub, head = pcall(string.sub, displayName, 1, keepChars)
-        if not okSub or not head or head == "" then
+        if not okSub or type(head) ~= "string" then
             break
         end
-        frame.nameText:SetText(head:gsub("%s+$", "") .. "...")
-        if GetNameTextWidthNoWrap(frame.nameText) <= maxWidth then
+        local okHeadLen, headLen = pcall(string.len, head)
+        if not okHeadLen or type(headLen) ~= "number" or not SafeIsGreater(headLen, 0) then
+            break
+        end
+        local okHeadTrim, headTrimmed = pcall(string.gsub, head, "%s+$", "")
+        if not okHeadTrim or type(headTrimmed) ~= "string" then
+            break
+        end
+        frame.nameText:SetText(headTrimmed .. "...")
+        if SafeIsLessOrEqual(GetNameTextWidthNoWrap(frame.nameText), maxWidth) then
             return
         end
-        keepChars = keepChars - 1
+        keepChars = SafeSubtract(keepChars, 1, 0)
     end
 end
 
@@ -412,12 +549,13 @@ local function UpdateUnitFrame(frame)
         frame.nameText:Show()
         local unitName = UnitName(unit)
         local displayName = GetDisplayUnitName(unit, unitName)
+        local nameTextWidth = SafeGetNameTextMaxWidth(frame)
         if unit == "targettarget" then
             frame.nameText:SetText(displayName or "")
-            frame.nameText:SetWidth(frame.originalWidth - 4)
+            frame.nameText:SetWidth(nameTextWidth)
         else
             frame.nameText:SetText(displayName)
-            frame.nameText:SetWidth(frame.originalWidth - 4)
+            frame.nameText:SetWidth(nameTextWidth)
         end
         ApplyAutoResizeNameText(frame, unit, displayName)
     end

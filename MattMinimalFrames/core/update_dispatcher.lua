@@ -40,14 +40,19 @@ local function ClearPending()
     wipe(dirtyFrames)
 end
 
+local function SafeUpdateUnitFrame(frame)
+    if not frame or not frame:IsShown() or not MMF_UpdateUnitFrame then
+        return
+    end
+    pcall(MMF_UpdateUnitFrame, frame)
+end
+
 local function UpdateAllFramesNow()
     if not MMF_GetAllFrames or not MMF_UpdateUnitFrame then
         return
     end
     for _, frame in ipairs(MMF_GetAllFrames()) do
-        if frame and frame:IsShown() then
-            MMF_UpdateUnitFrame(frame)
-        end
+        SafeUpdateUnitFrame(frame)
     end
 end
 
@@ -64,17 +69,13 @@ function MMF_FlushRequestedUpdates()
     end
 
     for frame in pairs(dirtyFrames) do
-        if frame and frame:IsShown() then
-            MMF_UpdateUnitFrame(frame)
-        end
+        SafeUpdateUnitFrame(frame)
     end
 
     if MMF_GetFrameForUnit then
         for unit in pairs(dirtyUnits) do
             local frame = MMF_GetFrameForUnit(unit)
-            if frame and frame:IsShown() then
-                MMF_UpdateUnitFrame(frame)
-            end
+            SafeUpdateUnitFrame(frame)
         end
     end
 
