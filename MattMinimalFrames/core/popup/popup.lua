@@ -2,7 +2,7 @@ local Compat = _G.MMF_Compat
 
 local POPUP_LAYOUT = (MMF_GetPopupLayout and MMF_GetPopupLayout()) or {
     width = Compat.IsTBC and 600 or 620,
-    height = Compat.IsTBC and 696 or 700,
+    height = Compat.IsTBC and 720 or 724,
     titleHeight = 28,
     footerHeight = 32,
     tabHeight = 24,

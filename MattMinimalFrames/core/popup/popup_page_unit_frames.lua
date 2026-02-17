@@ -239,10 +239,17 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         StaticPopup_Show("MMF_RELOADUI")
     end)
 
+    local hideBlizzardCastBarCheck = CreateMinimalCheckbox(unitFramesCol, "Hide Blizzard Cast Bar", 280, -204, "hideBlizzardPlayerCastBar", false, function()
+        if MMF_UpdateBlizzardPlayerCastBarVisibility then
+            MMF_UpdateBlizzardPlayerCastBarVisibility()
+        end
+        StaticPopup_Show("MMF_RELOADUI")
+    end)
+
     local castBarColorDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = 280,
-        y = -204,
+        y = -228,
         width = 252,
         labelWidth = 95,
         buttonOffset = 104,
@@ -263,18 +270,18 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local castStyleDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     castStyleDivider:SetSize(252, 1)
-    castStyleDivider:SetPoint("TOPLEFT", 280, -244)
+    castStyleDivider:SetPoint("TOPLEFT", 280, -268)
     castStyleDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
 
     local styleTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     styleTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    styleTitle:SetPoint("TOPLEFT", 280, -256)
+    styleTitle:SetPoint("TOPLEFT", 280, -280)
     styleTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     styleTitle:SetText("STYLE")
 
     local styleSubtext = unitFramesCol:CreateFontString(nil, "OVERLAY")
     styleSubtext:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    styleSubtext:SetPoint("TOPLEFT", 280, -276)
+    styleSubtext:SetPoint("TOPLEFT", 280, -300)
     styleSubtext:SetTextColor(0.65, 0.65, 0.7)
     styleSubtext:SetText("SharedMedia unit frame textures and fonts")
 
@@ -282,7 +289,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local texturePreviewBG = CreateFrame("Frame", nil, unitFramesCol, "BackdropTemplate")
     texturePreviewBG:SetSize(194, 16)
-    texturePreviewBG:SetPoint("TOPLEFT", 338, -334)
+    texturePreviewBG:SetPoint("TOPLEFT", 338, -358)
     texturePreviewBG:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -341,7 +348,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     unitTextureDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = 280,
-        y = -300,
+        y = -324,
         width = 252,
         labelWidth = 56,
         buttonOffset = 58,
@@ -392,7 +399,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     unitFontDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = 280,
-        y = -370,
+        y = -394,
         width = 252,
         labelWidth = 56,
         buttonOffset = 58,
@@ -427,12 +434,12 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local styleDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     styleDivider:SetSize(252, 1)
-    styleDivider:SetPoint("TOPLEFT", 280, -398)
+    styleDivider:SetPoint("TOPLEFT", 280, -422)
     styleDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
 
     local frameOptionsTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     frameOptionsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    frameOptionsTitle:SetPoint("TOPLEFT", 280, -410)
+    frameOptionsTitle:SetPoint("TOPLEFT", 280, -434)
     frameOptionsTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     frameOptionsTitle:SetText("FRAME OPTIONS")
 
@@ -444,7 +451,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local playerIconModeDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = 280,
-        y = -434,
+        y = -458,
         width = 252,
         labelWidth = 95,
         buttonOffset = 104,
@@ -475,7 +482,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local targetIconModeDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = 280,
-        y = -458,
+        y = -482,
         width = 252,
         labelWidth = 95,
         buttonOffset = 104,
@@ -497,7 +504,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     })
     targetIconModeList = targetIconModeDropdown.list
 
-    local targetMarkersCheck = CreateMinimalCheckbox(unitFramesCol, "Target Markers", 280, -490, "showTargetMarkers", false, function(checked)
+    local targetMarkersCheck = CreateMinimalCheckbox(unitFramesCol, "Target Markers", 280, -514, "showTargetMarkers", false, function(checked)
         if MMF_UpdateTargetMarkerVisibility then
             MMF_UpdateTargetMarkerVisibility(checked)
         end
@@ -529,16 +536,16 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local frameOptionsDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     frameOptionsDivider:SetSize(252, 1)
-    frameOptionsDivider:SetPoint("TOPLEFT", 280, -514)
+    frameOptionsDivider:SetPoint("TOPLEFT", 280, -538)
     frameOptionsDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
 
     local healOverlaysTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     healOverlaysTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    healOverlaysTitle:SetPoint("TOPLEFT", 280, -526)
+    healOverlaysTitle:SetPoint("TOPLEFT", 280, -550)
     healOverlaysTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     healOverlaysTitle:SetText("HEAL OVERLAYS")
 
-    local healPredictionCheck = CreateMinimalCheckbox(unitFramesCol, "Heal Prediction", 280, -550, "showHealPrediction", true, function()
+    local healPredictionCheck = CreateMinimalCheckbox(unitFramesCol, "Heal Prediction", 280, -574, "showHealPrediction", true, function()
         RefreshPredictionVisuals()
     end)
 
@@ -639,7 +646,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         52
     )
 
-    local absorbBarCheck = CreateMinimalCheckbox(unitFramesCol, "Absorb Bar", 280, -574, "showAbsorbBar", true, function()
+    local absorbBarCheck = CreateMinimalCheckbox(unitFramesCol, "Absorb Bar", 280, -598, "showAbsorbBar", true, function()
         RefreshPredictionVisuals()
     end)
     CreateHintIcon(

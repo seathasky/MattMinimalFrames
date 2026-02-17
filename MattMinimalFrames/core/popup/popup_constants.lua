@@ -11,8 +11,8 @@ MMF_POPUP_LAYOUT = {
     DEFAULT_CENTER_Y = 50,
     WIDTH_TBC = 600,
     WIDTH_RETAIL = 620,
-    HEIGHT_TBC = 696,
-    HEIGHT_RETAIL = 700,
+    HEIGHT_TBC = 720,
+    HEIGHT_RETAIL = 724,
 }
 
 function MMF_GetPopupLayout()
@@ -28,7 +28,7 @@ function MMF_GetPopupLayout()
         pageGap = layout.PAGE_GAP or 4,
         centerY = layout.DEFAULT_CENTER_Y or 50,
         width = isTBC and (layout.WIDTH_TBC or 600) or (layout.WIDTH_RETAIL or 620),
-        height = isTBC and (layout.HEIGHT_TBC or 696) or (layout.HEIGHT_RETAIL or 700),
+        height = isTBC and (layout.HEIGHT_TBC or 720) or (layout.HEIGHT_RETAIL or 724),
     }
 end
 

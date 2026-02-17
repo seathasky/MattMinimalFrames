@@ -37,6 +37,33 @@ local function HideBlizzardFrames()
     end
 end
 
+local function UpdateBlizzardPlayerCastBarVisibility()
+    local shouldHide = MattMinimalFramesDB and MattMinimalFramesDB.hideBlizzardPlayerCastBar == true
+    local frames = {
+        _G.PlayerCastingBarFrame,
+        _G.CastingBarFrame,
+    }
+
+    for _, frame in ipairs(frames) do
+        if frame then
+            if not frame.mmfHideBlizzardCastBarHooked then
+                frame:HookScript("OnShow", function(self)
+                    if MattMinimalFramesDB and MattMinimalFramesDB.hideBlizzardPlayerCastBar == true then
+                        self:Hide()
+                    end
+                end)
+                frame.mmfHideBlizzardCastBarHooked = true
+            end
+
+            if shouldHide then
+                frame:Hide()
+            end
+        end
+    end
+end
+
+MMF_UpdateBlizzardPlayerCastBarVisibility = UpdateBlizzardPlayerCastBarVisibility
+
 
 SLASH_MATTMINIMALFRAMES1 = "/mmf"
 SlashCmdList["MATTMINIMALFRAMES"] = function()
@@ -176,6 +203,9 @@ function MMF_ApplyActiveProfileLive()
     if MMF_UpdateTargetMarkerVisibility then
         MMF_UpdateTargetMarkerVisibility(MattMinimalFramesDB.showTargetMarkers == true)
     end
+    if MMF_UpdateBlizzardPlayerCastBarVisibility then
+        MMF_UpdateBlizzardPlayerCastBarVisibility()
+    end
 
     if MMF_InitializeClassResources then MMF_InitializeClassResources() end
     if MMF_UpdateClassBarLayoutForCurrentClass then MMF_UpdateClassBarLayoutForCurrentClass() end
@@ -235,6 +265,7 @@ local function Initialize()
     end
     
     HideBlizzardFrames()
+    UpdateBlizzardPlayerCastBarVisibility()
     MMF_CreateAllMinimalFrames()
     MMF_ApplyAllFrameScales()
     MMF_InitializeClassResources()
@@ -287,5 +318,6 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
     if event == "PLAYER_LOGIN" and isInitialized then
         -- Apply selected SharedMedia again after all addons have loaded.
         ReapplySharedMediaSelections()
+        UpdateBlizzardPlayerCastBarVisibility()
     end
 end)

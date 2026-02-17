@@ -142,6 +142,7 @@ local mmfDefaults = {
     -- Cast bar settings
     showPlayerCastBar = true,
     showTargetCastBar = true,
+    hideBlizzardPlayerCastBar = false,
     castBarColor = "yellow",  -- key for MMF_Config.CAST_BAR_COLORS
     statusBarTexture = "MMF Melli",
     globalFont = "MMF Naowh",
