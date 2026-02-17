@@ -592,6 +592,7 @@ function MMF_UpdateNameTextSize(size)
             else
                 frame.nameText:SetFont(fontPath, size, "OUTLINE")
             end
+            frame.mmfAppliedNameFontSize = math.floor((tonumber(size) or 12) + 0.5)
             if frame.unit and UnitExists(frame.unit) then
                 local currentText = frame.nameText:GetText()
                 frame.nameText:SetText("")

@@ -94,6 +94,9 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
         MattMinimalFramesDB.timerTextScale = d.timerTextScale
         MattMinimalFramesDB.auraIconSize = d.auraIconSize
         MattMinimalFramesDB.nameTextSize = d.nameTextSize
+        MattMinimalFramesDB.enableNameTruncation = d.enableNameTruncation
+        MattMinimalFramesDB.autoResizeTextOnLongName = d.autoResizeTextOnLongName
+        MattMinimalFramesDB.nameTruncationLength = d.nameTruncationLength
         MattMinimalFramesDB.nameTextXOffset = d.nameTextXOffset
         MattMinimalFramesDB.nameTextYOffset = d.nameTextYOffset
         MattMinimalFramesDB.playerNameTextXOffset = d.playerNameTextXOffset

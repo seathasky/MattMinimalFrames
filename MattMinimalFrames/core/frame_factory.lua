@@ -506,6 +506,15 @@ local function CreateNameText(frame, unit)
     local pos = positions[unit] or positions.focus
     frame.nameText:SetPoint(pos.point, frame, pos.relPoint, pos.x + nameX, pos.y + nameY)
     frame.nameText:SetJustifyH(pos.justify)
+    pcall(function()
+        frame.nameText:SetWordWrap(true)
+    end)
+    pcall(function()
+        frame.nameText:SetNonSpaceWrap(true)
+    end)
+    pcall(function()
+        frame.nameText:SetMaxLines(0)
+    end)
     frame.nameText:SetWidth(frame.originalWidth - 4)
 end
 

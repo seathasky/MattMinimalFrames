@@ -17,11 +17,173 @@ local PowerBarColor = PowerBarColor
 
 local IS_PLAYER_SHAMAN = (UnitClassBase("player") == "SHAMAN")
 
+local function IsCheckedFlag(value)
+    return value == true or value == 1
+end
+
 local function SafeEq(a, b)
     local ok, result = pcall(function()
         return a == b
     end)
     return ok and result or false
+end
+
+local function GetNameTruncationSettings()
+    local manualEnabled = MattMinimalFramesDB and IsCheckedFlag(MattMinimalFramesDB.enableNameTruncation)
+    local autoResizeEnabled = MattMinimalFramesDB and IsCheckedFlag(MattMinimalFramesDB.autoResizeTextOnLongName)
+    local enabled = manualEnabled and not autoResizeEnabled
+    local length = tonumber(MattMinimalFramesDB and MattMinimalFramesDB.nameTruncationLength) or 14
+    if length < 5 then
+        length = 5
+    elseif length > 30 then
+        length = 30
+    end
+    return enabled, length
+end
+
+local function IsAutoResizeNameTextEnabled()
+    if not MattMinimalFramesDB then
+        return false
+    end
+
+    return IsCheckedFlag(MattMinimalFramesDB.autoResizeTextOnLongName)
+end
+
+local function GetDisplayUnitName(unit, unitName)
+    if not unitName then
+        return ""
+    end
+
+    local truncEnabled, truncLength = GetNameTruncationSettings()
+    if not truncEnabled then
+        return unitName
+    end
+
+    if unit == "targettarget" then
+        return unitName
+    end
+
+    local shouldTruncate = false
+    local lengthOk = pcall(function()
+        shouldTruncate = #unitName > truncLength
+    end)
+    if not lengthOk or not shouldTruncate then
+        return unitName
+    end
+
+    local ok, truncated = pcall(string.sub, unitName, 1, truncLength)
+    if not ok then
+        return unitName
+    end
+    return truncated
+end
+
+local function ApplyNameTextFontSize(frame, size)
+    if not frame or not frame.nameText then return end
+    size = tonumber(size) or 12
+    if size < 6 then size = 6 end
+    local rounded = math.floor(size + 0.5)
+    if frame.mmfAppliedNameFontSize == rounded then
+        return
+    end
+    local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or cfg.FONT_PATH
+    if MMF_SetFontSafe then
+        MMF_SetFontSafe(frame.nameText, fontPath, rounded, "OUTLINE")
+    else
+        frame.nameText:SetFont(fontPath, rounded, "OUTLINE")
+    end
+    frame.mmfAppliedNameFontSize = rounded
+end
+
+local function GetNameTextWidthNoWrap(nameText)
+    if not nameText then return 0 end
+    local currentWidth = nameText:GetWidth() or 0
+    local probeWidth = 4096
+    if currentWidth <= 0 then
+        currentWidth = 1
+    end
+    nameText:SetWidth(probeWidth)
+    local width = nameText:GetStringWidth() or 0
+    nameText:SetWidth(currentWidth)
+    return width
+end
+
+local function ApplyAutoResizeNameText(frame, unit, displayName)
+    if not frame or not frame.nameText then return end
+    local baseSize = tonumber(MattMinimalFramesDB and MattMinimalFramesDB.nameTextSize) or 12
+    local autoEnabled = IsAutoResizeNameTextEnabled()
+    local maxWidth = (frame.originalWidth or frame:GetWidth() or 0) - 4
+
+    ApplyNameTextFontSize(frame, baseSize)
+
+    if not autoEnabled or unit == "targettarget" or not displayName or displayName == "" then
+        return
+    end
+    if maxWidth <= 0 then
+        return
+    end
+
+    local minSize = 6
+    local size = math.floor(baseSize + 0.5)
+    while size > minSize and GetNameTextWidthNoWrap(frame.nameText) > maxWidth do
+        size = size - 1
+        ApplyNameTextFontSize(frame, size)
+    end
+
+    local textWidth = GetNameTextWidthNoWrap(frame.nameText)
+    if textWidth <= maxWidth then
+        return
+    end
+
+    -- Allow a little overflow before truncating in auto mode (about 5 chars worth).
+    local lengthOk, totalChars = pcall(function()
+        return #displayName
+    end)
+    if lengthOk and totalChars and totalChars > 0 then
+        local avgCharWidth = textWidth / totalChars
+        if avgCharWidth > 0 then
+            local overflowBudgetPx = avgCharWidth * 5
+            if textWidth <= (maxWidth + overflowBudgetPx) then
+                return
+            end
+        end
+    end
+
+    -- Prefer removing whole trailing words first.
+    local trimmed = tostring(displayName):gsub("%s+$", "")
+    local guard = 0
+    while guard < 64 do
+        local withoutLastWord = trimmed:match("^(.*)%s+[^%s]+$")
+        if not withoutLastWord or withoutLastWord == "" then
+            break
+        end
+        trimmed = withoutLastWord:gsub("%s+$", "")
+        frame.nameText:SetText(trimmed .. "...")
+        if GetNameTextWidthNoWrap(frame.nameText) <= maxWidth then
+            return
+        end
+        guard = guard + 1
+    end
+
+    -- Fallback for single long words: character trim to force fit.
+    local okCount, charCount = pcall(function()
+        return #displayName
+    end)
+    if not okCount or not charCount or charCount < 2 then
+        return
+    end
+    local keepChars = charCount - 1
+    while keepChars > 1 do
+        local okSub, head = pcall(string.sub, displayName, 1, keepChars)
+        if not okSub or not head or head == "" then
+            break
+        end
+        frame.nameText:SetText(head:gsub("%s+$", "") .. "...")
+        if GetNameTextWidthNoWrap(frame.nameText) <= maxWidth then
+            return
+        end
+        keepChars = keepChars - 1
+    end
 end
 
 --------------------------------------------------
@@ -139,27 +301,41 @@ end
 local function UpdateUnitFrame(frame)
     if not frame or not frame.unit or not frame.nameText then return end
     local unit = frame.unit
+    local manualTruncateEnabled = IsCheckedFlag(MattMinimalFramesDB and MattMinimalFramesDB.enableNameTruncation)
+    local autoResizeEnabled = IsCheckedFlag(MattMinimalFramesDB and MattMinimalFramesDB.autoResizeTextOnLongName)
+    local forceSingleLine = manualTruncateEnabled or autoResizeEnabled
+    pcall(function()
+        frame.nameText:SetWordWrap(not forceSingleLine)
+    end)
+    pcall(function()
+        frame.nameText:SetNonSpaceWrap(not forceSingleLine)
+    end)
+    pcall(function()
+        frame.nameText:SetMaxLines(forceSingleLine and 1 or 0)
+    end)
     local hideNameText = MMF_IsNameTextHidden and MMF_IsNameTextHidden(unit)
     local hideHPText = MMF_IsHPTextHidden and MMF_IsHPTextHidden(unit)
 
     if hideNameText then
         frame.nameText:SetText("")
         frame.nameText:Hide()
+        ApplyNameTextFontSize(frame, tonumber(MattMinimalFramesDB and MattMinimalFramesDB.nameTextSize) or 12)
     elseif not UnitExists(unit) then
         frame.nameText:SetText("")
         frame.nameText:Show()
+        ApplyNameTextFontSize(frame, tonumber(MattMinimalFramesDB and MattMinimalFramesDB.nameTextSize) or 12)
     else
         frame.nameText:Show()
         local unitName = UnitName(unit)
+        local displayName = GetDisplayUnitName(unit, unitName)
         if unit == "targettarget" then
-            -- Avoid string ops on unit names: in some restricted contexts (e.g. dungeons)
-            -- Blizzard may provide a protected "secret string" that errors on Lua manipulation.
-            frame.nameText:SetText(unitName or "")
+            frame.nameText:SetText(displayName or "")
             frame.nameText:SetWidth(frame.originalWidth - 4)
         else
-            frame.nameText:SetText(unitName)
+            frame.nameText:SetText(displayName)
             frame.nameText:SetWidth(frame.originalWidth - 4)
         end
+        ApplyAutoResizeNameText(frame, unit, displayName)
     end
 
     local maxHP = UnitHealthMax(unit)

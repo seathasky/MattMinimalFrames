@@ -9,7 +9,7 @@ local function DeepCopy(value)
     return out
 end
 
-local PROFILE_DB_VERSION = 2
+local PROFILE_DB_VERSION = 4
 
 local function ApplyDefaults(target, defaults)
     if type(target) ~= "table" or type(defaults) ~= "table" then return end
@@ -43,6 +43,26 @@ local function MigrateProfile(profile)
         if profile.minimap.hide == nil then
             profile.minimap.hide = false
         end
+    end
+
+    if version < 3 then
+        -- New name-overflow features should start disabled for existing profiles.
+        profile.enableNameTruncation = false
+        profile.autoResizeTextOnLongName = false
+        local len = tonumber(profile.nameTruncationLength) or 14
+        if len < 5 then len = 5 end
+        if len > 30 then len = 30 end
+        profile.nameTruncationLength = len
+    end
+
+    if version < 4 then
+        -- Safety migration: force both toggles off so neither feature is enabled by default.
+        profile.enableNameTruncation = false
+        profile.autoResizeTextOnLongName = false
+        local len = tonumber(profile.nameTruncationLength) or 14
+        if len < 5 then len = 5 end
+        if len > 30 then len = 30 end
+        profile.nameTruncationLength = len
     end
 
     profile.dbVersion = PROFILE_DB_VERSION
@@ -116,6 +136,13 @@ local function EnsureProfile(name)
     if type(MattMinimalFrames_Defaults) == "table" then
         ApplyDefaults(profile, MattMinimalFrames_Defaults)
     end
+    -- Normalize persisted checkbox values (`true/false` vs `1/nil`/stringy values).
+    profile.enableNameTruncation = (profile.enableNameTruncation == true or profile.enableNameTruncation == 1)
+    profile.autoResizeTextOnLongName = (profile.autoResizeTextOnLongName == true or profile.autoResizeTextOnLongName == 1)
+    local len = tonumber(profile.nameTruncationLength) or 14
+    if len < 5 then len = 5 end
+    if len > 30 then len = 30 end
+    profile.nameTruncationLength = len
     profile.dbVersion = PROFILE_DB_VERSION
     return profile
 end

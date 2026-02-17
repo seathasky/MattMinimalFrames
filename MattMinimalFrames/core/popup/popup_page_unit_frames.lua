@@ -44,7 +44,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local textOffsetsTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     textOffsetsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    textOffsetsTitle:SetPoint("TOPLEFT", 12, -338)
+    textOffsetsTitle:SetPoint("TOPLEFT", 12, -410)
     textOffsetsTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     textOffsetsTitle:SetText("TEXT OFFSETS")
 
@@ -81,7 +81,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local nameUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = 12,
-        y = -362,
+        y = -434,
         width = 220,
         labelWidth = 74,
         buttonOffset = 78,
@@ -102,10 +102,10 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local nameYSliders = {}
     for _, opt in ipairs(nameUnitOptions) do
         local prefix = opt.value == "targettarget" and "tot" or opt.value
-        nameXSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Name X Offset", 12, -386, 220, prefix .. "NameTextXOffset", -60, 60, 1, 0, function()
+        nameXSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Name X Offset", 12, -458, 220, prefix .. "NameTextXOffset", -60, 60, 1, 0, function()
             if MMF_UpdateFrameTextOffsets then MMF_UpdateFrameTextOffsets() end
         end, true)
-        nameYSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Name Y Offset", 12, -410, 220, prefix .. "NameTextYOffset", -60, 60, 1, 0, function()
+        nameYSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Name Y Offset", 12, -482, 220, prefix .. "NameTextYOffset", -60, 60, 1, 0, function()
             if MMF_UpdateFrameTextOffsets then MMF_UpdateFrameTextOffsets() end
         end, true)
         nameXSliders[opt.value]:Hide()
@@ -130,7 +130,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local hpUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = 12,
-        y = -442,
+        y = -514,
         width = 220,
         labelWidth = 74,
         buttonOffset = 78,
@@ -151,10 +151,10 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local hpYSliders = {}
     for _, opt in ipairs(hpUnitOptions) do
         local prefix = opt.value == "targettarget" and "tot" or opt.value
-        hpXSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "HP X Offset", 12, -466, 220, prefix .. "HPTextXOffset", -60, 60, 1, 0, function()
+        hpXSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "HP X Offset", 12, -538, 220, prefix .. "HPTextXOffset", -60, 60, 1, 0, function()
             if MMF_UpdateFrameTextOffsets then MMF_UpdateFrameTextOffsets() end
         end, true)
-        hpYSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "HP Y Offset", 12, -490, 220, prefix .. "HPTextYOffset", -60, 60, 1, 0, function()
+        hpYSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "HP Y Offset", 12, -562, 220, prefix .. "HPTextYOffset", -60, 60, 1, 0, function()
             if MMF_UpdateFrameTextOffsets then MMF_UpdateFrameTextOffsets() end
         end, true)
         hpXSliders[opt.value]:Hide()
@@ -183,7 +183,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local offsetsDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     offsetsDivider:SetSize(220, 1)
-    offsetsDivider:SetPoint("TOPLEFT", 12, -326)
+    offsetsDivider:SetPoint("TOPLEFT", 12, -398)
     offsetsDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
 
     local castBarsTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
@@ -709,14 +709,106 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         end
     end, true)
 
+    local function RequestNameTextRefresh()
+        if MMF_RequestAllFramesUpdate then
+            MMF_RequestAllFramesUpdate()
+            return
+        end
+        if MMF_GetAllFrames and MMF_UpdateUnitFrame then
+            for _, frame in ipairs(MMF_GetAllFrames()) do
+                if frame then
+                    MMF_UpdateUnitFrame(frame)
+                end
+            end
+        end
+    end
+
+    if MattMinimalFramesDB.enableNameTruncation == nil then
+        MattMinimalFramesDB.enableNameTruncation = false
+    end
+    MattMinimalFramesDB.enableNameTruncation = (MattMinimalFramesDB.enableNameTruncation == true or MattMinimalFramesDB.enableNameTruncation == 1)
+    local truncLength = tonumber(MattMinimalFramesDB.nameTruncationLength) or 14
+    if truncLength < 5 then truncLength = 5 end
+    if truncLength > 30 then truncLength = 30 end
+    MattMinimalFramesDB.nameTruncationLength = truncLength
+
+    if MattMinimalFramesDB.autoResizeTextOnLongName == nil then
+        MattMinimalFramesDB.autoResizeTextOnLongName = false
+    end
+    MattMinimalFramesDB.autoResizeTextOnLongName = (MattMinimalFramesDB.autoResizeTextOnLongName == true or MattMinimalFramesDB.autoResizeTextOnLongName == 1)
+    if MattMinimalFramesDB.enableNameTruncation and MattMinimalFramesDB.autoResizeTextOnLongName then
+        MattMinimalFramesDB.autoResizeTextOnLongName = false
+    end
+
+    local truncateNameCheck
+    local autoResizeNameCheck
+    local truncateNameSlider
+
+    local function SetCheckboxEnabled(container, enabled)
+        if not container then return end
+        container:SetAlpha(enabled and 1 or 0.45)
+        if container.checkbox then
+            container.checkbox:EnableMouse(enabled)
+        end
+    end
+
+    local function UpdateNameFeatureState()
+        local truncEnabled = (MattMinimalFramesDB.enableNameTruncation == true or MattMinimalFramesDB.enableNameTruncation == 1)
+        local autoEnabled = (MattMinimalFramesDB.autoResizeTextOnLongName == true or MattMinimalFramesDB.autoResizeTextOnLongName == 1)
+
+        truncateNameSlider:SetAlpha(truncEnabled and 1 or 0.45)
+        if truncateNameSlider.slider then
+            truncateNameSlider.slider:SetEnabled(truncEnabled)
+            truncateNameSlider.slider:EnableMouse(truncEnabled)
+        end
+        if truncateNameSlider.valueText then
+            truncateNameSlider.valueText:SetEnabled(truncEnabled)
+            truncateNameSlider.valueText:EnableMouse(truncEnabled)
+        end
+
+        SetCheckboxEnabled(truncateNameCheck, not autoEnabled)
+        SetCheckboxEnabled(autoResizeNameCheck, not truncEnabled)
+    end
+
+    truncateNameCheck = CreateMinimalCheckbox(unitFramesCol, "Manual Name Truncate", 12, -192, "enableNameTruncation", false, function(checked)
+        MattMinimalFramesDB.enableNameTruncation = checked and true or false
+        if checked and MattMinimalFramesDB.autoResizeTextOnLongName then
+            MattMinimalFramesDB.autoResizeTextOnLongName = false
+            if autoResizeNameCheck and autoResizeNameCheck.checkbox then
+                autoResizeNameCheck.checkbox:SetChecked(false)
+                autoResizeNameCheck.checkbox.check:SetShown(false)
+            end
+        end
+        UpdateNameFeatureState()
+        RequestNameTextRefresh()
+    end)
+
+    truncateNameSlider = CreateMinimalSlider(unitFramesCol, "Truncate Length", 12, -216, 220, "nameTruncationLength", 5, 30, 1, 14, function()
+        RequestNameTextRefresh()
+    end, true)
+
+    autoResizeNameCheck = CreateMinimalCheckbox(unitFramesCol, "Auto Resize Text On Long Name", 12, -240, "autoResizeTextOnLongName", false, function(checked)
+        MattMinimalFramesDB.autoResizeTextOnLongName = checked and true or false
+        if checked and MattMinimalFramesDB.enableNameTruncation then
+            MattMinimalFramesDB.enableNameTruncation = false
+            if truncateNameCheck and truncateNameCheck.checkbox then
+                truncateNameCheck.checkbox:SetChecked(false)
+                truncateNameCheck.checkbox.check:SetShown(false)
+            end
+        end
+        UpdateNameFeatureState()
+        RequestNameTextRefresh()
+    end)
+    UpdateNameFeatureState()
+
     local textVisibilityDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     textVisibilityDivider:SetSize(220, 1)
-    textVisibilityDivider:SetPoint("TOPLEFT", 12, -192)
+    textVisibilityDivider:SetPoint("TOPLEFT", 12, -264)
     textVisibilityDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
 
     local textVisibilityTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     textVisibilityTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    textVisibilityTitle:SetPoint("TOPLEFT", 12, -204)
+    textVisibilityTitle:SetPoint("TOPLEFT", 12, -276)
     textVisibilityTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     textVisibilityTitle:SetText("TEXT VISIBILITY")
 
@@ -796,7 +888,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local hideNameUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = 12,
-        y = -226,
+        y = -298,
         width = 220,
         labelWidth = 74,
         buttonOffset = 78,
@@ -814,7 +906,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     })
     hideNameTextUnitList = hideNameUnitDropdown.list
 
-    hideNameTextCheckbox = CreateMinimalCheckbox(unitFramesCol, "Hide Name Text", 12, -250, "__tempHideNameText", false, function(checked)
+    hideNameTextCheckbox = CreateMinimalCheckbox(unitFramesCol, "Hide Name Text", 12, -322, "__tempHideNameText", false, function(checked)
         local unit = MattMinimalFramesDB.textHideNameUnit
         local prefix = GetUnitPrefix(unit)
         MattMinimalFramesDB[prefix .. "HideNameText"] = checked and true or false
@@ -827,7 +919,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local hideHPUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = 12,
-        y = -280,
+        y = -352,
         width = 220,
         labelWidth = 74,
         buttonOffset = 78,
@@ -845,7 +937,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     })
     hideHPTextUnitList = hideHPUnitDropdown.list
 
-    hideHPTextCheckbox = CreateMinimalCheckbox(unitFramesCol, "Hide HP Text", 12, -304, "__tempHideHPText", false, function(checked)
+    hideHPTextCheckbox = CreateMinimalCheckbox(unitFramesCol, "Hide HP Text", 12, -376, "__tempHideHPText", false, function(checked)
         local unit = MattMinimalFramesDB.textHideHPUnit
         local prefix = GetUnitPrefix(unit)
         MattMinimalFramesDB[prefix .. "HideHPText"] = checked and true or false
