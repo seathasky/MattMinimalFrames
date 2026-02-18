@@ -560,6 +560,10 @@ local function UpdateUnitFrame(frame)
         ApplyAutoResizeNameText(frame, unit, displayName)
     end
 
+    if MMF_UpdatePVPFlagIndicator then
+        MMF_UpdatePVPFlagIndicator(frame)
+    end
+
     local maxHP = UnitHealthMax(unit)
     local hp = UnitHealth(unit)
 

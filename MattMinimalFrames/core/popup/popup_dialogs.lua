@@ -105,3 +105,41 @@ StaticPopupDialogs["MMF_RESET_PROFILE_WARNING"] = {
     hideOnEscape = true,
     preferredIndex = 3,
 }
+
+StaticPopupDialogs["MMF_COPY_LINK"] = {
+    text = "|cffFF4444Jiberish Icons not found.|r\nCopy this URL:",
+    button1 = "Close",
+    hasEditBox = true,
+    editBoxWidth = 320,
+    OnShow = function(self, data)
+        local url = tostring(data or "")
+        if self.editBox then
+            self.editBox:SetText(url)
+            self.editBox:HighlightText()
+            self.editBox:SetFocus()
+        end
+    end,
+    EditBoxOnEscapePressed = function(self)
+        self:ClearFocus()
+        local parent = self:GetParent()
+        if parent then
+            parent:Hide()
+        end
+    end,
+    OnHide = function(self)
+        if self.editBox then
+            self.editBox:SetText("")
+            self.editBox:ClearFocus()
+        end
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
+
+function MMF_ShowCopyLinkPopup(url)
+    if StaticPopup_Show then
+        StaticPopup_Show("MMF_COPY_LINK", nil, nil, tostring(url or ""))
+    end
+end

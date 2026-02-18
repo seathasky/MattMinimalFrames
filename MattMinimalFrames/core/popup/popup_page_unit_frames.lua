@@ -41,11 +41,11 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     unitFramesSplit:SetPoint("TOPLEFT", 264, -36)
     unitFramesSplit:SetPoint("BOTTOMLEFT", 264, 12)
     unitFramesSplit:SetWidth(1)
-    unitFramesSplit:SetColorTexture(0.12, 0.12, 0.15, 1)
+    unitFramesSplit:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     local textOffsetsTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     textOffsetsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    textOffsetsTitle:SetPoint("TOPLEFT", 12, -410)
+    textOffsetsTitle:SetPoint("TOPLEFT", 12, -416)
     textOffsetsTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     textOffsetsTitle:SetText("TEXT OFFSETS")
 
@@ -184,13 +184,13 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local offsetsDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     offsetsDivider:SetSize(220, 1)
-    offsetsDivider:SetPoint("TOPLEFT", 12, -398)
-    offsetsDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
+    offsetsDivider:SetPoint("TOPLEFT", 12, -404)
+    offsetsDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     local textFormatTopDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     textFormatTopDivider:SetSize(252, 1)
     textFormatTopDivider:SetPoint("TOPLEFT", 280, -24)
-    textFormatTopDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
+    textFormatTopDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     local textFormatTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     textFormatTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
@@ -223,7 +223,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local textFormatCastDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     textFormatCastDivider:SetSize(252, 1)
     textFormatCastDivider:SetPoint("TOPLEFT", 280, -120)
-    textFormatCastDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
+    textFormatCastDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     local castBarsTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     castBarsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
@@ -271,7 +271,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local castStyleDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     castStyleDivider:SetSize(252, 1)
     castStyleDivider:SetPoint("TOPLEFT", 280, -268)
-    castStyleDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
+    castStyleDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     local styleTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     styleTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
@@ -435,7 +435,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local styleDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     styleDivider:SetSize(252, 1)
     styleDivider:SetPoint("TOPLEFT", 280, -422)
-    styleDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
+    styleDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     local frameOptionsTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     frameOptionsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
@@ -443,11 +443,88 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     frameOptionsTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     frameOptionsTitle:SetText("FRAME OPTIONS")
 
-    local iconModeOptions = {
-        { value = "off", label = "Off" },
-        { value = "class", label = "Class Icon" },
-        { value = "portrait", label = "Portrait" },
-    }
+    local function BuildJiberishStyleValue(styleKey)
+        return string.format("jiberishstyle:%s", tostring(styleKey or ""))
+    end
+    local JIBERISH_DOWNLOAD_VALUE = "__mmf_jiberish_download__"
+    local JIBERISH_DOWNLOAD_URL = "https://www.curseforge.com/wow/addons/jiberish-fabled-icons"
+
+    local function ParseJiberishStyleValue(value)
+        if type(value) ~= "string" then
+            return nil
+        end
+        local styleKey = value:match("^jiberishstyle:(.+)$")
+        if not styleKey then
+            return nil
+        end
+        return styleKey
+    end
+
+    local function BuildIconModeOptions(textOnlyStyles)
+        local options = {
+            { value = "off", label = "|cff33ff66Off (MMF)|r" },
+            { value = "class", label = "|cff33ff66Class Icon (MMF)|r" },
+            { value = "portrait", label = "|cff33ff66Portrait (MMF)|r" },
+        }
+
+        local styleOptions = MMF_GetIconTextureOptions and MMF_GetIconTextureOptions() or {}
+        if #styleOptions > 0 then
+            options[#options + 1] = { divider = true, label = "------------------------------" }
+            for _, entry in ipairs(styleOptions) do
+                if entry and entry.key and entry.mediaType and entry.path then
+                    local labelText = tostring(entry.label or entry.key)
+                    if not textOnlyStyles then
+                        local iconTag = nil
+                        if entry.texString then
+                            iconTag = string.format("|T%s:14:14:0:0:1024:1024:%s|t ", tostring(entry.path), tostring(entry.texString))
+                        else
+                            iconTag = string.format("|T%s:14:14:0:0|t ", tostring(entry.path))
+                        end
+                        labelText = iconTag .. labelText
+                    end
+                    options[#options + 1] = {
+                        value = BuildJiberishStyleValue(entry.key),
+                        label = labelText,
+                    }
+                end
+            end
+        else
+            options[#options + 1] = { divider = true, label = "------------------------------" }
+            options[#options + 1] = {
+                value = JIBERISH_DOWNLOAD_VALUE,
+                label = "|cffff3333Download Jiberish Icons|r",
+            }
+        end
+
+        return options
+    end
+
+    local function GetCurrentPlayerIconDropdownValue()
+        local mode = GetCurrentPlayerIconModeValue()
+        if mode == "sharedmedia" or mode == "jiberish" then
+            local styleKey = (MattMinimalFramesDB and NormalizeSelectionValue(MattMinimalFramesDB.playerFrameIconStyle, nil))
+                or (MattMinimalFramesDB and NormalizeSelectionValue(MattMinimalFramesDB.playerFrameIconMediaKey, nil))
+            if styleKey then
+                return BuildJiberishStyleValue(styleKey)
+            end
+            return "off"
+        end
+        return mode
+    end
+
+    local function GetCurrentTargetIconDropdownValue()
+        local mode = GetCurrentTargetIconModeValue()
+        if mode == "sharedmedia" or mode == "jiberish" then
+            local styleKey = (MattMinimalFramesDB and NormalizeSelectionValue(MattMinimalFramesDB.targetFrameIconStyle, nil))
+                or (MattMinimalFramesDB and NormalizeSelectionValue(MattMinimalFramesDB.targetFrameIconMediaKey, nil))
+            if styleKey then
+                return BuildJiberishStyleValue(styleKey)
+            end
+            return "off"
+        end
+        return mode
+    end
+
     local playerIconModeDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = 280,
@@ -456,18 +533,44 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         labelWidth = 95,
         buttonOffset = 104,
         buttonWidth = 148,
-        visibleRows = #iconModeOptions,
-        label = "Player Frame Icon",
-        options = iconModeOptions,
+        visibleRows = 10,
+        preserveTextFormatting = true,
+        label = "Player Icon",
+        options = BuildIconModeOptions(false),
         getValue = function()
-            return GetCurrentPlayerIconModeValue()
+            return GetCurrentPlayerIconDropdownValue()
         end,
-        onSelect = function(value)
+        optionsProvider = function()
+            return BuildIconModeOptions(false)
+        end,
+        onSelect = function(value, _, dropdown)
+            if value == JIBERISH_DOWNLOAD_VALUE then
+                if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
+                    local msg = "|cffff3333[MMF]|r Jiberish Icons not found. Download: " .. JIBERISH_DOWNLOAD_URL
+                    DEFAULT_CHAT_FRAME:AddMessage(msg)
+                end
+                if dropdown and dropdown.SetSelectedValue then
+                    dropdown.SetSelectedValue(GetCurrentPlayerIconDropdownValue())
+                end
+                return
+            end
             if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
-            MattMinimalFramesDB.playerFrameIconMode = value
-            MattMinimalFramesDB.showPlayerClassIcon = (value == "class")
+            local styleKey = ParseJiberishStyleValue(value)
+            if styleKey then
+                MattMinimalFramesDB.playerFrameIconMode = "jiberish"
+                MattMinimalFramesDB.playerFrameIconStyle = styleKey
+                MattMinimalFramesDB.showPlayerClassIcon = false
+            else
+                MattMinimalFramesDB.playerFrameIconMode = value
+                MattMinimalFramesDB.showPlayerClassIcon = (value == "class")
+                if value ~= "sharedmedia" and value ~= "jiberish" then
+                    MattMinimalFramesDB.playerFrameIconStyle = nil
+                    MattMinimalFramesDB.playerFrameIconMediaType = nil
+                    MattMinimalFramesDB.playerFrameIconMediaKey = nil
+                end
+            end
             if MMF_UpdatePlayerClassIconVisibility then
-                MMF_UpdatePlayerClassIconVisibility(value)
+                MMF_UpdatePlayerClassIconVisibility(MattMinimalFramesDB.playerFrameIconMode)
             end
             UpdatePlayerIconModeButtonText()
         end,
@@ -475,7 +578,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     playerIconModeList = playerIconModeDropdown.list
 
     UpdatePlayerIconModeButtonText = function()
-        playerIconModeDropdown.SetSelectedValue(GetCurrentPlayerIconModeValue())
+        playerIconModeDropdown.SetSelectedValue(GetCurrentPlayerIconDropdownValue())
     end
     UpdatePlayerIconModeButtonText()
 
@@ -487,24 +590,169 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         labelWidth = 95,
         buttonOffset = 104,
         buttonWidth = 148,
-        visibleRows = #iconModeOptions,
-        label = "Target Frame Icon",
-        options = iconModeOptions,
+        visibleRows = 10,
+        preserveTextFormatting = true,
+        label = "Target Icon",
+        options = BuildIconModeOptions(true),
         getValue = function()
-            return GetCurrentTargetIconModeValue()
+            return GetCurrentTargetIconDropdownValue()
         end,
-        onSelect = function(value)
+        optionsProvider = function()
+            return BuildIconModeOptions(true)
+        end,
+        onSelect = function(value, _, dropdown)
+            if value == JIBERISH_DOWNLOAD_VALUE then
+                if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
+                    local msg = "|cffff3333[MMF]|r Jiberish Icons not found. Download: " .. JIBERISH_DOWNLOAD_URL
+                    DEFAULT_CHAT_FRAME:AddMessage(msg)
+                end
+                if dropdown and dropdown.SetSelectedValue then
+                    dropdown.SetSelectedValue(GetCurrentTargetIconDropdownValue())
+                end
+                return
+            end
             if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
-            MattMinimalFramesDB.targetFrameIconMode = value
-            MattMinimalFramesDB.showTargetFrameIcon = (value == "class")
+            local styleKey = ParseJiberishStyleValue(value)
+            if styleKey then
+                MattMinimalFramesDB.targetFrameIconMode = "jiberish"
+                MattMinimalFramesDB.targetFrameIconStyle = styleKey
+                MattMinimalFramesDB.showTargetFrameIcon = false
+            else
+                MattMinimalFramesDB.targetFrameIconMode = value
+                MattMinimalFramesDB.showTargetFrameIcon = (value == "class")
+                if value ~= "sharedmedia" and value ~= "jiberish" then
+                    MattMinimalFramesDB.targetFrameIconStyle = nil
+                    MattMinimalFramesDB.targetFrameIconMediaType = nil
+                    MattMinimalFramesDB.targetFrameIconMediaKey = nil
+                end
+            end
             if MMF_UpdateTargetFrameIconVisibility then
-                MMF_UpdateTargetFrameIconVisibility(value)
+                MMF_UpdateTargetFrameIconVisibility(MattMinimalFramesDB.targetFrameIconMode)
             end
         end,
     })
     targetIconModeList = targetIconModeDropdown.list
 
-    local targetMarkersCheck = CreateMinimalCheckbox(unitFramesCol, "Target Markers", 280, -514, "showTargetMarkers", false, function(checked)
+    local function NormalizeIconOffset(value)
+        local offset = tonumber(value) or 0
+        if offset < -200 then offset = -200 end
+        if offset > 200 then offset = 200 end
+        return math.floor(offset + 0.5)
+    end
+
+    local function NormalizeIconScale(value)
+        local scale = tonumber(value) or 1
+        if scale < 0.5 then scale = 0.5 end
+        if scale > 3.0 then scale = 3.0 end
+        return scale
+    end
+
+    MattMinimalFramesDB.playerFrameIconXOffset = NormalizeIconOffset(MattMinimalFramesDB.playerFrameIconXOffset)
+    MattMinimalFramesDB.playerFrameIconYOffset = NormalizeIconOffset(MattMinimalFramesDB.playerFrameIconYOffset)
+    MattMinimalFramesDB.targetFrameIconXOffset = NormalizeIconOffset(MattMinimalFramesDB.targetFrameIconXOffset)
+    MattMinimalFramesDB.targetFrameIconYOffset = NormalizeIconOffset(MattMinimalFramesDB.targetFrameIconYOffset)
+    MattMinimalFramesDB.playerFrameIconScale = NormalizeIconScale(MattMinimalFramesDB.playerFrameIconScale)
+    MattMinimalFramesDB.targetFrameIconScale = NormalizeIconScale(MattMinimalFramesDB.targetFrameIconScale)
+
+    local playerIconXSlider = CreateMinimalSlider(unitFramesCol, "Player Icon X", 280, -506, 252, "playerFrameIconXOffset", -200, 200, 1, 0, function(value)
+        MattMinimalFramesDB.playerFrameIconXOffset = NormalizeIconOffset(value)
+        if MMF_UpdateFrameIconPlacement then
+            MMF_UpdateFrameIconPlacement("player")
+        end
+    end, true)
+
+    local playerIconYSlider = CreateMinimalSlider(unitFramesCol, "Player Icon Y", 280, -530, 252, "playerFrameIconYOffset", -200, 200, 1, 0, function(value)
+        MattMinimalFramesDB.playerFrameIconYOffset = NormalizeIconOffset(value)
+        if MMF_UpdateFrameIconPlacement then
+            MMF_UpdateFrameIconPlacement("player")
+        end
+    end, true)
+
+    local targetIconXSlider = CreateMinimalSlider(unitFramesCol, "Target Icon X", 280, -554, 252, "targetFrameIconXOffset", -200, 200, 1, 0, function(value)
+        MattMinimalFramesDB.targetFrameIconXOffset = NormalizeIconOffset(value)
+        if MMF_UpdateFrameIconPlacement then
+            MMF_UpdateFrameIconPlacement("target")
+        end
+    end, true)
+
+    local targetIconYSlider = CreateMinimalSlider(unitFramesCol, "Target Icon Y", 280, -578, 252, "targetFrameIconYOffset", -200, 200, 1, 0, function(value)
+        MattMinimalFramesDB.targetFrameIconYOffset = NormalizeIconOffset(value)
+        if MMF_UpdateFrameIconPlacement then
+            MMF_UpdateFrameIconPlacement("target")
+        end
+    end, true)
+
+    local playerIconScaleSlider = CreateMinimalSlider(unitFramesCol, "Player Icon Size", 280, -602, 252, "playerFrameIconScale", 0.5, 3.0, 0.05, 1.0, function(value)
+        MattMinimalFramesDB.playerFrameIconScale = NormalizeIconScale(value)
+        if MMF_UpdateFrameIconPlacement then
+            MMF_UpdateFrameIconPlacement("player")
+        end
+    end, false)
+
+    local targetIconScaleSlider = CreateMinimalSlider(unitFramesCol, "Target Icon Size", 280, -626, 252, "targetFrameIconScale", 0.5, 3.0, 0.05, 1.0, function(value)
+        MattMinimalFramesDB.targetFrameIconScale = NormalizeIconScale(value)
+        if MMF_UpdateFrameIconPlacement then
+            MMF_UpdateFrameIconPlacement("target")
+        end
+    end, false)
+
+    local function CreateIconResetButton(label, x, y, onClick)
+        local button = CreateFrame("Button", nil, unitFramesCol, "BackdropTemplate")
+        button:SetSize(122, 20)
+        button:SetPoint("TOPLEFT", x, y)
+        button:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8x8",
+            edgeFile = "Interface\\Buttons\\WHITE8x8",
+            edgeSize = 1,
+        })
+        button:SetBackdropColor(0.08, 0.08, 0.1, 1)
+        button:SetBackdropBorderColor(0.15, 0.15, 0.18, 1)
+
+        local text = button:CreateFontString(nil, "OVERLAY")
+        text:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
+        text:SetPoint("CENTER")
+        text:SetText(label)
+        text:SetTextColor(0.8, 0.8, 0.8)
+
+        button:SetScript("OnEnter", function(self)
+            self:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.9)
+            text:SetTextColor(1, 1, 1)
+        end)
+        button:SetScript("OnLeave", function(self)
+            self:SetBackdropBorderColor(0.15, 0.15, 0.18, 1)
+            text:SetTextColor(0.8, 0.8, 0.8)
+        end)
+        button:SetScript("OnClick", function()
+            if onClick then onClick() end
+        end)
+        return button
+    end
+
+    CreateIconResetButton("Reset Player Icon", 280, -650, function()
+        MattMinimalFramesDB.playerFrameIconXOffset = 0
+        MattMinimalFramesDB.playerFrameIconYOffset = 0
+        MattMinimalFramesDB.playerFrameIconScale = 1.0
+        if playerIconXSlider and playerIconXSlider.slider then playerIconXSlider.slider:SetValue(0) end
+        if playerIconYSlider and playerIconYSlider.slider then playerIconYSlider.slider:SetValue(0) end
+        if playerIconScaleSlider and playerIconScaleSlider.slider then playerIconScaleSlider.slider:SetValue(1.0) end
+        if MMF_UpdateFrameIconPlacement then
+            MMF_UpdateFrameIconPlacement("player")
+        end
+    end)
+
+    CreateIconResetButton("Reset Target Icon", 410, -650, function()
+        MattMinimalFramesDB.targetFrameIconXOffset = 0
+        MattMinimalFramesDB.targetFrameIconYOffset = 0
+        MattMinimalFramesDB.targetFrameIconScale = 1.0
+        if targetIconXSlider and targetIconXSlider.slider then targetIconXSlider.slider:SetValue(0) end
+        if targetIconYSlider and targetIconYSlider.slider then targetIconYSlider.slider:SetValue(0) end
+        if targetIconScaleSlider and targetIconScaleSlider.slider then targetIconScaleSlider.slider:SetValue(1.0) end
+        if MMF_UpdateFrameIconPlacement then
+            MMF_UpdateFrameIconPlacement("target")
+        end
+    end)
+
+    local targetMarkersCheck = CreateMinimalCheckbox(unitFramesCol, "Target Markers", 280, -678, "showTargetMarkers", false, function(checked)
         if MMF_UpdateTargetMarkerVisibility then
             MMF_UpdateTargetMarkerVisibility(checked)
         end
@@ -535,17 +783,17 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     end
 
     local frameOptionsDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
-    frameOptionsDivider:SetSize(252, 1)
-    frameOptionsDivider:SetPoint("TOPLEFT", 280, -538)
-    frameOptionsDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
+    frameOptionsDivider:SetSize(220, 1)
+    frameOptionsDivider:SetPoint("TOPLEFT", 12, -596)
+    frameOptionsDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     local healOverlaysTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     healOverlaysTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    healOverlaysTitle:SetPoint("TOPLEFT", 280, -550)
+    healOverlaysTitle:SetPoint("TOPLEFT", 12, -608)
     healOverlaysTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     healOverlaysTitle:SetText("HEAL OVERLAYS")
 
-    local healPredictionCheck = CreateMinimalCheckbox(unitFramesCol, "Heal Prediction", 280, -574, "showHealPrediction", true, function()
+    local healPredictionCheck = CreateMinimalCheckbox(unitFramesCol, "Heal Prediction", 12, -632, "showHealPrediction", true, function()
         RefreshPredictionVisuals()
     end)
 
@@ -646,7 +894,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         52
     )
 
-    local absorbBarCheck = CreateMinimalCheckbox(unitFramesCol, "Absorb Bar", 280, -598, "showAbsorbBar", true, function()
+    local absorbBarCheck = CreateMinimalCheckbox(unitFramesCol, "Absorb Bar", 12, -656, "showAbsorbBar", true, function()
         RefreshPredictionVisuals()
     end)
     CreateHintIcon(
@@ -733,13 +981,13 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     -- Divider before Frame Text
     local unitFramesDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     unitFramesDivider:SetSize(220, 1)
-    unitFramesDivider:SetPoint("TOPLEFT", 12, -108)
-    unitFramesDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
+    unitFramesDivider:SetPoint("TOPLEFT", 12, -120)
+    unitFramesDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     -- Frame Text section (moved here)
     local frameTextTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     frameTextTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    frameTextTitle:SetPoint("TOPLEFT", 12, -120)
+    frameTextTitle:SetPoint("TOPLEFT", 12, -132)
     frameTextTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     frameTextTitle:SetText("FRAME TEXT")
 
@@ -849,12 +1097,12 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local textVisibilityDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     textVisibilityDivider:SetSize(220, 1)
-    textVisibilityDivider:SetPoint("TOPLEFT", 12, -264)
-    textVisibilityDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
+    textVisibilityDivider:SetPoint("TOPLEFT", 12, -270)
+    textVisibilityDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     local textVisibilityTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     textVisibilityTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    textVisibilityTitle:SetPoint("TOPLEFT", 12, -276)
+    textVisibilityTitle:SetPoint("TOPLEFT", 12, -282)
     textVisibilityTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     textVisibilityTitle:SetText("TEXT VISIBILITY")
 

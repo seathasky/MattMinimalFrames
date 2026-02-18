@@ -2,7 +2,7 @@ local Compat = _G.MMF_Compat
 
 local POPUP_LAYOUT = (MMF_GetPopupLayout and MMF_GetPopupLayout()) or {
     width = Compat.IsTBC and 600 or 620,
-    height = Compat.IsTBC and 720 or 724,
+    height = Compat.IsTBC and 820 or 824,
     titleHeight = 28,
     footerHeight = 32,
     tabHeight = 24,
@@ -282,14 +282,14 @@ function MMF_ShowWelcomePopup(forceShow)
     end
     local GetCurrentPlayerIconModeValue = function()
         local mode = MattMinimalFramesDB and MattMinimalFramesDB.playerFrameIconMode or nil
-        if mode ~= "off" and mode ~= "class" and mode ~= "portrait" then
+        if mode ~= "off" and mode ~= "class" and mode ~= "portrait" and mode ~= "sharedmedia" and mode ~= "jiberish" then
             mode = "off"
         end
         return mode
     end
     local GetCurrentTargetIconModeValue = function()
         local mode = MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconMode or nil
-        if mode ~= "off" and mode ~= "class" and mode ~= "portrait" then
+        if mode ~= "off" and mode ~= "class" and mode ~= "portrait" and mode ~= "sharedmedia" and mode ~= "jiberish" then
             mode = "off"
         end
         return mode

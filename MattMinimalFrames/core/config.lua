@@ -30,6 +30,7 @@ MMF_Config = {
 local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
 local STATUSBAR = LSM and LSM.MediaType and LSM.MediaType.STATUSBAR or "statusbar"
 local FONT = LSM and LSM.MediaType and LSM.MediaType.FONT or "font"
+local BACKGROUND = LSM and LSM.MediaType and LSM.MediaType.BACKGROUND or "background"
 local MMF_STATUSBAR_DEFAULT = "MMF Melli"
 local MMF_FONT_DEFAULT = "MMF Naowh"
 local MMF_FONT_DEFAULT_PATH = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
@@ -188,6 +189,130 @@ function MMF_GetStatusBarTextureOptions()
     end
     table.sort(list, function(a, b) return tostring(a):lower() < tostring(b):lower() end)
     return list
+end
+
+function MMF_GetIconTextureOptions(classToken)
+    local entries = {}
+    local engine = _G.ElvUI_JiberishIcons
+    local JI = type(engine) == "table" and engine[1] or nil
+    if type(JI) ~= "table" then
+        return entries
+    end
+
+    local mergedClassStyles = JI.mergedStylePacks and JI.mergedStylePacks.class
+    local defaultClassStyles = JI.defaultStylePacks and JI.defaultStylePacks.class
+    local styleContainer = mergedClassStyles or defaultClassStyles
+    if type(styleContainer) ~= "table" or type(styleContainer.styles) ~= "table" then
+        return entries
+    end
+
+    local classData = JI.dataHelper and JI.dataHelper.class and JI.dataHelper.class[classToken or select(2, UnitClass("player"))]
+    local previewTexString = classData and classData.texString
+
+    for styleKey, data in pairs(styleContainer.styles) do
+        local normalizedStyleKey = NormalizeMediaName(styleKey)
+        if normalizedStyleKey then
+            local pathRoot = NormalizeMediaName(data and data.path) or NormalizeMediaName(styleContainer.path)
+            local fullPath = pathRoot and (pathRoot .. normalizedStyleKey) or nil
+            local validPath = false
+            if type(fullPath) == "string" and fullPath ~= "" then
+                if type(JI.IsValidTexturePath) == "function" then
+                    local ok, result = pcall(JI.IsValidTexturePath, JI, fullPath)
+                    validPath = ok and result == true
+                else
+                    validPath = true
+                end
+            end
+            if validPath then
+                entries[#entries + 1] = {
+                    key = normalizedStyleKey,
+                    mediaType = "jiberish",
+                    label = tostring((data and data.name) or normalizedStyleKey),
+                    path = fullPath,
+                    texString = previewTexString,
+                }
+            end
+        end
+    end
+
+    table.sort(entries, function(a, b)
+        return tostring(a.label):lower() < tostring(b.label):lower()
+    end)
+    return entries
+end
+
+function MMF_GetIconTexturePath(mediaKey, mediaType)
+    local key = NormalizeMediaName(mediaKey)
+    if not key then
+        return nil
+    end
+
+    local desiredType = NormalizeMediaName(mediaType)
+    if desiredType == "jiberish" then
+        local engine = _G.ElvUI_JiberishIcons
+        local JI = type(engine) == "table" and engine[1] or nil
+        if type(JI) ~= "table" then
+            return nil
+        end
+        local mergedClassStyles = JI.mergedStylePacks and JI.mergedStylePacks.class
+        local defaultClassStyles = JI.defaultStylePacks and JI.defaultStylePacks.class
+        local styleContainer = mergedClassStyles or defaultClassStyles
+        if type(styleContainer) ~= "table" then
+            return nil
+        end
+        local styleData = styleContainer.styles and styleContainer.styles[key]
+        local pathRoot = NormalizeMediaName(styleData and styleData.path) or NormalizeMediaName(styleContainer.path)
+        if not pathRoot then
+            return nil
+        end
+        return pathRoot .. key
+    end
+
+    if not LSM then
+        return nil
+    end
+
+    if desiredType == BACKGROUND or desiredType == STATUSBAR then
+        local fetched = LSM:Fetch(desiredType, key, true)
+        if type(fetched) == "string" and fetched ~= "" then
+            return fetched
+        end
+    end
+
+    local backgroundPath = LSM:Fetch(BACKGROUND, key, true)
+    if type(backgroundPath) == "string" and backgroundPath ~= "" then
+        return backgroundPath
+    end
+    local statusbarPath = LSM:Fetch(STATUSBAR, key, true)
+    if type(statusbarPath) == "string" and statusbarPath ~= "" then
+        return statusbarPath
+    end
+
+    return nil
+end
+
+function MMF_GetIconTextureCoords(mediaKey, mediaType, classToken)
+    local key = NormalizeMediaName(mediaKey)
+    local desiredType = NormalizeMediaName(mediaType)
+    if not key or desiredType ~= "jiberish" then
+        return nil
+    end
+
+    local engine = _G.ElvUI_JiberishIcons
+    local JI = type(engine) == "table" and engine[1] or nil
+    if type(JI) ~= "table" then
+        return nil
+    end
+
+    local token = classToken
+    if not token then
+        return nil
+    end
+    local classData = JI.dataHelper and JI.dataHelper.class and JI.dataHelper.class[token]
+    if classData and type(classData.texCoords) == "table" then
+        return classData.texCoords
+    end
+    return nil
 end
 
 function MMF_EnsureStatusBarTextureSelection()
@@ -350,6 +475,22 @@ if LSM and LSM.RegisterCallback then
         elseif mediaType == STATUSBAR and normalizedKey and normalizedKey == NormalizeMediaName(MattMinimalFramesDB.statusBarTexture) then
             if MMF_ApplyStatusBarTexture then
                 MMF_ApplyStatusBarTexture()
+            end
+        elseif (mediaType == BACKGROUND or mediaType == STATUSBAR) and normalizedKey then
+            local playerKey = NormalizeMediaName(MattMinimalFramesDB.playerFrameIconStyle) or NormalizeMediaName(MattMinimalFramesDB.playerFrameIconMediaKey)
+            local playerType = NormalizeMediaName(MattMinimalFramesDB.playerFrameIconMediaType)
+            local targetKey = NormalizeMediaName(MattMinimalFramesDB.targetFrameIconStyle) or NormalizeMediaName(MattMinimalFramesDB.targetFrameIconMediaKey)
+            local targetType = NormalizeMediaName(MattMinimalFramesDB.targetFrameIconMediaType)
+
+            if playerKey and normalizedKey == playerKey and MMF_UpdatePlayerClassIconVisibility then
+                if not playerType or playerType == mediaType then
+                    MMF_UpdatePlayerClassIconVisibility(MMF_GetPlayerFrameIconMode and MMF_GetPlayerFrameIconMode() or "jiberish")
+                end
+            end
+            if targetKey and normalizedKey == targetKey and MMF_UpdateTargetFrameIconVisibility then
+                if not targetType or targetType == mediaType then
+                    MMF_UpdateTargetFrameIconVisibility(MMF_GetTargetFrameIconMode and MMF_GetTargetFrameIconMode() or "jiberish")
+                end
             end
         end
     end)
@@ -701,14 +842,22 @@ function MMF_UpdateFrameScale(unit)
     if frame.classIcon then
         local iconSize = math.max(8, newHeight)
         frame.classIcon:SetSize(iconSize, iconSize)
-        frame.classIcon:ClearAllPoints()
-        frame.classIcon:SetPoint("RIGHT", frame, "LEFT", 0, 0)
+        if MMF_ApplyFrameIconPlacement then
+            MMF_ApplyFrameIconPlacement(frame)
+        else
+            frame.classIcon:ClearAllPoints()
+            frame.classIcon:SetPoint("RIGHT", frame, "LEFT", 0, 0)
+        end
     end
     if frame.targetIcon then
         local iconSize = math.max(8, newHeight)
         frame.targetIcon:SetSize(iconSize, iconSize)
-        frame.targetIcon:ClearAllPoints()
-        frame.targetIcon:SetPoint("LEFT", frame, "RIGHT", 0, 0)
+        if MMF_ApplyFrameIconPlacement then
+            MMF_ApplyFrameIconPlacement(frame)
+        else
+            frame.targetIcon:ClearAllPoints()
+            frame.targetIcon:SetPoint("LEFT", frame, "RIGHT", 0, 0)
+        end
     end
     if frame.targetMarker then
         local markerSize = math.max(10, math.floor(newHeight * 0.75))

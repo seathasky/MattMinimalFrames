@@ -105,7 +105,22 @@ local function RequestAllUpdates()
     end
 end
 
+local function RefreshPVPIndicators()
+    if MMF_UpdatePVPFlagIndicator then
+        if MMF_PlayerFrame then
+            MMF_UpdatePVPFlagIndicator(MMF_PlayerFrame)
+        end
+        if MMF_TargetFrame then
+            MMF_UpdatePVPFlagIndicator(MMF_TargetFrame)
+        end
+    end
+end
+
 local coreEventFrame = CreateFrame("Frame")
+local function SafeRegisterEvent(frame, eventName)
+    local ok = pcall(frame.RegisterEvent, frame, eventName)
+    return ok
+end
 coreEventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 coreEventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 coreEventFrame:RegisterEvent("UNIT_HEALTH")
@@ -121,6 +136,9 @@ coreEventFrame:RegisterEvent("UNIT_PET")
 coreEventFrame:RegisterEvent("UNIT_TARGET")
 coreEventFrame:RegisterEvent("UNIT_HEAL_PREDICTION")
 coreEventFrame:RegisterEvent("UNIT_ABSORB_AMOUNT_CHANGED")
+coreEventFrame:RegisterEvent("UNIT_FACTION")
+coreEventFrame:RegisterEvent("PLAYER_FLAGS_CHANGED")
+SafeRegisterEvent(coreEventFrame, "PLAYER_PVP_UPDATE")
 
 coreEventFrame:SetScript("OnEvent", function(_, event, unit)
     if event == "PLAYER_REGEN_ENABLED" then
@@ -159,10 +177,39 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
             RequestFrameUpdate(MMF_TargetOfTargetFrame)
         end
 
+    elseif event == "PLAYER_FLAGS_CHANGED" then
+        if unit == nil or unit == "player" or unit == "target" then
+            RequestUnitUpdate("player")
+            RequestUnitUpdate("target")
+            RefreshPVPIndicators()
+        end
+
+    elseif event == "PLAYER_PVP_UPDATE" then
+        RequestUnitUpdate("player")
+        RequestUnitUpdate("target")
+        RefreshPVPIndicators()
+
     elseif event == "UNIT_NAME_UPDATE" or event == "UNIT_HEALTH" or event == "UNIT_POWER_UPDATE" or event == "UNIT_HEAL_PREDICTION" or event == "UNIT_ABSORB_AMOUNT_CHANGED" then
         RequestUnitUpdate(unit)
+
+    elseif event == "UNIT_FACTION" then
+        if unit == nil or unit == "player" or unit == "target" then
+            RequestUnitUpdate("player")
+            RequestUnitUpdate("target")
+            RefreshPVPIndicators()
+        end
 
     elseif event == "PLAYER_ALIVE" or event == "PLAYER_DEAD" then
         RequestUnitUpdate("player")
     end
+end)
+
+local pvpRefreshElapsed = 0
+coreEventFrame:SetScript("OnUpdate", function(_, elapsed)
+    pvpRefreshElapsed = pvpRefreshElapsed + (elapsed or 0)
+    if pvpRefreshElapsed < 1.0 then
+        return
+    end
+    pvpRefreshElapsed = 0
+    RefreshPVPIndicators()
 end)

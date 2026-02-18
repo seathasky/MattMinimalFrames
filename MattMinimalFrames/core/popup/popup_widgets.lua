@@ -253,17 +253,21 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
         end
         for _, opt in ipairs(raw or {}) do
             if type(opt) == "table" then
-                local value = opt.value
-                local label = opt.label
-                local normalizedLabel = NormalizeString(label)
-                if value ~= nil and normalizedLabel then
-                    if type(value) == "string" then
-                        local normalizedValue = NormalizeString(value)
-                        if normalizedValue then
-                            out[#out + 1] = { value = normalizedValue, label = normalizedLabel }
+                if opt.divider == true then
+                    out[#out + 1] = { divider = true, label = tostring(opt.label or "") }
+                else
+                    local value = opt.value
+                    local label = opt.label
+                    local normalizedLabel = NormalizeString(label)
+                    if value ~= nil and normalizedLabel then
+                        if type(value) == "string" then
+                            local normalizedValue = NormalizeString(value)
+                            if normalizedValue then
+                                out[#out + 1] = { value = normalizedValue, label = normalizedLabel }
+                            end
+                        else
+                            out[#out + 1] = { value = value, label = normalizedLabel }
                         end
-                    else
-                        out[#out + 1] = { value = value, label = normalizedLabel }
                     end
                 end
             elseif type(opt) == "string" then
@@ -282,8 +286,12 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
     local rows = {}
     local selectedValue = nil
 
+    local preserveTextFormatting = (config and config.preserveTextFormatting) == true
     local function EscapeDisplayText(text)
         local value = tostring(text or "")
+        if preserveTextFormatting then
+            return value
+        end
         return value:gsub("|", "||")
     end
 
@@ -368,7 +376,7 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
 
     local function GetOptionByValue(value)
         for _, opt in ipairs(options) do
-            if opt.value == value then
+            if opt.divider ~= true and opt.value == value then
                 return opt
             end
         end
@@ -415,6 +423,13 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
             if option then
                 row.option = option
                 row.text:SetText(EscapeDisplayText(option.label))
+                if option.divider then
+                    row.text:SetTextColor(0.35, 0.35, 0.4)
+                    row.bg:SetColorTexture(0, 0, 0, 0)
+                else
+                    row.text:SetTextColor(0.9, 0.9, 0.9)
+                    row.bg:SetColorTexture(0, 0, 0, 0)
+                end
                 row:Show()
             else
                 row.option = nil
@@ -456,6 +471,7 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
 
     local function SelectOption(option)
         if not option then return end
+        if option.divider then return end
         selectedValue = option.value
         UpdateButtonTextFromSelection()
         if config and config.onSelect then
@@ -479,10 +495,18 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
         row.text:SetJustifyH("LEFT")
         row.text:SetTextColor(0.9, 0.9, 0.9)
         row:SetScript("OnEnter", function(self)
+            if self.option and self.option.divider then
+                return
+            end
             self.bg:SetColorTexture(accent[1] * 0.2, accent[2] * 0.2, accent[3] * 0.2, 0.6)
             self.text:SetTextColor(accent[1], accent[2], accent[3])
         end)
         row:SetScript("OnLeave", function(self)
+            if self.option and self.option.divider then
+                self.bg:SetColorTexture(0, 0, 0, 0)
+                self.text:SetTextColor(0.35, 0.35, 0.4)
+                return
+            end
             self.bg:SetColorTexture(0, 0, 0, 0)
             self.text:SetTextColor(0.9, 0.9, 0.9)
         end)

@@ -17,7 +17,10 @@ end
 
 local function GetPlayerFrameIconMode()
     local mode = MattMinimalFramesDB and MattMinimalFramesDB.playerFrameIconMode or nil
-    if mode == "off" or mode == "class" or mode == "portrait" then
+    if mode == "sharedmedia" and MattMinimalFramesDB and MattMinimalFramesDB.playerFrameIconMediaType == "jiberish" then
+        return "jiberish"
+    end
+    if mode == "off" or mode == "class" or mode == "portrait" or mode == "sharedmedia" or mode == "jiberish" then
         return mode
     end
     if MattMinimalFramesDB and MattMinimalFramesDB.showPlayerClassIcon ~= nil then
@@ -31,7 +34,10 @@ end
 
 local function GetTargetFrameIconMode()
     local mode = MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconMode or nil
-    if mode == "off" or mode == "class" or mode == "portrait" then
+    if mode == "sharedmedia" and MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconMediaType == "jiberish" then
+        return "jiberish"
+    end
+    if mode == "off" or mode == "class" or mode == "portrait" or mode == "sharedmedia" or mode == "jiberish" then
         return mode
     end
     if MattMinimalFramesDB and MattMinimalFramesDB.showTargetFrameIcon ~= nil then
@@ -43,9 +49,95 @@ local function GetTargetFrameIconMode()
     return "off"
 end
 
+local function ClampIconOffset(value)
+    local offset = tonumber(value) or 0
+    if offset < -200 then offset = -200 end
+    if offset > 200 then offset = 200 end
+    return math.floor(offset + 0.5)
+end
+
+local function GetIconOffsetsForUnit(unit)
+    if unit == "player" then
+        local x = MattMinimalFramesDB and MattMinimalFramesDB.playerFrameIconXOffset or 0
+        local y = MattMinimalFramesDB and MattMinimalFramesDB.playerFrameIconYOffset or 0
+        return ClampIconOffset(x), ClampIconOffset(y)
+    elseif unit == "target" then
+        local x = MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconXOffset or 0
+        local y = MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconYOffset or 0
+        return ClampIconOffset(x), ClampIconOffset(y)
+    end
+    return 0, 0
+end
+
+local function ClampIconScale(value)
+    local scale = tonumber(value) or 1
+    if scale < 0.5 then scale = 0.5 end
+    if scale > 3.0 then scale = 3.0 end
+    return scale
+end
+
+local function GetIconScaleForUnit(unit)
+    if unit == "player" then
+        return ClampIconScale(MattMinimalFramesDB and MattMinimalFramesDB.playerFrameIconScale or 1)
+    elseif unit == "target" then
+        return ClampIconScale(MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconScale or 1)
+    end
+    return 1
+end
+
+local function ApplySingleIconPlacement(frame, icon, unit)
+    if not frame or not icon or (unit ~= "player" and unit ~= "target") then
+        return
+    end
+
+    local baseSize = math.max(8, (frame:GetHeight() or frame.originalHeight or 28))
+    local iconSize = math.max(8, math.floor((baseSize * GetIconScaleForUnit(unit)) + 0.5))
+    local xOffset, yOffset = GetIconOffsetsForUnit(unit)
+    icon:SetSize(iconSize, iconSize)
+
+    icon:ClearAllPoints()
+    if unit == "player" then
+        icon:SetPoint("RIGHT", frame, "LEFT", xOffset, yOffset)
+    else
+        icon:SetPoint("LEFT", frame, "RIGHT", xOffset, yOffset)
+    end
+end
+
+local function ApplyFrameIconPlacement(frame)
+    if not frame or not frame.unit then return end
+    if frame.unit == "player" and frame.classIcon then
+        ApplySingleIconPlacement(frame, frame.classIcon, "player")
+    elseif frame.unit == "target" and frame.targetIcon then
+        ApplySingleIconPlacement(frame, frame.targetIcon, "target")
+    end
+end
+
+local function ApplySharedMediaIconTexture(icon, mediaKey, mediaType, classToken)
+    if not icon or not MMF_GetIconTexturePath then
+        return false
+    end
+    local path = MMF_GetIconTexturePath(mediaKey, mediaType)
+    if type(path) ~= "string" or path == "" then
+        return false
+    end
+    icon:SetTexture(path)
+    local coords = MMF_GetIconTextureCoords and MMF_GetIconTextureCoords(mediaKey, mediaType, classToken)
+    if mediaType == "jiberish" and (type(coords) ~= "table" or #coords < 8) then
+        return false
+    end
+    if type(coords) == "table" and #coords >= 8 then
+        icon:SetTexCoord(coords[1], coords[2], coords[3], coords[4], coords[5], coords[6], coords[7], coords[8])
+    else
+        icon:SetTexCoord(0, 1, 0, 1)
+    end
+    icon:Show()
+    return true
+end
+
 local function ApplyPlayerFrameIconMode(frame, mode)
     if not frame or not frame.classIcon then return end
 
+    ApplyFrameIconPlacement(frame)
     mode = mode or GetPlayerFrameIconMode()
     local icon = frame.classIcon
     if mode == "off" then
@@ -64,6 +156,17 @@ local function ApplyPlayerFrameIconMode(frame, mode)
         return
     end
 
+    if mode == "sharedmedia" or mode == "jiberish" then
+        local mediaKey = (MattMinimalFramesDB and MattMinimalFramesDB.playerFrameIconStyle) or (MattMinimalFramesDB and MattMinimalFramesDB.playerFrameIconMediaKey)
+        local mediaType = (mode == "jiberish" and "jiberish") or (MattMinimalFramesDB and MattMinimalFramesDB.playerFrameIconMediaType) or "jiberish"
+        local _, classToken = UnitClass("player")
+        if ApplySharedMediaIconTexture(icon, mediaKey, mediaType, classToken) then
+            return
+        end
+        icon:Hide()
+        return
+    end
+
     local _, classFile = UnitClass("player")
     local coords = classFile and CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[classFile]
     if not coords then
@@ -79,6 +182,7 @@ end
 local function ApplyTargetFrameIconMode(frame, mode)
     if not frame or not frame.targetIcon then return end
 
+    ApplyFrameIconPlacement(frame)
     mode = mode or GetTargetFrameIconMode()
     local icon = frame.targetIcon
     if mode == "off" then
@@ -99,6 +203,17 @@ local function ApplyTargetFrameIconMode(frame, mode)
         end
         icon:SetTexCoord(0, 1, 0, 1)
         icon:Show()
+        return
+    end
+
+    if mode == "sharedmedia" or mode == "jiberish" then
+        local mediaKey = (MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconStyle) or (MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconMediaKey)
+        local mediaType = (mode == "jiberish" and "jiberish") or (MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconMediaType) or "jiberish"
+        local _, classToken = UnitClass("target")
+        if ApplySharedMediaIconTexture(icon, mediaKey, mediaType, classToken) then
+            return
+        end
+        icon:Hide()
         return
     end
 
@@ -587,8 +702,8 @@ local function CreatePlayerClassIcon(frame)
     local classIcon = frame.nameOverlay:CreateTexture(nil, "OVERLAY", nil, 7)
     local iconSize = math.max(8, (frame:GetHeight() or frame.originalHeight or 28))
     classIcon:SetSize(iconSize, iconSize)
-    classIcon:SetPoint("RIGHT", frame, "LEFT", 0, 0)
     frame.classIcon = classIcon
+    ApplyFrameIconPlacement(frame)
 
     ApplyPlayerFrameIconMode(frame, GetPlayerFrameIconMode())
 end
@@ -600,10 +715,98 @@ local function CreateTargetFrameIcon(frame)
     local targetIcon = frame.nameOverlay:CreateTexture(nil, "OVERLAY", nil, 7)
     local iconSize = math.max(8, (frame:GetHeight() or frame.originalHeight or 28))
     targetIcon:SetSize(iconSize, iconSize)
-    targetIcon:SetPoint("LEFT", frame, "RIGHT", 0, 0)
     frame.targetIcon = targetIcon
+    ApplyFrameIconPlacement(frame)
 
     ApplyTargetFrameIconMode(frame, GetTargetFrameIconMode())
+end
+
+local function CreatePVPFlagIndicator(frame, unit)
+    if not frame or not frame.nameOverlay then return end
+    if not Compat.IsTBC then return end
+    if unit ~= "player" and unit ~= "target" then return end
+    if frame.pvpFlagText then return end
+
+    local text = frame.nameOverlay:CreateFontString(nil, "OVERLAY", nil, 7)
+    if MMF_SetFontSafe then
+        MMF_SetFontSafe(text, cfg.FONT_PATH, 10, "OUTLINE")
+    else
+        text:SetFont(cfg.FONT_PATH, 10, "OUTLINE")
+    end
+    text:SetText("PVP")
+    text:SetTextColor(1, 0.2, 0.2, 1)
+    text:SetShadowOffset(1, -1)
+    text:SetShadowColor(0, 0, 0, 0.9)
+
+    text:ClearAllPoints()
+    if unit == "player" then
+        text:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 2, 2)
+    else
+        text:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -2, 2)
+    end
+
+    text:Hide()
+
+    frame.pvpFlagText = text
+end
+
+local function UpdatePVPFlagIndicator(frame)
+    if not frame or not frame.unit then return end
+    if not frame.pvpFlagText then return end
+    if not Compat.IsTBC then
+        frame.pvpFlagText:Hide()
+        return
+    end
+
+    local unit = frame.unit
+    if (unit ~= "player" and unit ~= "target") or not UnitExists(unit) then
+        frame.pvpFlagText:Hide()
+        return
+    end
+
+    local function FormatPVPTimerText(milliseconds)
+        local totalSeconds = math.floor(((tonumber(milliseconds) or 0) / 1000) + 0.5)
+        if totalSeconds < 0 then totalSeconds = 0 end
+        local minutes = math.floor(totalSeconds / 60)
+        local seconds = totalSeconds % 60
+        return string.format("%d:%02d", minutes, seconds)
+    end
+
+    local isFFA = UnitIsPVPFreeForAll(unit) == true
+    local isFlagged = false
+    local labelText = "PVP"
+    local timerMode = false
+    local textR, textG, textB = 1, 0.2, 0.2
+    if unit == "player" then
+        local desired = (GetPVPDesired and GetPVPDesired()) == true
+        local timerRunning = (IsPVPTimerRunning and IsPVPTimerRunning()) == true
+        isFlagged = isFFA or (UnitIsPVP(unit) and (desired or timerRunning))
+        if timerRunning and not desired and GetPVPTimer then
+            local timerText = FormatPVPTimerText(GetPVPTimer())
+            local timerHex = "ffffd933"
+            local _, playerClass = UnitClass("player")
+            if playerClass == "ROGUE" then
+                timerHex = "ffffffff"
+            end
+            labelText = "|cffff3333PVP|r |c" .. timerHex .. timerText .. "|r"
+            timerMode = true
+            textR, textG, textB = 1.0, 0.85, 0.2
+        end
+    else
+        -- Target indicator should only reflect actual PvP flags on player targets.
+        isFlagged = isFFA or (UnitIsPlayer(unit) and UnitIsPVP(unit))
+    end
+    if isFlagged then
+        frame.pvpFlagText:SetText(labelText)
+        if timerMode then
+            frame.pvpFlagText:SetTextColor(1, 1, 1, 1)
+        else
+            frame.pvpFlagText:SetTextColor(textR, textG, textB, 1)
+        end
+        frame.pvpFlagText:Show()
+    else
+        frame.pvpFlagText:Hide()
+    end
 end
 
 --------------------------------------------------
@@ -918,6 +1121,7 @@ function MMF_CreateSecureUnitFrame(unit, frameName, width, height, point, relPoi
 
     CreateNameText(f, unit)
     CreateResourceText(f, unit)
+    CreatePVPFlagIndicator(f, unit)
     CreateTargetMarker(f)
 
     if unit == "player" or unit == "target" then
@@ -969,7 +1173,7 @@ function MMF_UpdatePlayerClassIconVisibility(enabled)
     if mode == nil then
         mode = GetPlayerFrameIconMode()
     end
-    if mode ~= "off" and mode ~= "class" and mode ~= "portrait" then
+    if mode ~= "off" and mode ~= "class" and mode ~= "portrait" and mode ~= "sharedmedia" and mode ~= "jiberish" then
         mode = "off"
     end
     if MattMinimalFramesDB then
@@ -992,7 +1196,7 @@ function MMF_UpdateTargetFrameIconVisibility(enabled)
     if mode == nil then
         mode = GetTargetFrameIconMode()
     end
-    if mode ~= "off" and mode ~= "class" and mode ~= "portrait" then
+    if mode ~= "off" and mode ~= "class" and mode ~= "portrait" and mode ~= "sharedmedia" and mode ~= "jiberish" then
         mode = "off"
     end
     if MattMinimalFramesDB then
@@ -1028,6 +1232,39 @@ function MMF_UpdateTargetMarkerVisibility(enabled)
     MMF_UpdateTargetMarkers()
 end
 
+function MMF_UpdatePVPFlagIndicator(frame)
+    UpdatePVPFlagIndicator(frame)
+end
+
+function MMF_ApplyFrameIconPlacement(frame)
+    ApplyFrameIconPlacement(frame)
+end
+
+function MMF_UpdateFrameIconPlacement(unit)
+    if unit == "player" then
+        ApplyFrameIconPlacement(MMF_PlayerFrame)
+        if MMF_UpdatePlayerClassIconVisibility then
+            MMF_UpdatePlayerClassIconVisibility(GetPlayerFrameIconMode())
+        end
+        return
+    elseif unit == "target" then
+        ApplyFrameIconPlacement(MMF_TargetFrame)
+        if MMF_UpdateTargetFrameIconVisibility then
+            MMF_UpdateTargetFrameIconVisibility(GetTargetFrameIconMode())
+        end
+        return
+    end
+
+    ApplyFrameIconPlacement(MMF_PlayerFrame)
+    ApplyFrameIconPlacement(MMF_TargetFrame)
+    if MMF_UpdatePlayerClassIconVisibility then
+        MMF_UpdatePlayerClassIconVisibility(GetPlayerFrameIconMode())
+    end
+    if MMF_UpdateTargetFrameIconVisibility then
+        MMF_UpdateTargetFrameIconVisibility(GetTargetFrameIconMode())
+    end
+end
+
 do
     local iconEventFrame = CreateFrame("Frame")
     iconEventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -1035,8 +1272,8 @@ do
     iconEventFrame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "target")
     iconEventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
     iconEventFrame:SetScript("OnEvent", function(_, _, unit)
-        if (not unit or unit == "player") and MMF_GetPlayerFrameIconMode and MMF_GetPlayerFrameIconMode() == "portrait" then
-            MMF_UpdatePlayerClassIconVisibility("portrait")
+        if (not unit or unit == "player") and MMF_GetPlayerFrameIconMode and MMF_GetPlayerFrameIconMode() ~= "off" then
+            MMF_UpdatePlayerClassIconVisibility(MMF_GetPlayerFrameIconMode())
         end
         if (not unit or unit == "target") and MMF_GetTargetFrameIconMode and MMF_GetTargetFrameIconMode() ~= "off" then
             MMF_UpdateTargetFrameIconVisibility(MMF_GetTargetFrameIconMode())
