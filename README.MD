@@ -11,13 +11,15 @@ Minimal unit frames for World of Warcraft. Clean, lightweight, and standalone.
 Clean, minimal unit frames for WoW (Retail Midnight + TBC Anniversary).
 
 ## Highlights
-- Player, Target, ToT, Focus, and Pet frames
-- Cast bars, heal prediction, and absorb bars
-- Target buffs/debuffs with timers
-- Class/resource bars (Retail) + power bars
-- SharedMedia texture + global font styling
-- Range fade and SHIFT+drag frame movement
-- Tools panel with alignment grid, minimap toggle, and reset actions
+
+*   Player, Target, ToT, Focus, and Pet frames
+*   Cast bars, heal prediction, and absorb bars
+*   Target buffs/debuffs with timers
+*   Player portrait icons including support for [Jiberish Fabled Icons](https://www.curseforge.com/wow/addons/jiberish-fabled-icons)
+*   Class/resource bars (Retail) + power bars
+*   SharedMedia texture + global font styling
+*   Range fade and SHIFT+drag frame movement
+*   PvP detection for TBC anniversary.
 
 ## Command
 - `/mmf` to open settings
