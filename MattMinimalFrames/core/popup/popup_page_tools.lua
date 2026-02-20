@@ -94,6 +94,12 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
         MattMinimalFramesDB.timerTextScale = d.timerTextScale
         MattMinimalFramesDB.auraIconSize = d.auraIconSize
         MattMinimalFramesDB.nameTextSize = d.nameTextSize
+        MattMinimalFramesDB.textSizeUnit = d.textSizeUnit
+        MattMinimalFramesDB.playerNameTextSize = d.nameTextSize
+        MattMinimalFramesDB.targetNameTextSize = d.nameTextSize
+        MattMinimalFramesDB.totNameTextSize = d.nameTextSize
+        MattMinimalFramesDB.petNameTextSize = d.nameTextSize
+        MattMinimalFramesDB.focusNameTextSize = d.nameTextSize
         MattMinimalFramesDB.enableNameTruncation = d.enableNameTruncation
         MattMinimalFramesDB.autoResizeTextOnLongName = d.autoResizeTextOnLongName
         MattMinimalFramesDB.nameTruncationLength = d.nameTruncationLength
@@ -110,6 +116,11 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
         MattMinimalFramesDB.focusNameTextXOffset = d.focusNameTextXOffset
         MattMinimalFramesDB.focusNameTextYOffset = d.focusNameTextYOffset
         MattMinimalFramesDB.hpTextSize = d.hpTextSize
+        MattMinimalFramesDB.playerHPTextSize = d.hpTextSize
+        MattMinimalFramesDB.targetHPTextSize = d.hpTextSize
+        MattMinimalFramesDB.totHPTextSize = d.hpTextSize
+        MattMinimalFramesDB.petHPTextSize = d.hpTextSize
+        MattMinimalFramesDB.focusHPTextSize = d.hpTextSize
         MattMinimalFramesDB.hpTextXOffset = d.hpTextXOffset
         MattMinimalFramesDB.hpTextYOffset = d.hpTextYOffset
         MattMinimalFramesDB.playerHPTextXOffset = d.playerHPTextXOffset

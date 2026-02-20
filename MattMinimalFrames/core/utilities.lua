@@ -248,12 +248,12 @@ function MMF_ApplyGlobalFont()
         MMF_Config.FONT_PATH = fontPath
     end
 
-    local nameSize = (MMF_GetNameTextSize and MMF_GetNameTextSize()) or 12
-    local hpSize = (MMF_GetHPTextSize and MMF_GetHPTextSize()) or 13
-
     local frames = MMF_GetAllFrames and MMF_GetAllFrames() or {}
     for _, frame in ipairs(frames) do
         if frame then
+            local unit = frame.unit
+            local nameSize = (MMF_GetNameTextSize and MMF_GetNameTextSize(unit)) or 12
+            local hpSize = (MMF_GetHPTextSize and MMF_GetHPTextSize(unit)) or 13
             if frame.nameText then SafeSetFont(frame.nameText, fontPath, nameSize, "OUTLINE") end
             if frame.hpText then SafeSetFont(frame.hpText, fontPath, hpSize, "OUTLINE") end
             if frame.powerText then SafeSetFont(frame.powerText, fontPath, 13, "OUTLINE") end

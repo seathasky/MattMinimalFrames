@@ -598,7 +598,7 @@ local function CreateNameText(frame, unit)
     
     frame.nameText = frame.nameOverlay:CreateFontString(nil, "OVERLAY", nil, 7)
     
-    local fontSize = MMF_GetNameTextSize()
+    local fontSize = MMF_GetNameTextSize(unit)
     local nameX = MMF_GetNameTextXOffset and MMF_GetNameTextXOffset(unit) or 0
     local nameY = MMF_GetNameTextYOffset and MMF_GetNameTextYOffset(unit) or 0
     if MMF_SetFontSafe then
@@ -635,7 +635,7 @@ end
 
 local function CreateResourceText(frame, unit)
     local fontPath = cfg.FONT_PATH
-    local hpSize = MMF_GetHPTextSize and MMF_GetHPTextSize() or 13
+    local hpSize = MMF_GetHPTextSize and MMF_GetHPTextSize(unit) or 13
     local hpX = MMF_GetHPTextXOffset and MMF_GetHPTextXOffset(unit) or 0
     local hpY = MMF_GetHPTextYOffset and MMF_GetHPTextYOffset(unit) or 0
     

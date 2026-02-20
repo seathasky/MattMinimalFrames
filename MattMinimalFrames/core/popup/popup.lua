@@ -259,6 +259,7 @@ function MMF_ShowWelcomePopup(forceShow)
     local playerIconModeList
     local targetIconModeList
     local scaleUnitList
+    local frameTextUnitList
     local nameTextUnitList
     local hpTextUnitList
     local hideNameTextUnitList
@@ -430,6 +431,7 @@ function MMF_ShowWelcomePopup(forceShow)
     playerIconModeList = unitFramesState.playerIconModeList
     targetIconModeList = unitFramesState.targetIconModeList
     scaleUnitList = unitFramesState.scaleUnitList
+    frameTextUnitList = unitFramesState.frameTextUnitList
     nameTextUnitList = unitFramesState.nameTextUnitList
     hpTextUnitList = unitFramesState.hpTextUnitList
     hideNameTextUnitList = unitFramesState.hideNameTextUnitList
@@ -443,6 +445,7 @@ function MMF_ShowWelcomePopup(forceShow)
     RegisterClosableList(playerIconModeList)
     RegisterClosableList(targetIconModeList)
     RegisterClosableList(scaleUnitList)
+    RegisterClosableList(frameTextUnitList)
     RegisterClosableList(nameTextUnitList)
     RegisterClosableList(hpTextUnitList)
     RegisterClosableList(hideNameTextUnitList)

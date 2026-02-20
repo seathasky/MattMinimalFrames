@@ -163,8 +163,21 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
         end
 
     elseif event == "PLAYER_TARGET_CHANGED" then
-        RequestFrameUpdate(MMF_TargetFrame)
-        RequestFrameUpdate(MMF_TargetOfTargetFrame)
+        if MMF_UpdateUnitFrame then
+            if MMF_TargetFrame then
+                MMF_UpdateUnitFrame(MMF_TargetFrame)
+            else
+                RequestFrameUpdate(MMF_TargetFrame)
+            end
+            if MMF_TargetOfTargetFrame then
+                MMF_UpdateUnitFrame(MMF_TargetOfTargetFrame)
+            else
+                RequestFrameUpdate(MMF_TargetOfTargetFrame)
+            end
+        else
+            RequestFrameUpdate(MMF_TargetFrame)
+            RequestFrameUpdate(MMF_TargetOfTargetFrame)
+        end
 
     elseif event == "PLAYER_FOCUS_CHANGED" then
         RequestFrameUpdate(MMF_FocusFrame)

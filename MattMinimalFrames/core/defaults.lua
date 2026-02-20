@@ -76,6 +76,7 @@ local mmfDefaults = {
     timerTextScale = 0.8,
     auraIconSize = 18,
     nameTextSize = 12,
+    textSizeUnit = "player",
     enableNameTruncation = false,
     autoResizeTextOnLongName = false,
     nameTruncationLength = 14,

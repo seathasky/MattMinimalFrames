@@ -272,6 +272,23 @@ local function ApplyNameTextFontSize(frame, size)
     frame.mmfAppliedNameFontSize = rounded
 end
 
+local function ApplyHPTextFontSize(frame, size)
+    if not frame or not frame.hpText then return end
+    size = tonumber(size) or 13
+    if size < 6 then size = 6 end
+    local rounded = math.floor(size + 0.5)
+    if frame.mmfAppliedHPFontSize == rounded then
+        return
+    end
+    local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or cfg.FONT_PATH
+    if MMF_SetFontSafe then
+        MMF_SetFontSafe(frame.hpText, fontPath, rounded, "OUTLINE")
+    else
+        frame.hpText:SetFont(fontPath, rounded, "OUTLINE")
+    end
+    frame.mmfAppliedHPFontSize = rounded
+end
+
 local function GetNameTextWidthNoWrap(nameText)
     if not nameText then return 0 end
     local okUnbounded, unboundedWidth = pcall(nameText.GetUnboundedStringWidth, nameText)
@@ -301,7 +318,7 @@ end
 
 local function ApplyAutoResizeNameText(frame, unit, displayName)
     if not frame or not frame.nameText then return end
-    local baseSize = tonumber(MattMinimalFramesDB and MattMinimalFramesDB.nameTextSize) or 12
+    local baseSize = tonumber(MMF_GetNameTextSize and MMF_GetNameTextSize(unit) or (MattMinimalFramesDB and MattMinimalFramesDB.nameTextSize)) or 12
     local autoEnabled = IsAutoResizeNameTextEnabled()
     local maxWidth = SafeGetNameTextMaxWidth(frame)
 
@@ -540,11 +557,11 @@ local function UpdateUnitFrame(frame)
     if hideNameText then
         frame.nameText:SetText("")
         frame.nameText:Hide()
-        ApplyNameTextFontSize(frame, tonumber(db.nameTextSize) or 12)
+        ApplyNameTextFontSize(frame, MMF_GetNameTextSize and MMF_GetNameTextSize(unit) or tonumber(db.nameTextSize) or 12)
     elseif not UnitExists(unit) then
         frame.nameText:SetText("")
         frame.nameText:Show()
-        ApplyNameTextFontSize(frame, tonumber(db.nameTextSize) or 12)
+        ApplyNameTextFontSize(frame, MMF_GetNameTextSize and MMF_GetNameTextSize(unit) or tonumber(db.nameTextSize) or 12)
     else
         frame.nameText:Show()
         local unitName = UnitName(unit)
@@ -573,6 +590,7 @@ local function UpdateUnitFrame(frame)
     end
 
     if frame.hpText and (unit == "player" or unit == "target") then
+        ApplyHPTextFontSize(frame, MMF_GetHPTextSize and MMF_GetHPTextSize(unit) or tonumber(db.hpTextSize) or 13)
         if hideHPText then
             frame.hpText:SetText("")
             frame.hpText:Hide()

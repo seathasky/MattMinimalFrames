@@ -616,17 +616,33 @@ function MMF_GetDebuffYOffset()
     return (MattMinimalFramesDB and MattMinimalFramesDB.debuffYOffset) or 27
 end
 
-function MMF_GetNameTextSize()
-    return (MattMinimalFramesDB and MattMinimalFramesDB.nameTextSize) or 12
-end
-
-function MMF_GetHPTextSize()
-    return (MattMinimalFramesDB and MattMinimalFramesDB.hpTextSize) or 13
-end
-
 local function GetUnitPrefix(unit)
     if unit == "targettarget" then return "tot" end
     return unit
+end
+
+function MMF_GetNameTextSize(unit)
+    if not MattMinimalFramesDB then return 12 end
+    if unit then
+        local prefix = GetUnitPrefix(unit)
+        local key = prefix .. "NameTextSize"
+        if MattMinimalFramesDB[key] ~= nil then
+            return MattMinimalFramesDB[key]
+        end
+    end
+    return MattMinimalFramesDB.nameTextSize or 12
+end
+
+function MMF_GetHPTextSize(unit)
+    if not MattMinimalFramesDB then return 13 end
+    if unit then
+        local prefix = GetUnitPrefix(unit)
+        local key = prefix .. "HPTextSize"
+        if MattMinimalFramesDB[key] ~= nil then
+            return MattMinimalFramesDB[key]
+        end
+    end
+    return MattMinimalFramesDB.hpTextSize or 13
 end
 
 function MMF_GetNameTextXOffset(unit)
@@ -732,7 +748,21 @@ function MMF_UpdateFrameTextOffsets()
     end
 end
 
-function MMF_UpdateNameTextSize(size)
+local function ForEachUnitFrame(unit, callback)
+    if type(callback) ~= "function" then
+        return
+    end
+    if unit then
+        local frame = (MMF_GetFrameForUnit and MMF_GetFrameForUnit(unit))
+            or (unit == "player" and MMF_PlayerFrame)
+            or (unit == "target" and MMF_TargetFrame)
+            or (unit == "targettarget" and MMF_TargetOfTargetFrame)
+            or (unit == "pet" and MMF_PetFrame)
+            or (unit == "focus" and MMF_FocusFrame)
+        callback(frame)
+        return
+    end
+
     local frames = {
         MMF_PlayerFrame,
         MMF_TargetFrame,
@@ -740,9 +770,14 @@ function MMF_UpdateNameTextSize(size)
         MMF_PetFrame,
         MMF_FocusFrame
     }
-    
-    local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or MMF_Config.FONT_PATH
     for _, frame in ipairs(frames) do
+        callback(frame)
+    end
+end
+
+function MMF_UpdateNameTextSize(size, unit)
+    local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or MMF_Config.FONT_PATH
+    ForEachUnitFrame(unit, function(frame)
         if frame and frame.nameText then
             if MMF_SetFontSafe then
                 MMF_SetFontSafe(frame.nameText, fontPath, size, "OUTLINE")
@@ -756,20 +791,12 @@ function MMF_UpdateNameTextSize(size)
                 frame.nameText:SetText(currentText)
             end
         end
-    end
+    end)
 end
 
-function MMF_UpdateHPTextSize(size)
-    local frames = {
-        MMF_PlayerFrame,
-        MMF_TargetFrame,
-        MMF_TargetOfTargetFrame,
-        MMF_PetFrame,
-        MMF_FocusFrame
-    }
-    
+function MMF_UpdateHPTextSize(size, unit)
     local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or MMF_Config.FONT_PATH
-    for _, frame in ipairs(frames) do
+    ForEachUnitFrame(unit, function(frame)
         if frame and frame.hpText then
             if MMF_SetFontSafe then
                 MMF_SetFontSafe(frame.hpText, fontPath, size, "OUTLINE")
@@ -788,7 +815,7 @@ function MMF_UpdateHPTextSize(size)
                 end
             end)
         end
-    end
+    end)
 end
 
 function MMF_GetFrameScaleX(unit)
