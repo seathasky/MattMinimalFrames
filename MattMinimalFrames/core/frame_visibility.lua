@@ -200,6 +200,39 @@ local function EnsureVisibilityHooks(frame, unit)
     frame.mmfCombatVisibilityHooksSet = true
 end
 
+local function EnsurePlayerHoverHooks(frame)
+    if not frame or frame.mmfPlayerHoverHooksSet then
+        return
+    end
+
+    frame:HookScript("OnEnter", function(self)
+        if not MMF_IsCombatFrameVisibilityEnabled or MMF_IsCombatFrameVisibilityEnabled() ~= true then
+            return
+        end
+        if (type(InCombatLockdown) == "function") and InCombatLockdown() then
+            return
+        end
+
+        local baseAlpha = MMF_GetCombatVisibilityBaseAlphaForUnit and MMF_GetCombatVisibilityBaseAlphaForUnit("player") or 1
+        if baseAlpha >= 1 then
+            return
+        end
+
+        self.mmfPlayerHovering = true
+        local fade = MMF_GetCombatVisibilityFadeTime and MMF_GetCombatVisibilityFadeTime() or 0.4
+        MMF_SetAlphaSmooth(self, 1, fade)
+    end)
+
+    frame:HookScript("OnLeave", function(self)
+        self.mmfPlayerHovering = nil
+        if MMF_UpdateCombatFrameVisibility then
+            MMF_UpdateCombatFrameVisibility()
+        end
+    end)
+
+    frame.mmfPlayerHoverHooksSet = true
+end
+
 local function SetAlphaSmooth(frame, targetAlpha, duration)
     if not frame then
         return
@@ -317,6 +350,7 @@ function MMF_UpdateCombatFrameVisibility()
 
     EnsureVisibilityHooks(targetFrame, "target")
     EnsureVisibilityHooks(totFrame, "targettarget")
+    EnsurePlayerHoverHooks(playerFrame)
 
     local combatEnabled = MMF_IsCombatFrameVisibilityEnabled()
     local inCombat = (type(InCombatLockdown) == "function") and InCombatLockdown() or false
@@ -335,6 +369,13 @@ function MMF_UpdateCombatFrameVisibility()
         end
 
         local alpha = MMF_GetCombatVisibilityBaseAlphaForUnit(unit)
+        if unit == "player"
+            and combatEnabled
+            and (not inCombat)
+            and frame.mmfPlayerHovering
+            and alpha < 1 then
+            alpha = 1
+        end
         if not combatEnabled then
             StopAlphaDriver(frame)
             frame:SetAlpha(alpha)
