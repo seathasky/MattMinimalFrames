@@ -215,6 +215,10 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
     elseif event == "PLAYER_ALIVE" or event == "PLAYER_DEAD" then
         RequestUnitUpdate("player")
     end
+
+    if MMF_UpdateCombatFrameVisibility then
+        MMF_UpdateCombatFrameVisibility()
+    end
 end)
 
 local pvpRefreshElapsed = 0

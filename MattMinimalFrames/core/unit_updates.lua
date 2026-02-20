@@ -30,6 +30,13 @@ local function SafeEq(a, b)
     return ok and result or false
 end
 
+local function NotSecretValue(value)
+    if issecretvalue and issecretvalue(value) then
+        return false
+    end
+    return true
+end
+
 local function SafeIsGreater(a, b)
     local ok, result = pcall(function()
         return a > b
@@ -45,8 +52,11 @@ local function SafeIsLessOrEqual(a, b)
 end
 
 local function SafeToNumber(value, fallback)
+    if not NotSecretValue(value) then
+        return fallback
+    end
     local ok, numberValue = pcall(tonumber, value)
-    if ok and type(numberValue) == "number" then
+    if ok and type(numberValue) == "number" and NotSecretValue(numberValue) then
         return numberValue
     end
     return fallback
@@ -287,6 +297,28 @@ local function ApplyHPTextFontSize(frame, size)
         frame.hpText:SetFont(fontPath, rounded, "OUTLINE")
     end
     frame.mmfAppliedHPFontSize = rounded
+end
+
+local function ApplyPowerTextFontSize(frame, scale)
+    if not frame or not frame.powerText then return end
+    local normalizedScale = tonumber(scale) or 1
+    if normalizedScale < 0.5 then normalizedScale = 0.5 end
+    if normalizedScale > 2.0 then normalizedScale = 2.0 end
+
+    local baseSize = 13
+    local size = math.floor((baseSize * normalizedScale) + 0.5)
+    if size < 6 then size = 6 end
+    if frame.mmfAppliedPowerFontSize == size then
+        return
+    end
+
+    local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or cfg.FONT_PATH
+    if MMF_SetFontSafe then
+        MMF_SetFontSafe(frame.powerText, fontPath, size, "OUTLINE")
+    else
+        frame.powerText:SetFont(fontPath, size, "OUTLINE")
+    end
+    frame.mmfAppliedPowerFontSize = size
 end
 
 local function GetNameTextWidthNoWrap(nameText)
@@ -628,8 +660,19 @@ local function UpdateUnitFrame(frame)
             end
         end
 
-        local maxPower = useManaPowerType and UnitPowerMax(unit, 0) or UnitPowerMax(unit)
-        local power = useManaPowerType and UnitPower(unit, 0) or UnitPower(unit)
+        local maxPower, power
+        if useManaPowerType then
+            maxPower = UnitPowerMax(unit, 0)
+            power = UnitPower(unit, 0)
+        else
+            if powerType ~= nil then
+                maxPower = UnitPowerMax(unit, powerType)
+                power = UnitPower(unit, powerType)
+            else
+                maxPower = UnitPowerMax(unit)
+                power = UnitPower(unit)
+            end
+        end
         local hasPower = false
         pcall(function()
             hasPower = (maxPower and maxPower > 0) and true or false
@@ -660,7 +703,29 @@ local function UpdateUnitFrame(frame)
             frame.powerBarBG:Show()
             frame.powerBar:Show()
 
-            if frame.powerText then frame.powerText:Hide() end
+            if frame.powerText then
+                local showPowerText = false
+                if unit == "player" then
+                    showPowerText = (db.showPlayerPowerBar ~= false) and IsCheckedFlag(db.showPlayerPowerText)
+                else
+                    showPowerText = (db.showTargetPowerBar ~= false) and IsCheckedFlag(db.showTargetPowerText)
+                end
+
+                if showPowerText then
+                    local display = SafeFormatValue(power, false)
+                    local textScale = db.powerTextScale or 1.0
+                    if unit == "player" then
+                        textScale = db.playerPowerTextScale or textScale
+                    elseif unit == "target" then
+                        textScale = db.targetPowerTextScale or textScale
+                    end
+                    ApplyPowerTextFontSize(frame, textScale)
+                    frame.powerText:SetText(display)
+                    frame.powerText:Show()
+                else
+                    frame.powerText:Hide()
+                end
+            end
         else
             if frame.powerBarBorder then frame.powerBarBorder:Hide() end
             frame.powerBarBG:Hide()
@@ -685,11 +750,10 @@ function MMF_UpdateAll(elapsed)
     end
 end
 
-function MMF_SetPowerBarSize(width, height)
+function MMF_SetPowerBarSize(width, height, unit)
     if not width or not height then return end
 
-    local frames = { MMF_PlayerFrame, MMF_TargetFrame }
-    for _, frame in ipairs(frames) do
+    local function ApplySize(frame)
         if frame and frame.powerBarFrame then
             frame.powerBarFrame:SetSize(width + 2, height + 2)
             frame.powerBarBG:SetWidth(width)
@@ -700,9 +764,31 @@ function MMF_SetPowerBarSize(width, height)
         end
     end
 
+    if unit == "player" then
+        ApplySize(MMF_PlayerFrame)
+    elseif unit == "target" then
+        ApplySize(MMF_TargetFrame)
+    else
+        ApplySize(MMF_PlayerFrame)
+        ApplySize(MMF_TargetFrame)
+    end
+
     if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
-    MattMinimalFramesDB.powerBarWidth = width
-    MattMinimalFramesDB.powerBarHeight = height
+    if unit == "player" then
+        MattMinimalFramesDB.playerPowerBarWidth = width
+        MattMinimalFramesDB.playerPowerBarHeight = height
+    elseif unit == "target" then
+        MattMinimalFramesDB.targetPowerBarWidth = width
+        MattMinimalFramesDB.targetPowerBarHeight = height
+    else
+        MattMinimalFramesDB.playerPowerBarWidth = width
+        MattMinimalFramesDB.playerPowerBarHeight = height
+        MattMinimalFramesDB.targetPowerBarWidth = width
+        MattMinimalFramesDB.targetPowerBarHeight = height
+        -- Keep legacy keys in sync for backward compatibility.
+        MattMinimalFramesDB.powerBarWidth = width
+        MattMinimalFramesDB.powerBarHeight = height
+    end
 end
 
 function MMF_SetPowerBarOffset(verticalOffset, horizontalOffset)
@@ -731,11 +817,9 @@ end
 function MMF_UpdatePowerBarVisibility()
     if MMF_PlayerFrame and MMF_PlayerFrame.powerBarFrame then
         MMF_PlayerFrame.powerBarFrame:SetShown(MattMinimalFramesDB.showPlayerPowerBar ~= false)
-        MMF_PlayerFrame.powerText:SetShown(MattMinimalFramesDB.showPlayerPowerBar ~= false)
     end
 
     if MMF_TargetFrame and MMF_TargetFrame.powerBarFrame then
         MMF_TargetFrame.powerBarFrame:SetShown(MattMinimalFramesDB.showTargetPowerBar ~= false)
-        MMF_TargetFrame.powerText:SetShown(MattMinimalFramesDB.showTargetPowerBar ~= false)
     end
 end

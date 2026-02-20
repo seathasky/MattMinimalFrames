@@ -3,8 +3,9 @@ function MMF_CreatePopupFooter(popup, popupWidth, accentColor, footerHeight)
     local height = footerHeight or 40
     -- Footer
     local footer = CreateFrame("Frame", nil, popup)
-    footer:SetSize(popupWidth, height)
-    footer:SetPoint("BOTTOM", 0, 0)
+    footer:SetPoint("BOTTOMLEFT", popup, "BOTTOMLEFT", 0, 0)
+    footer:SetPoint("BOTTOMRIGHT", popup, "BOTTOMRIGHT", 0, 0)
+    footer:SetHeight(height)
     
     local footerBg = footer:CreateTexture(nil, "BACKGROUND")
     footerBg:SetAllPoints()
@@ -47,7 +48,7 @@ function MMF_CreatePopupFooter(popup, popupWidth, accentColor, footerHeight)
     -- Current class display (bottom-right)
     local classInfo = CreateFrame("Frame", nil, footer)
     classInfo:SetSize(138, 24)
-    classInfo:SetPoint("RIGHT", -12, 0)
+    classInfo:SetPoint("RIGHT", -34, 0)
 
     local classIcon = classInfo:CreateTexture(nil, "ARTWORK")
     classIcon:SetSize(24, 24)
@@ -75,5 +76,7 @@ function MMF_CreatePopupFooter(popup, popupWidth, accentColor, footerHeight)
     else
         classNameText:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     end
+
+    return footer
 
 end

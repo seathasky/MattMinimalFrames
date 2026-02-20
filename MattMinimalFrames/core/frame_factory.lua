@@ -470,8 +470,18 @@ local function CreatePowerBarContainer(frame, unit)
 end
 
 local function SetupPowerBar(frame, unit)
-    local DEFAULT_WIDTH = MattMinimalFramesDB.powerBarWidth or cfg.POWER_BAR_WIDTH
-    local DEFAULT_HEIGHT = MattMinimalFramesDB.powerBarHeight or cfg.POWER_BAR_HEIGHT
+    local DEFAULT_WIDTH = cfg.POWER_BAR_WIDTH
+    local DEFAULT_HEIGHT = cfg.POWER_BAR_HEIGHT
+    if unit == "player" then
+        DEFAULT_WIDTH = (MattMinimalFramesDB and (MattMinimalFramesDB.playerPowerBarWidth or MattMinimalFramesDB.powerBarWidth)) or DEFAULT_WIDTH
+        DEFAULT_HEIGHT = (MattMinimalFramesDB and (MattMinimalFramesDB.playerPowerBarHeight or MattMinimalFramesDB.powerBarHeight)) or DEFAULT_HEIGHT
+    elseif unit == "target" then
+        DEFAULT_WIDTH = (MattMinimalFramesDB and (MattMinimalFramesDB.targetPowerBarWidth or MattMinimalFramesDB.powerBarWidth)) or DEFAULT_WIDTH
+        DEFAULT_HEIGHT = (MattMinimalFramesDB and (MattMinimalFramesDB.targetPowerBarHeight or MattMinimalFramesDB.powerBarHeight)) or DEFAULT_HEIGHT
+    else
+        DEFAULT_WIDTH = (MattMinimalFramesDB and MattMinimalFramesDB.powerBarWidth) or DEFAULT_WIDTH
+        DEFAULT_HEIGHT = (MattMinimalFramesDB and MattMinimalFramesDB.powerBarHeight) or DEFAULT_HEIGHT
+    end
     local DEFAULT_V_OFFSET = cfg.POWER_BAR_VERTICAL_OFFSET
     local DEFAULT_H_OFFSET = cfg.POWER_BAR_HORIZONTAL_OFFSET
 
@@ -657,10 +667,18 @@ local function CreateResourceText(frame, unit)
     
     if unit == "player" then
         frame.hpText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0 + hpX, -14.5 + hpY)
-        frame.powerText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+        if frame.powerBarFrame then
+            frame.powerText:SetPoint("TOP", frame.powerBarFrame, "BOTTOM", 0, -2)
+        else
+            frame.powerText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+        end
     elseif unit == "target" then
         frame.hpText:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 2 + hpX, -14.5 + hpY)
-        frame.powerText:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0)
+        if frame.powerBarFrame then
+            frame.powerText:SetPoint("TOP", frame.powerBarFrame, "BOTTOM", 0, -2)
+        else
+            frame.powerText:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0)
+        end
     elseif unit == "targettarget" or unit == "pet" then
         frame.hpText:SetPoint("BOTTOM", frame, "BOTTOM", 0 + hpX, 0 + hpY)
         frame.powerText:SetPoint("BOTTOM", frame, "BOTTOM", 0, 0)
@@ -1147,8 +1165,16 @@ MMF_CreateSecureUnitFrame = function(...)
     local frame = originalCreate(...)
     
     if frame.powerBarFrame then
-        frame.powerBarFrame:SetShown(MattMinimalFramesDB and MattMinimalFramesDB.showPowerBars)
-        frame.powerText:SetShown(MattMinimalFramesDB and MattMinimalFramesDB.showPowerBars)
+        local showPowerBar = true
+        if frame.unit == "player" then
+            showPowerBar = not (MattMinimalFramesDB and MattMinimalFramesDB.showPlayerPowerBar == false)
+        elseif frame.unit == "target" then
+            showPowerBar = (MattMinimalFramesDB and MattMinimalFramesDB.showTargetPowerBar ~= false)
+        end
+        frame.powerBarFrame:SetShown(showPowerBar)
+        if frame.powerText then
+            frame.powerText:Hide()
+        end
     end
     
     return frame

@@ -18,12 +18,18 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local UpdatePlayerIconModeButtonText = function() end
     local RefreshPredictionVisuals
     local LEFT_COL_X = 12
-    local DIVIDER_X = 300
+    local DIVIDER_ONE_X = 300
+    local DIVIDER_TWO_X = 600
     local LEFT_COL_WIDTH = 276
     local LEFT_LABEL_WIDTH = 74
     local LEFT_BUTTON_OFFSET = 78
     local LEFT_BUTTON_WIDTH = LEFT_COL_WIDTH - LEFT_BUTTON_OFFSET
-    local RIGHT_COL_X = DIVIDER_X + 12
+    local MIDDLE_COL_X = DIVIDER_ONE_X + 12
+    local MIDDLE_COL_WIDTH = 276
+    local MIDDLE_LABEL_WIDTH = 95
+    local MIDDLE_BUTTON_OFFSET = 104
+    local MIDDLE_BUTTON_WIDTH = MIDDLE_COL_WIDTH - MIDDLE_BUTTON_OFFSET
+    local RIGHT_COL_X = DIVIDER_TWO_X + 12
     local RIGHT_COL_WIDTH = 276
     local RIGHT_LABEL_WIDTH = 95
     local RIGHT_BUTTON_OFFSET = 104
@@ -34,6 +40,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local ICON_RESET_BUTTON_GAP = 8
     local ICON_RESET_BUTTON_WIDTH = math.floor((RIGHT_COL_WIDTH - ICON_RESET_BUTTON_GAP) / 2)
     local RIGHT_COL_Y_OFFSET = 24
+    local RIGHT_STACK_Y_OFFSET = RIGHT_COL_Y_OFFSET + 252
     local LEFT_LOWER_Y_OFFSET = -24
 
     local function NormalizeSelectionValue(value, fallback)
@@ -56,11 +63,17 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     unitFramesTitle:SetText("UNIT FRAMES")
 
     -- Right-side style column for unit frame texture selection
-    local unitFramesSplit = unitFramesCol:CreateTexture(nil, "ARTWORK")
-    unitFramesSplit:SetPoint("TOPLEFT", DIVIDER_X, -36)
-    unitFramesSplit:SetPoint("BOTTOMLEFT", DIVIDER_X, 12)
-    unitFramesSplit:SetWidth(1)
-    unitFramesSplit:SetColorTexture(0.42, 0.42, 0.46, 1)
+    local unitFramesSplitOne = unitFramesCol:CreateTexture(nil, "ARTWORK")
+    unitFramesSplitOne:SetPoint("TOPLEFT", DIVIDER_ONE_X, -12)
+    unitFramesSplitOne:SetPoint("BOTTOMLEFT", DIVIDER_ONE_X, 12)
+    unitFramesSplitOne:SetWidth(1)
+    unitFramesSplitOne:SetColorTexture(0.42, 0.42, 0.46, 1)
+
+    local unitFramesSplitTwo = unitFramesCol:CreateTexture(nil, "ARTWORK")
+    unitFramesSplitTwo:SetPoint("TOPLEFT", DIVIDER_TWO_X, -12)
+    unitFramesSplitTwo:SetPoint("BOTTOMLEFT", DIVIDER_TWO_X, 12)
+    unitFramesSplitTwo:SetWidth(1)
+    unitFramesSplitTwo:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     local textOffsetsTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     textOffsetsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
@@ -208,13 +221,13 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local textFormatTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     textFormatTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    textFormatTitle:SetPoint("TOPLEFT", RIGHT_COL_X, -36 + RIGHT_COL_Y_OFFSET)
+    textFormatTitle:SetPoint("TOPLEFT", MIDDLE_COL_X, -36 + RIGHT_COL_Y_OFFSET)
     textFormatTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     textFormatTitle:SetText("TEXT FORMAT")
 
     local textFormatSubtext = unitFramesCol:CreateFontString(nil, "OVERLAY")
     textFormatSubtext:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    textFormatSubtext:SetPoint("TOPLEFT", RIGHT_COL_X, -56 + RIGHT_COL_Y_OFFSET)
+    textFormatSubtext:SetPoint("TOPLEFT", MIDDLE_COL_X, -56 + RIGHT_COL_Y_OFFSET)
     textFormatSubtext:SetTextColor(0.65, 0.65, 0.7)
     textFormatSubtext:SetText("HP text format options")
 
@@ -226,34 +239,34 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         MattMinimalFramesDB.hpTextUseShortValue = true
     end
 
-    CreateMinimalCheckbox(unitFramesCol, "HP Text: % | Value", RIGHT_COL_X, -76 + RIGHT_COL_Y_OFFSET, "showHPPercentText", true, function()
+    CreateMinimalCheckbox(unitFramesCol, "HP Text: % | Value", MIDDLE_COL_X, -76 + RIGHT_COL_Y_OFFSET, "showHPPercentText", true, function()
         RefreshPredictionVisuals()
     end)
 
-    CreateMinimalCheckbox(unitFramesCol, "HP Text: Short Value (K/M)", RIGHT_COL_X, -100 + RIGHT_COL_Y_OFFSET, "hpTextUseShortValue", true, function()
+    CreateMinimalCheckbox(unitFramesCol, "HP Text: Short Value (K/M)", MIDDLE_COL_X, -100 + RIGHT_COL_Y_OFFSET, "hpTextUseShortValue", true, function()
         RefreshPredictionVisuals()
     end)
 
     local textFormatCastDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
-    textFormatCastDivider:SetSize(RIGHT_COL_WIDTH, 1)
-    textFormatCastDivider:SetPoint("TOPLEFT", RIGHT_COL_X, -128 + RIGHT_COL_Y_OFFSET)
+    textFormatCastDivider:SetSize(MIDDLE_COL_WIDTH, 1)
+    textFormatCastDivider:SetPoint("TOPLEFT", MIDDLE_COL_X, -128 + RIGHT_COL_Y_OFFSET)
     textFormatCastDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     local castBarsTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     castBarsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    castBarsTitle:SetPoint("TOPLEFT", RIGHT_COL_X, -140 + RIGHT_COL_Y_OFFSET)
+    castBarsTitle:SetPoint("TOPLEFT", MIDDLE_COL_X, -140 + RIGHT_COL_Y_OFFSET)
     castBarsTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     castBarsTitle:SetText("CAST BARS")
 
-    local playerCastBarCheck = CreateMinimalCheckbox(unitFramesCol, "Player Cast Bar", RIGHT_COL_X, -164 + RIGHT_COL_Y_OFFSET, "showPlayerCastBar", true, function()
+    local playerCastBarCheck = CreateMinimalCheckbox(unitFramesCol, "Player Cast Bar", MIDDLE_COL_X, -164 + RIGHT_COL_Y_OFFSET, "showPlayerCastBar", true, function()
         StaticPopup_Show("MMF_RELOADUI")
     end)
 
-    local targetCastBarCheck = CreateMinimalCheckbox(unitFramesCol, "Target Cast Bar", RIGHT_COL_X, -188 + RIGHT_COL_Y_OFFSET, "showTargetCastBar", true, function()
+    local targetCastBarCheck = CreateMinimalCheckbox(unitFramesCol, "Target Cast Bar", MIDDLE_COL_X, -188 + RIGHT_COL_Y_OFFSET, "showTargetCastBar", true, function()
         StaticPopup_Show("MMF_RELOADUI")
     end)
 
-    local hideBlizzardCastBarCheck = CreateMinimalCheckbox(unitFramesCol, "Hide Blizzard Cast Bar", RIGHT_COL_X, -212 + RIGHT_COL_Y_OFFSET, "hideBlizzardPlayerCastBar", false, function()
+    local hideBlizzardCastBarCheck = CreateMinimalCheckbox(unitFramesCol, "Hide Blizzard Cast Bar", MIDDLE_COL_X, -212 + RIGHT_COL_Y_OFFSET, "hideBlizzardPlayerCastBar", false, function()
         if MMF_UpdateBlizzardPlayerCastBarVisibility then
             MMF_UpdateBlizzardPlayerCastBarVisibility()
         end
@@ -262,12 +275,12 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local castBarColorDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
-        x = RIGHT_COL_X,
+        x = MIDDLE_COL_X,
         y = -236 + RIGHT_COL_Y_OFFSET,
-        width = RIGHT_COL_WIDTH,
-        labelWidth = RIGHT_LABEL_WIDTH,
-        buttonOffset = RIGHT_BUTTON_OFFSET,
-        buttonWidth = RIGHT_BUTTON_WIDTH,
+        width = MIDDLE_COL_WIDTH,
+        labelWidth = MIDDLE_LABEL_WIDTH,
+        buttonOffset = MIDDLE_BUTTON_OFFSET,
+        buttonWidth = MIDDLE_BUTTON_WIDTH,
         visibleRows = #MMF_Config.CAST_BAR_COLORS,
         label = "Cast Bar Color",
         options = MMF_Config.CAST_BAR_COLORS,
@@ -283,19 +296,125 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     castBarColorList = castBarColorDropdown.list
 
     local castStyleDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
-    castStyleDivider:SetSize(RIGHT_COL_WIDTH, 1)
-    castStyleDivider:SetPoint("TOPLEFT", RIGHT_COL_X, -276 + RIGHT_COL_Y_OFFSET)
+    castStyleDivider:SetSize(MIDDLE_COL_WIDTH, 1)
+    castStyleDivider:SetPoint("TOPLEFT", MIDDLE_COL_X, -276 + RIGHT_COL_Y_OFFSET)
     castStyleDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
+
+    if MattMinimalFramesDB.enableCombatFrameVisibility == nil then
+        MattMinimalFramesDB.enableCombatFrameVisibility = false
+    end
+    if MattMinimalFramesDB.showPlayerOnTargetSelected == nil then
+        MattMinimalFramesDB.showPlayerOnTargetSelected = false
+    end
+    if MattMinimalFramesDB.outOfCombatTargetOpacity == nil then
+        MattMinimalFramesDB.outOfCombatTargetOpacity = 0.35
+    end
+    if MattMinimalFramesDB.combatVisibilityFadeTime == nil then
+        MattMinimalFramesDB.combatVisibilityFadeTime = 0.4
+    end
+    if MMF_GetOutOfCombatTargetOpacity then
+        MattMinimalFramesDB.outOfCombatTargetOpacity = MMF_GetOutOfCombatTargetOpacity()
+    end
+    if MMF_GetCombatVisibilityFadeTime then
+        MattMinimalFramesDB.combatVisibilityFadeTime = MMF_GetCombatVisibilityFadeTime()
+    end
+
+    local combatVisibilityTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    combatVisibilityTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
+    combatVisibilityTitle:SetPoint("TOPLEFT", MIDDLE_COL_X, -288 + RIGHT_COL_Y_OFFSET)
+    combatVisibilityTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    combatVisibilityTitle:SetText("COMBAT VISIBILITY")
+
+    local combatVisibilitySubtext = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    combatVisibilitySubtext:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+    combatVisibilitySubtext:SetPoint("TOPLEFT", MIDDLE_COL_X, -308 + RIGHT_COL_Y_OFFSET)
+    combatVisibilitySubtext:SetTextColor(0.65, 0.65, 0.7)
+    combatVisibilitySubtext:SetText("OOC visibility options")
+
+    local combatVisibilityWarning = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    combatVisibilityWarning:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+    combatVisibilityWarning:SetPoint("TOPLEFT", MIDDLE_COL_X, -320 + RIGHT_COL_Y_OFFSET)
+    combatVisibilityWarning:SetTextColor(0.95, 0.25, 0.25)
+    combatVisibilityWarning:SetText("Range Check Disabled")
+    combatVisibilityWarning:SetShown(MattMinimalFramesDB.enableCombatFrameVisibility == true)
+
+    local targetOpacitySlider
+    local fadeTimeSlider
+    local showPlayerOnTargetCheck
+    local function SetSliderEnabled(container, enabled)
+        if not container then return end
+        container:SetAlpha(enabled and 1 or 0.45)
+        if container.slider then
+            container.slider:SetEnabled(enabled)
+            container.slider:EnableMouse(enabled)
+        end
+        if container.valueText then
+            container.valueText:SetEnabled(enabled)
+            container.valueText:EnableMouse(enabled)
+        end
+    end
+
+    local function SetCheckboxEnabled(container, enabled)
+        if not container then return end
+        container:SetAlpha(enabled and 1 or 0.45)
+        if container.checkbox then
+            container.checkbox:SetEnabled(enabled)
+            container.checkbox:EnableMouse(enabled)
+        end
+    end
+
+    CreateMinimalCheckbox(unitFramesCol, "Hide Player OOC", MIDDLE_COL_X, -346 + RIGHT_COL_Y_OFFSET, "enableCombatFrameVisibility", false, function()
+        local combatVisibilityEnabled = MattMinimalFramesDB.enableCombatFrameVisibility == true
+        if targetOpacitySlider then
+            SetSliderEnabled(targetOpacitySlider, combatVisibilityEnabled)
+        end
+        if fadeTimeSlider then
+            SetSliderEnabled(fadeTimeSlider, combatVisibilityEnabled)
+        end
+        if showPlayerOnTargetCheck then
+            SetCheckboxEnabled(showPlayerOnTargetCheck, combatVisibilityEnabled)
+        end
+        if combatVisibilityWarning then
+            combatVisibilityWarning:SetShown(combatVisibilityEnabled)
+        end
+        if MMF_UpdateCombatFrameVisibility then
+            MMF_UpdateCombatFrameVisibility()
+        end
+    end)
+
+    showPlayerOnTargetCheck = CreateMinimalCheckbox(unitFramesCol, "Show Player on Target Select", MIDDLE_COL_X, -370 + RIGHT_COL_Y_OFFSET, "showPlayerOnTargetSelected", false, function()
+        if MMF_UpdateCombatFrameVisibility then
+            MMF_UpdateCombatFrameVisibility()
+        end
+    end)
+
+    targetOpacitySlider = CreateMinimalSlider(unitFramesCol, "Target/TOT OOC Opacity", MIDDLE_COL_X, -394 + RIGHT_COL_Y_OFFSET, MIDDLE_COL_WIDTH, "outOfCombatTargetOpacity", 0.0, 1.0, 0.05, 0.35, function(value)
+        MattMinimalFramesDB.outOfCombatTargetOpacity = value
+        if MMF_UpdateCombatFrameVisibility then
+            MMF_UpdateCombatFrameVisibility()
+        end
+    end, false)
+
+    fadeTimeSlider = CreateMinimalSlider(unitFramesCol, "Fade Time", MIDDLE_COL_X, -418 + RIGHT_COL_Y_OFFSET, MIDDLE_COL_WIDTH, "combatVisibilityFadeTime", 0.0, 2.0, 0.05, 0.4, function(value)
+        MattMinimalFramesDB.combatVisibilityFadeTime = value
+        if MMF_UpdateCombatFrameVisibility then
+            MMF_UpdateCombatFrameVisibility()
+        end
+    end, false)
+
+    SetSliderEnabled(targetOpacitySlider, MattMinimalFramesDB.enableCombatFrameVisibility == true)
+    SetSliderEnabled(fadeTimeSlider, MattMinimalFramesDB.enableCombatFrameVisibility == true)
+    SetCheckboxEnabled(showPlayerOnTargetCheck, MattMinimalFramesDB.enableCombatFrameVisibility == true)
 
     local styleTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     styleTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    styleTitle:SetPoint("TOPLEFT", RIGHT_COL_X, -288 + RIGHT_COL_Y_OFFSET)
+    styleTitle:SetPoint("TOPLEFT", RIGHT_COL_X, -288 + RIGHT_STACK_Y_OFFSET)
     styleTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     styleTitle:SetText("STYLE")
 
     local styleSubtext = unitFramesCol:CreateFontString(nil, "OVERLAY")
     styleSubtext:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    styleSubtext:SetPoint("TOPLEFT", RIGHT_COL_X, -308 + RIGHT_COL_Y_OFFSET)
+    styleSubtext:SetPoint("TOPLEFT", RIGHT_COL_X, -308 + RIGHT_STACK_Y_OFFSET)
     styleSubtext:SetTextColor(0.65, 0.65, 0.7)
     styleSubtext:SetText("SharedMedia unit frame textures and fonts")
 
@@ -303,7 +422,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local texturePreviewBG = CreateFrame("Frame", nil, unitFramesCol, "BackdropTemplate")
     texturePreviewBG:SetSize(RIGHT_STYLE_BUTTON_WIDTH, 16)
-    texturePreviewBG:SetPoint("TOPLEFT", RIGHT_COL_X + RIGHT_STYLE_BUTTON_OFFSET, -366 + RIGHT_COL_Y_OFFSET)
+    texturePreviewBG:SetPoint("TOPLEFT", RIGHT_COL_X + RIGHT_STYLE_BUTTON_OFFSET, -366 + RIGHT_STACK_Y_OFFSET)
     texturePreviewBG:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -362,7 +481,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     unitTextureDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = RIGHT_COL_X,
-        y = -332 + RIGHT_COL_Y_OFFSET,
+        y = -332 + RIGHT_STACK_Y_OFFSET,
         width = RIGHT_COL_WIDTH,
         labelWidth = RIGHT_STYLE_LABEL_WIDTH,
         buttonOffset = RIGHT_STYLE_BUTTON_OFFSET,
@@ -413,7 +532,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     unitFontDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = RIGHT_COL_X,
-        y = -402 + RIGHT_COL_Y_OFFSET,
+        y = -402 + RIGHT_STACK_Y_OFFSET,
         width = RIGHT_COL_WIDTH,
         labelWidth = RIGHT_STYLE_LABEL_WIDTH,
         buttonOffset = RIGHT_STYLE_BUTTON_OFFSET,
@@ -448,12 +567,12 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local styleDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     styleDivider:SetSize(RIGHT_COL_WIDTH, 1)
-    styleDivider:SetPoint("TOPLEFT", RIGHT_COL_X, -430 + RIGHT_COL_Y_OFFSET)
+    styleDivider:SetPoint("TOPLEFT", RIGHT_COL_X, -430 + RIGHT_STACK_Y_OFFSET)
     styleDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     local frameOptionsTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     frameOptionsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    frameOptionsTitle:SetPoint("TOPLEFT", RIGHT_COL_X, -442 + RIGHT_COL_Y_OFFSET)
+    frameOptionsTitle:SetPoint("TOPLEFT", RIGHT_COL_X, -442 + RIGHT_STACK_Y_OFFSET)
     frameOptionsTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     frameOptionsTitle:SetText("FRAME OPTIONS")
 
@@ -542,7 +661,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local playerIconModeDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = RIGHT_COL_X,
-        y = -458 + RIGHT_COL_Y_OFFSET,
+        y = -458 + RIGHT_STACK_Y_OFFSET,
         width = RIGHT_COL_WIDTH,
         labelWidth = RIGHT_LABEL_WIDTH,
         buttonOffset = RIGHT_BUTTON_OFFSET,
@@ -599,7 +718,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local targetIconModeDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = RIGHT_COL_X,
-        y = -482 + RIGHT_COL_Y_OFFSET,
+        y = -482 + RIGHT_STACK_Y_OFFSET,
         width = RIGHT_COL_WIDTH,
         labelWidth = RIGHT_LABEL_WIDTH,
         buttonOffset = RIGHT_BUTTON_OFFSET,
@@ -668,42 +787,42 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     MattMinimalFramesDB.playerFrameIconScale = NormalizeIconScale(MattMinimalFramesDB.playerFrameIconScale)
     MattMinimalFramesDB.targetFrameIconScale = NormalizeIconScale(MattMinimalFramesDB.targetFrameIconScale)
 
-    local playerIconXSlider = CreateMinimalSlider(unitFramesCol, "Player Icon X", RIGHT_COL_X, -506 + RIGHT_COL_Y_OFFSET, RIGHT_COL_WIDTH, "playerFrameIconXOffset", -200, 200, 1, 0, function(value)
+    local playerIconXSlider = CreateMinimalSlider(unitFramesCol, "Player Icon X", RIGHT_COL_X, -506 + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "playerFrameIconXOffset", -200, 200, 1, 0, function(value)
         MattMinimalFramesDB.playerFrameIconXOffset = NormalizeIconOffset(value)
         if MMF_UpdateFrameIconPlacement then
             MMF_UpdateFrameIconPlacement("player")
         end
     end, true)
 
-    local playerIconYSlider = CreateMinimalSlider(unitFramesCol, "Player Icon Y", RIGHT_COL_X, -530 + RIGHT_COL_Y_OFFSET, RIGHT_COL_WIDTH, "playerFrameIconYOffset", -200, 200, 1, 0, function(value)
+    local playerIconYSlider = CreateMinimalSlider(unitFramesCol, "Player Icon Y", RIGHT_COL_X, -530 + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "playerFrameIconYOffset", -200, 200, 1, 0, function(value)
         MattMinimalFramesDB.playerFrameIconYOffset = NormalizeIconOffset(value)
         if MMF_UpdateFrameIconPlacement then
             MMF_UpdateFrameIconPlacement("player")
         end
     end, true)
 
-    local targetIconXSlider = CreateMinimalSlider(unitFramesCol, "Target Icon X", RIGHT_COL_X, -554 + RIGHT_COL_Y_OFFSET, RIGHT_COL_WIDTH, "targetFrameIconXOffset", -200, 200, 1, 0, function(value)
+    local targetIconXSlider = CreateMinimalSlider(unitFramesCol, "Target Icon X", RIGHT_COL_X, -554 + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "targetFrameIconXOffset", -200, 200, 1, 0, function(value)
         MattMinimalFramesDB.targetFrameIconXOffset = NormalizeIconOffset(value)
         if MMF_UpdateFrameIconPlacement then
             MMF_UpdateFrameIconPlacement("target")
         end
     end, true)
 
-    local targetIconYSlider = CreateMinimalSlider(unitFramesCol, "Target Icon Y", RIGHT_COL_X, -578 + RIGHT_COL_Y_OFFSET, RIGHT_COL_WIDTH, "targetFrameIconYOffset", -200, 200, 1, 0, function(value)
+    local targetIconYSlider = CreateMinimalSlider(unitFramesCol, "Target Icon Y", RIGHT_COL_X, -578 + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "targetFrameIconYOffset", -200, 200, 1, 0, function(value)
         MattMinimalFramesDB.targetFrameIconYOffset = NormalizeIconOffset(value)
         if MMF_UpdateFrameIconPlacement then
             MMF_UpdateFrameIconPlacement("target")
         end
     end, true)
 
-    local playerIconScaleSlider = CreateMinimalSlider(unitFramesCol, "Player Icon Size", RIGHT_COL_X, -602 + RIGHT_COL_Y_OFFSET, RIGHT_COL_WIDTH, "playerFrameIconScale", 0.5, 3.0, 0.05, 1.0, function(value)
+    local playerIconScaleSlider = CreateMinimalSlider(unitFramesCol, "Player Icon Size", RIGHT_COL_X, -602 + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "playerFrameIconScale", 0.5, 3.0, 0.05, 1.0, function(value)
         MattMinimalFramesDB.playerFrameIconScale = NormalizeIconScale(value)
         if MMF_UpdateFrameIconPlacement then
             MMF_UpdateFrameIconPlacement("player")
         end
     end, false)
 
-    local targetIconScaleSlider = CreateMinimalSlider(unitFramesCol, "Target Icon Size", RIGHT_COL_X, -626 + RIGHT_COL_Y_OFFSET, RIGHT_COL_WIDTH, "targetFrameIconScale", 0.5, 3.0, 0.05, 1.0, function(value)
+    local targetIconScaleSlider = CreateMinimalSlider(unitFramesCol, "Target Icon Size", RIGHT_COL_X, -626 + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "targetFrameIconScale", 0.5, 3.0, 0.05, 1.0, function(value)
         MattMinimalFramesDB.targetFrameIconScale = NormalizeIconScale(value)
         if MMF_UpdateFrameIconPlacement then
             MMF_UpdateFrameIconPlacement("target")
@@ -742,7 +861,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         return button
     end
 
-    CreateIconResetButton("Reset Player Icon", RIGHT_COL_X, -650 + RIGHT_COL_Y_OFFSET, function()
+    CreateIconResetButton("Reset Player Icon", RIGHT_COL_X, -650 + RIGHT_STACK_Y_OFFSET, function()
         MattMinimalFramesDB.playerFrameIconXOffset = 0
         MattMinimalFramesDB.playerFrameIconYOffset = 0
         MattMinimalFramesDB.playerFrameIconScale = 1.0
@@ -754,7 +873,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         end
     end)
 
-    CreateIconResetButton("Reset Target Icon", RIGHT_COL_X + ICON_RESET_BUTTON_WIDTH + ICON_RESET_BUTTON_GAP, -650 + RIGHT_COL_Y_OFFSET, function()
+    CreateIconResetButton("Reset Target Icon", RIGHT_COL_X + ICON_RESET_BUTTON_WIDTH + ICON_RESET_BUTTON_GAP, -650 + RIGHT_STACK_Y_OFFSET, function()
         MattMinimalFramesDB.targetFrameIconXOffset = 0
         MattMinimalFramesDB.targetFrameIconYOffset = 0
         MattMinimalFramesDB.targetFrameIconScale = 1.0
@@ -766,7 +885,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         end
     end)
 
-    local targetMarkersCheck = CreateMinimalCheckbox(unitFramesCol, "Target Markers", RIGHT_COL_X, -678 + RIGHT_COL_Y_OFFSET, "showTargetMarkers", false, function(checked)
+    local targetMarkersCheck = CreateMinimalCheckbox(unitFramesCol, "Target Markers", RIGHT_COL_X, -678 + RIGHT_STACK_Y_OFFSET, "showTargetMarkers", false, function(checked)
         if MMF_UpdateTargetMarkerVisibility then
             MMF_UpdateTargetMarkerVisibility(checked)
         end
@@ -797,17 +916,17 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     end
 
     local frameOptionsDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
-    frameOptionsDivider:SetSize(LEFT_COL_WIDTH, 1)
-    frameOptionsDivider:SetPoint("TOPLEFT", LEFT_COL_X, -596 + LEFT_LOWER_Y_OFFSET)
+    frameOptionsDivider:SetSize(RIGHT_COL_WIDTH, 1)
+    frameOptionsDivider:SetPoint("TOPLEFT", RIGHT_COL_X, -706 + RIGHT_STACK_Y_OFFSET)
     frameOptionsDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     local healOverlaysTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     healOverlaysTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    healOverlaysTitle:SetPoint("TOPLEFT", LEFT_COL_X, -608 + LEFT_LOWER_Y_OFFSET)
+    healOverlaysTitle:SetPoint("TOPLEFT", RIGHT_COL_X, -718 + RIGHT_STACK_Y_OFFSET)
     healOverlaysTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     healOverlaysTitle:SetText("HEAL OVERLAYS")
 
-    local healPredictionCheck = CreateMinimalCheckbox(unitFramesCol, "Heal Prediction", LEFT_COL_X, -632 + LEFT_LOWER_Y_OFFSET, "showHealPrediction", true, function()
+    local healPredictionCheck = CreateMinimalCheckbox(unitFramesCol, "Heal Prediction", RIGHT_COL_X, -742 + RIGHT_STACK_Y_OFFSET, "showHealPrediction", true, function()
         RefreshPredictionVisuals()
     end)
 
@@ -908,7 +1027,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         52
     )
 
-    local absorbBarCheck = CreateMinimalCheckbox(unitFramesCol, "Absorb Bar", LEFT_COL_X, -656 + LEFT_LOWER_Y_OFFSET, "showAbsorbBar", true, function()
+    local absorbBarCheck = CreateMinimalCheckbox(unitFramesCol, "Absorb Bar", RIGHT_COL_X, -766 + RIGHT_STACK_Y_OFFSET, "showAbsorbBar", true, function()
         RefreshPredictionVisuals()
     end)
     CreateHintIcon(

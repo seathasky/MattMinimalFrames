@@ -143,22 +143,108 @@ end
 
 local function UpdateFrameRange(frame, unit)
     if not frame then return end
+    if frame.mmfOOCFadeOutActive then
+        return
+    end
+
+    local baseAlpha = 1
+    if MMF_GetCombatVisibilityBaseAlphaForUnit then
+        baseAlpha = MMF_GetCombatVisibilityBaseAlphaForUnit(unit)
+    end
+
+    local useCombatVisibilityFade = (unit == "target" or unit == "targettarget")
+        and MMF_IsCombatFrameVisibilityEnabled
+        and MMF_IsCombatFrameVisibilityEnabled() == true
+
+    local fadeDuration = 0.2
+    if useCombatVisibilityFade and MMF_GetCombatVisibilityFadeTime then
+        fadeDuration = MMF_GetCombatVisibilityFadeTime()
+    end
+
+    local inCombat = InCombatLockdown and NormalizeBooleanResult(SafeCall(InCombatLockdown)) == true
 
     if NormalizeBooleanResult(SafeCall(UnitExists, unit)) ~= true then
-        frame:SetAlpha(1)
+        if useCombatVisibilityFade and MMF_SetAlphaSmooth then
+            if inCombat and baseAlpha >= 1 then
+                if MMF_StopAlphaDriver then
+                    MMF_StopAlphaDriver(frame)
+                end
+                frame:SetAlpha(baseAlpha)
+            else
+                MMF_SetAlphaSmooth(frame, baseAlpha, fadeDuration)
+            end
+        else
+            frame:SetAlpha(baseAlpha)
+        end
+        return
+    end
+
+    -- When combat visibility is enabled for target/TOT, let that system
+    -- fully control alpha behavior so it matches player-style fades.
+    if useCombatVisibilityFade then
+        local targetAlpha = baseAlpha
+        local currentAlpha = frame:GetAlpha()
+
+        if currentAlpha == targetAlpha then
+            return
+        end
+
+        if inCombat and targetAlpha >= 1 then
+            if MMF_StopAlphaDriver then
+                MMF_StopAlphaDriver(frame)
+            end
+            frame:SetAlpha(targetAlpha)
+            frame.fadeInfo = nil
+            if frame.fadeTimer then
+                frame.fadeTimer:SetScript("OnUpdate", nil)
+            end
+            return
+        end
+
+        if MMF_SetAlphaSmooth then
+            MMF_SetAlphaSmooth(frame, targetAlpha, fadeDuration)
+            return
+        end
+
+        frame:SetAlpha(targetAlpha)
         return
     end
 
     local inRange = IsUnitInRange(unit)
-    local targetAlpha = inRange and 1 or 0.5
+    local rangeAlpha = inRange and 1 or 0.5
+    local targetAlpha = baseAlpha * rangeAlpha
     local currentAlpha = frame:GetAlpha()
 
     if currentAlpha ~= targetAlpha then
+        -- Match combat visibility behavior: reveal instantly on combat entry.
+        if useCombatVisibilityFade and inCombat and targetAlpha >= 1 then
+            if MMF_StopAlphaDriver then
+                MMF_StopAlphaDriver(frame)
+            end
+            frame:SetAlpha(targetAlpha)
+            frame.fadeInfo = nil
+            if frame.fadeTimer then
+                frame.fadeTimer:SetScript("OnUpdate", nil)
+            end
+            return
+        end
+
+        if useCombatVisibilityFade and MMF_SetAlphaSmooth then
+            MMF_SetAlphaSmooth(frame, targetAlpha, fadeDuration)
+            return
+        end
+
+        if frame.fadeInfo
+            and math.abs((frame.fadeInfo.targetAlpha or 0) - targetAlpha) < 0.001
+            and math.abs((frame.fadeInfo.duration or 0) - fadeDuration) < 0.001 then
+            return
+        end
+
         frame.fadeInfo = frame.fadeInfo or {}
         frame.fadeInfo.startAlpha = currentAlpha
         frame.fadeInfo.targetAlpha = targetAlpha
         frame.fadeInfo.startTime = GetTime()
-        frame.fadeInfo.duration = 0.2
+        frame.fadeInfo.duration = fadeDuration
 
         if not frame.fadeTimer then
             frame.fadeTimer = CreateFrame("Frame")
@@ -187,7 +273,15 @@ end
 
 local function ResetFrameAlpha(frame)
     if frame then
-        frame:SetAlpha(1)
+        if frame.mmfOOCFadeOutActive then
+            return
+        end
+        local unit = frame.unit
+        local baseAlpha = 1
+        if MMF_GetCombatVisibilityBaseAlphaForUnit and unit then
+            baseAlpha = MMF_GetCombatVisibilityBaseAlphaForUnit(unit)
+        end
+        frame:SetAlpha(baseAlpha)
         frame.fadeInfo = nil
         if frame.fadeTimer then
             frame.fadeTimer:SetScript("OnUpdate", nil)

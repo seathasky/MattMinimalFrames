@@ -9,10 +9,15 @@ MMF_POPUP_LAYOUT = {
     CONTENT_TOP_OFFSET = -4,
     PAGE_GAP = 4,
     DEFAULT_CENTER_Y = 50,
-    WIDTH_TBC = 600,
-    WIDTH_RETAIL = 620,
-    HEIGHT_TBC = 820,
-    HEIGHT_RETAIL = 824,
+    WIDTH_TBC = 914,
+    WIDTH_RETAIL = 934,
+    HEIGHT_TBC = 750,
+    HEIGHT_RETAIL = 750,
+    PAGE_CONTENT_HEIGHT_UNIT_FRAMES = 880,
+    PAGE_CONTENT_HEIGHT_AURAS_POWER = 760,
+    PAGE_CONTENT_HEIGHT_CURRENT_CLASS = 640,
+    PAGE_CONTENT_HEIGHT_PROFILES = 640,
+    PAGE_CONTENT_HEIGHT_TOOLS = 640,
 }
 
 function MMF_GetPopupLayout()
@@ -29,6 +34,11 @@ function MMF_GetPopupLayout()
         centerY = layout.DEFAULT_CENTER_Y or 50,
         width = isTBC and (layout.WIDTH_TBC or 600) or (layout.WIDTH_RETAIL or 620),
         height = isTBC and (layout.HEIGHT_TBC or 820) or (layout.HEIGHT_RETAIL or 824),
+        unitFramesContentHeight = layout.PAGE_CONTENT_HEIGHT_UNIT_FRAMES or 980,
+        aurasPowerContentHeight = layout.PAGE_CONTENT_HEIGHT_AURAS_POWER or 980,
+        currentClassContentHeight = layout.PAGE_CONTENT_HEIGHT_CURRENT_CLASS or 760,
+        profilesContentHeight = layout.PAGE_CONTENT_HEIGHT_PROFILES or 760,
+        toolsContentHeight = layout.PAGE_CONTENT_HEIGHT_TOOLS or 760,
     }
 end
 

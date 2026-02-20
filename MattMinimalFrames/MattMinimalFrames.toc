@@ -1,7 +1,7 @@
 ## Interface: 120000
 ## Title: Matt's Minimal Frames
 ## Author: Seathasky
-## Version: 5.1.6
+## Version: 5.1.7
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
 ## SavedVariables: MattMinimalFramesDB, MattMinimalFramesProfilesDB
 
@@ -24,6 +24,7 @@ core/unit_updates.lua
 core/combat_queue.lua
 core/update_dispatcher.lua
 core/auras.lua
+core/frame_visibility.lua
 core/events.lua
 core/frames.lua
 core/popup/popup_constants.lua

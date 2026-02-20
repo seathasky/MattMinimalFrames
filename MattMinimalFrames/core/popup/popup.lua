@@ -1,8 +1,8 @@
 local Compat = _G.MMF_Compat
 
 local POPUP_LAYOUT = (MMF_GetPopupLayout and MMF_GetPopupLayout()) or {
-    width = Compat.IsTBC and 600 or 620,
-    height = Compat.IsTBC and 820 or 824,
+    width = Compat.IsTBC and 914 or 934,
+    height = Compat.IsTBC and 750 or 750,
     titleHeight = 28,
     footerHeight = 32,
     tabHeight = 24,
@@ -11,6 +11,11 @@ local POPUP_LAYOUT = (MMF_GetPopupLayout and MMF_GetPopupLayout()) or {
     contentTopOffset = -4,
     pageGap = 4,
     centerY = 50,
+    unitFramesContentHeight = 880,
+    aurasPowerContentHeight = 760,
+    currentClassContentHeight = 640,
+    profilesContentHeight = 640,
+    toolsContentHeight = 640,
 }
 
 local CreateMinimalCheckbox = MMF_CreateMinimalCheckbox
@@ -47,7 +52,74 @@ function MMF_ShowWelcomePopup(forceShow)
     local popup = CreateFrame("Frame", "MMF_WelcomePopup", UIParent, "BackdropTemplate")
     local popupHeight = POPUP_LAYOUT.height
     local popupWidth = POPUP_LAYOUT.width
+    local MIN_POPUP_WIDTH = POPUP_LAYOUT.width
+    local chromeHeight = (POPUP_LAYOUT.titleHeight or 28)
+        + (POPUP_LAYOUT.footerHeight or 32)
+        - (POPUP_LAYOUT.contentTopOffset or -4)
+        + (POPUP_LAYOUT.tabHeight or 24)
+        + (POPUP_LAYOUT.pageGap or 4)
+    local MIN_POPUP_HEIGHT = chromeHeight + 8
+    local MAX_POPUP_HEIGHT = (POPUP_LAYOUT.unitFramesContentHeight or 980) + chromeHeight
+    if MattMinimalFramesDB and type(MattMinimalFramesDB.popupSize) == "table" then
+        local h = tonumber(MattMinimalFramesDB.popupSize.height)
+        if h and h > (MIN_POPUP_HEIGHT - 40) then popupHeight = h end
+    end
+    popupWidth = MIN_POPUP_WIDTH
+    if popupHeight < MIN_POPUP_HEIGHT then
+        popupHeight = MIN_POPUP_HEIGHT
+    end
+    if popupHeight > MAX_POPUP_HEIGHT then
+        popupHeight = MAX_POPUP_HEIGHT
+    end
     popup:SetSize(popupWidth, popupHeight)
+
+    local function PersistPopupSize()
+        if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
+        MattMinimalFramesDB.popupSize = {
+            width = math.floor((popup:GetWidth() or POPUP_LAYOUT.width) + 0.5),
+            height = math.floor((popup:GetHeight() or POPUP_LAYOUT.height) + 0.5),
+        }
+    end
+    local function PersistPopupPosition()
+        local left = popup:GetLeft()
+        local top = popup:GetTop()
+        if left and top then
+            if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
+            MattMinimalFramesDB.popupPosition = { left = left, top = top }
+        end
+    end
+    local function ClampPopupHorizontal(self)
+        if not self or not UIParent then return end
+        local left = self:GetLeft()
+        local right = self:GetRight()
+        local top = self:GetTop()
+        if not left or not right or not top then return end
+
+        local parentLeft = UIParent:GetLeft() or 0
+        local parentRight = UIParent:GetRight()
+        if not parentRight then
+            local parentWidth = UIParent.GetWidth and UIParent:GetWidth() or 0
+            parentRight = parentLeft + parentWidth
+        end
+
+        local width = right - left
+        local clampedLeft = left
+        if width >= (parentRight - parentLeft) then
+            clampedLeft = parentLeft
+        else
+            if left < parentLeft then
+                clampedLeft = parentLeft
+            end
+            if right > parentRight then
+                clampedLeft = parentRight - width
+            end
+        end
+
+        if math.abs(clampedLeft - left) > 0.5 then
+            self:ClearAllPoints()
+            self:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", clampedLeft, top)
+        end
+    end
     
     -- Apply saved GUI scale
     local guiScale = (MMF_ClampGUIScale and MMF_ClampGUIScale(MattMinimalFramesDB.guiScale)) or 1.0
@@ -61,6 +133,7 @@ function MMF_ShowWelcomePopup(forceShow)
     else
         popup:SetPoint("CENTER", UIParent, "CENTER", 0, POPUP_LAYOUT.centerY)
     end
+    ClampPopupHorizontal(popup)
     
     popup:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
@@ -70,17 +143,25 @@ function MMF_ShowWelcomePopup(forceShow)
     popup:SetBackdropColor(0.04, 0.04, 0.05, 0.98)
     popup:SetBackdropBorderColor(0.1, 0.1, 0.12, 1)
     popup:SetMovable(true)
+    local canSystemResize = (type(popup.SetResizable) == "function")
+        and (type(popup.StartSizing) == "function")
+        and (type(popup.StopMovingOrSizing) == "function")
+    if canSystemResize then
+        popup:SetResizable(true)
+        if type(popup.SetMinResize) == "function" then
+            popup:SetMinResize(MIN_POPUP_WIDTH, MIN_POPUP_HEIGHT)
+        end
+        if type(popup.SetMaxResize) == "function" then
+            popup:SetMaxResize(MIN_POPUP_WIDTH, MAX_POPUP_HEIGHT)
+        end
+    end
     popup:EnableMouse(true)
     popup:RegisterForDrag("LeftButton")
     popup:SetScript("OnDragStart", popup.StartMoving)
     popup:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
-        local left = self:GetLeft()
-        local top = self:GetTop()
-        if left and top then
-            if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
-            MattMinimalFramesDB.popupPosition = { left = left, top = top }
-        end
+        ClampPopupHorizontal(self)
+        PersistPopupPosition()
     end)
     popup:SetFrameStrata("DIALOG")
 
@@ -232,10 +313,40 @@ function MMF_ShowWelcomePopup(forceShow)
     pageContainer:SetPoint("BOTTOMRIGHT", 0, 0)
     pageContainer:SetClipsChildren(true)
 
-    local function CreatePageFrame(parent)
+    local SCROLLBAR_WIDTH = 12
+    local SCROLLBAR_GAP = 4
+
+    local pageScrollFrame = CreateFrame("ScrollFrame", nil, pageContainer)
+    pageScrollFrame:SetPoint("TOPLEFT", 0, 0)
+    pageScrollFrame:SetPoint("BOTTOMRIGHT", -(SCROLLBAR_WIDTH + SCROLLBAR_GAP), 0)
+    pageScrollFrame:EnableMouseWheel(true)
+    pageScrollFrame:SetClipsChildren(true)
+
+    local sharedScrollBar = CreateFrame("Slider", nil, pageContainer, "BackdropTemplate")
+    sharedScrollBar:SetPoint("TOPRIGHT", 0, -2)
+    sharedScrollBar:SetPoint("BOTTOMRIGHT", 0, 2)
+    sharedScrollBar:SetWidth(SCROLLBAR_WIDTH)
+    sharedScrollBar:SetOrientation("VERTICAL")
+    sharedScrollBar:SetMinMaxValues(0, 0)
+    sharedScrollBar:SetValueStep(1)
+    sharedScrollBar:SetObeyStepOnDrag(true)
+    sharedScrollBar:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    sharedScrollBar:SetBackdropColor(0.03, 0.03, 0.04, 1)
+    sharedScrollBar:SetBackdropBorderColor(0.15, 0.15, 0.18, 1)
+    local sharedThumb = sharedScrollBar:CreateTexture(nil, "OVERLAY")
+    sharedThumb:SetSize(8, 24)
+    sharedThumb:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 1)
+    sharedScrollBar:SetThumbTexture(sharedThumb)
+
+    local function CreatePageFrame(parent, contentHeight)
         local page = CreateFrame("Frame", nil, parent, "BackdropTemplate")
         page:SetPoint("TOPLEFT", 0, 0)
-        page:SetPoint("BOTTOMRIGHT", 0, 0)
+        page:SetWidth(10)
+        page:SetHeight(contentHeight or 760)
         page:SetClipsChildren(true)
         page:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8x8",
@@ -247,11 +358,11 @@ function MMF_ShowWelcomePopup(forceShow)
         return page
     end
 
-    local leftCol = CreatePageFrame(pageContainer)
-    local unitFramesCol = CreatePageFrame(pageContainer)
-    local middleCol = CreatePageFrame(pageContainer)
-    local rightCol = CreatePageFrame(pageContainer)
-    local profilesCol = CreatePageFrame(pageContainer)
+    local leftCol = CreatePageFrame(pageScrollFrame, POPUP_LAYOUT.aurasPowerContentHeight)
+    local unitFramesCol = CreatePageFrame(pageScrollFrame, POPUP_LAYOUT.unitFramesContentHeight)
+    local middleCol = CreatePageFrame(pageScrollFrame, POPUP_LAYOUT.currentClassContentHeight)
+    local rightCol = CreatePageFrame(pageScrollFrame, POPUP_LAYOUT.toolsContentHeight)
+    local profilesCol = CreatePageFrame(pageScrollFrame, POPUP_LAYOUT.profilesContentHeight)
 
     local castBarColorList
     local unitTextureList
@@ -304,6 +415,60 @@ function MMF_ShowWelcomePopup(forceShow)
         rightCol,
         profilesCol,
     }
+    local activePage
+    local function ApplyPageWidths(explicitWidth)
+        local w = explicitWidth or pageScrollFrame:GetWidth() or 1
+        w = math.max(1, w)
+        for _, page in ipairs(allPages) do
+            page:SetWidth(w)
+        end
+    end
+
+    local function UpdateSharedScrollBounds()
+        local page = activePage
+        if not page then
+            sharedScrollBar:SetMinMaxValues(0, 0)
+            sharedScrollBar:SetValue(0)
+            pageScrollFrame:SetVerticalScroll(0)
+            return
+        end
+
+        local viewHeight = pageScrollFrame:GetHeight() or 0
+        local contentHeight = page:GetHeight() or 0
+        local maxScroll = math.max(0, contentHeight - viewHeight)
+        local current = sharedScrollBar:GetValue() or 0
+        if current > maxScroll then
+            current = maxScroll
+        end
+
+        sharedScrollBar:SetMinMaxValues(0, maxScroll)
+        sharedScrollBar:SetValue(current)
+        sharedScrollBar:SetEnabled(maxScroll > 0)
+        sharedScrollBar:SetAlpha(maxScroll > 0 and 1 or 0.45)
+        pageScrollFrame:SetVerticalScroll(current)
+    end
+
+    sharedScrollBar:SetScript("OnValueChanged", function(self, value)
+        pageScrollFrame:SetVerticalScroll(value or 0)
+    end)
+
+    pageScrollFrame:SetScript("OnMouseWheel", function(_, delta)
+        local minScroll, maxScroll = sharedScrollBar:GetMinMaxValues()
+        local current = sharedScrollBar:GetValue() or 0
+        local step = 32
+        if delta > 0 then
+            current = math.max(minScroll, current - step)
+        else
+            current = math.min(maxScroll, current + step)
+        end
+        sharedScrollBar:SetValue(current)
+    end)
+
+    pageScrollFrame:SetScript("OnSizeChanged", function(_, width)
+        ApplyPageWidths(width)
+        UpdateSharedScrollBounds()
+    end)
+    ApplyPageWidths()
     local tabPages
     local tabDefs
     if Compat.IsTBC then
@@ -336,6 +501,29 @@ function MMF_ShowWelcomePopup(forceShow)
         }
     end
 
+    local function LayoutTabButtons()
+        local tabCount = #tabDefs
+        local tabSpacing = POPUP_LAYOUT.tabSpacing
+        local tabContentWidth = popup:GetWidth() - (POPUP_LAYOUT.contentSidePadding * 2) - (SCROLLBAR_WIDTH + SCROLLBAR_GAP)
+        local totalGapWidth = (tabCount - 1) * tabSpacing
+        local usableTabWidth = tabContentWidth - totalGapWidth
+        local baseTabWidth = math.floor(usableTabWidth / tabCount)
+        local extraPixels = usableTabWidth - (baseTabWidth * tabCount)
+        local tabX = 0
+
+        for i, tabButton in ipairs(tabButtons) do
+            local thisTabWidth = baseTabWidth
+            if extraPixels > 0 then
+                thisTabWidth = thisTabWidth + 1
+                extraPixels = extraPixels - 1
+            end
+            tabButton:SetSize(thisTabWidth, POPUP_LAYOUT.tabHeight)
+            tabButton:ClearAllPoints()
+            tabButton:SetPoint("TOPLEFT", tabX, 0)
+            tabX = tabX + thisTabWidth + tabSpacing
+        end
+    end
+
     local function SetTabButtonState(tabButton, isActive)
         tabButton.isActive = isActive
         if isActive then
@@ -354,9 +542,13 @@ function MMF_ShowWelcomePopup(forceShow)
             page:Hide()
         end
 
-        local activePage = tabPages[tabIndex]
+        activePage = tabPages[tabIndex]
         if activePage then
             activePage:Show()
+            pageScrollFrame:SetScrollChild(activePage)
+            sharedScrollBar:SetValue(0)
+            pageScrollFrame:SetVerticalScroll(0)
+            UpdateSharedScrollBounds()
         end
 
         for i, tabButton in ipairs(tabButtons) do
@@ -370,25 +562,10 @@ function MMF_ShowWelcomePopup(forceShow)
         MattMinimalFramesDB.popupActiveTab = tabIndex
     end
 
-    local tabCount = #tabDefs
-    local tabSpacing = POPUP_LAYOUT.tabSpacing
-    local tabContentWidth = popupWidth - (POPUP_LAYOUT.contentSidePadding * 2)
-    local totalGapWidth = (tabCount - 1) * tabSpacing
-    local usableTabWidth = tabContentWidth - totalGapWidth
-    local baseTabWidth = math.floor(usableTabWidth / tabCount)
-    local extraPixels = usableTabWidth - (baseTabWidth * tabCount)
-    local tabX = 0
-
     for i, def in ipairs(tabDefs) do
         local tabButton = CreateFrame("Button", nil, tabBar, "BackdropTemplate")
-        local thisTabWidth = baseTabWidth
-        if extraPixels > 0 then
-            thisTabWidth = thisTabWidth + 1
-            extraPixels = extraPixels - 1
-        end
-        tabButton:SetSize(thisTabWidth, POPUP_LAYOUT.tabHeight)
-        tabButton:SetPoint("TOPLEFT", tabX, 0)
-        tabX = tabX + thisTabWidth + tabSpacing
+        tabButton:SetSize(1, POPUP_LAYOUT.tabHeight)
+        tabButton:SetPoint("TOPLEFT", 0, 0)
         tabButton:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8x8",
             edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -422,6 +599,7 @@ function MMF_ShowWelcomePopup(forceShow)
 
         tabButtons[i] = tabButton
     end
+    LayoutTabButtons()
 
     ---------------------------------------------------
     local unitFramesState = MMF_CreateUnitFramesSection(unitFramesCol, popup, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider, GetCurrentPlayerIconModeValue, GetCurrentTargetIconModeValue)
@@ -477,9 +655,91 @@ function MMF_ShowWelcomePopup(forceShow)
     end
     SetActiveTab(defaultTab)
 
-    MMF_CreatePopupFooter(popup, popupWidth, ACCENT_COLOR, POPUP_LAYOUT.footerHeight)
+    local footer = MMF_CreatePopupFooter(popup, popupWidth, ACCENT_COLOR, POPUP_LAYOUT.footerHeight)
+
+    local resizeGrip = CreateFrame("Button", nil, popup)
+    resizeGrip:SetSize(18, 18)
+    resizeGrip:SetPoint("BOTTOMRIGHT", popup, "BOTTOMRIGHT", -2, 2)
+    resizeGrip:SetFrameStrata("DIALOG")
+    local gripTex = resizeGrip:CreateTexture(nil, "OVERLAY")
+    gripTex:SetAllPoints()
+    gripTex:SetTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+    gripTex:SetVertexColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.9)
+    resizeGrip:SetNormalTexture(gripTex)
+    resizeGrip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Highlight")
+    resizeGrip:SetPushedTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+
+    resizeGrip:SetScript("OnMouseDown", function()
+        if type(GetCursorPosition) ~= "function" then
+            return
+        end
+        popup.mmfResizing = true
+        popup.mmfResizeStartH = popup:GetHeight() or POPUP_LAYOUT.height
+        local _, startY = GetCursorPosition()
+        popup.mmfResizeStartY = startY
+        popup:SetScript("OnUpdate", function(self)
+            if not self.mmfResizing or type(GetCursorPosition) ~= "function" then
+                return
+            end
+            local _, cy = GetCursorPosition()
+            local scale = self:GetEffectiveScale() or 1
+            local dy = ((self.mmfResizeStartY or cy) - cy) / scale
+            -- Ignore tiny cursor jitter so click without drag does nothing.
+            if math.abs(dy) < 1 then
+                return
+            end
+            local newH = math.max(MIN_POPUP_HEIGHT, math.min(MAX_POPUP_HEIGHT, (self.mmfResizeStartH or POPUP_LAYOUT.height) + dy))
+            self:SetSize(MIN_POPUP_WIDTH, newH)
+        end)
+    end)
+
+    resizeGrip:SetScript("OnMouseUp", function()
+        popup.mmfResizing = false
+        popup:SetScript("OnUpdate", nil)
+        ClampPopupHorizontal(popup)
+        PersistPopupPosition()
+        if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
+        MattMinimalFramesDB.popupSize = {
+            width = math.floor((popup:GetWidth() or POPUP_LAYOUT.width) + 0.5),
+            height = math.floor((popup:GetHeight() or POPUP_LAYOUT.height) + 0.5),
+        }
+        LayoutTabButtons()
+        UpdateSharedScrollBounds()
+    end)
+
+    popup:SetScript("OnSizeChanged", function(self, width, height)
+        if math.abs((self:GetWidth() or 0) - MIN_POPUP_WIDTH) > 0.5 then
+            self:SetWidth(MIN_POPUP_WIDTH)
+            width = MIN_POPUP_WIDTH
+        end
+        local currentHeight = self:GetHeight() or height or POPUP_LAYOUT.height
+        if currentHeight < MIN_POPUP_HEIGHT then
+            self:SetHeight(MIN_POPUP_HEIGHT)
+            currentHeight = MIN_POPUP_HEIGHT
+        elseif currentHeight > MAX_POPUP_HEIGHT then
+            self:SetHeight(MAX_POPUP_HEIGHT)
+            currentHeight = MAX_POPUP_HEIGHT
+        end
+        height = currentHeight
+        ClampPopupHorizontal(self)
+        if titleBar then
+            titleBar:SetWidth(width or self:GetWidth())
+        end
+        if footer then
+            footer:SetWidth(width or self:GetWidth())
+        end
+        LayoutTabButtons()
+        UpdateSharedScrollBounds()
+        PersistPopupSize()
+    end)
 
     popup:Show()
+    C_Timer.After(0, function()
+        if not popup or not popup:IsShown() then return end
+        ApplyPageWidths()
+        LayoutTabButtons()
+        UpdateSharedScrollBounds()
+    end)
     if MMF_ApplyGlobalFont then
         MMF_ApplyGlobalFont()
     end

@@ -105,6 +105,8 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
         MattMinimalFramesDB.nameTruncationLength = d.nameTruncationLength
         MattMinimalFramesDB.nameTextXOffset = d.nameTextXOffset
         MattMinimalFramesDB.nameTextYOffset = d.nameTextYOffset
+        MattMinimalFramesDB.nameTextScaleX = d.nameTextScaleX or 1.0
+        MattMinimalFramesDB.nameTextScaleY = d.nameTextScaleY or 1.0
         MattMinimalFramesDB.playerNameTextXOffset = d.playerNameTextXOffset
         MattMinimalFramesDB.playerNameTextYOffset = d.playerNameTextYOffset
         MattMinimalFramesDB.targetNameTextXOffset = d.targetNameTextXOffset
@@ -123,13 +125,30 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
         MattMinimalFramesDB.focusHPTextSize = d.hpTextSize
         MattMinimalFramesDB.hpTextXOffset = d.hpTextXOffset
         MattMinimalFramesDB.hpTextYOffset = d.hpTextYOffset
+        MattMinimalFramesDB.hpTextScaleX = d.hpTextScaleX or 1.0
+        MattMinimalFramesDB.hpTextScaleY = d.hpTextScaleY or 1.0
         MattMinimalFramesDB.playerHPTextXOffset = d.playerHPTextXOffset
         MattMinimalFramesDB.playerHPTextYOffset = d.playerHPTextYOffset
         MattMinimalFramesDB.targetHPTextXOffset = d.targetHPTextXOffset
         MattMinimalFramesDB.targetHPTextYOffset = d.targetHPTextYOffset
         -- Power bar size
+        MattMinimalFramesDB.showPlayerPowerBar = d.showPlayerPowerBar
+        MattMinimalFramesDB.showTargetPowerBar = d.showTargetPowerBar
+        MattMinimalFramesDB.showPlayerPowerText = d.showPlayerPowerText
+        MattMinimalFramesDB.showTargetPowerText = d.showTargetPowerText
         MattMinimalFramesDB.powerBarWidth = d.powerBarWidth
         MattMinimalFramesDB.powerBarHeight = d.powerBarHeight
+        MattMinimalFramesDB.powerTextScale = d.powerTextScale or 1.0
+        MattMinimalFramesDB.playerPowerTextScale = d.playerPowerTextScale or d.powerTextScale or 1.0
+        MattMinimalFramesDB.targetPowerTextScale = d.targetPowerTextScale or d.powerTextScale or 1.0
+        MattMinimalFramesDB.playerPowerBarWidth = d.playerPowerBarWidth or d.powerBarWidth
+        MattMinimalFramesDB.playerPowerBarHeight = d.playerPowerBarHeight or d.powerBarHeight
+        MattMinimalFramesDB.targetPowerBarWidth = d.targetPowerBarWidth or d.powerBarWidth
+        MattMinimalFramesDB.targetPowerBarHeight = d.targetPowerBarHeight or d.powerBarHeight
+        MattMinimalFramesDB.powerBarVerticalOffset = d.powerBarVerticalOffset or -24
+        MattMinimalFramesDB.powerBarHorizontalOffset = d.powerBarHorizontalOffset or 4
+        MattMinimalFramesDB.powerBarPositions = nil
+        MattMinimalFramesDB.powerBarSizeUnit = "player"
         -- Class resource bars (legacy scales + new layout keys)
         MattMinimalFramesDB.runeBarScale = d.runeBarScale
         MattMinimalFramesDB.holyPowerBarScale = d.holyPowerBarScale
@@ -184,6 +203,12 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
         MattMinimalFramesDB.focusFrameScaleY = d.focusFrameScaleY
         MattMinimalFramesDB.petFrameScaleX = d.petFrameScaleX
         MattMinimalFramesDB.petFrameScaleY = d.petFrameScaleY
+        MattMinimalFramesDB.playerFrameIconScale = d.playerFrameIconScale or 1.0
+        MattMinimalFramesDB.targetFrameIconScale = d.targetFrameIconScale or 1.0
+        MattMinimalFramesDB.popupSize = {
+            width = (MMF_GetPopupLayout and MMF_GetPopupLayout().width) or 920,
+            height = (MMF_GetPopupLayout and MMF_GetPopupLayout().height) or 748,
+        }
         StaticPopup_Show("MMF_RELOADUI")
     end
 

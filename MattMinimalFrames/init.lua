@@ -173,7 +173,12 @@ function MMF_ApplyActiveProfileLive()
     ApplyPowerBarPositions()
 
     if MMF_SetPowerBarSize then
-        MMF_SetPowerBarSize(MattMinimalFramesDB.powerBarWidth or 73, MattMinimalFramesDB.powerBarHeight or 5)
+        local playerPowerW = MattMinimalFramesDB.playerPowerBarWidth or MattMinimalFramesDB.powerBarWidth or 73
+        local playerPowerH = MattMinimalFramesDB.playerPowerBarHeight or MattMinimalFramesDB.powerBarHeight or 5
+        local targetPowerW = MattMinimalFramesDB.targetPowerBarWidth or MattMinimalFramesDB.powerBarWidth or 73
+        local targetPowerH = MattMinimalFramesDB.targetPowerBarHeight or MattMinimalFramesDB.powerBarHeight or 5
+        MMF_SetPowerBarSize(playerPowerW, playerPowerH, "player")
+        MMF_SetPowerBarSize(targetPowerW, targetPowerH, "target")
     end
     if MMF_UpdatePowerBarVisibility then MMF_UpdatePowerBarVisibility() end
 
@@ -202,6 +207,9 @@ function MMF_ApplyActiveProfileLive()
     end
     if MMF_UpdateTargetMarkerVisibility then
         MMF_UpdateTargetMarkerVisibility(MattMinimalFramesDB.showTargetMarkers == true)
+    end
+    if MMF_UpdateCombatFrameVisibility then
+        MMF_UpdateCombatFrameVisibility()
     end
     if MMF_UpdateBlizzardPlayerCastBarVisibility then
         MMF_UpdateBlizzardPlayerCastBarVisibility()
@@ -267,6 +275,9 @@ local function Initialize()
     HideBlizzardFrames()
     UpdateBlizzardPlayerCastBarVisibility()
     MMF_CreateAllMinimalFrames()
+    if MMF_UpdateCombatFrameVisibility then
+        MMF_UpdateCombatFrameVisibility()
+    end
     MMF_ApplyAllFrameScales()
     MMF_InitializeClassResources()
     MMF_ApplyStatusBarTexture()
