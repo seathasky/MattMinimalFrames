@@ -1,7 +1,7 @@
 ## Interface: 120000
 ## Title: Matt's Minimal Frames
 ## Author: Seathasky
-## Version: 5.1.8
+## Version: 5.1.9
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
 ## SavedVariables: MattMinimalFramesDB, MattMinimalFramesProfilesDB
 
