@@ -10,6 +10,7 @@ local UnitName = UnitName
 local UnitPowerType = UnitPowerType
 local UnitPowerMax = UnitPowerMax
 local UnitPower = UnitPower
+local UnitPowerPercent = UnitPowerPercent
 local UnitClassBase = UnitClassBase
 local UnitGetIncomingHeals = UnitGetIncomingHeals
 local UnitGetDetailedHealPrediction = UnitGetDetailedHealPrediction
@@ -21,6 +22,26 @@ local SCALE_TO_100 = CurveConstants and CurveConstants.ScaleTo100
 
 local function IsCheckedFlag(value)
     return value == true or value == 1
+end
+
+local function ResolvePowerColor(powerType, powerToken)
+    local powerColor = nil
+    pcall(function()
+        if powerType ~= nil and PowerBarColor then
+            powerColor = PowerBarColor[powerType]
+        end
+        if (not powerColor) and powerToken and PowerBarColor then
+            powerColor = PowerBarColor[powerToken]
+        end
+    end)
+
+    if powerType == 0 or powerToken == "MANA" then
+        return 0.2, 0.7, 1
+    end
+    if powerColor then
+        return powerColor.r or 1, powerColor.g or 1, powerColor.b or 1
+    end
+    return 1, 1, 1
 end
 
 local function SafeEq(a, b)
@@ -206,6 +227,61 @@ local function GetHealthPercentText(unit, current, maximum)
     return "0%"
 end
 
+local function GetPowerPercentText(unit, current, maximum)
+    if unit and UnitPowerPercent then
+        if SCALE_TO_100 then
+            local okCurve, percentText = pcall(function()
+                return string.format("%d%%", UnitPowerPercent(unit, nil, true, SCALE_TO_100))
+            end)
+            if okCurve and percentText then
+                return percentText
+            end
+        else
+            local okScaled, percentText = pcall(function()
+                local pct = UnitPowerPercent(unit, nil, true)
+                if pct == nil then
+                    pct = UnitPowerPercent(unit)
+                end
+                return string.format("%.0f%%", pct * 100)
+            end)
+            if okScaled and percentText then
+                return percentText
+            end
+        end
+    end
+
+    local currentNumber = SafeToNumber(current, nil)
+    local maximumNumber = SafeToNumber(maximum, nil)
+    if not currentNumber or not maximumNumber or maximumNumber <= 0 then
+        return "0%"
+    end
+
+    local ok, text = pcall(function()
+        local pct = math.floor(((currentNumber / maximumNumber) * 100) + 0.5)
+        if pct < 0 then pct = 0 end
+        if pct > 100 then pct = 100 end
+        return string.format("%d%%", pct)
+    end)
+    if ok and text then
+        return text
+    end
+    return "0%"
+end
+
+local function IsPowerPercentEnabledForUnit(db, unit)
+    if unit == "player" then
+        if db.showPlayerPowerPercentText ~= nil then
+            return IsCheckedFlag(db.showPlayerPowerPercentText)
+        end
+    elseif unit == "target" then
+        if db.showTargetPowerPercentText ~= nil then
+            return IsCheckedFlag(db.showTargetPowerPercentText)
+        end
+    end
+    -- Backward compatibility with older single-toggle setting.
+    return db.showPowerPercentText == true
+end
+
 local function FormatPercentAndValue(current, showPercent, useShortValue, percentText)
     local absolute = SafeFormatValue(current, useShortValue)
 
@@ -265,10 +341,12 @@ local function GetDisplayUnitName(unit, unitName)
     return truncated
 end
 
-local function ApplyNameTextFontSize(frame, size)
+local function ApplyNameTextFontSize(frame, size, minSize)
     if not frame or not frame.nameText then return end
     size = tonumber(size) or 12
-    if size < 6 then size = 6 end
+    minSize = tonumber(minSize) or 6
+    if minSize < 1 then minSize = 1 end
+    if size < minSize then size = minSize end
     local rounded = math.floor(size + 0.5)
     if frame.mmfAppliedNameFontSize == rounded then
         return
@@ -354,7 +432,7 @@ local function ApplyAutoResizeNameText(frame, unit, displayName)
     local autoEnabled = IsAutoResizeNameTextEnabled()
     local maxWidth = SafeGetNameTextMaxWidth(frame)
 
-    ApplyNameTextFontSize(frame, baseSize)
+    ApplyNameTextFontSize(frame, baseSize, 1)
 
     local hasDisplayName = false
     if displayName then
@@ -369,7 +447,7 @@ local function ApplyAutoResizeNameText(frame, unit, displayName)
         return
     end
 
-    local minSize = 6
+    local minSize = 1
     local size = math.floor(baseSize + 0.5)
     while size > minSize do
         local widthNow = GetNameTextWidthNoWrap(frame.nameText)
@@ -377,7 +455,7 @@ local function ApplyAutoResizeNameText(frame, unit, displayName)
             break
         end
         size = size - 1
-        ApplyNameTextFontSize(frame, size)
+        ApplyNameTextFontSize(frame, size, minSize)
     end
 
     local textWidth = GetNameTextWidthNoWrap(frame.nameText)
@@ -385,73 +463,24 @@ local function ApplyAutoResizeNameText(frame, unit, displayName)
         return
     end
 
-    -- Allow a little overflow before truncating in auto mode (about 5 chars worth).
-    local totalChars = SafeStringLen(displayName)
-    if totalChars and SafeIsGreater(totalChars, 0) then
-        local avgCharWidth = SafeDivide(textWidth, totalChars, 0)
-        if SafeIsGreater(avgCharWidth, 0) then
-            local overflowBudgetPx = SafeMultiply(avgCharWidth, 5, 0)
-            local allowedWidth = SafeAdd(maxWidth, overflowBudgetPx, maxWidth)
-            if SafeIsLessOrEqual(textWidth, allowedWidth) then
-                return
-            end
+    -- Auto mode should preserve the full name and only scale the font down.
+    local scale = SafeDivide(maxWidth, textWidth, 0)
+    if SafeIsGreater(scale, 0) and SafeIsGreater(1, scale) then
+        local target = math.floor((baseSize * scale) + 0.5)
+        if target < minSize then
+            target = minSize
+        end
+        if target < size then
+            size = target
+            ApplyNameTextFontSize(frame, size, minSize)
+            textWidth = GetNameTextWidthNoWrap(frame.nameText)
         end
     end
 
-    -- Prefer removing whole trailing words first.
-    local okTrimmed, trimmed = pcall(string.gsub, displayName, "%s+$", "")
-    if not okTrimmed or type(trimmed) ~= "string" then
-        return
-    end
-    local guard = 0
-    while guard < 64 do
-        local okMatch, withoutLastWord = pcall(string.match, trimmed, "^(.*)%s+[^%s]+$")
-        if not okMatch or type(withoutLastWord) ~= "string" then
-            break
-        end
-        local okWordLen, wordLen = pcall(string.len, withoutLastWord)
-        if not okWordLen or type(wordLen) ~= "number" or not SafeIsGreater(wordLen, 0) then
-            break
-        end
-        local okStrip, stripped = pcall(string.gsub, withoutLastWord, "%s+$", "")
-        if not okStrip or type(stripped) ~= "string" then
-            break
-        end
-        trimmed = stripped
-        frame.nameText:SetText(trimmed .. "...")
-        if SafeIsLessOrEqual(GetNameTextWidthNoWrap(frame.nameText), maxWidth) then
-            return
-        end
-        guard = guard + 1
-    end
-
-    -- Fallback for single long words: character trim to force fit.
-    local charCount = SafeStringLen(displayName)
-    if not charCount or not SafeIsGreater(charCount, 1) then
-        return
-    end
-    local keepChars = SafeSubtract(charCount, 1, nil)
-    if not keepChars then
-        return
-    end
-    while SafeIsGreater(keepChars, 1) do
-        local okSub, head = pcall(string.sub, displayName, 1, keepChars)
-        if not okSub or type(head) ~= "string" then
-            break
-        end
-        local okHeadLen, headLen = pcall(string.len, head)
-        if not okHeadLen or type(headLen) ~= "number" or not SafeIsGreater(headLen, 0) then
-            break
-        end
-        local okHeadTrim, headTrimmed = pcall(string.gsub, head, "%s+$", "")
-        if not okHeadTrim or type(headTrimmed) ~= "string" then
-            break
-        end
-        frame.nameText:SetText(headTrimmed .. "...")
-        if SafeIsLessOrEqual(GetNameTextWidthNoWrap(frame.nameText), maxWidth) then
-            return
-        end
-        keepChars = SafeSubtract(keepChars, 1, 0)
+    while size > minSize and SafeIsGreater(textWidth, maxWidth) do
+        size = size - 1
+        ApplyNameTextFontSize(frame, size, minSize)
+        textWidth = GetNameTextWidthNoWrap(frame.nameText)
     end
 end
 
@@ -649,7 +678,7 @@ local function UpdateUnitFrame(frame)
     end
 
     if frame.powerBar and (unit == "player" or unit == "target") then
-        local powerType = UnitPowerType(unit)
+        local powerType, powerToken = UnitPowerType(unit)
 
         local useManaPowerType = false
         if unit == "player" and IS_PLAYER_SHAMAN and Compat.HasSpecialization then
@@ -657,6 +686,7 @@ local function UpdateUnitFrame(frame)
             if SafeEq(spec, 1) or SafeEq(spec, 2) then
                 useManaPowerType = true
                 powerType = 0
+                powerToken = "MANA"
             end
         end
 
@@ -682,37 +712,41 @@ local function UpdateUnitFrame(frame)
             frame.powerBar:SetMinMaxValues(0, maxPower)
             frame.powerBar:SetValue(power)
 
-            local powerColor
-            pcall(function()
-                powerColor = PowerBarColor[powerType]
-            end)
-            local pr, pg, pb = 1, 1, 1
-            local isManaPowerType = false
-            pcall(function()
-                isManaPowerType = (powerType == 0)
-            end)
-            if isManaPowerType then
-                pr, pg, pb = 0.2, 0.7, 1
-            elseif powerColor then
-                pr, pg, pb = powerColor.r, powerColor.g, powerColor.b
+            local pr, pg, pb = ResolvePowerColor(powerType, powerToken)
+            local showPowerBar = false
+            if unit == "player" then
+                showPowerBar = (db.showPlayerPowerBar ~= false)
+            else
+                showPowerBar = (db.showTargetPowerBar ~= false)
             end
 
             frame.powerBar:SetStatusBarColor(pr, pg, pb, 1)
-
-            if frame.powerBarBorder then frame.powerBarBorder:Show() end
-            frame.powerBarBG:Show()
-            frame.powerBar:Show()
+            if showPowerBar then
+                if frame.powerBarBorder then frame.powerBarBorder:Show() end
+                frame.powerBarBG:Show()
+                frame.powerBar:Show()
+            else
+                if frame.powerBarBorder then frame.powerBarBorder:Hide() end
+                frame.powerBarBG:Hide()
+                frame.powerBar:Hide()
+            end
 
             if frame.powerText then
                 local showPowerText = false
+                local colorPowerText = false
                 if unit == "player" then
-                    showPowerText = (db.showPlayerPowerBar ~= false) and IsCheckedFlag(db.showPlayerPowerText)
+                    showPowerText = IsCheckedFlag(db.showPlayerPowerText)
+                    colorPowerText = IsCheckedFlag(db.colorPlayerPowerTextByResource)
                 else
-                    showPowerText = (db.showTargetPowerBar ~= false) and IsCheckedFlag(db.showTargetPowerText)
+                    showPowerText = IsCheckedFlag(db.showTargetPowerText)
+                    colorPowerText = IsCheckedFlag(db.colorTargetPowerTextByResource)
                 end
 
                 if showPowerText then
                     local display = SafeFormatValue(power, false)
+                    if IsPowerPercentEnabledForUnit(db, unit) then
+                        display = GetPowerPercentText(unit, power, maxPower)
+                    end
                     local textScale = db.powerTextScale or 1.0
                     if unit == "player" then
                         textScale = db.playerPowerTextScale or textScale
@@ -721,9 +755,16 @@ local function UpdateUnitFrame(frame)
                     end
                     ApplyPowerTextFontSize(frame, textScale)
                     frame.powerText:SetText(display)
+                    if colorPowerText then
+                        frame.powerText:SetTextColor(pr, pg, pb, 1)
+                    else
+                        frame.powerText:SetTextColor(1, 1, 1, 1)
+                    end
                     frame.powerText:Show()
+                    if frame.powerTextDragFrame then frame.powerTextDragFrame:Show() end
                 else
                     frame.powerText:Hide()
+                    if frame.powerTextDragFrame then frame.powerTextDragFrame:Hide() end
                 end
             end
         else
@@ -731,6 +772,7 @@ local function UpdateUnitFrame(frame)
             frame.powerBarBG:Hide()
             frame.powerBar:Hide()
             if frame.powerText then frame.powerText:Hide() end
+            if frame.powerTextDragFrame then frame.powerTextDragFrame:Hide() end
         end
     end
 end

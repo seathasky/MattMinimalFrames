@@ -11,11 +11,11 @@ local POPUP_LAYOUT = (MMF_GetPopupLayout and MMF_GetPopupLayout()) or {
     contentTopOffset = -4,
     pageGap = 4,
     centerY = 50,
-    unitFramesContentHeight = 880,
-    aurasPowerContentHeight = 760,
-    currentClassContentHeight = 640,
-    profilesContentHeight = 640,
-    toolsContentHeight = 640,
+    unitFramesContentHeight = 680,
+    aurasPowerContentHeight = 680,
+    currentClassContentHeight = 680,
+    profilesContentHeight = 680,
+    toolsContentHeight = 680,
 }
 
 local CreateMinimalCheckbox = MMF_CreateMinimalCheckbox
@@ -202,6 +202,54 @@ function MMF_ShowWelcomePopup(forceShow)
     closeX:SetScript("OnEnter", function() closeText:SetTextColor(1, 0.3, 0.3) end)
     closeX:SetScript("OnLeave", function() closeText:SetTextColor(0.5, 0.5, 0.5) end)
     closeX:SetScript("OnClick", function() popup:Hide() end)
+
+    -- Lock Frames checkbox on title bar
+    local lockFramesContainer = CreateFrame("Frame", nil, titleBar)
+    lockFramesContainer:SetSize(120, 20)
+    lockFramesContainer:SetPoint("RIGHT", closeX, "LEFT", -136, 0)
+
+    local lockFramesCheckbox = CreateFrame("CheckButton", nil, lockFramesContainer)
+    lockFramesCheckbox:SetSize(14, 14)
+    lockFramesCheckbox:SetPoint("LEFT", 0, 0)
+
+    local lockFramesBg = lockFramesCheckbox:CreateTexture(nil, "BACKGROUND")
+    lockFramesBg:SetAllPoints()
+    lockFramesBg:SetColorTexture(0.08, 0.08, 0.1, 1)
+
+    local lockFramesBorder = lockFramesCheckbox:CreateTexture(nil, "BORDER")
+    lockFramesBorder:SetPoint("TOPLEFT", -1, 1)
+    lockFramesBorder:SetPoint("BOTTOMRIGHT", 1, -1)
+    lockFramesBorder:SetColorTexture(0.25, 0.25, 0.3, 1)
+
+    local lockFramesCheck = lockFramesCheckbox:CreateTexture(nil, "ARTWORK")
+    lockFramesCheck:SetSize(8, 8)
+    lockFramesCheck:SetPoint("CENTER")
+    lockFramesCheck:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 1)
+    lockFramesCheckbox.check = lockFramesCheck
+
+    local lockFramesLabel = lockFramesContainer:CreateFontString(nil, "OVERLAY")
+    lockFramesLabel:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+    lockFramesLabel:SetPoint("LEFT", lockFramesCheckbox, "RIGHT", 6, 0)
+    lockFramesLabel:SetTextColor(0.9, 0.9, 0.9)
+    lockFramesLabel:SetText("Lock Frames")
+
+    local isLocked = MattMinimalFramesDB and MattMinimalFramesDB.locked == true
+    lockFramesCheckbox:SetChecked(isLocked)
+    lockFramesCheck:SetShown(isLocked)
+    lockFramesCheckbox:SetScript("OnClick", function(self)
+        local checked = self:GetChecked() == true
+        self.check:SetShown(checked)
+        MattMinimalFramesDB.locked = checked
+        if checked then
+            if MMF_LockFrames then
+                MMF_LockFrames()
+            end
+        else
+            if MMF_UnlockFrames then
+                MMF_UnlockFrames()
+            end
+        end
+    end)
 
     -- GUI Scale slider on title bar
     local guiScaleContainer = CreateFrame("Frame", nil, titleBar)

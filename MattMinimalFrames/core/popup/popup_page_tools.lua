@@ -131,11 +131,18 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
         MattMinimalFramesDB.playerHPTextYOffset = d.playerHPTextYOffset
         MattMinimalFramesDB.targetHPTextXOffset = d.targetHPTextXOffset
         MattMinimalFramesDB.targetHPTextYOffset = d.targetHPTextYOffset
+        MattMinimalFramesDB.showHPPercentText = d.showHPPercentText
+        MattMinimalFramesDB.hpTextUseShortValue = d.hpTextUseShortValue
         -- Power bar size
         MattMinimalFramesDB.showPlayerPowerBar = d.showPlayerPowerBar
         MattMinimalFramesDB.showTargetPowerBar = d.showTargetPowerBar
         MattMinimalFramesDB.showPlayerPowerText = d.showPlayerPowerText
         MattMinimalFramesDB.showTargetPowerText = d.showTargetPowerText
+        MattMinimalFramesDB.showPlayerPowerPercentText = d.showPlayerPowerPercentText
+        MattMinimalFramesDB.showTargetPowerPercentText = d.showTargetPowerPercentText
+        MattMinimalFramesDB.showPowerPercentText = d.showPowerPercentText
+        MattMinimalFramesDB.colorPlayerPowerTextByResource = d.colorPlayerPowerTextByResource
+        MattMinimalFramesDB.colorTargetPowerTextByResource = d.colorTargetPowerTextByResource
         MattMinimalFramesDB.powerBarWidth = d.powerBarWidth
         MattMinimalFramesDB.powerBarHeight = d.powerBarHeight
         MattMinimalFramesDB.powerTextScale = d.powerTextScale or 1.0
@@ -148,7 +155,23 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
         MattMinimalFramesDB.powerBarVerticalOffset = d.powerBarVerticalOffset or -24
         MattMinimalFramesDB.powerBarHorizontalOffset = d.powerBarHorizontalOffset or 4
         MattMinimalFramesDB.powerBarPositions = nil
+        MattMinimalFramesDB.powerTextPositions = nil
         MattMinimalFramesDB.powerBarSizeUnit = "player"
+        if MMF_UpdatePowerBarVisibility then
+            MMF_UpdatePowerBarVisibility()
+        end
+        if MMF_RequestUnitUpdate then
+            MMF_RequestUnitUpdate("player")
+            MMF_RequestUnitUpdate("target")
+        elseif MMF_GetFrameForUnit and MMF_UpdateUnitFrame then
+            local playerFrame = MMF_GetFrameForUnit("player")
+            if playerFrame then MMF_UpdateUnitFrame(playerFrame) end
+            local targetFrame = MMF_GetFrameForUnit("target")
+            if targetFrame then MMF_UpdateUnitFrame(targetFrame) end
+        end
+        if MMF_RefreshPowerTextOptionStates then
+            MMF_RefreshPowerTextOptionStates()
+        end
         -- Class resource bars (legacy scales + new layout keys)
         MattMinimalFramesDB.runeBarScale = d.runeBarScale
         MattMinimalFramesDB.holyPowerBarScale = d.holyPowerBarScale

@@ -171,6 +171,7 @@ function MMF_ApplyActiveProfileLive()
     ApplyFramePositions()
     if MMF_ApplyAllFrameScales then MMF_ApplyAllFrameScales() end
     ApplyPowerBarPositions()
+    if MMF_ApplyPowerTextPositions then MMF_ApplyPowerTextPositions() end
 
     if MMF_SetPowerBarSize then
         local playerPowerW = MattMinimalFramesDB.playerPowerBarWidth or MattMinimalFramesDB.powerBarWidth or 73

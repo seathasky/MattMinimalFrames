@@ -369,7 +369,8 @@ end
 
 local function CreateDragHandlers(frame, frameName)
     frame:SetScript("OnDragStart", function(self)
-        if not InCombatLockdown() and IsShiftKeyDown() and self:IsMovable() then
+        local isLocked = MattMinimalFramesDB and MattMinimalFramesDB.locked
+        if not isLocked and not InCombatLockdown() and IsShiftKeyDown() and self:IsMovable() then
             self:StartMoving()
         end
     end)
@@ -387,7 +388,8 @@ local function CreateDragHandlers(frame, frameName)
     frame.moveOverlay:Hide()
 
     frame:HookScript("OnEnter", function(self)
-        if not InCombatLockdown() and IsShiftKeyDown() then
+        local isLocked = MattMinimalFramesDB and MattMinimalFramesDB.locked
+        if not isLocked and not InCombatLockdown() and IsShiftKeyDown() then
             self.moveOverlay:Show()
         end
     end)
@@ -497,7 +499,8 @@ local function SetupPowerBar(frame, unit)
     end
 
     frame.powerBarFrame:SetScript("OnDragStart", function(self)
-        if not InCombatLockdown() and IsShiftKeyDown() then
+        local isLocked = MattMinimalFramesDB and MattMinimalFramesDB.locked
+        if not isLocked and not InCombatLockdown() and IsShiftKeyDown() then
             self:StartMoving()
         end
     end)
@@ -545,6 +548,45 @@ local function SetupPowerBar(frame, unit)
         frame.powerBarFrame:ClearAllPoints()
         frame.powerBarFrame:SetPoint("CENTER", frame, "CENTER", pos.x, pos.y)
     end
+end
+
+local function GetDefaultPowerTextAnchor(frame, unit)
+    if unit == "player" then
+        if frame.powerBarFrame then
+            return "TOP", frame.powerBarFrame, "BOTTOM", 0, -2
+        end
+        return "BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0
+    elseif unit == "target" then
+        if frame.powerBarFrame then
+            return "TOP", frame.powerBarFrame, "BOTTOM", 0, -2
+        end
+        return "BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0
+    elseif unit == "targettarget" or unit == "pet" then
+        return "BOTTOM", frame, "BOTTOM", 0, 0
+    end
+    return "BOTTOMLEFT", frame, "BOTTOMLEFT", 3, 3
+end
+
+local function ApplyPowerTextPosition(frame, unit)
+    if not frame or not frame.powerText then return end
+
+    if frame.powerTextDragFrame and (unit == "player" or unit == "target") then
+        frame.powerTextDragFrame:ClearAllPoints()
+        local pos = MattMinimalFramesDB and MattMinimalFramesDB.powerTextPositions and MattMinimalFramesDB.powerTextPositions[unit]
+        if pos and pos.x and pos.y then
+            frame.powerTextDragFrame:SetPoint("CENTER", frame, "CENTER", pos.x, pos.y)
+        else
+            local point, relFrame, relPoint, x, y = GetDefaultPowerTextAnchor(frame, unit)
+            frame.powerTextDragFrame:SetPoint(point, relFrame, relPoint, x, y)
+        end
+
+        frame.powerText:ClearAllPoints()
+        frame.powerText:SetPoint("CENTER", frame.powerTextDragFrame, "CENTER", 0, 0)
+        return
+    end
+
+    local point, relFrame, relPoint, x, y = GetDefaultPowerTextAnchor(frame, unit)
+    frame.powerText:SetPoint(point, relFrame, relPoint, x, y)
 end
 
 --------------------------------------------------
@@ -664,31 +706,77 @@ local function CreateResourceText(frame, unit)
         frame.powerText:SetFont(fontPath, 13, "OUTLINE")
     end
     frame.powerText:SetTextColor(1, 1, 1)
+
+    if unit == "player" or unit == "target" then
+        frame.powerTextDragFrame = CreateFrame("Frame", nil, frame.nameOverlay)
+        frame.powerTextDragFrame:SetFrameLevel(frame.nameOverlay:GetFrameLevel() + 1)
+        frame.powerTextDragFrame:SetSize(84, 18)
+        frame.powerTextDragFrame:SetMovable(true)
+        frame.powerTextDragFrame:EnableMouse(true)
+        frame.powerTextDragFrame:RegisterForDrag("LeftButton")
+
+        frame.powerTextDragFrame:SetScript("OnDragStart", function(self)
+            local isLocked = MattMinimalFramesDB and MattMinimalFramesDB.locked
+            if not isLocked and not InCombatLockdown() and IsShiftKeyDown() then
+                self:StartMoving()
+            end
+        end)
+
+        frame.powerTextDragFrame:SetScript("OnDragStop", function(self)
+            self:StopMovingOrSizing()
+            local x, y = self:GetCenter()
+            local px, py = frame:GetCenter()
+            if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
+            if not MattMinimalFramesDB.powerTextPositions then
+                MattMinimalFramesDB.powerTextPositions = {}
+            end
+            MattMinimalFramesDB.powerTextPositions[unit] = { x = x - px, y = y - py }
+        end)
+
+        frame.powerTextDragFrame:SetScript("OnEnter", function()
+            GameTooltip_SetDefaultAnchor(GameTooltip, UIParent)
+            if unit == "player" then
+                GameTooltip:SetText("Player Power Text", 1, 1, 1)
+            else
+                GameTooltip:SetText("Target Power Text", 1, 1, 1)
+            end
+            GameTooltip:AddLine("Shift+Drag to move", 0.5, 0.5, 0.5)
+            GameTooltip:Show()
+        end)
+
+        frame.powerTextDragFrame:SetScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
+
+        frame.powerTextDragFrame:Hide()
+    end
     
     if unit == "player" then
         frame.hpText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0 + hpX, -14.5 + hpY)
-        if frame.powerBarFrame then
-            frame.powerText:SetPoint("TOP", frame.powerBarFrame, "BOTTOM", 0, -2)
-        else
-            frame.powerText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
-        end
+        ApplyPowerTextPosition(frame, unit)
     elseif unit == "target" then
         frame.hpText:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 2 + hpX, -14.5 + hpY)
-        if frame.powerBarFrame then
-            frame.powerText:SetPoint("TOP", frame.powerBarFrame, "BOTTOM", 0, -2)
-        else
-            frame.powerText:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0)
-        end
+        ApplyPowerTextPosition(frame, unit)
     elseif unit == "targettarget" or unit == "pet" then
         frame.hpText:SetPoint("BOTTOM", frame, "BOTTOM", 0 + hpX, 0 + hpY)
-        frame.powerText:SetPoint("BOTTOM", frame, "BOTTOM", 0, 0)
+        ApplyPowerTextPosition(frame, unit)
     elseif unit == "focus" then
         frame.hpText:Hide()
         frame.powerText:Hide()
     else
         frame.hpText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -3 + hpX, 3 + hpY)
-        frame.powerText:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 3, 3)
+        ApplyPowerTextPosition(frame, unit)
     end
+end
+
+function MMF_ApplyPowerTextPositions()
+    local function ApplyFor(frame, unit)
+        if not frame or not frame.powerText then return end
+        ApplyPowerTextPosition(frame, unit)
+    end
+
+    ApplyFor(_G.MMF_PlayerFrame, "player")
+    ApplyFor(_G.MMF_TargetFrame, "target")
 end
 
 --------------------------------------------------
@@ -1174,6 +1262,9 @@ MMF_CreateSecureUnitFrame = function(...)
         frame.powerBarFrame:SetShown(showPowerBar)
         if frame.powerText then
             frame.powerText:Hide()
+        end
+        if frame.powerTextDragFrame then
+            frame.powerTextDragFrame:Hide()
         end
     end
     

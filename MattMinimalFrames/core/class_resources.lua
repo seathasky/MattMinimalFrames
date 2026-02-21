@@ -409,7 +409,8 @@ local function CreateBaseResourceBar(frameName, prefix, moveLabel, color, numRun
     end
 
     frame:SetScript("OnDragStart", function(self)
-        if IsShiftKeyDown() then
+        local isLocked = MattMinimalFramesDB and MattMinimalFramesDB.locked
+        if not isLocked and IsShiftKeyDown() then
             self:StartMoving()
         end
     end)

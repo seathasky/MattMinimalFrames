@@ -132,6 +132,9 @@ coreEventFrame:RegisterEvent("PLAYER_UPDATE_RESTING")
 coreEventFrame:RegisterEvent("UNIT_NAME_UPDATE")
 coreEventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
 coreEventFrame:RegisterEvent("PLAYER_FOCUS_CHANGED")
+coreEventFrame:RegisterEvent("UNIT_DISPLAYPOWER")
+coreEventFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
+coreEventFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
 coreEventFrame:RegisterEvent("UNIT_PET")
 coreEventFrame:RegisterEvent("UNIT_TARGET")
 coreEventFrame:RegisterEvent("UNIT_HEAL_PREDICTION")
@@ -182,6 +185,14 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
     elseif event == "PLAYER_FOCUS_CHANGED" then
         RequestFrameUpdate(MMF_FocusFrame)
 
+    elseif event == "UPDATE_SHAPESHIFT_FORM" then
+        RequestUnitUpdate("player")
+
+    elseif event == "PLAYER_SPECIALIZATION_CHANGED" then
+        if unit == nil or unit == "player" then
+            RequestUnitUpdate("player")
+        end
+
     elseif event == "UNIT_PET" then
         RequestFrameUpdate(MMF_PetFrame)
 
@@ -202,7 +213,7 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
         RequestUnitUpdate("target")
         RefreshPVPIndicators()
 
-    elseif event == "UNIT_NAME_UPDATE" or event == "UNIT_HEALTH" or event == "UNIT_POWER_UPDATE" or event == "UNIT_HEAL_PREDICTION" or event == "UNIT_ABSORB_AMOUNT_CHANGED" then
+    elseif event == "UNIT_NAME_UPDATE" or event == "UNIT_HEALTH" or event == "UNIT_POWER_UPDATE" or event == "UNIT_DISPLAYPOWER" or event == "UNIT_HEAL_PREDICTION" or event == "UNIT_ABSORB_AMOUNT_CHANGED" then
         RequestUnitUpdate(unit)
 
     elseif event == "UNIT_FACTION" then

@@ -172,7 +172,7 @@ function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalC
     resourceHint:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
     resourceHint:SetPoint("TOPLEFT", RESOURCE_COL_X, -28)
     resourceHint:SetTextColor(0.6, 0.6, 0.6)
-    resourceHint:SetText("Tip: Hold Shift and Click+Drag a power bar to move it.")
+    resourceHint:SetText("Tip: Hold Shift and Click+Drag power bar or power text to move it.")
 
     local playerTitle = leftCol:CreateFontString(nil, "OVERLAY")
     playerTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
@@ -180,25 +180,66 @@ function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalC
     playerTitle:SetTextColor(0.85, 0.85, 0.9)
     playerTitle:SetText("PLAYER")
 
+    local playerColorPowerTextCheck = nil
+    local targetColorPowerTextCheck = nil
+    local playerPercentPowerTextCheck = nil
+    local targetPercentPowerTextCheck = nil
+    if MattMinimalFramesDB.showPlayerPowerPercentText == nil then
+        MattMinimalFramesDB.showPlayerPowerPercentText = (MattMinimalFramesDB.showPowerPercentText == true)
+    end
+    if MattMinimalFramesDB.showTargetPowerPercentText == nil then
+        MattMinimalFramesDB.showTargetPowerPercentText = (MattMinimalFramesDB.showPowerPercentText == true)
+    end
+    local function SetDependentCheckboxState(container, enabled)
+        if not container then return end
+        local checkbox = container.checkbox
+        if checkbox then
+            checkbox:EnableMouse(enabled)
+            checkbox:SetAlpha(enabled and 1 or 0.45)
+            if checkbox.check then
+                checkbox.check:SetAlpha(enabled and 1 or 0.35)
+            end
+        end
+        container:SetAlpha(enabled and 1 or 0.55)
+    end
+    local function UpdatePowerTextDependencies()
+        local playerTextEnabled = (MattMinimalFramesDB.showPlayerPowerText == true or MattMinimalFramesDB.showPlayerPowerText == 1)
+        local targetTextEnabled = (MattMinimalFramesDB.showTargetPowerText == true or MattMinimalFramesDB.showTargetPowerText == 1)
+        SetDependentCheckboxState(playerColorPowerTextCheck, playerTextEnabled)
+        SetDependentCheckboxState(playerPercentPowerTextCheck, playerTextEnabled)
+        SetDependentCheckboxState(targetColorPowerTextCheck, targetTextEnabled)
+        SetDependentCheckboxState(targetPercentPowerTextCheck, targetTextEnabled)
+    end
+    MMF_RefreshPowerTextOptionStates = UpdatePowerTextDependencies
+
     CreateMinimalCheckbox(leftCol, "Power Bar", RESOURCE_COL_X, -72, "showPlayerPowerBar", true, function()
         RefreshPowerFrames()
     end)
 
     CreateMinimalCheckbox(leftCol, "Power Text", RESOURCE_COL_X, -96, "showPlayerPowerText", false, function()
         RefreshPowerFrames()
+        UpdatePowerTextDependencies()
     end)
 
-    CreateMinimalSlider(leftCol, "Text Scale", RESOURCE_COL_X, -120, 200, "playerPowerTextScale", 0.5, 2.0, 0.05, 1.0, function()
+    playerColorPowerTextCheck = CreateMinimalCheckbox(leftCol, "Color Text by Resource", RESOURCE_COL_X, -120, "colorPlayerPowerTextByResource", false, function()
+        RefreshPowerFrames()
+    end)
+
+    playerPercentPowerTextCheck = CreateMinimalCheckbox(leftCol, "Power Text: Percent", RESOURCE_COL_X, -144, "showPlayerPowerPercentText", false, function()
+        RefreshPowerFrames()
+    end)
+
+    CreateMinimalSlider(leftCol, "Text Scale", RESOURCE_COL_X, -168, 200, "playerPowerTextScale", 0.5, 2.0, 0.05, 1.0, function()
         RefreshPowerFrames()
     end, false)
 
-    CreateMinimalSlider(leftCol, "Width", RESOURCE_COL_X, -144, 200, "playerPowerBarWidth", 30, 250, 1, 73, function(value)
+    CreateMinimalSlider(leftCol, "Width", RESOURCE_COL_X, -192, 200, "playerPowerBarWidth", 30, 250, 1, 73, function(value)
         if MMF_SetPowerBarSize then
             MMF_SetPowerBarSize(value, MattMinimalFramesDB.playerPowerBarHeight or MattMinimalFramesDB.powerBarHeight or 5, "player")
         end
     end, true)
 
-    CreateMinimalSlider(leftCol, "Height", RESOURCE_COL_X, -168, 200, "playerPowerBarHeight", 3, 15, 1, 5, function(value)
+    CreateMinimalSlider(leftCol, "Height", RESOURCE_COL_X, -216, 200, "playerPowerBarHeight", 3, 15, 1, 5, function(value)
         if MMF_SetPowerBarSize then
             MMF_SetPowerBarSize(MattMinimalFramesDB.playerPowerBarWidth or MattMinimalFramesDB.powerBarWidth or 73, value, "player")
         end
@@ -206,34 +247,44 @@ function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalC
 
     local targetDivider = leftCol:CreateTexture(nil, "ARTWORK")
     targetDivider:SetSize(200, 1)
-    targetDivider:SetPoint("TOPLEFT", RESOURCE_COL_X, -196)
+    targetDivider:SetPoint("TOPLEFT", RESOURCE_COL_X, -244)
     targetDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
 
     local targetTitle = leftCol:CreateFontString(nil, "OVERLAY")
     targetTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
-    targetTitle:SetPoint("TOPLEFT", RESOURCE_COL_X, -208)
+    targetTitle:SetPoint("TOPLEFT", RESOURCE_COL_X, -256)
     targetTitle:SetTextColor(0.85, 0.85, 0.9)
     targetTitle:SetText("TARGET")
 
-    CreateMinimalCheckbox(leftCol, "Power Bar", RESOURCE_COL_X, -228, "showTargetPowerBar", false, function()
+    CreateMinimalCheckbox(leftCol, "Power Bar", RESOURCE_COL_X, -276, "showTargetPowerBar", false, function()
         RefreshPowerFrames()
     end)
 
-    CreateMinimalCheckbox(leftCol, "Power Text", RESOURCE_COL_X, -252, "showTargetPowerText", false, function()
+    CreateMinimalCheckbox(leftCol, "Power Text", RESOURCE_COL_X, -300, "showTargetPowerText", false, function()
+        RefreshPowerFrames()
+        UpdatePowerTextDependencies()
+    end)
+
+    targetColorPowerTextCheck = CreateMinimalCheckbox(leftCol, "Color Text by Resource", RESOURCE_COL_X, -324, "colorTargetPowerTextByResource", false, function()
+        RefreshPowerFrames()
+    end)
+    targetPercentPowerTextCheck = CreateMinimalCheckbox(leftCol, "Power Text: Percent", RESOURCE_COL_X, -348, "showTargetPowerPercentText", false, function()
         RefreshPowerFrames()
     end)
 
-    CreateMinimalSlider(leftCol, "Text Scale", RESOURCE_COL_X, -276, 200, "targetPowerTextScale", 0.5, 2.0, 0.05, 1.0, function()
+    UpdatePowerTextDependencies()
+
+    CreateMinimalSlider(leftCol, "Text Scale", RESOURCE_COL_X, -372, 200, "targetPowerTextScale", 0.5, 2.0, 0.05, 1.0, function()
         RefreshPowerFrames()
     end, false)
 
-    CreateMinimalSlider(leftCol, "Width", RESOURCE_COL_X, -300, 200, "targetPowerBarWidth", 30, 250, 1, 73, function(value)
+    CreateMinimalSlider(leftCol, "Width", RESOURCE_COL_X, -396, 200, "targetPowerBarWidth", 30, 250, 1, 73, function(value)
         if MMF_SetPowerBarSize then
             MMF_SetPowerBarSize(value, MattMinimalFramesDB.targetPowerBarHeight or MattMinimalFramesDB.powerBarHeight or 5, "target")
         end
     end, true)
 
-    CreateMinimalSlider(leftCol, "Height", RESOURCE_COL_X, -324, 200, "targetPowerBarHeight", 3, 15, 1, 5, function(value)
+    CreateMinimalSlider(leftCol, "Height", RESOURCE_COL_X, -420, 200, "targetPowerBarHeight", 3, 15, 1, 5, function(value)
         if MMF_SetPowerBarSize then
             MMF_SetPowerBarSize(MattMinimalFramesDB.targetPowerBarWidth or MattMinimalFramesDB.powerBarWidth or 73, value, "target")
         end

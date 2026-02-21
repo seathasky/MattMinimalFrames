@@ -75,6 +75,7 @@ local PROFILE_LAYOUT_KEYS = {
     "MMF_PetFrame",
     "MMF_FocusFrame",
     "powerBarPositions",
+    "powerTextPositions",
     "popupPosition",
 }
 
