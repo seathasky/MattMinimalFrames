@@ -694,7 +694,20 @@ local function UpdateHolyPowerBar(self, event, unit)
 end
 
 local function UpdateComboPointBar()
-    if not MMF_ComboPointBar or not MMF_ComboPointBar:IsShown() then return end
+    if not MMF_ComboPointBar then return end
+
+    if playerClass == "DRUID" then
+        local _, powerToken = UnitPowerType("player")
+        if powerToken ~= "ENERGY" then
+            MMF_ComboPointBar:Hide()
+            return
+        end
+        if not MMF_ComboPointBar:IsShown() then
+            MMF_ComboPointBar:Show()
+        end
+    elseif not MMF_ComboPointBar:IsShown() then
+        return
+    end
 
     local numComboPoints, maxComboPoints = GetComboPointState()
     if SafeNe(MMF_ComboPointBar.mmfVisibleRunes, maxComboPoints) then
@@ -897,6 +910,10 @@ function MMF_InitializeClassResources()
             ApplyLegacyScale(frame, "comboPointBar")
             frame:Show()
             frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+            if playerClass == "DRUID" then
+                frame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
+                frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "player")
+            end
             if isClassicComboMode then
                 frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
                 frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")

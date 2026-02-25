@@ -20,6 +20,7 @@ local mmfDefaults = {
     showTargetPowerBar = false,
     showPlayerPowerText = false,
     showTargetPowerText = false,
+    showDruidManaPowerText = false,
     showPlayerPowerPercentText = false,
     showTargetPowerPercentText = false,
     colorPlayerPowerTextByResource = false,

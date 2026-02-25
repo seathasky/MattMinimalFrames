@@ -18,6 +18,7 @@ local UnitGetTotalAbsorbs = UnitGetTotalAbsorbs
 local PowerBarColor = PowerBarColor
 
 local IS_PLAYER_SHAMAN = (UnitClassBase("player") == "SHAMAN")
+local IS_PLAYER_DRUID = (UnitClassBase("player") == "DRUID")
 local SCALE_TO_100 = CurveConstants and CurveConstants.ScaleTo100
 
 local function IsCheckedFlag(value)
@@ -227,20 +228,20 @@ local function GetHealthPercentText(unit, current, maximum)
     return "0%"
 end
 
-local function GetPowerPercentText(unit, current, maximum)
+local function GetPowerPercentText(unit, current, maximum, powerType)
     if unit and UnitPowerPercent then
         if SCALE_TO_100 then
             local okCurve, percentText = pcall(function()
-                return string.format("%d%%", UnitPowerPercent(unit, nil, true, SCALE_TO_100))
+                return string.format("%d%%", UnitPowerPercent(unit, powerType, true, SCALE_TO_100))
             end)
             if okCurve and percentText then
                 return percentText
             end
         else
             local okScaled, percentText = pcall(function()
-                local pct = UnitPowerPercent(unit, nil, true)
+                local pct = UnitPowerPercent(unit, powerType, true)
                 if pct == nil then
-                    pct = UnitPowerPercent(unit)
+                    pct = UnitPowerPercent(unit, powerType)
                 end
                 return string.format("%.0f%%", pct * 100)
             end)
@@ -681,12 +682,18 @@ local function UpdateUnitFrame(frame)
         local powerType, powerToken = UnitPowerType(unit)
 
         local useManaPowerType = false
-        if unit == "player" and IS_PLAYER_SHAMAN and Compat.HasSpecialization then
-            local spec = Compat.GetSpecialization()
-            if SafeEq(spec, 1) or SafeEq(spec, 2) then
+        if unit == "player" then
+            if IS_PLAYER_DRUID and IsCheckedFlag(db.showDruidManaPowerText) then
                 useManaPowerType = true
                 powerType = 0
                 powerToken = "MANA"
+            elseif IS_PLAYER_SHAMAN and Compat.HasSpecialization then
+                local spec = Compat.GetSpecialization()
+                if SafeEq(spec, 1) or SafeEq(spec, 2) then
+                    useManaPowerType = true
+                    powerType = 0
+                    powerToken = "MANA"
+                end
             end
         end
 
@@ -734,19 +741,33 @@ local function UpdateUnitFrame(frame)
             if frame.powerText then
                 local showPowerText = false
                 local colorPowerText = false
+                local textPowerType = powerType
+                local textPowerToken = powerToken
                 if unit == "player" then
                     showPowerText = IsCheckedFlag(db.showPlayerPowerText)
                     colorPowerText = IsCheckedFlag(db.colorPlayerPowerTextByResource)
+                    if IS_PLAYER_DRUID and IsCheckedFlag(db.showDruidManaPowerText) then
+                        textPowerType = 0
+                        textPowerToken = "MANA"
+                    end
                 else
                     showPowerText = IsCheckedFlag(db.showTargetPowerText)
                     colorPowerText = IsCheckedFlag(db.colorTargetPowerTextByResource)
                 end
 
                 if showPowerText then
-                    local display = SafeFormatValue(power, false)
-                    if IsPowerPercentEnabledForUnit(db, unit) then
-                        display = GetPowerPercentText(unit, power, maxPower)
+                    local textPower = power
+                    local textMaxPower = maxPower
+                    if textPowerType ~= powerType then
+                        textMaxPower = UnitPowerMax(unit, textPowerType)
+                        textPower = UnitPower(unit, textPowerType)
                     end
+
+                    local display = SafeFormatValue(textPower, false)
+                    if IsPowerPercentEnabledForUnit(db, unit) then
+                        display = GetPowerPercentText(unit, textPower, textMaxPower, textPowerType)
+                    end
+                    local tpr, tpg, tpb = ResolvePowerColor(textPowerType, textPowerToken)
                     local textScale = db.powerTextScale or 1.0
                     if unit == "player" then
                         textScale = db.playerPowerTextScale or textScale
@@ -756,7 +777,7 @@ local function UpdateUnitFrame(frame)
                     ApplyPowerTextFontSize(frame, textScale)
                     frame.powerText:SetText(display)
                     if colorPowerText then
-                        frame.powerText:SetTextColor(pr, pg, pb, 1)
+                        frame.powerText:SetTextColor(tpr, tpg, tpb, 1)
                     else
                         frame.powerText:SetTextColor(1, 1, 1, 1)
                     end
