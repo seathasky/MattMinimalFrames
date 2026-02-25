@@ -1,5 +1,27 @@
 local Compat = _G.MMF_Compat
 local _, playerClass = UnitClass("player")
+local LibCustomGlow = _G.LibStub and _G.LibStub("LibCustomGlow-1.0", true) or nil
+
+local HOLY_POWER_BASE_COLOR = { 0.95, 0.9, 0.2 }
+local HOLY_POWER_MAX_COLOR = { 0.92, 0.2, 0.28 }
+local HOLY_POWER_THREE_GLOW_COLOR = { 0.2, 0.85, 0.3, 1.0 }
+local HOLY_POWER_GLOW_COLOR = { 1.0, 0.9, 0.2, 1.0 }
+local HOLY_POWER_GLOW_KEY = "MMF_HOLY_POWER_MAX"
+
+local function PlayHolyPowerSound(soundFile)
+    if not PlaySoundFile then return end
+    local file = soundFile or "hp.mp3"
+
+    pcall(function()
+        PlaySoundFile("Interface\\AddOns\\MattMinimalFrames\\Sounds\\" .. file, "Master")
+    end)
+    pcall(function()
+        PlaySoundFile("Interface\\AddOns\\MattMinimalFrames\\Sounds\\" .. file, "Dialog")
+    end)
+    pcall(function()
+        PlaySoundFile("Interface\\AddOns\\MattMinimalFrames\\Sounds\\click.mp3", "Master")
+    end)
+end
 
 local function GetStatusBarTexturePath()
     if MMF_GetStatusBarTexturePath then
@@ -61,6 +83,8 @@ local CLASS_BAR_CONFIG = {
     PALADIN = {
         prefix = "holyPowerBar",
         showKey = "showHolyPowerBar",
+        classSoundsKey = "holyPowerClassSounds",
+        classSoundsLabel = "Class Sounds",
         classLabel = "Paladin",
         classColor = {1.0, 0.6, 0.8},
         showLabel = "Show Holy Power Bar",
@@ -467,7 +491,7 @@ end
 
 local function CreateHolyPowerBar()
     if MMF_HolyPowerBar then return MMF_HolyPowerBar end
-    MMF_HolyPowerBar = CreateBaseResourceBar("MMF_HolyPowerBar", "holyPowerBar", "Holy Power Bar", GetClassBarColor({0.95, 0.9, 0.2}), 5, 0)
+    MMF_HolyPowerBar = CreateBaseResourceBar("MMF_HolyPowerBar", "holyPowerBar", "Holy Power Bar", GetClassBarColor(HOLY_POWER_BASE_COLOR), 5, 0)
     _G.MMF_HolyPowerBar = MMF_HolyPowerBar
     return MMF_HolyPowerBar
 end
@@ -550,6 +574,9 @@ function MMF_ResetCurrentClassBarSettings()
         prefix .. "X",
         prefix .. "Y",
     }
+    if cfg.classSoundsKey then
+        table.insert(keys, cfg.classSoundsKey)
+    end
 
     local showChanged = false
     for _, key in ipairs(keys) do
@@ -603,6 +630,28 @@ local function UpdateHolyPowerBar(self, event, unit)
 
     local numHolyPower = GetPowerCountSafe(Enum.PowerType.HolyPower, MMF_HolyPowerBar.mmfMaxRunes)
     local maxHolyPower = GetPowerMaxCountSafe(Enum.PowerType.HolyPower, MMF_HolyPowerBar.mmfMaxRunes)
+    if playerClass == "PALADIN" then
+        if not SafeLe(3, numHolyPower) then
+            MMF_HolyPowerBar.mmfHolyPower3Announced = false
+        elseif SafeEq(numHolyPower, 3) and not MMF_HolyPowerBar.mmfHolyPower3Announced then
+            if MattMinimalFramesDB and MattMinimalFramesDB.holyPowerClassSounds then
+                PlayHolyPowerSound("hp.mp3")
+            end
+            MMF_HolyPowerBar.mmfHolyPower3Announced = true
+        end
+
+        if not SafeLe(5, numHolyPower) then
+            MMF_HolyPowerBar.mmfHolyPower5Announced = false
+        elseif SafeEq(numHolyPower, 5) and not MMF_HolyPowerBar.mmfHolyPower5Announced then
+            if MattMinimalFramesDB and MattMinimalFramesDB.holyPowerClassSounds then
+                PlayHolyPowerSound("hpc.mp3")
+            end
+            MMF_HolyPowerBar.mmfHolyPower5Announced = true
+        end
+    end
+    local holyBaseColor = GetClassBarColor(HOLY_POWER_BASE_COLOR)
+    local isThreePlusHolyPower = (playerClass == "PALADIN") and SafeLe(3, maxHolyPower) and SafeLe(3, numHolyPower) and not SafeLe(5, numHolyPower)
+    local isMaxHolyPower = (playerClass == "PALADIN") and SafeLe(5, maxHolyPower) and SafeLe(5, numHolyPower)
     if SafeNe(MMF_HolyPowerBar.mmfVisibleRunes, maxHolyPower) then
         ApplyLayout(MMF_HolyPowerBar, "holyPowerBar", maxHolyPower)
     end
@@ -612,6 +661,21 @@ local function UpdateHolyPowerBar(self, event, unit)
         if rune then
             if SafeLe(i, maxHolyPower) then
                 rune:Show()
+                if isMaxHolyPower and SafeLe(i, 5) then
+                    rune:SetStatusBarColor(HOLY_POWER_MAX_COLOR[1], HOLY_POWER_MAX_COLOR[2], HOLY_POWER_MAX_COLOR[3], 1)
+                    if LibCustomGlow then
+                        LibCustomGlow.PixelGlow_Start(rune, HOLY_POWER_GLOW_COLOR, 8, 0.25, nil, 1, 0, 0, true, HOLY_POWER_GLOW_KEY)
+                    end
+                else
+                    rune:SetStatusBarColor(holyBaseColor[1], holyBaseColor[2], holyBaseColor[3], 1)
+                    if LibCustomGlow then
+                        if isThreePlusHolyPower and SafeLe(i, 3) then
+                            LibCustomGlow.PixelGlow_Start(rune, HOLY_POWER_THREE_GLOW_COLOR, 8, 0.25, nil, 1, 0, 0, true, HOLY_POWER_GLOW_KEY)
+                        else
+                            LibCustomGlow.PixelGlow_Stop(rune, HOLY_POWER_GLOW_KEY)
+                        end
+                    end
+                end
                 if SafeLe(i, numHolyPower) then
                     rune:SetValue(1)
                     rune:SetAlpha(1)
@@ -620,6 +684,9 @@ local function UpdateHolyPowerBar(self, event, unit)
                     rune:SetAlpha(0.4)
                 end
             else
+                if LibCustomGlow then
+                    LibCustomGlow.PixelGlow_Stop(rune, HOLY_POWER_GLOW_KEY)
+                end
                 rune:Hide()
             end
         end

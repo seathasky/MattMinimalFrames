@@ -31,6 +31,7 @@ local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
 local STATUSBAR = LSM and LSM.MediaType and LSM.MediaType.STATUSBAR or "statusbar"
 local FONT = LSM and LSM.MediaType and LSM.MediaType.FONT or "font"
 local BACKGROUND = LSM and LSM.MediaType and LSM.MediaType.BACKGROUND or "background"
+local SOUND = LSM and LSM.MediaType and LSM.MediaType.SOUND or "sound"
 local MMF_STATUSBAR_DEFAULT = "MMF Melli"
 local MMF_FONT_DEFAULT = "MMF Naowh"
 local MMF_FONT_DEFAULT_PATH = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
@@ -150,6 +151,16 @@ local MMF_LEGACY_STATUSBAR_ALIASES = {}
 local MMF_FONT_REGISTRY = {
     { name = MMF_FONT_DEFAULT, path = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf" },
 }
+local MMF_SOUND_REGISTRY = {
+    { name = "MMF Are You Sure", path = "Interface\\AddOns\\MattMinimalFrames\\Sounds\\are-you-sure-about-that.mp3" },
+    { name = "MMF Click", path = "Interface\\AddOns\\MattMinimalFrames\\Sounds\\click.mp3" },
+    { name = "MMF ESPARK1", path = "Interface\\AddOns\\MattMinimalFrames\\Sounds\\ESPARK1.ogg" },
+    { name = "MMF HP", path = "Interface\\AddOns\\MattMinimalFrames\\Sounds\\hp.mp3" },
+    { name = "MMF HPC", path = "Interface\\AddOns\\MattMinimalFrames\\Sounds\\hpc.mp3" },
+    { name = "MMF HPF", path = "Interface\\AddOns\\MattMinimalFrames\\Sounds\\hpf.mp3" },
+    { name = "MMF Sonar", path = "Interface\\AddOns\\MattMinimalFrames\\Sounds\\sonar.ogg" },
+    { name = "MMF Sword Echo", path = "Interface\\AddOns\\MattMinimalFrames\\Sounds\\swordecho.ogg" },
+}
 
 function MMF_RegisterStatusBarMedia()
     if not LSM then return end
@@ -165,6 +176,15 @@ function MMF_RegisterFontMedia()
     for _, media in ipairs(MMF_FONT_REGISTRY) do
         if not LSM:IsValid(FONT, media.name) then
             LSM:Register(FONT, media.name, media.path)
+        end
+    end
+end
+
+function MMF_RegisterSoundMedia()
+    if not LSM then return end
+    for _, media in ipairs(MMF_SOUND_REGISTRY) do
+        if not LSM:IsValid(SOUND, media.name) then
+            LSM:Register(SOUND, media.name, media.path)
         end
     end
 end
@@ -460,6 +480,7 @@ end
 
 MMF_RegisterStatusBarMedia()
 MMF_RegisterFontMedia()
+MMF_RegisterSoundMedia()
 
 if LSM and LSM.RegisterCallback then
     LSM.RegisterCallback("MMF_SHARED_MEDIA_WATCHER", "LibSharedMedia_Registered", function(eventName, mediaType, mediaKey)

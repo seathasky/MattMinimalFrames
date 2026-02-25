@@ -86,12 +86,73 @@ local function ClearLayoutState(profile)
     end
 end
 
+local function GetCurrentCharacterKey()
+    local name, realm = UnitFullName and UnitFullName("player")
+    if type(name) == "string" and name ~= "" then
+        if type(realm) == "string" and realm ~= "" then
+            return name .. "-" .. realm
+        end
+        return name
+    end
+
+    local fullName = GetUnitName and GetUnitName("player", true)
+    if type(fullName) == "string" and fullName ~= "" then
+        return fullName
+    end
+
+    name = UnitName and UnitName("player")
+    if type(name) ~= "string" or name == "" then
+        return nil
+    end
+
+    realm = GetRealmName and GetRealmName()
+    if type(realm) == "string" and realm ~= "" then
+        return name .. "-" .. realm
+    end
+    return name
+end
+
+local function SetCurrentCharacterProfile(profileName)
+    if type(profileName) ~= "string" or profileName == "" then
+        return
+    end
+    local characterKey = GetCurrentCharacterKey()
+    if type(characterKey) ~= "string" or characterKey == "" then
+        return
+    end
+    MattMinimalFramesProfilesDB.characterProfiles[characterKey] = profileName
+end
+
+local function ApplyCharacterProfilePreference()
+    if type(MattMinimalFramesProfilesDB.profiles.Default) ~= "table" then
+        MattMinimalFramesProfilesDB.profiles.Default = {}
+    end
+
+    local characterKey = GetCurrentCharacterKey()
+    if type(characterKey) ~= "string" or characterKey == "" then
+        MattMinimalFramesProfilesDB.activeProfile = "Default"
+        return
+    end
+
+    local mappedProfile = MattMinimalFramesProfilesDB.characterProfiles[characterKey]
+    if type(mappedProfile) == "string" and mappedProfile ~= "" and type(MattMinimalFramesProfilesDB.profiles[mappedProfile]) == "table" then
+        MattMinimalFramesProfilesDB.activeProfile = mappedProfile
+        return
+    end
+
+    MattMinimalFramesProfilesDB.activeProfile = "Default"
+    MattMinimalFramesProfilesDB.characterProfiles[characterKey] = "Default"
+end
+
 local function EnsureProfilesRoot()
     if type(MattMinimalFramesProfilesDB) ~= "table" then
         MattMinimalFramesProfilesDB = {}
     end
     if type(MattMinimalFramesProfilesDB.profiles) ~= "table" then
         MattMinimalFramesProfilesDB.profiles = {}
+    end
+    if type(MattMinimalFramesProfilesDB.characterProfiles) ~= "table" then
+        MattMinimalFramesProfilesDB.characterProfiles = {}
     end
     if type(MattMinimalFramesProfilesDB.activeProfile) ~= "string" or MattMinimalFramesProfilesDB.activeProfile == "" then
         MattMinimalFramesProfilesDB.activeProfile = "Default"
@@ -109,6 +170,16 @@ local function SanitizeProfilesMap()
     end
     if not next(MattMinimalFramesProfilesDB.profiles) then
         MattMinimalFramesProfilesDB.profiles["Default"] = {}
+    end
+end
+
+local function SanitizeCharacterProfilesMap()
+    for characterKey, profileName in pairs(MattMinimalFramesProfilesDB.characterProfiles) do
+        if type(characterKey) ~= "string" or characterKey == "" or type(profileName) ~= "string" or profileName == "" then
+            MattMinimalFramesProfilesDB.characterProfiles[characterKey] = nil
+        elseif type(MattMinimalFramesProfilesDB.profiles[profileName]) ~= "table" then
+            MattMinimalFramesProfilesDB.characterProfiles[characterKey] = nil
+        end
     end
 end
 
@@ -172,14 +243,23 @@ local function BindActiveProfile()
     MattMinimalFramesDB = profile
 end
 
+local function ResolveAndBindCharacterProfile()
+    EnsureActiveProfileExists()
+    SanitizeCharacterProfilesMap()
+    local previousActiveProfile = MattMinimalFramesProfilesDB.activeProfile
+    ApplyCharacterProfilePreference()
+    EnsureActiveProfileExists()
+    BindActiveProfile()
+    return previousActiveProfile ~= MattMinimalFramesProfilesDB.activeProfile
+end
+
 function MMF_Profiles_Initialize()
     EnsureProfilesRoot()
     SanitizeProfilesMap()
     MigrateLegacyDBIntoDefault()
     EnsureProfile("Default")
     EnsureAllProfiles()
-    EnsureActiveProfileExists()
-    BindActiveProfile()
+    ResolveAndBindCharacterProfile()
 end
 
 function MMF_NormalizeActiveProfile()
@@ -187,8 +267,21 @@ function MMF_NormalizeActiveProfile()
     SanitizeProfilesMap()
     EnsureProfile("Default")
     EnsureAllProfiles()
-    EnsureActiveProfileExists()
-    BindActiveProfile()
+    ResolveAndBindCharacterProfile()
+end
+
+function MMF_ResolveCharacterProfile(applyLive)
+    EnsureProfilesRoot()
+    SanitizeProfilesMap()
+    EnsureProfile("Default")
+    EnsureAllProfiles()
+    local profileChanged = ResolveAndBindCharacterProfile()
+
+    if applyLive and MMF_ApplyActiveProfileLive then
+        MMF_ApplyActiveProfileLive()
+    end
+
+    return profileChanged, MMF_GetActiveProfileName()
 end
 
 function MMF_GetActiveProfileName()
@@ -218,6 +311,7 @@ function MMF_SwitchProfile(name)
         return false
     end
     MattMinimalFramesProfilesDB.activeProfile = name
+    SetCurrentCharacterProfile(name)
     BindActiveProfile()
     if MMF_ApplyActiveProfileLive then
         MMF_ApplyActiveProfileLive()
@@ -259,6 +353,11 @@ function MMF_DeleteProfile(name)
     if name == MMF_GetActiveProfileName() then return false end
     if not MattMinimalFramesProfilesDB.profiles[name] then return false end
     MattMinimalFramesProfilesDB.profiles[name] = nil
+    for characterKey, profileName in pairs(MattMinimalFramesProfilesDB.characterProfiles) do
+        if profileName == name then
+            MattMinimalFramesProfilesDB.characterProfiles[characterKey] = nil
+        end
+    end
     return true
 end
 

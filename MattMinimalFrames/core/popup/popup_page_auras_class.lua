@@ -374,6 +374,20 @@ function MMF_CreateCurrentClassSection(middleCol, accentColor, createMinimalChec
         local classShowCheck = CreateMinimalCheckbox(middleCol, classCfg.showLabel or "Show Class Resource Bar", 12, -92, classCfg.showKey, true, function()
             StaticPopup_Show("MMF_RELOADUI")
         end)
+        local classSoundsCheck = nil
+        local classSoundsEnabled = (classCfg.classSoundsKey and classCfg.classSoundsLabel) and true or false
+        local classSoundsLabel = classSoundsEnabled and classCfg.classSoundsLabel or "Class Sounds (Coming Soon)"
+        local classSoundsKey = classSoundsEnabled and classCfg.classSoundsKey or "__mmfClassSoundsComingSoon"
+        classSoundsCheck = CreateMinimalCheckbox(middleCol, classSoundsLabel, 12, -116, classSoundsKey, false, nil)
+        if not classSoundsEnabled and classSoundsCheck and classSoundsCheck.checkbox then
+            classSoundsCheck:SetAlpha(0.55)
+            classSoundsCheck.checkbox:EnableMouse(false)
+            classSoundsCheck.checkbox:SetChecked(false)
+            if classSoundsCheck.checkbox.check then
+                classSoundsCheck.checkbox.check:SetShown(false)
+                classSoundsCheck.checkbox.check:SetAlpha(0.35)
+            end
+        end
 
         local layoutTitle = middleCol:CreateFontString(nil, "OVERLAY")
         layoutTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
@@ -479,6 +493,11 @@ function MMF_CreateCurrentClassSection(middleCol, accentColor, createMinimalChec
                     local checked = MattMinimalFramesDB[classCfg.showKey]
                     classShowCheck.checkbox:SetChecked(checked)
                     classShowCheck.checkbox.check:SetShown(checked)
+                end
+                if classSoundsEnabled and classSoundsCheck and classSoundsCheck.checkbox and classCfg.classSoundsKey then
+                    local checked = MattMinimalFramesDB[classCfg.classSoundsKey]
+                    classSoundsCheck.checkbox:SetChecked(checked)
+                    classSoundsCheck.checkbox.check:SetShown(checked)
                 end
                 UpdatePlayerIconModeButtonText()
 

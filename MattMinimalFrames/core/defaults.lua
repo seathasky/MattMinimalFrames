@@ -37,6 +37,7 @@ local mmfDefaults = {
     runeBarX = 0,
     runeBarY = 48,
     showHolyPowerBar = true,
+    holyPowerClassSounds = false,
     holyPowerBarScale = 1.0,
     holyPowerBarWidth = 30,
     holyPowerBarHeight = 10,

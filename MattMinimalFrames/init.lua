@@ -328,6 +328,15 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
     end
 
     if event == "PLAYER_LOGIN" and isInitialized then
+        if MMF_ResolveCharacterProfile then
+            MMF_ResolveCharacterProfile(true)
+        elseif MMF_NormalizeActiveProfile then
+            MMF_NormalizeActiveProfile()
+            if MMF_ApplyActiveProfileLive then
+                MMF_ApplyActiveProfileLive()
+            end
+        end
+
         -- Apply selected SharedMedia again after all addons have loaded.
         ReapplySharedMediaSelections()
         UpdateBlizzardPlayerCastBarVisibility()
