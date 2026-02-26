@@ -26,6 +26,10 @@ local function ClampFadeTime(value)
     return math.floor((n * 100) + 0.5) / 100
 end
 
+local function IsCheckedFlag(value)
+    return value == true or value == 1
+end
+
 local function StopAlphaDriver(frame)
     if not frame or not frame.mmfAlphaDriver then
         return
@@ -294,19 +298,21 @@ MMF_SetAlphaSmooth = SetAlphaSmooth
 MMF_StopAlphaDriver = StopAlphaDriver
 
 function MMF_GetCombatVisibilityBaseAlphaForUnit(unit)
-    local enabled = MattMinimalFramesDB and MattMinimalFramesDB.enableCombatFrameVisibility == true
+    local enabled = MattMinimalFramesDB and IsCheckedFlag(MattMinimalFramesDB.enableCombatFrameVisibility)
     if not enabled then
         return 1
     end
 
     local inCombat = (type(InCombatLockdown) == "function") and InCombatLockdown() or false
     if unit == "player" then
-        local showOnTarget = MattMinimalFramesDB and MattMinimalFramesDB.showPlayerOnTargetSelected == true
+        local showOnTarget = MattMinimalFramesDB and IsCheckedFlag(MattMinimalFramesDB.showPlayerOnTargetSelected)
         local hasTarget = (type(UnitExists) == "function") and UnitExists("target") or false
+        local basePlayerOOCAlpha = MMF_GetOutOfCombatPlayerOpacity()
+
         if (not inCombat) and showOnTarget and hasTarget then
             return 1
         end
-        return inCombat and 1 or 0
+        return inCombat and 1 or basePlayerOOCAlpha
     end
 
     if unit == "target" or unit == "targettarget" then
@@ -320,7 +326,7 @@ function MMF_IsCombatFrameVisibilityEnabled()
     if not MattMinimalFramesDB then
         return false
     end
-    return MattMinimalFramesDB.enableCombatFrameVisibility == true
+    return IsCheckedFlag(MattMinimalFramesDB.enableCombatFrameVisibility)
 end
 
 function MMF_GetOutOfCombatTargetOpacity()
@@ -329,6 +335,14 @@ function MMF_GetOutOfCombatTargetOpacity()
     end
     MattMinimalFramesDB.outOfCombatTargetOpacity = ClampOpacity(MattMinimalFramesDB.outOfCombatTargetOpacity)
     return MattMinimalFramesDB.outOfCombatTargetOpacity
+end
+
+function MMF_GetOutOfCombatPlayerOpacity()
+    if not MattMinimalFramesDB then
+        return 0
+    end
+    MattMinimalFramesDB.outOfCombatPlayerOpacity = ClampOpacity(MattMinimalFramesDB.outOfCombatPlayerOpacity)
+    return MattMinimalFramesDB.outOfCombatPlayerOpacity
 end
 
 function MMF_GetCombatVisibilityFadeTime()

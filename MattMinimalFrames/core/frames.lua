@@ -32,5 +32,9 @@ function MMF_CreateAllMinimalFrames()
         if MMF_TargetFrame and MMF_TargetFrame.powerBarFrame then
             MMF_TargetFrame.powerBarFrame:SetShown(MattMinimalFramesDB.showTargetPowerBar ~= false)
         end
+
+        if MMF_RegisterFramesWithClique then
+            MMF_RegisterFramesWithClique()
+        end
     end)
 end

@@ -15,6 +15,7 @@ local mmfDefaults = {
     showTargetMarkers = false,
     enableCombatFrameVisibility = false,
     showPlayerOnTargetSelected = false,
+    outOfCombatPlayerOpacity = 0.0,
     outOfCombatTargetOpacity = 0.35,
     combatVisibilityFadeTime = 0.4,
     showTargetPowerBar = false,

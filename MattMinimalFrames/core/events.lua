@@ -227,6 +227,13 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
         RequestUnitUpdate("player")
     end
 
+    if MMF_FlushRequestedUpdates then
+        if (event == "UNIT_HEALTH" or event == "UNIT_POWER_UPDATE" or event == "UNIT_DISPLAYPOWER")
+            and (unit == nil or unit == "player") then
+            MMF_FlushRequestedUpdates()
+        end
+    end
+
     if MMF_UpdateCombatFrameVisibility then
         MMF_UpdateCombatFrameVisibility()
     end

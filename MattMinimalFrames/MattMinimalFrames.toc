@@ -1,7 +1,7 @@
 ## Interface: 120001
 ## Title: Matt's Minimal Frames
 ## Author: Seathasky
-## Version: 5.2.3
+## Version: 5.2.4
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
 ## SavedVariables: MattMinimalFramesDB, MattMinimalFramesProfilesDB
 
@@ -37,6 +37,7 @@ core/popup/popup_page_auras_class.lua
 core/popup/popup_footer.lua
 core/popup/popup.lua
 core/minimap.lua
+core/clique_support.lua
 
 init.lua
 core/range_check.lua

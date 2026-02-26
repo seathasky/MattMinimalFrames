@@ -73,6 +73,13 @@ local function SafeIsLessOrEqual(a, b)
     return ok and result or false
 end
 
+local function SafeIsLess(a, b)
+    local ok, result = pcall(function()
+        return a < b
+    end)
+    return ok and result or false
+end
+
 local function SafeToNumber(value, fallback)
     if not NotSecretValue(value) then
         return fallback

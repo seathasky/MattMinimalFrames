@@ -254,9 +254,22 @@ function MMF_ApplyGlobalFont()
             local unit = frame.unit
             local nameSize = (MMF_GetNameTextSize and MMF_GetNameTextSize(unit)) or 12
             local hpSize = (MMF_GetHPTextSize and MMF_GetHPTextSize(unit)) or 13
+            local powerScale = (MattMinimalFramesDB and MattMinimalFramesDB.powerTextScale) or 1.0
+            if unit == "player" then
+                powerScale = (MattMinimalFramesDB and MattMinimalFramesDB.playerPowerTextScale) or powerScale
+            elseif unit == "target" then
+                powerScale = (MattMinimalFramesDB and MattMinimalFramesDB.targetPowerTextScale) or powerScale
+            end
+            powerScale = tonumber(powerScale) or 1.0
+            if powerScale < 0.5 then powerScale = 0.5 end
+            if powerScale > 2.0 then powerScale = 2.0 end
+            local powerSize = math.max(6, math.floor((13 * powerScale) + 0.5))
             if frame.nameText then SafeSetFont(frame.nameText, fontPath, nameSize, "OUTLINE") end
             if frame.hpText then SafeSetFont(frame.hpText, fontPath, hpSize, "OUTLINE") end
-            if frame.powerText then SafeSetFont(frame.powerText, fontPath, 13, "OUTLINE") end
+            if frame.powerText then
+                SafeSetFont(frame.powerText, fontPath, powerSize, "OUTLINE")
+                frame.mmfAppliedPowerFontSize = powerSize
+            end
             if frame.castBarText then SafeSetFont(frame.castBarText, fontPath, 9, "OUTLINE") end
             if frame.moveHint then SafeSetFont(frame.moveHint, fontPath, 10, "OUTLINE") end
             if frame.moveSubtext then SafeSetFont(frame.moveSubtext, fontPath, 9, "OUTLINE") end

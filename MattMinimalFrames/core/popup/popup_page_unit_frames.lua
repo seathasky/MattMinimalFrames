@@ -54,6 +54,10 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         return trimmed
     end
 
+    local function IsCheckedFlag(value)
+        return value == true or value == 1
+    end
+
     -- UNIT FRAMES COLUMN (2nd Column)
     ---------------------------------------------------
     local unitFramesTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
@@ -306,6 +310,9 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     if MattMinimalFramesDB.showPlayerOnTargetSelected == nil then
         MattMinimalFramesDB.showPlayerOnTargetSelected = false
     end
+    if MattMinimalFramesDB.outOfCombatPlayerOpacity == nil then
+        MattMinimalFramesDB.outOfCombatPlayerOpacity = 0.0
+    end
     if MattMinimalFramesDB.outOfCombatTargetOpacity == nil then
         MattMinimalFramesDB.outOfCombatTargetOpacity = 0.35
     end
@@ -314,6 +321,9 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     end
     if MMF_GetOutOfCombatTargetOpacity then
         MattMinimalFramesDB.outOfCombatTargetOpacity = MMF_GetOutOfCombatTargetOpacity()
+    end
+    if MMF_GetOutOfCombatPlayerOpacity then
+        MattMinimalFramesDB.outOfCombatPlayerOpacity = MMF_GetOutOfCombatPlayerOpacity()
     end
     if MMF_GetCombatVisibilityFadeTime then
         MattMinimalFramesDB.combatVisibilityFadeTime = MMF_GetCombatVisibilityFadeTime()
@@ -336,8 +346,9 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     combatVisibilityWarning:SetPoint("TOPLEFT", MIDDLE_COL_X, -320 + RIGHT_COL_Y_OFFSET)
     combatVisibilityWarning:SetTextColor(0.95, 0.25, 0.25)
     combatVisibilityWarning:SetText("Range Check Disabled")
-    combatVisibilityWarning:SetShown(MattMinimalFramesDB.enableCombatFrameVisibility == true)
+    combatVisibilityWarning:SetShown(IsCheckedFlag(MattMinimalFramesDB.enableCombatFrameVisibility))
 
+    local playerOpacitySlider
     local targetOpacitySlider
     local fadeTimeSlider
     local showPlayerOnTargetCheck
@@ -363,8 +374,11 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         end
     end
 
-    CreateMinimalCheckbox(unitFramesCol, "Hide Player OOC", MIDDLE_COL_X, -346 + RIGHT_COL_Y_OFFSET, "enableCombatFrameVisibility", false, function()
-        local combatVisibilityEnabled = MattMinimalFramesDB.enableCombatFrameVisibility == true
+    local function RefreshCombatVisibilityControlStates()
+        local combatVisibilityEnabled = IsCheckedFlag(MattMinimalFramesDB.enableCombatFrameVisibility)
+        if playerOpacitySlider then
+            SetSliderEnabled(playerOpacitySlider, combatVisibilityEnabled)
+        end
         if targetOpacitySlider then
             SetSliderEnabled(targetOpacitySlider, combatVisibilityEnabled)
         end
@@ -377,6 +391,10 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         if combatVisibilityWarning then
             combatVisibilityWarning:SetShown(combatVisibilityEnabled)
         end
+    end
+
+    CreateMinimalCheckbox(unitFramesCol, "Hide Player OOC", MIDDLE_COL_X, -346 + RIGHT_COL_Y_OFFSET, "enableCombatFrameVisibility", false, function()
+        RefreshCombatVisibilityControlStates()
         if MMF_UpdateCombatFrameVisibility then
             MMF_UpdateCombatFrameVisibility()
         end
@@ -388,23 +406,28 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         end
     end)
 
-    targetOpacitySlider = CreateMinimalSlider(unitFramesCol, "Target/TOT OOC Opacity", MIDDLE_COL_X, -394 + RIGHT_COL_Y_OFFSET, MIDDLE_COL_WIDTH, "outOfCombatTargetOpacity", 0.0, 1.0, 0.05, 0.35, function(value)
+    playerOpacitySlider = CreateMinimalSlider(unitFramesCol, "Player OOC Opacity", MIDDLE_COL_X, -394 + RIGHT_COL_Y_OFFSET, MIDDLE_COL_WIDTH, "outOfCombatPlayerOpacity", 0.0, 1.0, 0.05, 0.0, function(value)
+        MattMinimalFramesDB.outOfCombatPlayerOpacity = value
+        if MMF_UpdateCombatFrameVisibility then
+            MMF_UpdateCombatFrameVisibility()
+        end
+    end, false)
+
+    targetOpacitySlider = CreateMinimalSlider(unitFramesCol, "Target/TOT OOC Opacity", MIDDLE_COL_X, -418 + RIGHT_COL_Y_OFFSET, MIDDLE_COL_WIDTH, "outOfCombatTargetOpacity", 0.0, 1.0, 0.05, 0.35, function(value)
         MattMinimalFramesDB.outOfCombatTargetOpacity = value
         if MMF_UpdateCombatFrameVisibility then
             MMF_UpdateCombatFrameVisibility()
         end
     end, false)
 
-    fadeTimeSlider = CreateMinimalSlider(unitFramesCol, "Fade Time", MIDDLE_COL_X, -418 + RIGHT_COL_Y_OFFSET, MIDDLE_COL_WIDTH, "combatVisibilityFadeTime", 0.0, 2.0, 0.05, 0.4, function(value)
+    fadeTimeSlider = CreateMinimalSlider(unitFramesCol, "Fade Time", MIDDLE_COL_X, -442 + RIGHT_COL_Y_OFFSET, MIDDLE_COL_WIDTH, "combatVisibilityFadeTime", 0.0, 2.0, 0.05, 0.4, function(value)
         MattMinimalFramesDB.combatVisibilityFadeTime = value
         if MMF_UpdateCombatFrameVisibility then
             MMF_UpdateCombatFrameVisibility()
         end
     end, false)
 
-    SetSliderEnabled(targetOpacitySlider, MattMinimalFramesDB.enableCombatFrameVisibility == true)
-    SetSliderEnabled(fadeTimeSlider, MattMinimalFramesDB.enableCombatFrameVisibility == true)
-    SetCheckboxEnabled(showPlayerOnTargetCheck, MattMinimalFramesDB.enableCombatFrameVisibility == true)
+    RefreshCombatVisibilityControlStates()
 
     local styleTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     styleTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
