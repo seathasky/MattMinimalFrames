@@ -37,8 +37,6 @@ function MMF_ShowWelcomePopup(forceShow)
     local ACCENT_COLOR = (MMF_GetPopupAccentColor and MMF_GetPopupAccentColor()) or { 0.6, 0.4, 0.9 }
     local ACCENT_HEX_PREFIX = (MMF_RGBToHexPrefix and MMF_RGBToHexPrefix(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])) or "|cff9966e6"
 
-    if not forceShow and MattMinimalFramesDB.hideWelcomeMessage then return end
-
     -- If popup already exists, just show it and return
     if MMF_WelcomePopup then
         MMF_WelcomePopup:Show()

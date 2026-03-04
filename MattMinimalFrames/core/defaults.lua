@@ -89,7 +89,6 @@ local mmfDefaults = {
     targetPowerBarHeight = 5,
     powerBarVerticalOffset = -24,
     powerBarHorizontalOffset = 4,
-    hideWelcomeMessage = false,
     classColorGUI = true,
     uiSoundsEnabled = true,
     auraTextScale = 1.0,

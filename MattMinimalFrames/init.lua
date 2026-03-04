@@ -293,17 +293,6 @@ local function Initialize()
     else
         MMF_UnlockFrames()
     end
-    C_Timer.After(1, function()
-        if MMF_ShowWelcomePopup then
-            MMF_ShowWelcomePopup(false)
-            return
-        end
-        C_Timer.After(1, function()
-            if MMF_ShowWelcomePopup then
-                MMF_ShowWelcomePopup(false)
-            end
-        end)
-    end)
 end
 
 local function ReapplySharedMediaSelections()
