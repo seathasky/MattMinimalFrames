@@ -1,5 +1,113 @@
 local Compat = _G.MMF_Compat or {}
 
+local function MMF_SetupAurasPowerHeader(leftCol, accentColor)
+    local ACCENT_COLOR = accentColor or { 0.6, 0.4, 0.9 }
+
+    local hero = CreateFrame("Frame", nil, leftCol, "BackdropTemplate")
+    hero:SetPoint("TOPLEFT", 12, -12)
+    hero:SetPoint("TOPRIGHT", -12, -12)
+    hero:SetHeight(8)
+    hero:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    hero:SetBackdropColor(0.05, 0.07, 0.09, 0.96)
+    hero:SetBackdropBorderColor(0.16, 0.2, 0.23, 1)
+
+    local heroLine = hero:CreateTexture(nil, "ARTWORK")
+    heroLine:SetPoint("BOTTOMLEFT", 0, 0)
+    heroLine:SetPoint("BOTTOMRIGHT", 0, 0)
+    heroLine:SetHeight(2)
+    heroLine:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.95)
+
+    local sectionCard = CreateFrame("Frame", nil, leftCol, "BackdropTemplate")
+    sectionCard:SetPoint("TOPLEFT", 12, -60)
+    sectionCard:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    sectionCard:SetBackdropColor(0.03, 0.05, 0.07, 0.98)
+    sectionCard:SetBackdropBorderColor(0.12, 0.16, 0.18, 1)
+
+    local sectionTitle = sectionCard:CreateFontString(nil, "OVERLAY")
+    sectionTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 14, "")
+    sectionTitle:SetPoint("TOPLEFT", 18, -16)
+    sectionTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+
+    local sectionSubtitle = sectionCard:CreateFontString(nil, "OVERLAY")
+    sectionSubtitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+    sectionSubtitle:SetPoint("TOPLEFT", sectionTitle, "BOTTOMLEFT", 0, -6)
+    sectionSubtitle:SetTextColor(0.62, 0.67, 0.71)
+
+    local sectionDivider = sectionCard:CreateTexture(nil, "ARTWORK")
+    sectionDivider:SetPoint("TOPLEFT", 18, -52)
+    sectionDivider:SetPoint("TOPRIGHT", -18, -52)
+    sectionDivider:SetHeight(1)
+    sectionDivider:SetColorTexture(0.14, 0.18, 0.2, 1)
+
+    local sectionViewport = CreateFrame("Frame", nil, sectionCard)
+    sectionViewport:SetPoint("TOPLEFT", 18, -62)
+    sectionViewport:SetClipsChildren(true)
+
+    local legacyContent = CreateFrame("Frame", nil, sectionViewport)
+    legacyContent:SetPoint("TOPLEFT", 0, 0)
+    legacyContent:SetSize(640, 760)
+
+    local sectionDefs = {
+        { label = "Auras", subtitle = "Target aura position and appearance.", x = 0, y = 12, width = 300, height = 260 },
+        { label = "Power", subtitle = "Player and target power bars and text.", x = 304, y = 12, width = 228, height = 460 },
+    }
+
+    local activeSectionIndex = tonumber(MattMinimalFramesDB.aurasPowerSubTab) or 1
+    if activeSectionIndex < 1 or activeSectionIndex > #sectionDefs then
+        activeSectionIndex = 1
+    end
+
+    local function ApplySection(index)
+        activeSectionIndex = index
+        MattMinimalFramesDB.aurasPowerSubTab = index
+        local section = sectionDefs[index]
+        if not section then return end
+
+        sectionTitle:SetText(section.label or "")
+        sectionSubtitle:SetText(section.subtitle or "")
+        sectionCard:SetSize(math.max(360, section.width + 36), section.height + 82)
+        sectionViewport:SetSize(section.width, section.height)
+        legacyContent:ClearAllPoints()
+        legacyContent:SetPoint("TOPLEFT", sectionViewport, "TOPLEFT", -section.x, section.y)
+        leftCol:SetHeight(section.height + 182)
+    end
+
+    local subTabs = MMF_CreateSubTabBar and MMF_CreateSubTabBar(leftCol, {
+        accentColor = ACCENT_COLOR,
+        x = 12,
+        y = -22,
+        width = 560,
+        height = 28,
+        spacing = 6,
+        minButtonWidth = 58,
+        horizontalPadding = 12,
+        fontSize = 10,
+        tabs = sectionDefs,
+        defaultIndex = activeSectionIndex,
+        onSelect = function(index)
+            ApplySection(index)
+        end,
+    }) or nil
+
+    return {
+        contentRoot = legacyContent,
+        ApplyInitialSection = function()
+            if subTabs and subTabs.SetActive then
+                subTabs.SetActive(activeSectionIndex, true)
+            end
+            ApplySection(activeSectionIndex)
+        end,
+    }
+end
+
 function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalCheckbox, createMinimalSlider)
     local _, playerClass = UnitClass("player")
     local isPlayerDruid = (playerClass == "DRUID")
@@ -8,6 +116,8 @@ function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalC
     local ACCENT_COLOR = accentColor or { 0.6, 0.4, 0.9 }
     local CreateMinimalCheckbox = createMinimalCheckbox or MMF_CreateMinimalCheckbox
     local CreateMinimalSlider = createMinimalSlider or MMF_CreateMinimalSlider
+    local headerState = MMF_SetupAurasPowerHeader(leftCol, ACCENT_COLOR)
+    leftCol = headerState and headerState.contentRoot or leftCol
     local AURA_COL_X = 12
     local AURA_COL_WIDTH = 280
     local RESOURCE_COL_X = AURA_COL_X + AURA_COL_WIDTH + 24
@@ -159,21 +269,9 @@ function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalC
 
     local generalTitle = leftCol:CreateFontString(nil, "OVERLAY")
     generalTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    local columnDivider = leftCol:CreateTexture(nil, "ARTWORK")
-    columnDivider:SetPoint("TOPLEFT", RESOURCE_COL_X - 16, -12)
-    columnDivider:SetPoint("BOTTOMLEFT", RESOURCE_COL_X - 16, 12)
-    columnDivider:SetWidth(1)
-    columnDivider:SetColorTexture(0.35, 0.35, 0.4, 1)
-
     generalTitle:SetPoint("TOPLEFT", RESOURCE_COL_X, -12)
     generalTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     generalTitle:SetText("RESOURCES")
-
-    local resourceHint = leftCol:CreateFontString(nil, "OVERLAY")
-    resourceHint:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    resourceHint:SetPoint("TOPLEFT", RESOURCE_COL_X, -28)
-    resourceHint:SetTextColor(0.6, 0.6, 0.6)
-    resourceHint:SetText("Tip: Hold Shift and Click+Drag power bar or power text to move it.")
 
     local playerTitle = leftCol:CreateFontString(nil, "OVERLAY")
     playerTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
@@ -365,6 +463,10 @@ function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalC
     MattMinimalFramesDB.__tempAuraOffsetY = nil
 
     ---------------------------------------------------
+    if headerState and headerState.ApplyInitialSection then
+        headerState.ApplyInitialSection()
+    end
+
     return {
         auraTypeList = auraTypeDropdown.list,
     }

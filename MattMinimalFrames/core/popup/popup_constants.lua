@@ -9,15 +9,15 @@ MMF_POPUP_LAYOUT = {
     CONTENT_TOP_OFFSET = -4,
     PAGE_GAP = 4,
     DEFAULT_CENTER_Y = 50,
-    WIDTH_TBC = 934,
-    WIDTH_RETAIL = 934,
-    HEIGHT_TBC = 750,
-    HEIGHT_RETAIL = 750,
-    PAGE_CONTENT_HEIGHT_UNIT_FRAMES = 680,
+    WIDTH_TBC = 820,
+    WIDTH_RETAIL = 820,
+    HEIGHT_TBC = 580,
+    HEIGHT_RETAIL = 580,
+    PAGE_CONTENT_HEIGHT_UNIT_FRAMES = 460,
     PAGE_CONTENT_HEIGHT_AURAS_POWER = 680,
     PAGE_CONTENT_HEIGHT_CURRENT_CLASS = 680,
-    PAGE_CONTENT_HEIGHT_PROFILES = 680,
-    PAGE_CONTENT_HEIGHT_TOOLS = 680,
+    PAGE_CONTENT_HEIGHT_PROFILES = 460,
+    PAGE_CONTENT_HEIGHT_TOOLS = 460,
 }
 
 function MMF_GetPopupLayout()
@@ -43,19 +43,8 @@ function MMF_GetPopupLayout()
 end
 
 local function GetPlayerClassAccent()
-    if MattMinimalFramesDB and MattMinimalFramesDB.classColorGUI == false then
-        return 0.72, 0.74, 0.78
-    end
-    local _, classToken = UnitClass("player")
-    local classColors = RAID_CLASS_COLORS
-    local classColor = classToken and classColors and classColors[classToken]
-    if classColor then
-        return classColor.r, classColor.g, classColor.b
-    end
-    if Compat.IsTBC then
-        return 0.2, 0.9, 0.4
-    end
-    return 0.6, 0.4, 0.9
+    -- Monochrome popup accent (gray/white/dark-gray theme).
+    return 0.72, 0.74, 0.78
 end
 
 function MMF_GetPopupAccentColor()

@@ -1,12 +1,191 @@
-function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMinimalCheckbox, createMinimalSlider, getCurrentPlayerIconModeValue, getCurrentTargetIconModeValue)
+local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTabBar, scrollToSectionOffset, requestScrollRefresh)
+    local ACCENT_COLOR = accentColor or { 0.6, 0.4, 0.9 }
+    local CreateSubTabBar = createSubTabBar or MMF_CreateSubTabBar
+    local RequestScrollRefresh = requestScrollRefresh or function() end
+
+    local unitFramesHero = CreateFrame("Frame", nil, unitFramesCol, "BackdropTemplate")
+    unitFramesHero:SetPoint("TOPLEFT", 12, -12)
+    unitFramesHero:SetPoint("TOPRIGHT", -12, -12)
+    unitFramesHero:SetHeight(8)
+    unitFramesHero:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    unitFramesHero:SetBackdropColor(0.05, 0.07, 0.09, 0.96)
+    unitFramesHero:SetBackdropBorderColor(0.16, 0.2, 0.23, 1)
+
+    local heroGlow = unitFramesHero:CreateTexture(nil, "BACKGROUND")
+    heroGlow:SetPoint("TOPLEFT", 0, 0)
+    heroGlow:SetPoint("TOPRIGHT", 0, 0)
+    heroGlow:SetHeight(4)
+    heroGlow:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.12)
+
+    local heroLine = unitFramesHero:CreateTexture(nil, "ARTWORK")
+    heroLine:SetPoint("BOTTOMLEFT", 0, 0)
+    heroLine:SetPoint("BOTTOMRIGHT", 0, 0)
+    heroLine:SetHeight(2)
+    heroLine:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.95)
+
+    local sectionCard = CreateFrame("Frame", nil, unitFramesCol, "BackdropTemplate")
+    sectionCard:SetPoint("TOPLEFT", 12, -60)
+    sectionCard:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    sectionCard:SetBackdropColor(0.03, 0.05, 0.07, 0.98)
+    sectionCard:SetBackdropBorderColor(0.12, 0.16, 0.18, 1)
+
+    local sectionCardGlow = sectionCard:CreateTexture(nil, "BACKGROUND")
+    sectionCardGlow:SetPoint("TOPLEFT", 0, 0)
+    sectionCardGlow:SetPoint("TOPRIGHT", 0, 0)
+    sectionCardGlow:SetHeight(14)
+    sectionCardGlow:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.06)
+
+    local sectionCardTitle = sectionCard:CreateFontString(nil, "OVERLAY")
+    sectionCardTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 14, "")
+    sectionCardTitle:SetPoint("TOPLEFT", 18, -16)
+    sectionCardTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+
+    local sectionCardSubtitle = sectionCard:CreateFontString(nil, "OVERLAY")
+    sectionCardSubtitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+    sectionCardSubtitle:SetPoint("TOPLEFT", sectionCardTitle, "BOTTOMLEFT", 0, -6)
+    sectionCardSubtitle:SetTextColor(0.62, 0.67, 0.71)
+
+    local sectionDivider = sectionCard:CreateTexture(nil, "ARTWORK")
+    sectionDivider:SetPoint("TOPLEFT", 18, -52)
+    sectionDivider:SetPoint("TOPRIGHT", -18, -52)
+    sectionDivider:SetHeight(1)
+    sectionDivider:SetColorTexture(0.14, 0.18, 0.2, 1)
+
+    local sectionViewport = CreateFrame("Frame", nil, sectionCard)
+    sectionViewport:SetPoint("TOPLEFT", 18, -62)
+    sectionViewport:SetClipsChildren(true)
+
+    local sectionViewportMaskTop = sectionViewport:CreateTexture(nil, "OVERLAY")
+    sectionViewportMaskTop:SetPoint("TOPLEFT", 0, 0)
+    sectionViewportMaskTop:SetPoint("TOPRIGHT", 0, 0)
+    sectionViewportMaskTop:SetColorTexture(0.03, 0.05, 0.07, 1)
+    sectionViewportMaskTop:Hide()
+
+    local sectionViewportMaskBottom = sectionViewport:CreateTexture(nil, "OVERLAY")
+    sectionViewportMaskBottom:SetPoint("BOTTOMLEFT", 0, 0)
+    sectionViewportMaskBottom:SetPoint("BOTTOMRIGHT", 0, 0)
+    sectionViewportMaskBottom:SetColorTexture(0.03, 0.05, 0.07, 1)
+    sectionViewportMaskBottom:Hide()
+
+    local legacyContent = CreateFrame("Frame", nil, sectionViewport)
+    legacyContent:SetPoint("TOPLEFT", 0, 0)
+    legacyContent:SetSize(900, 680)
+
+    local sectionDefs = {
+        { label = "Layout", subtitle = "Scale and frame sizing controls.", x = 0, y = 8, width = 288, height = 122 },
+        { label = "Text", subtitle = "Font sizes, truncation, and name behavior.", x = 0, y = 126, width = 288, height = 160, maskTop = 12 },
+        { label = "Visibility", subtitle = "Choose when name and HP text are shown.", x = 0, y = 300, width = 288, height = 124 },
+        { label = "Offsets", subtitle = "Adjust text positions for each supported unit.", x = 0, y = 434, width = 288, height = 174 },
+        { label = "Cast Bars", subtitle = "HP text format and cast bar options.", x = 300, y = 6, width = 288, height = 234 },
+        { label = "Combat", subtitle = "Out-of-combat fading and visibility rules.", x = 300, y = 258, width = 288, height = 184 },
+        { label = "Media", subtitle = "Textures, fonts, and frame colors.", x = 588, y = 6, width = 300, height = 220 },
+        { label = "Icons", subtitle = "Icon positions, sizes, and target markers.", x = 588, y = 236, width = 300, height = 266 },
+        { label = "Overlays", subtitle = "Heal prediction and absorb overlay settings.", x = 588, y = 512, width = 300, height = 78 },
+    }
+
+    local activeSectionIndex = tonumber(MattMinimalFramesDB.unitFramesSubTab) or 1
+    if activeSectionIndex < 1 or activeSectionIndex > #sectionDefs then
+        activeSectionIndex = 1
+    end
+
+    -- Compute a fixed card size from the largest section so every sub-tab
+    -- renders inside the same box — no resize flash when switching tabs.
+    local fixedCardW, fixedCardH = 360, 0
+    for _, def in ipairs(sectionDefs) do
+        local w = math.max(360, (def.width or 0) + 36)
+        local h = (def.height or 0) + 82
+        if w > fixedCardW then fixedCardW = w end
+        if h > fixedCardH then fixedCardH = h end
+    end
+    local fixedPageH = fixedCardH + 100   -- card height + header / padding
+
+    sectionCard:SetSize(fixedCardW, fixedCardH)
+    unitFramesCol:SetHeight(fixedPageH)
+
+    local sectionChangeHandler = nil
+
+    local function ApplySection(index)
+        activeSectionIndex = index
+        MattMinimalFramesDB.unitFramesSubTab = index
+        local section = sectionDefs[index]
+        if not section then
+            return
+        end
+        sectionCardTitle:SetText(section.label or "")
+        sectionCardSubtitle:SetText(section.subtitle or "")
+        sectionViewport:SetSize(section.width, section.height)
+        legacyContent:ClearAllPoints()
+        legacyContent:SetPoint("TOPLEFT", sectionViewport, "TOPLEFT", -section.x, section.y)
+        if section.maskTop and section.maskTop > 0 then
+            sectionViewportMaskTop:SetHeight(section.maskTop)
+            sectionViewportMaskTop:Show()
+        else
+            sectionViewportMaskTop:Hide()
+        end
+        if section.maskBottom and section.maskBottom > 0 then
+            sectionViewportMaskBottom:SetHeight(section.maskBottom)
+            sectionViewportMaskBottom:Show()
+        else
+            sectionViewportMaskBottom:Hide()
+        end
+        if sectionChangeHandler then
+            sectionChangeHandler(index, section)
+        end
+        RequestScrollRefresh()
+    end
+
+    local unitFramesSubTabs = CreateSubTabBar and CreateSubTabBar(unitFramesCol, {
+        accentColor = ACCENT_COLOR,
+        x = 12,
+        y = -22,
+        width = 580,
+        height = 28,
+        spacing = 6,
+        minButtonWidth = 58,
+        horizontalPadding = 12,
+        fontSize = 10,
+        tabs = sectionDefs,
+        defaultIndex = activeSectionIndex,
+        onSelect = function(index)
+            ApplySection(index)
+        end,
+    }) or nil
+
+    return {
+        contentRoot = legacyContent,
+        SetSectionChangeHandler = function(handler)
+            sectionChangeHandler = handler
+        end,
+        ApplyInitialSection = function()
+            if unitFramesSubTabs and unitFramesSubTabs.SetActive then
+                unitFramesSubTabs.SetActive(activeSectionIndex, true)
+            end
+            ApplySection(activeSectionIndex)
+        end,
+    }
+end
+
+function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMinimalCheckbox, createMinimalSlider, getCurrentPlayerIconModeValue, getCurrentTargetIconModeValue, createSubTabBar, scrollToSectionOffset, requestScrollRefresh)
     local ACCENT_COLOR = accentColor or { 0.6, 0.4, 0.9 }
     local CreateMinimalCheckbox = createMinimalCheckbox or MMF_CreateMinimalCheckbox
     local CreateMinimalSlider = createMinimalSlider or MMF_CreateMinimalSlider
     local GetCurrentPlayerIconModeValue = getCurrentPlayerIconModeValue or function() return "off" end
     local GetCurrentTargetIconModeValue = getCurrentTargetIconModeValue or function() return "off" end
+    local pageShell = unitFramesCol
     local castBarColorList
     local unitTextureList
     local unitFontList
+    local playerBarColorList
+    local targetBarColorList
+    local totBarColorList
     local playerIconModeList
     local targetIconModeList
     local scaleUnitList
@@ -17,6 +196,8 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local hideHPTextUnitList
     local UpdatePlayerIconModeButtonText = function() end
     local RefreshPredictionVisuals
+    local headerState = MMF_SetupUnitFramesHeader(pageShell, ACCENT_COLOR, createSubTabBar, scrollToSectionOffset, requestScrollRefresh)
+    unitFramesCol = headerState and headerState.contentRoot or unitFramesCol
     local LEFT_COL_X = 12
     local DIVIDER_ONE_X = 300
     local DIVIDER_TWO_X = 600
@@ -41,6 +222,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local ICON_RESET_BUTTON_WIDTH = math.floor((RIGHT_COL_WIDTH - ICON_RESET_BUTTON_GAP) / 2)
     local RIGHT_COL_Y_OFFSET = 24
     local RIGHT_STACK_Y_OFFSET = RIGHT_COL_Y_OFFSET + 252
+    local RIGHT_FRAME_OPTIONS_Y_SHIFT = 76
     local LEFT_LOWER_Y_OFFSET = -24
 
     local function NormalizeSelectionValue(value, fallback)
@@ -60,24 +242,6 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     -- UNIT FRAMES COLUMN (2nd Column)
     ---------------------------------------------------
-    local unitFramesTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
-    unitFramesTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    unitFramesTitle:SetPoint("TOPLEFT", 12, -12)
-    unitFramesTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
-    unitFramesTitle:SetText("UNIT FRAMES")
-
-    -- Right-side style column for unit frame texture selection
-    local unitFramesSplitOne = unitFramesCol:CreateTexture(nil, "ARTWORK")
-    unitFramesSplitOne:SetPoint("TOPLEFT", DIVIDER_ONE_X, -12)
-    unitFramesSplitOne:SetPoint("BOTTOMLEFT", DIVIDER_ONE_X, 12)
-    unitFramesSplitOne:SetWidth(1)
-    unitFramesSplitOne:SetColorTexture(0.42, 0.42, 0.46, 1)
-
-    local unitFramesSplitTwo = unitFramesCol:CreateTexture(nil, "ARTWORK")
-    unitFramesSplitTwo:SetPoint("TOPLEFT", DIVIDER_TWO_X, -12)
-    unitFramesSplitTwo:SetPoint("BOTTOMLEFT", DIVIDER_TWO_X, 12)
-    unitFramesSplitTwo:SetWidth(1)
-    unitFramesSplitTwo:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     local textOffsetsTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     textOffsetsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
@@ -439,7 +603,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     styleSubtext:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
     styleSubtext:SetPoint("TOPLEFT", RIGHT_COL_X, -308 + RIGHT_STACK_Y_OFFSET)
     styleSubtext:SetTextColor(0.65, 0.65, 0.7)
-    styleSubtext:SetText("SharedMedia unit frame textures and fonts")
+    styleSubtext:SetText("Textures, fonts, and player bar color")
 
     local unitTextureDropdown
 
@@ -588,14 +752,150 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     })
     unitFontList = unitFontDropdown.list
 
+    local playerBarColorOptions = (MMF_Config and MMF_Config.PLAYER_BAR_COLORS) or {
+        { value = "class", label = "Class (Default)" },
+        { value = "green", label = "Green", r = 0.20, g = 0.80, b = 0.20 },
+        { value = "white", label = "White", r = 1.00, g = 1.00, b = 1.00 },
+        { value = "gray",  label = "Gray",  r = 0.60, g = 0.60, b = 0.60 },
+        { value = "red",   label = "Red",   r = 0.90, g = 0.20, b = 0.20 },
+        { value = "blue",  label = "Blue",  r = 0.20, g = 0.45, b = 0.95 },
+    }
+
+    local function GetSelectedPlayerBarColorMode()
+        local selected = NormalizeSelectionValue(MattMinimalFramesDB and MattMinimalFramesDB.playerBarColorMode, "class")
+        for _, option in ipairs(playerBarColorOptions) do
+            if option and option.value == selected then
+                return selected
+            end
+        end
+        return "class"
+    end
+
+    local PLAYER_BAR_LABEL_WIDTH = 120
+    local PLAYER_BAR_BUTTON_OFFSET = 124
+    local PLAYER_BAR_BUTTON_WIDTH = RIGHT_COL_WIDTH - PLAYER_BAR_BUTTON_OFFSET
+
+    local playerBarColorDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
+        accentColor = ACCENT_COLOR,
+        x = RIGHT_COL_X,
+        y = -430 + RIGHT_STACK_Y_OFFSET,
+        width = RIGHT_COL_WIDTH,
+        labelWidth = PLAYER_BAR_LABEL_WIDTH,
+        buttonOffset = PLAYER_BAR_BUTTON_OFFSET,
+        buttonWidth = PLAYER_BAR_BUTTON_WIDTH,
+        visibleRows = #playerBarColorOptions,
+        label = "Player Frame Color",
+        options = playerBarColorOptions,
+        getValue = function()
+            return GetSelectedPlayerBarColorMode()
+        end,
+        onSelect = function(value)
+            if not MattMinimalFramesDB then
+                MattMinimalFramesDB = {}
+            end
+            MattMinimalFramesDB.playerBarColorMode = value or "class"
+            if MMF_RequestAllFramesUpdate then
+                MMF_RequestAllFramesUpdate()
+            elseif MMF_PlayerFrame and MMF_UpdateUnitFrame then
+                MMF_UpdateUnitFrame(MMF_PlayerFrame)
+            end
+        end,
+    })
+    playerBarColorList = playerBarColorDropdown.list
+
+    local targetBarColorOptions = (MMF_Config and MMF_Config.TARGET_BAR_COLORS) or {
+        { value = "default", label = "Default" },
+        { value = "green", label = "Green", r = 0.20, g = 0.80, b = 0.20 },
+        { value = "white", label = "White", r = 1.00, g = 1.00, b = 1.00 },
+        { value = "gray", label = "Gray", r = 0.60, g = 0.60, b = 0.60 },
+        { value = "red", label = "Red", r = 0.90, g = 0.20, b = 0.20 },
+        { value = "blue", label = "Blue", r = 0.20, g = 0.45, b = 0.95 },
+    }
+
+    local function GetSelectedTargetBarColorMode()
+        local selected = NormalizeSelectionValue(MattMinimalFramesDB and MattMinimalFramesDB.targetBarColorMode, "default")
+        for _, option in ipairs(targetBarColorOptions) do
+            if option and option.value == selected then
+                return selected
+            end
+        end
+        return "default"
+    end
+
+    local targetBarColorDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
+        accentColor = ACCENT_COLOR,
+        x = RIGHT_COL_X,
+        y = -454 + RIGHT_STACK_Y_OFFSET,
+        width = RIGHT_COL_WIDTH,
+        labelWidth = PLAYER_BAR_LABEL_WIDTH,
+        buttonOffset = PLAYER_BAR_BUTTON_OFFSET,
+        buttonWidth = PLAYER_BAR_BUTTON_WIDTH,
+        visibleRows = #targetBarColorOptions,
+        label = "Target Frame Color",
+        options = targetBarColorOptions,
+        getValue = function()
+            return GetSelectedTargetBarColorMode()
+        end,
+        onSelect = function(value)
+            if not MattMinimalFramesDB then
+                MattMinimalFramesDB = {}
+            end
+            MattMinimalFramesDB.targetBarColorMode = value or "default"
+            if MMF_RequestAllFramesUpdate then
+                MMF_RequestAllFramesUpdate()
+            elseif MMF_TargetFrame and MMF_UpdateUnitFrame then
+                MMF_UpdateUnitFrame(MMF_TargetFrame)
+            end
+        end,
+    })
+    targetBarColorList = targetBarColorDropdown.list
+
+    local function GetSelectedTOTBarColorMode()
+        local selected = NormalizeSelectionValue(MattMinimalFramesDB and MattMinimalFramesDB.totBarColorMode, "default")
+        for _, option in ipairs(targetBarColorOptions) do
+            if option and option.value == selected then
+                return selected
+            end
+        end
+        return "default"
+    end
+
+    local totBarColorDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
+        accentColor = ACCENT_COLOR,
+        x = RIGHT_COL_X,
+        y = -478 + RIGHT_STACK_Y_OFFSET,
+        width = RIGHT_COL_WIDTH,
+        labelWidth = PLAYER_BAR_LABEL_WIDTH,
+        buttonOffset = PLAYER_BAR_BUTTON_OFFSET,
+        buttonWidth = PLAYER_BAR_BUTTON_WIDTH,
+        visibleRows = #targetBarColorOptions,
+        label = "ToT Frame Color",
+        options = targetBarColorOptions,
+        getValue = function()
+            return GetSelectedTOTBarColorMode()
+        end,
+        onSelect = function(value)
+            if not MattMinimalFramesDB then
+                MattMinimalFramesDB = {}
+            end
+            MattMinimalFramesDB.totBarColorMode = value or "default"
+            if MMF_RequestAllFramesUpdate then
+                MMF_RequestAllFramesUpdate()
+            elseif MMF_TargetOfTargetFrame and MMF_UpdateUnitFrame then
+                MMF_UpdateUnitFrame(MMF_TargetOfTargetFrame)
+            end
+        end,
+    })
+    totBarColorList = totBarColorDropdown.list
+
     local styleDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     styleDivider:SetSize(RIGHT_COL_WIDTH, 1)
-    styleDivider:SetPoint("TOPLEFT", RIGHT_COL_X, -430 + RIGHT_STACK_Y_OFFSET)
+    styleDivider:SetPoint("TOPLEFT", RIGHT_COL_X, (-430 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET)
     styleDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     local frameOptionsTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     frameOptionsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    frameOptionsTitle:SetPoint("TOPLEFT", RIGHT_COL_X, -442 + RIGHT_STACK_Y_OFFSET)
+    frameOptionsTitle:SetPoint("TOPLEFT", RIGHT_COL_X, (-442 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET)
     frameOptionsTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     frameOptionsTitle:SetText("FRAME OPTIONS")
 
@@ -684,7 +984,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local playerIconModeDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = RIGHT_COL_X,
-        y = -458 + RIGHT_STACK_Y_OFFSET,
+        y = (-458 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET,
         width = RIGHT_COL_WIDTH,
         labelWidth = RIGHT_LABEL_WIDTH,
         buttonOffset = RIGHT_BUTTON_OFFSET,
@@ -741,7 +1041,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local targetIconModeDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = RIGHT_COL_X,
-        y = -482 + RIGHT_STACK_Y_OFFSET,
+        y = (-482 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET,
         width = RIGHT_COL_WIDTH,
         labelWidth = RIGHT_LABEL_WIDTH,
         buttonOffset = RIGHT_BUTTON_OFFSET,
@@ -810,42 +1110,42 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     MattMinimalFramesDB.playerFrameIconScale = NormalizeIconScale(MattMinimalFramesDB.playerFrameIconScale)
     MattMinimalFramesDB.targetFrameIconScale = NormalizeIconScale(MattMinimalFramesDB.targetFrameIconScale)
 
-    local playerIconXSlider = CreateMinimalSlider(unitFramesCol, "Player Icon X", RIGHT_COL_X, -506 + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "playerFrameIconXOffset", -200, 200, 1, 0, function(value)
+    local playerIconXSlider = CreateMinimalSlider(unitFramesCol, "Player Icon X", RIGHT_COL_X, (-506 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "playerFrameIconXOffset", -200, 200, 1, 0, function(value)
         MattMinimalFramesDB.playerFrameIconXOffset = NormalizeIconOffset(value)
         if MMF_UpdateFrameIconPlacement then
             MMF_UpdateFrameIconPlacement("player")
         end
     end, true)
 
-    local playerIconYSlider = CreateMinimalSlider(unitFramesCol, "Player Icon Y", RIGHT_COL_X, -530 + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "playerFrameIconYOffset", -200, 200, 1, 0, function(value)
+    local playerIconYSlider = CreateMinimalSlider(unitFramesCol, "Player Icon Y", RIGHT_COL_X, (-530 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "playerFrameIconYOffset", -200, 200, 1, 0, function(value)
         MattMinimalFramesDB.playerFrameIconYOffset = NormalizeIconOffset(value)
         if MMF_UpdateFrameIconPlacement then
             MMF_UpdateFrameIconPlacement("player")
         end
     end, true)
 
-    local targetIconXSlider = CreateMinimalSlider(unitFramesCol, "Target Icon X", RIGHT_COL_X, -554 + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "targetFrameIconXOffset", -200, 200, 1, 0, function(value)
+    local targetIconXSlider = CreateMinimalSlider(unitFramesCol, "Target Icon X", RIGHT_COL_X, (-554 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "targetFrameIconXOffset", -200, 200, 1, 0, function(value)
         MattMinimalFramesDB.targetFrameIconXOffset = NormalizeIconOffset(value)
         if MMF_UpdateFrameIconPlacement then
             MMF_UpdateFrameIconPlacement("target")
         end
     end, true)
 
-    local targetIconYSlider = CreateMinimalSlider(unitFramesCol, "Target Icon Y", RIGHT_COL_X, -578 + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "targetFrameIconYOffset", -200, 200, 1, 0, function(value)
+    local targetIconYSlider = CreateMinimalSlider(unitFramesCol, "Target Icon Y", RIGHT_COL_X, (-578 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "targetFrameIconYOffset", -200, 200, 1, 0, function(value)
         MattMinimalFramesDB.targetFrameIconYOffset = NormalizeIconOffset(value)
         if MMF_UpdateFrameIconPlacement then
             MMF_UpdateFrameIconPlacement("target")
         end
     end, true)
 
-    local playerIconScaleSlider = CreateMinimalSlider(unitFramesCol, "Player Icon Size", RIGHT_COL_X, -602 + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "playerFrameIconScale", 0.5, 3.0, 0.05, 1.0, function(value)
+    local playerIconScaleSlider = CreateMinimalSlider(unitFramesCol, "Player Icon Size", RIGHT_COL_X, (-602 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "playerFrameIconScale", 0.5, 3.0, 0.05, 1.0, function(value)
         MattMinimalFramesDB.playerFrameIconScale = NormalizeIconScale(value)
         if MMF_UpdateFrameIconPlacement then
             MMF_UpdateFrameIconPlacement("player")
         end
     end, false)
 
-    local targetIconScaleSlider = CreateMinimalSlider(unitFramesCol, "Target Icon Size", RIGHT_COL_X, -626 + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "targetFrameIconScale", 0.5, 3.0, 0.05, 1.0, function(value)
+    local targetIconScaleSlider = CreateMinimalSlider(unitFramesCol, "Target Icon Size", RIGHT_COL_X, (-626 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "targetFrameIconScale", 0.5, 3.0, 0.05, 1.0, function(value)
         MattMinimalFramesDB.targetFrameIconScale = NormalizeIconScale(value)
         if MMF_UpdateFrameIconPlacement then
             MMF_UpdateFrameIconPlacement("target")
@@ -884,7 +1184,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         return button
     end
 
-    CreateIconResetButton("Reset Player Icon", RIGHT_COL_X, -650 + RIGHT_STACK_Y_OFFSET, function()
+    CreateIconResetButton("Reset Player Icon", RIGHT_COL_X, (-650 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, function()
         MattMinimalFramesDB.playerFrameIconXOffset = 0
         MattMinimalFramesDB.playerFrameIconYOffset = 0
         MattMinimalFramesDB.playerFrameIconScale = 1.0
@@ -896,7 +1196,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         end
     end)
 
-    CreateIconResetButton("Reset Target Icon", RIGHT_COL_X + ICON_RESET_BUTTON_WIDTH + ICON_RESET_BUTTON_GAP, -650 + RIGHT_STACK_Y_OFFSET, function()
+    CreateIconResetButton("Reset Target Icon", RIGHT_COL_X + ICON_RESET_BUTTON_WIDTH + ICON_RESET_BUTTON_GAP, (-650 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, function()
         MattMinimalFramesDB.targetFrameIconXOffset = 0
         MattMinimalFramesDB.targetFrameIconYOffset = 0
         MattMinimalFramesDB.targetFrameIconScale = 1.0
@@ -908,7 +1208,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         end
     end)
 
-    local targetMarkersCheck = CreateMinimalCheckbox(unitFramesCol, "Target Markers", RIGHT_COL_X, -678 + RIGHT_STACK_Y_OFFSET, "showTargetMarkers", false, function(checked)
+    local targetMarkersCheck = CreateMinimalCheckbox(unitFramesCol, "Target Markers", RIGHT_COL_X, (-678 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showTargetMarkers", false, function(checked)
         if MMF_UpdateTargetMarkerVisibility then
             MMF_UpdateTargetMarkerVisibility(checked)
         end
@@ -940,16 +1240,16 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local frameOptionsDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     frameOptionsDivider:SetSize(RIGHT_COL_WIDTH, 1)
-    frameOptionsDivider:SetPoint("TOPLEFT", RIGHT_COL_X, -706 + RIGHT_STACK_Y_OFFSET)
+    frameOptionsDivider:SetPoint("TOPLEFT", RIGHT_COL_X, (-706 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET)
     frameOptionsDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     local healOverlaysTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     healOverlaysTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    healOverlaysTitle:SetPoint("TOPLEFT", RIGHT_COL_X, -718 + RIGHT_STACK_Y_OFFSET)
+    healOverlaysTitle:SetPoint("TOPLEFT", RIGHT_COL_X, (-718 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET)
     healOverlaysTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     healOverlaysTitle:SetText("HEAL OVERLAYS")
 
-    local healPredictionCheck = CreateMinimalCheckbox(unitFramesCol, "Heal Prediction", RIGHT_COL_X, -742 + RIGHT_STACK_Y_OFFSET, "showHealPrediction", true, function()
+    local healPredictionCheck = CreateMinimalCheckbox(unitFramesCol, "Heal Prediction", RIGHT_COL_X, (-742 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showHealPrediction", true, function()
         RefreshPredictionVisuals()
     end)
 
@@ -1050,7 +1350,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         52
     )
 
-    local absorbBarCheck = CreateMinimalCheckbox(unitFramesCol, "Absorb Bar", RIGHT_COL_X, -766 + RIGHT_STACK_Y_OFFSET, "showAbsorbBar", true, function()
+    local absorbBarCheck = CreateMinimalCheckbox(unitFramesCol, "Absorb Bar", RIGHT_COL_X, (-766 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showAbsorbBar", true, function()
         RefreshPredictionVisuals()
     end)
     CreateHintIcon(
@@ -1085,16 +1385,22 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     end
     EnsureScaleUnitSelection()
 
+    local frameScaleTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    frameScaleTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
+    frameScaleTitle:SetPoint("TOPLEFT", LEFT_COL_X, -12)
+    frameScaleTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    frameScaleTitle:SetText("FRAME SCALE")
+
     local scaleXSliders = {}
     local scaleYSliders = {}
     for _, opt in ipairs(scaleUnitOptions) do
         local prefix = (opt.value == "targettarget") and "tot" or opt.value
-        scaleXSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Scale X", LEFT_COL_X, -62, LEFT_COL_WIDTH, prefix .. "FrameScaleX", 0.5, 3.0, 0.05, 1.0, function()
+        scaleXSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Scale X", LEFT_COL_X, -82, LEFT_COL_WIDTH, prefix .. "FrameScaleX", 0.5, 3.0, 0.05, 1.0, function()
             if MMF_UpdateFrameScale then
                 MMF_UpdateFrameScale(opt.value)
             end
         end, false)
-        scaleYSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Scale Y", LEFT_COL_X, -86, LEFT_COL_WIDTH, prefix .. "FrameScaleY", 0.5, 5.0, 0.05, 1.0, function()
+        scaleYSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Scale Y", LEFT_COL_X, -106, LEFT_COL_WIDTH, prefix .. "FrameScaleY", 0.5, 5.0, 0.05, 1.0, function()
             if MMF_UpdateFrameScale then
                 MMF_UpdateFrameScale(opt.value)
             end
@@ -1115,7 +1421,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local scaleUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = LEFT_COL_X,
-        y = -36,
+        y = -56,
         width = LEFT_COL_WIDTH,
         labelWidth = LEFT_LABEL_WIDTH,
         buttonOffset = LEFT_BUTTON_OFFSET,
@@ -1134,11 +1440,28 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     scaleUnitList = scaleUnitDropdown.list
     UpdateVisibleScaleSliders()
 
-    -- Divider before Frame Text
-    local unitFramesDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
-    unitFramesDivider:SetSize(LEFT_COL_WIDTH, 1)
-    unitFramesDivider:SetPoint("TOPLEFT", LEFT_COL_X, -120)
-    unitFramesDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
+    local function UpdateLayoutSectionVisibility(sectionIndex)
+        local isLayout = (tonumber(sectionIndex) == 1)
+        frameScaleTitle:SetShown(isLayout)
+        if scaleUnitDropdown and scaleUnitDropdown.container then
+            scaleUnitDropdown.container:SetShown(isLayout)
+        end
+        for _, opt in ipairs(scaleUnitOptions) do
+            if scaleXSliders[opt.value] then
+                scaleXSliders[opt.value]:SetShown(isLayout and (opt.value == MattMinimalFramesDB.frameScaleUnit))
+            end
+            if scaleYSliders[opt.value] then
+                scaleYSliders[opt.value]:SetShown(isLayout and (opt.value == MattMinimalFramesDB.frameScaleUnit))
+            end
+        end
+    end
+
+    if headerState and headerState.SetSectionChangeHandler then
+        headerState.SetSectionChangeHandler(function(sectionIndex)
+            UpdateLayoutSectionVisibility(sectionIndex)
+        end)
+        UpdateLayoutSectionVisibility(tonumber(MattMinimalFramesDB.unitFramesSubTab) or 1)
+    end
 
     -- Frame Text section (moved here)
     local frameTextTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
@@ -1347,11 +1670,6 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     end)
     UpdateNameFeatureState()
 
-    local textVisibilityDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
-    textVisibilityDivider:SetSize(LEFT_COL_WIDTH, 1)
-    textVisibilityDivider:SetPoint("TOPLEFT", LEFT_COL_X, -294)
-    textVisibilityDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
-
     local textVisibilityTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     textVisibilityTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
     textVisibilityTitle:SetPoint("TOPLEFT", LEFT_COL_X, -306)
@@ -1499,6 +1817,9 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         castBarColorList = castBarColorList,
         unitTextureList = unitTextureList,
         unitFontList = unitFontList,
+        playerBarColorList = playerBarColorList,
+        targetBarColorList = targetBarColorList,
+        totBarColorList = totBarColorList,
         playerIconModeList = playerIconModeList,
         targetIconModeList = targetIconModeList,
         scaleUnitList = scaleUnitList,
@@ -1508,5 +1829,6 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         hideNameTextUnitList = hideNameTextUnitList,
         hideHPTextUnitList = hideHPTextUnitList,
         UpdatePlayerIconModeButtonText = UpdatePlayerIconModeButtonText,
+        ApplyInitialSection = headerState and headerState.ApplyInitialSection,
     }
 end

@@ -1,7 +1,7 @@
 local Compat = _G.MMF_Compat
 
 local POPUP_LAYOUT = (MMF_GetPopupLayout and MMF_GetPopupLayout()) or {
-    width = 934,
+    width = 820,
     height = Compat.IsTBC and 750 or 750,
     titleHeight = 28,
     footerHeight = 32,
@@ -20,6 +20,26 @@ local POPUP_LAYOUT = (MMF_GetPopupLayout and MMF_GetPopupLayout()) or {
 
 local CreateMinimalCheckbox = MMF_CreateMinimalCheckbox
 local CreateMinimalSlider = MMF_CreateMinimalSlider
+local CreateSubTabBar = MMF_CreateSubTabBar
+local TITLE_WALLPAPER_ALPHA = 0.03
+local SIDEBAR_WALLPAPER_ALPHA = 0.10
+
+local function SetAspectCropTexCoords(texture, holder, imageAspect)
+    if not texture or not holder then return end
+    local w = math.max(1, holder:GetWidth() or 1)
+    local h = math.max(1, holder:GetHeight() or 1)
+    local frameAspect = w / h
+    local sourceAspect = imageAspect or (16 / 9)
+    if frameAspect > sourceAspect then
+        local visibleV = sourceAspect / frameAspect
+        local padV = (1 - visibleV) * 0.5
+        texture:SetTexCoord(0, 1, padV, 1 - padV)
+    else
+        local visibleU = frameAspect / sourceAspect
+        local padU = (1 - visibleU) * 0.5
+        texture:SetTexCoord(padU, 1 - padU, 0, 1)
+    end
+end
 
 local function IsUISoundsEnabled()
     if MMF_IsPopupUISoundsEnabled then
@@ -170,17 +190,52 @@ function MMF_ShowWelcomePopup(forceShow)
     
     local titleBg = titleBar:CreateTexture(nil, "BACKGROUND")
     titleBg:SetAllPoints()
-    titleBg:SetColorTexture(0.12, 0.12, 0.15, 1)
+    titleBg:SetColorTexture(0.07, 0.09, 0.11, 1)
+
+    local titleWallpaper = titleBar:CreateTexture(nil, "ARTWORK")
+    titleWallpaper:SetPoint("TOPLEFT", 1, -1)
+    titleWallpaper:SetPoint("BOTTOMRIGHT", -1, 1)
+    titleWallpaper:SetTexture("Interface\\AddOns\\MattMinimalFrames\\Images\\mw.png")
+    titleWallpaper:SetAlpha(TITLE_WALLPAPER_ALPHA)
+
+    local function UpdateTitleWallpaperCrop()
+        local barW = math.max(1, titleBar:GetWidth() or popupWidth or 1)
+        local barH = math.max(1, titleBar:GetHeight() or (POPUP_LAYOUT.titleHeight or 28))
+        local imageAspect = 16 / 9
+        local barAspect = barW / barH
+
+        if barAspect > imageAspect then
+            local visibleV = imageAspect / barAspect
+            local padV = (1 - visibleV) * 0.5
+            titleWallpaper:SetTexCoord(0, 1, padV, 1 - padV)
+        else
+            local visibleU = barAspect / imageAspect
+            local padU = (1 - visibleU) * 0.5
+            titleWallpaper:SetTexCoord(padU, 1 - padU, 0, 1)
+        end
+    end
+    UpdateTitleWallpaperCrop()
+
+    local titleWallpaperTint = titleBar:CreateTexture(nil, "ARTWORK")
+    titleWallpaperTint:SetPoint("TOPLEFT", 1, -1)
+    titleWallpaperTint:SetPoint("BOTTOMRIGHT", -1, 1)
+    titleWallpaperTint:SetColorTexture(0.02, 0.03, 0.04, 0.22)
+
+    local titleGlow = titleBar:CreateTexture(nil, "ARTWORK")
+    titleGlow:SetPoint("BOTTOMLEFT", 0, 0)
+    titleGlow:SetPoint("BOTTOMRIGHT", 0, 0)
+    titleGlow:SetHeight(2)
+    titleGlow:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.95)
 
     local title = titleBar:CreateFontString(nil, "OVERLAY")
     title:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    title:SetPoint("LEFT", 12, 0)
+    title:SetPoint("LEFT", 16, 1)
     title:SetText("|cffffffffMatt's Minimal Frames ")
     
     -- Add version suffix with smaller font
     local versionSuffix = titleBar:CreateFontString(nil, "OVERLAY")
     versionSuffix:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 8, "")
-    versionSuffix:SetPoint("LEFT", title, "RIGHT", 2, 2)
+    versionSuffix:SetPoint("LEFT", title, "RIGHT", 4, 2)
     if Compat.IsTBC then
         versionSuffix:SetText("TBC EDITION")
         versionSuffix:SetTextColor(0.2, 0.9, 0.4)
@@ -189,16 +244,29 @@ function MMF_ShowWelcomePopup(forceShow)
         versionSuffix:SetTextColor(0.6, 0.4, 0.9)
     end
 
-    local closeX = CreateFrame("Button", nil, titleBar)
-    closeX:SetSize(28, 28)
-    closeX:SetPoint("RIGHT", 0, 0)
+    local closeX = CreateFrame("Button", nil, titleBar, "BackdropTemplate")
+    closeX:SetSize(18, 18)
+    closeX:SetPoint("RIGHT", -9, 0)
+    closeX:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    closeX:SetBackdropColor(0.06, 0.08, 0.1, 0.96)
+    closeX:SetBackdropBorderColor(0.18, 0.22, 0.25, 1)
     local closeText = closeX:CreateFontString(nil, "OVERLAY")
-    closeText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 14, "")
+    closeText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
     closeText:SetPoint("CENTER")
     closeText:SetText("×")
     closeText:SetTextColor(0.5, 0.5, 0.5)
-    closeX:SetScript("OnEnter", function() closeText:SetTextColor(1, 0.3, 0.3) end)
-    closeX:SetScript("OnLeave", function() closeText:SetTextColor(0.5, 0.5, 0.5) end)
+    closeX:SetScript("OnEnter", function()
+        closeX:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.8)
+        closeText:SetTextColor(1, 0.3, 0.3)
+    end)
+    closeX:SetScript("OnLeave", function()
+        closeX:SetBackdropBorderColor(0.18, 0.22, 0.25, 1)
+        closeText:SetTextColor(0.5, 0.5, 0.5)
+    end)
     closeX:SetScript("OnClick", function() popup:Hide() end)
 
     -- Lock Frames checkbox on title bar
@@ -349,21 +417,122 @@ function MMF_ShowWelcomePopup(forceShow)
     tabContainer:SetPoint("BOTTOMRIGHT", -POPUP_LAYOUT.contentSidePadding, 0)
     tabContainer:SetClipsChildren(true)
 
+    local SIDEBAR_WIDTH = 180
+    local HEADER_HEIGHT = 68
     local tabBar = CreateFrame("Frame", nil, tabContainer)
     tabBar:SetPoint("TOPLEFT", 0, 0)
-    tabBar:SetPoint("TOPRIGHT", 0, 0)
-    tabBar:SetHeight(POPUP_LAYOUT.tabHeight)
+    tabBar:SetPoint("BOTTOMLEFT", 0, 0)
+    tabBar:SetWidth(SIDEBAR_WIDTH)
+
+    local sidebarBg = CreateFrame("Frame", nil, tabBar, "BackdropTemplate")
+    sidebarBg:SetAllPoints()
+    sidebarBg:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    sidebarBg:SetBackdropColor(0.05, 0.07, 0.09, 0.72)
+    sidebarBg:SetBackdropBorderColor(0.12, 0.16, 0.18, 1)
+
+    local sidebarWallpaper = sidebarBg:CreateTexture(nil, "ARTWORK")
+    sidebarWallpaper:SetPoint("TOPLEFT", 1, -1)
+    sidebarWallpaper:SetPoint("BOTTOMRIGHT", -1, 1)
+    sidebarWallpaper:SetTexture("Interface\\AddOns\\MattMinimalFrames\\Images\\mw2.png")
+    sidebarWallpaper:SetAlpha(SIDEBAR_WALLPAPER_ALPHA)
+    SetAspectCropTexCoords(sidebarWallpaper, sidebarBg, 16 / 9)
+
+    local sidebarWallpaperTint = sidebarBg:CreateTexture(nil, "ARTWORK", nil, 1)
+    sidebarWallpaperTint:SetPoint("TOPLEFT", 1, -1)
+    sidebarWallpaperTint:SetPoint("BOTTOMRIGHT", -1, 1)
+    sidebarWallpaperTint:SetColorTexture(0.02, 0.03, 0.04, 0.02)
+
+    sidebarBg:SetScript("OnSizeChanged", function()
+        SetAspectCropTexCoords(sidebarWallpaper, sidebarBg, 16 / 9)
+    end)
+
+    local sidebarBrand = CreateFrame("Frame", nil, tabBar)
+    sidebarBrand:SetPoint("TOPLEFT", 0, 0)
+    sidebarBrand:SetPoint("TOPRIGHT", 0, 0)
+    sidebarBrand:SetHeight(64)
+
+    local sidebarBrandGlow = sidebarBrand:CreateTexture(nil, "ARTWORK")
+    sidebarBrandGlow:SetPoint("BOTTOMLEFT", 0, 0)
+    sidebarBrandGlow:SetPoint("BOTTOMRIGHT", 0, 0)
+    sidebarBrandGlow:SetHeight(2)
+    sidebarBrandGlow:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.95)
+
+    local sidebarBrandTitle = sidebarBrand:CreateFontString(nil, "OVERLAY")
+    sidebarBrandTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 20, "")
+    sidebarBrandTitle:SetPoint("TOPLEFT", 16, -16)
+    sidebarBrandTitle:SetTextColor(0.96, 0.97, 0.98)
+    sidebarBrandTitle:SetText("SETTINGS")
+
+    local sidebarBrandSub = sidebarBrand:CreateFontString(nil, "OVERLAY")
+    sidebarBrandSub:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
+    sidebarBrandSub:SetPoint("TOPLEFT", sidebarBrandTitle, "BOTTOMLEFT", 0, -4)
+    sidebarBrandSub:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    sidebarBrandSub:SetText("")
+
+    local navButtonHost = CreateFrame("Frame", nil, tabBar)
+    navButtonHost:SetPoint("TOPLEFT", sidebarBrand, "BOTTOMLEFT", 0, -14)
+    navButtonHost:SetPoint("TOPRIGHT", sidebarBrand, "BOTTOMRIGHT", 0, -14)
+    navButtonHost:SetPoint("BOTTOMLEFT", 0, 12)
+    navButtonHost:SetPoint("BOTTOMRIGHT", 0, 12)
 
     local pageContainer = CreateFrame("Frame", nil, tabContainer)
-    pageContainer:SetPoint("TOPLEFT", tabBar, "BOTTOMLEFT", 0, -POPUP_LAYOUT.pageGap)
+    pageContainer:SetPoint("TOPLEFT", tabBar, "TOPRIGHT", 12, 0)
     pageContainer:SetPoint("BOTTOMRIGHT", 0, 0)
     pageContainer:SetClipsChildren(true)
+
+    local pageHeader = CreateFrame("Frame", nil, pageContainer, "BackdropTemplate")
+    pageHeader:SetPoint("TOPLEFT", 0, 0)
+    pageHeader:SetPoint("TOPRIGHT", -(12 + 4), 0)
+    pageHeader:SetHeight(HEADER_HEIGHT)
+    pageHeader:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    pageHeader:SetBackdropColor(0.05, 0.07, 0.09, 0.96)
+    pageHeader:SetBackdropBorderColor(0.12, 0.16, 0.18, 1)
+
+    local pageHeaderWallpaper = pageHeader:CreateTexture(nil, "ARTWORK")
+    pageHeaderWallpaper:SetPoint("TOPLEFT", 1, -1)
+    pageHeaderWallpaper:SetPoint("BOTTOMRIGHT", -1, 1)
+    pageHeaderWallpaper:SetTexture("Interface\\AddOns\\MattMinimalFrames\\Images\\mw.png")
+    pageHeaderWallpaper:SetAlpha(0.12)
+    SetAspectCropTexCoords(pageHeaderWallpaper, pageHeader, 16 / 9)
+    pageHeader:SetScript("OnSizeChanged", function()
+        SetAspectCropTexCoords(pageHeaderWallpaper, pageHeader, 16 / 9)
+    end)
+
+    local pageHeaderGlow = pageHeader:CreateTexture(nil, "ARTWORK")
+    pageHeaderGlow:SetPoint("BOTTOMLEFT", 0, 0)
+    pageHeaderGlow:SetPoint("BOTTOMRIGHT", 0, 0)
+    pageHeaderGlow:SetHeight(2)
+    pageHeaderGlow:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.95)
+
+    local pageHeaderShade = pageHeader:CreateTexture(nil, "BACKGROUND")
+    pageHeaderShade:SetPoint("TOPLEFT", 0, 0)
+    pageHeaderShade:SetPoint("TOPRIGHT", 0, 0)
+    pageHeaderShade:SetHeight(22)
+    pageHeaderShade:SetColorTexture(0.02, 0.03, 0.04, 0.10)
+
+    local pageHeaderTitle = pageHeader:CreateFontString(nil, "OVERLAY")
+    pageHeaderTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 18, "")
+    pageHeaderTitle:SetPoint("TOPLEFT", 16, -14)
+    pageHeaderTitle:SetTextColor(0.98, 0.98, 0.98)
+
+    local pageHeaderSubtitle = pageHeader:CreateFontString(nil, "OVERLAY")
+    pageHeaderSubtitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+    pageHeaderSubtitle:SetPoint("TOPLEFT", pageHeaderTitle, "BOTTOMLEFT", 0, -6)
+    pageHeaderSubtitle:SetTextColor(0.62, 0.67, 0.71)
 
     local SCROLLBAR_WIDTH = 12
     local SCROLLBAR_GAP = 4
 
     local pageScrollFrame = CreateFrame("ScrollFrame", nil, pageContainer)
-    pageScrollFrame:SetPoint("TOPLEFT", 0, 0)
+    pageScrollFrame:SetPoint("TOPLEFT", pageHeader, "BOTTOMLEFT", 0, -8)
     pageScrollFrame:SetPoint("BOTTOMRIGHT", -(SCROLLBAR_WIDTH + SCROLLBAR_GAP), 0)
     pageScrollFrame:EnableMouseWheel(true)
     pageScrollFrame:SetClipsChildren(true)
@@ -399,8 +568,9 @@ function MMF_ShowWelcomePopup(forceShow)
             edgeFile = "Interface\\Buttons\\WHITE8x8",
             edgeSize = 1,
         })
-        page:SetBackdropColor(0.08, 0.08, 0.1, 1)
-        page:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.5)
+        page:SetBackdropColor(0.08, 0.10, 0.13, 0.96)
+        page:SetBackdropBorderColor(0.12, 0.16, 0.18, 1)
+
         return page
     end
 
@@ -413,6 +583,9 @@ function MMF_ShowWelcomePopup(forceShow)
     local castBarColorList
     local unitTextureList
     local unitFontList
+    local playerBarColorList
+    local targetBarColorList
+    local totBarColorList
     local playerIconModeList
     local targetIconModeList
     local scaleUnitList
@@ -453,6 +626,7 @@ function MMF_ShowWelcomePopup(forceShow)
         return mode
     end
     local UpdatePlayerIconModeButtonText = function() end
+    local unitFramesState
     local tabButtons = {}
     local allPages = {
         unitFramesCol,
@@ -470,6 +644,22 @@ function MMF_ShowWelcomePopup(forceShow)
         end
     end
 
+    local function GetActivePageScrollRange()
+        local page = activePage
+        if not page then
+            return 0, 0
+        end
+
+        if type(page.MMFGetSectionRange) == "function" then
+            local startY, endY = page:MMFGetSectionRange()
+            startY = math.max(0, tonumber(startY) or 0)
+            endY = math.max(startY, tonumber(endY) or (page:GetHeight() or 0))
+            return startY, endY
+        end
+
+        return 0, page:GetHeight() or 0
+    end
+
     local function UpdateSharedScrollBounds()
         local page = activePage
         if not page then
@@ -480,7 +670,8 @@ function MMF_ShowWelcomePopup(forceShow)
         end
 
         local viewHeight = pageScrollFrame:GetHeight() or 0
-        local contentHeight = page:GetHeight() or 0
+        local sectionStart, sectionEnd = GetActivePageScrollRange()
+        local contentHeight = math.max(0, sectionEnd - sectionStart)
         local maxScroll = math.max(0, contentHeight - viewHeight)
         local current = sharedScrollBar:GetValue() or 0
         if current > maxScroll then
@@ -491,11 +682,16 @@ function MMF_ShowWelcomePopup(forceShow)
         sharedScrollBar:SetValue(current)
         sharedScrollBar:SetEnabled(maxScroll > 0)
         sharedScrollBar:SetAlpha(maxScroll > 0 and 1 or 0.45)
-        pageScrollFrame:SetVerticalScroll(current)
+        pageScrollFrame:SetVerticalScroll(sectionStart + current)
     end
 
     sharedScrollBar:SetScript("OnValueChanged", function(self, value)
-        pageScrollFrame:SetVerticalScroll(value or 0)
+        local sectionStart = 0
+        if activePage and type(activePage.MMFGetSectionRange) == "function" then
+            local startY = activePage:MMFGetSectionRange()
+            sectionStart = math.max(0, tonumber(startY) or 0)
+        end
+        pageScrollFrame:SetVerticalScroll(sectionStart + (value or 0))
     end)
 
     pageScrollFrame:SetScript("OnMouseWheel", function(_, delta)
@@ -550,40 +746,44 @@ function MMF_ShowWelcomePopup(forceShow)
     local function LayoutTabButtons()
         local tabCount = #tabDefs
         local tabSpacing = POPUP_LAYOUT.tabSpacing
-        local tabContentWidth = popup:GetWidth() - (POPUP_LAYOUT.contentSidePadding * 2) - (SCROLLBAR_WIDTH + SCROLLBAR_GAP)
-        local totalGapWidth = (tabCount - 1) * tabSpacing
-        local usableTabWidth = tabContentWidth - totalGapWidth
-        local baseTabWidth = math.floor(usableTabWidth / tabCount)
-        local extraPixels = usableTabWidth - (baseTabWidth * tabCount)
-        local tabX = 0
+        local buttonHeight = 42
+        local tabY = 0
 
         for i, tabButton in ipairs(tabButtons) do
-            local thisTabWidth = baseTabWidth
-            if extraPixels > 0 then
-                thisTabWidth = thisTabWidth + 1
-                extraPixels = extraPixels - 1
-            end
-            tabButton:SetSize(thisTabWidth, POPUP_LAYOUT.tabHeight)
+            tabButton:SetSize(SIDEBAR_WIDTH - 16, buttonHeight)
             tabButton:ClearAllPoints()
-            tabButton:SetPoint("TOPLEFT", tabX, 0)
-            tabX = tabX + thisTabWidth + tabSpacing
+            tabButton:SetPoint("TOPLEFT", navButtonHost, "TOPLEFT", 8, -tabY)
+            tabY = tabY + buttonHeight + tabSpacing
         end
     end
 
     local function SetTabButtonState(tabButton, isActive)
         tabButton.isActive = isActive
         if isActive then
-            tabButton:SetBackdropColor(0.12, 0.12, 0.15, 1)
-            tabButton:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.85)
+            tabButton:SetBackdropColor(0.06, 0.10, 0.12, 0.78)
+            tabButton:SetBackdropBorderColor(0.16, 0.22, 0.24, 1)
             tabButton.text:SetTextColor(1, 1, 1)
+            tabButton.activeLine:SetAlpha(1)
+            tabButton.glow:SetAlpha(0.16)
+            tabButton.activeRail:SetAlpha(1)
         else
-            tabButton:SetBackdropColor(0.06, 0.06, 0.08, 1)
-            tabButton:SetBackdropBorderColor(0.18, 0.18, 0.22, 1)
-            tabButton.text:SetTextColor(0.7, 0.7, 0.7)
+            tabButton:SetBackdropColor(0.03, 0.04, 0.05, 0.70)
+            tabButton:SetBackdropBorderColor(0.12, 0.14, 0.16, 1)
+            tabButton.text:SetTextColor(0.68, 0.72, 0.76)
+            tabButton.activeLine:SetAlpha(0)
+            tabButton.glow:SetAlpha(0)
+            tabButton.activeRail:SetAlpha(0)
         end
     end
 
     local function SetActiveTab(tabIndex)
+        local subtitleByLabel = {
+            ["Unit Frames"] = "Frame sizing, text, visibility, style, and cast bar controls.",
+            ["Auras / Power"] = "Aura behavior, power options, and related display settings.",
+            ["Current Class"] = "Class-specific resources and active spec customization.",
+            ["Profiles"] = "Manage, copy, and delete settings profiles.",
+            ["Tools"] = "Utility settings and addon-wide helper tools.",
+        }
         for _, page in ipairs(allPages) do
             page:Hide()
         end
@@ -601,8 +801,17 @@ function MMF_ShowWelcomePopup(forceShow)
             SetTabButtonState(tabButton, i == tabIndex)
         end
 
+        local activeDef = tabDefs[tabIndex]
+        local activeLabel = activeDef and activeDef.label or "Settings"
+        pageHeaderTitle:SetText(activeLabel)
+        pageHeaderSubtitle:SetText(subtitleByLabel[activeLabel] or "")
+
         for _, listFrame in ipairs(closableLists) do
             CloseListFrame(listFrame)
+        end
+
+        if tabIndex == 1 and unitFramesState and unitFramesState.ApplyInitialSection then
+            unitFramesState.ApplyInitialSection()
         end
 
         MattMinimalFramesDB.popupActiveTab = tabIndex
@@ -617,23 +826,51 @@ function MMF_ShowWelcomePopup(forceShow)
             edgeFile = "Interface\\Buttons\\WHITE8x8",
             edgeSize = 1,
         })
+        tabButton:SetBackdropColor(0.04, 0.05, 0.06, 0.96)
+        tabButton:SetBackdropBorderColor(0.12, 0.14, 0.16, 1)
+
+        local tabGlow = tabButton:CreateTexture(nil, "BACKGROUND")
+        tabGlow:SetPoint("TOPLEFT", -2, -2)
+        tabGlow:SetPoint("BOTTOMRIGHT", 2, 2)
+        tabGlow:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 1)
+        tabGlow:SetAlpha(0)
+        tabButton.glow = tabGlow
+
+        local tabActiveRail = tabButton:CreateTexture(nil, "ARTWORK")
+        tabActiveRail:SetPoint("TOPLEFT", 0, 0)
+        tabActiveRail:SetPoint("BOTTOMLEFT", 0, 0)
+        tabActiveRail:SetWidth(3)
+        tabActiveRail:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 1)
+        tabActiveRail:SetAlpha(0)
+        tabButton.activeRail = tabActiveRail
+
+        local tabActiveLine = tabButton:CreateTexture(nil, "ARTWORK")
+        tabActiveLine:SetPoint("BOTTOMLEFT", 0, 0)
+        tabActiveLine:SetPoint("BOTTOMRIGHT", 0, 0)
+        tabActiveLine:SetHeight(2)
+        tabActiveLine:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 1)
+        tabActiveLine:SetAlpha(0)
+        tabButton.activeLine = tabActiveLine
 
         local tabButtonText = tabButton:CreateFontString(nil, "OVERLAY")
-        tabButtonText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-        tabButtonText:SetPoint("CENTER")
+        tabButtonText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
+        tabButtonText:SetPoint("LEFT", 16, 1)
+        tabButtonText:SetJustifyH("LEFT")
         tabButtonText:SetText(def.label)
         tabButton.text = tabButtonText
 
         tabButton:SetScript("OnEnter", function(self)
             if not self.isActive then
-                self:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.5)
-                self.text:SetTextColor(0.9, 0.9, 0.9)
+                self:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.4)
+                self.text:SetTextColor(0.9, 0.93, 0.95)
+                self.activeLine:SetAlpha(0.45)
             end
         end)
         tabButton:SetScript("OnLeave", function(self)
             if not self.isActive then
-                self:SetBackdropBorderColor(0.18, 0.18, 0.22, 1)
-                self.text:SetTextColor(0.7, 0.7, 0.7)
+                self:SetBackdropBorderColor(0.12, 0.14, 0.16, 1)
+                self.text:SetTextColor(0.68, 0.72, 0.76)
+                self.activeLine:SetAlpha(0)
             end
         end)
         tabButton:SetScript("OnClick", function()
@@ -647,11 +884,18 @@ function MMF_ShowWelcomePopup(forceShow)
     end
     LayoutTabButtons()
 
+    local function ScrollActivePageTo(offset)
+        sharedScrollBar:SetValue(math.max(0, tonumber(offset) or 0))
+    end
+
     ---------------------------------------------------
-    local unitFramesState = MMF_CreateUnitFramesSection(unitFramesCol, popup, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider, GetCurrentPlayerIconModeValue, GetCurrentTargetIconModeValue)
+    unitFramesState = MMF_CreateUnitFramesSection(unitFramesCol, popup, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider, GetCurrentPlayerIconModeValue, GetCurrentTargetIconModeValue, CreateSubTabBar, ScrollActivePageTo, UpdateSharedScrollBounds)
     castBarColorList = unitFramesState.castBarColorList
     unitTextureList = unitFramesState.unitTextureList
     unitFontList = unitFramesState.unitFontList
+    playerBarColorList = unitFramesState.playerBarColorList
+    targetBarColorList = unitFramesState.targetBarColorList
+    totBarColorList = unitFramesState.totBarColorList
     playerIconModeList = unitFramesState.playerIconModeList
     targetIconModeList = unitFramesState.targetIconModeList
     scaleUnitList = unitFramesState.scaleUnitList
@@ -666,6 +910,9 @@ function MMF_ShowWelcomePopup(forceShow)
     RegisterClosableList(castBarColorList)
     RegisterClosableList(unitTextureList)
     RegisterClosableList(unitFontList)
+    RegisterClosableList(playerBarColorList)
+    RegisterClosableList(targetBarColorList)
+    RegisterClosableList(totBarColorList)
     RegisterClosableList(playerIconModeList)
     RegisterClosableList(targetIconModeList)
     RegisterClosableList(scaleUnitList)
@@ -770,6 +1017,7 @@ function MMF_ShowWelcomePopup(forceShow)
         ClampPopupHorizontal(self)
         if titleBar then
             titleBar:SetWidth(width or self:GetWidth())
+            UpdateTitleWallpaperCrop()
         end
         if footer then
             footer:SetWidth(width or self:GetWidth())
@@ -790,3 +1038,4 @@ function MMF_ShowWelcomePopup(forceShow)
         MMF_ApplyGlobalFont()
     end
 end
+

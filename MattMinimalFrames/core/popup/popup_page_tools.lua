@@ -79,13 +79,6 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
     toolsActionsTitle:SetText("ACTIONS")
 
     CreateMinimalCheckbox(rightCol, "UI Sounds", 12, -148, "uiSoundsEnabled", true, nil)
-    local rainbowClassColorGUILabel =
-        "|cffff3b3bC|cffff7a2el|cffffb326a|cffffe01bs|cfff4ff10s " ..
-        "|cff8dff24C|cff36ff61o|cff22ffc6l|cff2bc9ffo|cff3e7dffr " ..
-        "|cff8f4effG|cffa548ffU|cfff14bffI"
-    CreateMinimalCheckbox(rightCol, rainbowClassColorGUILabel, 12, -172, "classColorGUI", true, function()
-        StaticPopup_Show("MMF_RELOADUI")
-    end)
 
     local function ResetScaleAndTextToDefaults()
         local d = MattMinimalFrames_Defaults
@@ -143,6 +136,9 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
         MattMinimalFramesDB.showPowerPercentText = d.showPowerPercentText
         MattMinimalFramesDB.colorPlayerPowerTextByResource = d.colorPlayerPowerTextByResource
         MattMinimalFramesDB.colorTargetPowerTextByResource = d.colorTargetPowerTextByResource
+        MattMinimalFramesDB.playerBarColorMode = d.playerBarColorMode or "class"
+        MattMinimalFramesDB.targetBarColorMode = d.targetBarColorMode or "default"
+        MattMinimalFramesDB.totBarColorMode = d.totBarColorMode or "default"
         MattMinimalFramesDB.powerBarWidth = d.powerBarWidth
         MattMinimalFramesDB.powerBarHeight = d.powerBarHeight
         MattMinimalFramesDB.powerTextScale = d.powerTextScale or 1.0
@@ -237,7 +233,7 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
 
     local toolsResetScaleBtn = CreateFrame("Button", nil, rightCol, "BackdropTemplate")
     toolsResetScaleBtn:SetSize(176, 24)
-    toolsResetScaleBtn:SetPoint("TOPLEFT", 12, -196)
+    toolsResetScaleBtn:SetPoint("TOPLEFT", 12, -172)
     toolsResetScaleBtn:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -264,7 +260,7 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
 
     local toolsResetAllBtn = CreateFrame("Button", nil, rightCol, "BackdropTemplate")
     toolsResetAllBtn:SetSize(176, 24)
-    toolsResetAllBtn:SetPoint("TOPLEFT", 12, -224)
+    toolsResetAllBtn:SetPoint("TOPLEFT", 12, -200)
     toolsResetAllBtn:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -294,18 +290,18 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
 
     local infoDivider = rightCol:CreateTexture(nil, "ARTWORK")
     infoDivider:SetSize(176, 1)
-    infoDivider:SetPoint("TOPLEFT", 12, -256)
+    infoDivider:SetPoint("TOPLEFT", 12, -232)
     infoDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
 
     local toolsInfoTitle = rightCol:CreateFontString(nil, "OVERLAY")
     toolsInfoTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    toolsInfoTitle:SetPoint("TOPLEFT", 12, -268)
+    toolsInfoTitle:SetPoint("TOPLEFT", 12, -244)
     toolsInfoTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     toolsInfoTitle:SetText("INFO")
 
     local infoText = rightCol:CreateFontString(nil, "OVERLAY")
     infoText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    infoText:SetPoint("TOPLEFT", 12, -292)
+    infoText:SetPoint("TOPLEFT", 12, -268)
     infoText:SetWidth(176)
     infoText:SetJustifyH("LEFT")
     infoText:SetSpacing(3)

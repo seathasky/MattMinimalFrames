@@ -11,6 +11,37 @@ function MMF_CreatePopupFooter(popup, popupWidth, accentColor, footerHeight)
     footerBg:SetAllPoints()
     footerBg:SetColorTexture(0.03, 0.03, 0.04, 1)
 
+    local footerWallpaper = footer:CreateTexture(nil, "ARTWORK")
+    footerWallpaper:SetPoint("TOPLEFT", 1, -1)
+    footerWallpaper:SetPoint("BOTTOMRIGHT", -1, 1)
+    footerWallpaper:SetTexture("Interface\\AddOns\\MattMinimalFrames\\Images\\mw.png")
+    footerWallpaper:SetAlpha(0.10)
+
+    local function UpdateFooterWallpaperCrop()
+        local w = math.max(1, footer:GetWidth() or 1)
+        local h = math.max(1, footer:GetHeight() or 1)
+        local imageAspect = 16 / 9
+        local frameAspect = w / h
+        if frameAspect > imageAspect then
+            local visibleV = imageAspect / frameAspect
+            local padV = (1 - visibleV) * 0.5
+            footerWallpaper:SetTexCoord(0, 1, padV, 1 - padV)
+        else
+            local visibleU = frameAspect / imageAspect
+            local padU = (1 - visibleU) * 0.5
+            footerWallpaper:SetTexCoord(padU, 1 - padU, 0, 1)
+        end
+    end
+    UpdateFooterWallpaperCrop()
+    footer:SetScript("OnSizeChanged", function()
+        UpdateFooterWallpaperCrop()
+    end)
+
+    local footerWallpaperTint = footer:CreateTexture(nil, "ARTWORK")
+    footerWallpaperTint:SetPoint("TOPLEFT", 1, -1)
+    footerWallpaperTint:SetPoint("BOTTOMRIGHT", -1, 1)
+    footerWallpaperTint:SetColorTexture(0.02, 0.03, 0.04, 0.22)
+
     -- Current class display (bottom-right)
     local classInfo = CreateFrame("Frame", nil, footer)
     classInfo:SetSize(138, 24)

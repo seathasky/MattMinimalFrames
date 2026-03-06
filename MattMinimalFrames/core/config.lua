@@ -25,6 +25,22 @@ MMF_Config = {
         { value = "red",    label = "Red",     r = 0.9, g = 0.2, b = 0.2 },
         { value = "gray",   label = "Gray",    r = 0.6, g = 0.6, b = 0.6 },
     },
+    PLAYER_BAR_COLORS = {
+        { value = "class", label = "Class (Default)" },
+        { value = "green", label = "Green", r = 0.20, g = 0.80, b = 0.20 },
+        { value = "white", label = "White", r = 1.00, g = 1.00, b = 1.00 },
+        { value = "gray",  label = "Gray",  r = 0.60, g = 0.60, b = 0.60 },
+        { value = "red",   label = "Red",   r = 0.90, g = 0.20, b = 0.20 },
+        { value = "blue",  label = "Blue",  r = 0.20, g = 0.45, b = 0.95 },
+    },
+    TARGET_BAR_COLORS = {
+        { value = "default", label = "Default" },
+        { value = "green", label = "Green", r = 0.20, g = 0.80, b = 0.20 },
+        { value = "white", label = "White", r = 1.00, g = 1.00, b = 1.00 },
+        { value = "gray", label = "Gray", r = 0.60, g = 0.60, b = 0.60 },
+        { value = "red", label = "Red", r = 0.90, g = 0.20, b = 0.20 },
+        { value = "blue", label = "Blue", r = 0.20, g = 0.45, b = 0.95 },
+    },
 }
 
 local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
@@ -576,7 +592,48 @@ end
 
 function MMF_GetUnitColor(unit)
     if not unit then return 1, 1, 1 end
+    if unit == "target" and MattMinimalFramesDB then
+        local mode = tostring(MattMinimalFramesDB.targetBarColorMode or "default"):lower()
+        if mode ~= "default" then
+            local colorOptions = MMF_Config and MMF_Config.TARGET_BAR_COLORS
+            if type(colorOptions) == "table" then
+                for _, option in ipairs(colorOptions) do
+                    if option and option.value == mode and option.r and option.g and option.b then
+                        return option.r, option.g, option.b
+                    end
+                end
+            end
+        end
+    end
+    if unit == "targettarget" and MattMinimalFramesDB then
+        local mode = tostring(MattMinimalFramesDB.totBarColorMode or "default"):lower()
+        if mode ~= "default" then
+            local colorOptions = MMF_Config and MMF_Config.TARGET_BAR_COLORS
+            if type(colorOptions) == "table" then
+                for _, option in ipairs(colorOptions) do
+                    if option and option.value == mode and option.r and option.g and option.b then
+                        return option.r, option.g, option.b
+                    end
+                end
+            end
+        end
+    end
     if UnitIsPlayer(unit) then
+        local isPlayerUnit = (unit == "player")
+            or (type(UnitIsUnit) == "function" and UnitIsUnit(unit, "player"))
+        if isPlayerUnit and MattMinimalFramesDB then
+            local mode = tostring(MattMinimalFramesDB.playerBarColorMode or "class"):lower()
+            if mode ~= "class" then
+                local colorOptions = MMF_Config and MMF_Config.PLAYER_BAR_COLORS
+                if type(colorOptions) == "table" then
+                    for _, option in ipairs(colorOptions) do
+                        if option and option.value == mode and option.r and option.g and option.b then
+                            return option.r, option.g, option.b
+                        end
+                    end
+                end
+            end
+        end
         local _, class = UnitClass(unit)
         if class then
             local colors = RAID_CLASS_COLORS[class]
