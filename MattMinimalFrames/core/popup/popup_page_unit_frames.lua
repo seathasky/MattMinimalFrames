@@ -3,30 +3,6 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
     local CreateSubTabBar = createSubTabBar or MMF_CreateSubTabBar
     local RequestScrollRefresh = requestScrollRefresh or function() end
 
-    local unitFramesHero = CreateFrame("Frame", nil, unitFramesCol, "BackdropTemplate")
-    unitFramesHero:SetPoint("TOPLEFT", 12, -12)
-    unitFramesHero:SetPoint("TOPRIGHT", -12, -12)
-    unitFramesHero:SetHeight(8)
-    unitFramesHero:SetBackdrop({
-        bgFile = "Interface\\Buttons\\WHITE8x8",
-        edgeFile = "Interface\\Buttons\\WHITE8x8",
-        edgeSize = 1,
-    })
-    unitFramesHero:SetBackdropColor(0.05, 0.07, 0.09, 0.96)
-    unitFramesHero:SetBackdropBorderColor(0.16, 0.2, 0.23, 1)
-
-    local heroGlow = unitFramesHero:CreateTexture(nil, "BACKGROUND")
-    heroGlow:SetPoint("TOPLEFT", 0, 0)
-    heroGlow:SetPoint("TOPRIGHT", 0, 0)
-    heroGlow:SetHeight(4)
-    heroGlow:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.12)
-
-    local heroLine = unitFramesHero:CreateTexture(nil, "ARTWORK")
-    heroLine:SetPoint("BOTTOMLEFT", 0, 0)
-    heroLine:SetPoint("BOTTOMRIGHT", 0, 0)
-    heroLine:SetHeight(2)
-    heroLine:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.95)
-
     local sectionCard = CreateFrame("Frame", nil, unitFramesCol, "BackdropTemplate")
     sectionCard:SetPoint("TOPLEFT", 12, -60)
     sectionCard:SetBackdrop({
@@ -36,12 +12,6 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
     })
     sectionCard:SetBackdropColor(0.03, 0.05, 0.07, 0.98)
     sectionCard:SetBackdropBorderColor(0.12, 0.16, 0.18, 1)
-
-    local sectionCardGlow = sectionCard:CreateTexture(nil, "BACKGROUND")
-    sectionCardGlow:SetPoint("TOPLEFT", 0, 0)
-    sectionCardGlow:SetPoint("TOPRIGHT", 0, 0)
-    sectionCardGlow:SetHeight(14)
-    sectionCardGlow:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.06)
 
     local sectionCardTitle = sectionCard:CreateFontString(nil, "OVERLAY")
     sectionCardTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 14, "")

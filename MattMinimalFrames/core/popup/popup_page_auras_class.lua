@@ -3,24 +3,6 @@ local Compat = _G.MMF_Compat or {}
 local function MMF_SetupAurasPowerHeader(leftCol, accentColor)
     local ACCENT_COLOR = accentColor or { 0.6, 0.4, 0.9 }
 
-    local hero = CreateFrame("Frame", nil, leftCol, "BackdropTemplate")
-    hero:SetPoint("TOPLEFT", 12, -12)
-    hero:SetPoint("TOPRIGHT", -12, -12)
-    hero:SetHeight(8)
-    hero:SetBackdrop({
-        bgFile = "Interface\\Buttons\\WHITE8x8",
-        edgeFile = "Interface\\Buttons\\WHITE8x8",
-        edgeSize = 1,
-    })
-    hero:SetBackdropColor(0.05, 0.07, 0.09, 0.96)
-    hero:SetBackdropBorderColor(0.16, 0.2, 0.23, 1)
-
-    local heroLine = hero:CreateTexture(nil, "ARTWORK")
-    heroLine:SetPoint("BOTTOMLEFT", 0, 0)
-    heroLine:SetPoint("BOTTOMRIGHT", 0, 0)
-    heroLine:SetHeight(2)
-    heroLine:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.95)
-
     local sectionCard = CreateFrame("Frame", nil, leftCol, "BackdropTemplate")
     sectionCard:SetPoint("TOPLEFT", 12, -60)
     sectionCard:SetBackdrop({
