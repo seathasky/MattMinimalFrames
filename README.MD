@@ -18,7 +18,8 @@ Clean, minimal unit frames for WoW (Retail Midnight + TBC Anniversary).
 *   Player portrait icons including support for [Jiberish Fabled Icons](https://www.curseforge.com/wow/addons/jiberish-fabled-icons)
 *   Class/resource bars (Retail) + power bars
 *   SharedMedia texture + global font styling
-*   Range fade and SHIFT+drag frame movement
+*   Full Edit mode for moving frames w/ optional SHIFT+drag frame movement out of edit mode.
+*   Range fade
 *   PvP detection for TBC anniversary.
 
 ## Command
