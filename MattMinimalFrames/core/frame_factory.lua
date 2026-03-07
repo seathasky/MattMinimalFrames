@@ -319,9 +319,90 @@ local function SaveFramePosition(frame, frameName)
     local top = frame:GetTop()
     if left and top then
         if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
+
+        local bossIndex = nil
+        if type(frameName) == "string" then
+            local idx = frameName:match("^MMF_Boss([1-5])Frame$")
+            if idx then
+                bossIndex = tonumber(idx)
+            end
+        end
+
+        if bossIndex then
+            local spacing = 36
+            local boss1Top = top + ((bossIndex - 1) * spacing)
+            for i = 1, 5 do
+                local name = "MMF_Boss" .. i .. "Frame"
+                local frameTop = boss1Top - ((i - 1) * spacing)
+                MattMinimalFramesDB[name] = { left = left, top = frameTop }
+
+                local bossFrame = _G[name]
+                if bossFrame then
+                    bossFrame:ClearAllPoints()
+                    bossFrame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, frameTop)
+                end
+            end
+            return
+        end
+
         MattMinimalFramesDB[frameName] = { left = left, top = top }
     end
 end
+
+local function SaveCastBarPosition(frame, unit)
+    if not frame or not frame.castBarFrame or not unit then
+        return
+    end
+    local x, y = frame.castBarFrame:GetCenter()
+    local px, py = frame:GetCenter()
+    if not x or not y or not px or not py then
+        return
+    end
+    if not MattMinimalFramesDB then
+        MattMinimalFramesDB = {}
+    end
+    if not MattMinimalFramesDB.castBarPositions then
+        MattMinimalFramesDB.castBarPositions = {}
+    end
+    MattMinimalFramesDB.castBarPositions[unit] = { x = x - px, y = y - py }
+end
+
+local function ApplyCastBarPosition(frame, unit)
+    if not frame or not frame.castBarFrame or not unit then
+        return
+    end
+
+    local castBarPrefix = (unit == "player") and "playerCastBar" or ((unit == "target") and "targetCastBar" or nil)
+    local scaleX = 1.0
+    local scaleY = 1.0
+    if castBarPrefix and MattMinimalFramesDB then
+        scaleX = tonumber(MattMinimalFramesDB[castBarPrefix .. "FrameScaleX"]) or 1.0
+        scaleY = tonumber(MattMinimalFramesDB[castBarPrefix .. "FrameScaleY"]) or 1.0
+    end
+    if scaleX < 0.5 then scaleX = 0.5 end
+    if scaleX > 3.0 then scaleX = 3.0 end
+    if scaleY < 0.5 then scaleY = 0.5 end
+    if scaleY > 5.0 then scaleY = 5.0 end
+
+    local baseWidth = math.max(8, (frame.originalWidth or frame:GetWidth() or 0) - 2)
+    local width = math.max(8, baseWidth * scaleX)
+    local height = math.max(4, 8 * scaleY)
+    frame.castBarFrame:SetSize(width, height)
+    frame.castBarFrame:ClearAllPoints()
+
+    local dbPos = MattMinimalFramesDB and MattMinimalFramesDB.castBarPositions and MattMinimalFramesDB.castBarPositions[unit]
+    if dbPos and dbPos.x and dbPos.y then
+        frame.castBarFrame:SetPoint("CENTER", frame, "CENTER", dbPos.x, dbPos.y)
+    else
+        frame.castBarFrame:SetPoint("BOTTOM", frame, "BOTTOM", 0, 1)
+    end
+
+    if frame.castBarText then
+        frame.castBarText:SetWidth(math.max(8, width - 6))
+    end
+end
+
+MMF_ApplyCastBarPosition = ApplyCastBarPosition
 
 local function RestoreFramePosition(frame, frameName, defaultPoint, defaultRelPoint, defaultX, defaultY)
     if MattMinimalFramesDB and MattMinimalFramesDB[frameName] then
@@ -346,7 +427,8 @@ local function CreateTooltipHandlers(frame)
     frame:SetScript("OnEnter", function(self)
         if self.unit and UnitExists(self.unit) and 
            (self.unit == "target" or self.unit == "targettarget" or 
-            self.unit == "player" or self.unit == "focus") then
+            self.unit == "player" or self.unit == "focus" or
+            self.unit == "boss1" or self.unit == "boss2" or self.unit == "boss3" or self.unit == "boss4" or self.unit == "boss5") then
             GameTooltip_SetDefaultAnchor(GameTooltip, self)
             GameTooltip:SetUnit(self.unit)
             GameTooltip:Show()
@@ -356,21 +438,211 @@ local function CreateTooltipHandlers(frame)
 
     frame:SetScript("OnLeave", function(self)
         if self.unit == "target" or self.unit == "targettarget" or 
-           self.unit == "player" or self.unit == "focus" then
+           self.unit == "player" or self.unit == "focus" or
+           self.unit == "boss1" or self.unit == "boss2" or self.unit == "boss3" or self.unit == "boss4" or self.unit == "boss5" then
             GameTooltip:Hide()
             self.highlightTexture:Hide()
         end
     end)
 end
 
+local function ResetFrameToDefaultPosition(frame, frameName)
+    if not frame or not frameName then
+        return
+    end
+    if not MattMinimalFramesDB then
+        MattMinimalFramesDB = {}
+    end
+
+    local bossIndex = tostring(frameName):match("^MMF_Boss([1-5])Frame$")
+    if bossIndex then
+        for i = 1, 5 do
+            local bossUnit = "boss" .. i
+            local bossFrameName = "MMF_Boss" .. i .. "Frame"
+            local bossFrame = _G[bossFrameName]
+            local def = MMF_GetFrameDefinition and MMF_GetFrameDefinition(bossUnit)
+            MattMinimalFramesDB[bossFrameName] = nil
+            if bossFrame and def then
+                bossFrame:ClearAllPoints()
+                bossFrame:SetPoint(def.point or "CENTER", UIParent, def.relPoint or "CENTER", def.x or 0, def.y or 0)
+            end
+        end
+        return
+    end
+
+    local def = MMF_GetFrameDefinition and MMF_GetFrameDefinition(frame.unit)
+    MattMinimalFramesDB[frameName] = nil
+    if def then
+        frame:ClearAllPoints()
+        frame:SetPoint(def.point or "CENTER", UIParent, def.relPoint or "CENTER", def.x or 0, def.y or 0)
+    end
+end
+
+local function EnsureFrameResetPopup()
+    if _G.MMF_FrameResetPopup then
+        return _G.MMF_FrameResetPopup
+    end
+
+    local popup = CreateFrame("Frame", "MMF_FrameResetPopup", UIParent, "BackdropTemplate")
+    popup:SetSize(230, 112)
+    popup:SetFrameStrata("DIALOG")
+    popup:SetToplevel(true)
+    popup:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    popup:SetBackdropColor(0.04, 0.04, 0.05, 0.72)
+    popup:SetBackdropBorderColor(0.1, 0.1, 0.12, 0.9)
+    popup:Hide()
+
+    local title = popup:CreateFontString(nil, "OVERLAY")
+    if MMF_SetFontSafe then
+        MMF_SetFontSafe(title, cfg.FONT_PATH, 10, "")
+    else
+        title:SetFont(cfg.FONT_PATH, 10, "")
+    end
+    title:SetPoint("TOPLEFT", 10, -8)
+    title:SetTextColor(1, 1, 1)
+    title:SetText("Frame Options")
+    popup.title = title
+
+    local close = CreateFrame("Button", nil, popup)
+    close:SetSize(16, 16)
+    close:SetPoint("TOPRIGHT", -6, -6)
+    local closeText = close:CreateFontString(nil, "OVERLAY")
+    if MMF_SetFontSafe then
+        MMF_SetFontSafe(closeText, cfg.FONT_PATH, 10, "")
+    else
+        closeText:SetFont(cfg.FONT_PATH, 10, "")
+    end
+    closeText:SetPoint("CENTER")
+    closeText:SetTextColor(0.8, 0.8, 0.8)
+    closeText:SetText("x")
+    close:SetScript("OnClick", function() popup:Hide() end)
+
+    local function CreatePopupButton(yOffset, label)
+        local btn = CreateFrame("Button", nil, popup, "BackdropTemplate")
+        btn:SetSize(206, 24)
+        btn:SetPoint("TOP", popup, "TOP", 0, yOffset)
+        btn:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8x8",
+            edgeFile = "Interface\\Buttons\\WHITE8x8",
+            edgeSize = 1,
+        })
+        btn:SetBackdropColor(0.06, 0.08, 0.1, 0.96)
+        btn:SetBackdropBorderColor(0.18, 0.22, 0.25, 1)
+        local txt = btn:CreateFontString(nil, "OVERLAY")
+        if MMF_SetFontSafe then
+            MMF_SetFontSafe(txt, cfg.FONT_PATH, 10, "")
+        else
+            txt:SetFont(cfg.FONT_PATH, 10, "")
+        end
+        txt:SetPoint("CENTER")
+        txt:SetTextColor(0.9, 0.9, 0.9)
+        txt:SetText(label)
+        return btn
+    end
+
+    popup.resetPositionBtn = CreatePopupButton(-28, "Reset Frame Position")
+    popup.resetCastBarBtn = CreatePopupButton(-58, "Reset Cast Bar")
+    _G.MMF_FrameResetPopup = popup
+    return popup
+end
+
+local function ShowFrameResetPopup(frame, frameName)
+    if not frame or not frameName then
+        return
+    end
+    if InCombatLockdown and InCombatLockdown() then
+        return
+    end
+    local popup = EnsureFrameResetPopup()
+    popup.currentFrame = frame
+    popup.currentFrameName = frameName
+    popup.title:SetText((frame.frameLabel or frame.unit or "Frame") .. " Options")
+
+    popup.resetPositionBtn:SetScript("OnClick", function()
+        ResetFrameToDefaultPosition(frame, frameName)
+        if frame.unit == "player" then
+            local defaults = MattMinimalFrames_Defaults or {}
+            if not MattMinimalFramesDB then
+                MattMinimalFramesDB = {}
+            end
+            MattMinimalFramesDB.playerCastBarFrameScaleX = tonumber(defaults.playerCastBarFrameScaleX) or 1.0
+            MattMinimalFramesDB.playerCastBarFrameScaleY = tonumber(defaults.playerCastBarFrameScaleY) or 1.0
+            if MattMinimalFramesDB.castBarPositions then
+                MattMinimalFramesDB.castBarPositions.player = nil
+            end
+            ApplyCastBarPosition(frame, "player")
+        end
+        if MMF_RequestFrameUpdate then
+            MMF_RequestFrameUpdate(frame)
+        elseif MMF_UpdateUnitFrame then
+            MMF_UpdateUnitFrame(frame)
+        end
+        popup:Hide()
+    end)
+
+    local hasCastBar = (frame.castBarFrame ~= nil and frame.unit == "player")
+    popup.resetCastBarBtn:SetShown(hasCastBar)
+    popup:SetHeight(hasCastBar and 112 or 82)
+    if hasCastBar then
+        popup.resetCastBarBtn:ClearAllPoints()
+        popup.resetCastBarBtn:SetPoint("TOP", popup, "TOP", 0, -58)
+    end
+
+    if hasCastBar then
+        popup.resetCastBarBtn:SetScript("OnClick", function()
+            if not MattMinimalFramesDB then
+                MattMinimalFramesDB = {}
+            end
+            local defaults = MattMinimalFrames_Defaults or {}
+            MattMinimalFramesDB.playerCastBarFrameScaleX = tonumber(defaults.playerCastBarFrameScaleX) or 1.0
+            MattMinimalFramesDB.playerCastBarFrameScaleY = tonumber(defaults.playerCastBarFrameScaleY) or 1.0
+            if MattMinimalFramesDB.castBarPositions then
+                MattMinimalFramesDB.castBarPositions[frame.unit] = nil
+            end
+            ApplyCastBarPosition(frame, frame.unit)
+            popup:Hide()
+        end)
+    end
+
+    popup:ClearAllPoints()
+    popup:SetPoint("TOP", frame, "BOTTOM", 0, -8)
+    popup:Show()
+end
+
 --------------------------------------------------
 -- DRAG HANDLERS
 --------------------------------------------------
 
+local function IsEditModeDragEnabled()
+    return MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
+end
+
+local function CanStartFrameDrag(frame)
+    if InCombatLockdown() then
+        return false
+    end
+    if IsEditModeDragEnabled() then
+        return frame and frame:IsMovable()
+    end
+    local isLocked = MattMinimalFramesDB and MattMinimalFramesDB.locked
+    return (not isLocked) and IsShiftKeyDown() and frame and frame:IsMovable()
+end
+
+local function GetDragHintText()
+    if IsEditModeDragEnabled() then
+        return "Drag to move"
+    end
+    return "Shift+Drag to move"
+end
+
 local function CreateDragHandlers(frame, frameName)
     frame:SetScript("OnDragStart", function(self)
-        local isLocked = MattMinimalFramesDB and MattMinimalFramesDB.locked
-        if not isLocked and not InCombatLockdown() and IsShiftKeyDown() and self:IsMovable() then
+        if CanStartFrameDrag(self) then
+            self.mmfDragInProgress = true
             self:StartMoving()
         end
     end)
@@ -379,17 +651,28 @@ local function CreateDragHandlers(frame, frameName)
         if self:IsMovable() then
             self:StopMovingOrSizing()
             SaveFramePosition(self, frameName)
+            self.mmfSuppressClickPopup = true
+            if C_Timer and C_Timer.After then
+                C_Timer.After(0.05, function()
+                    if self then
+                        self.mmfSuppressClickPopup = nil
+                        self.mmfDragInProgress = nil
+                    end
+                end)
+            else
+                self.mmfSuppressClickPopup = nil
+                self.mmfDragInProgress = nil
+            end
         end
     end)
 
     frame.moveOverlay = frame:CreateTexture(nil, "OVERLAY")
     frame.moveOverlay:SetAllPoints()
-    frame.moveOverlay:SetColorTexture(1, 1, 1, 0.3)
+    frame.moveOverlay:SetColorTexture(0, 0, 0, 0.35)
     frame.moveOverlay:Hide()
 
     frame:HookScript("OnEnter", function(self)
-        local isLocked = MattMinimalFramesDB and MattMinimalFramesDB.locked
-        if not isLocked and not InCombatLockdown() and IsShiftKeyDown() then
+        if CanStartFrameDrag(self) then
             self.moveOverlay:Show()
         end
     end)
@@ -400,6 +683,7 @@ local function CreateDragHandlers(frame, frameName)
 
     local frameDef = MMF_GetFrameDefinition(frame.unit)
     local frameLabel = frameDef and frameDef.label or frame.unit
+    frame.frameLabel = frameLabel
     
     frame.moveHint = frame:CreateFontString(nil, "OVERLAY")
     if MMF_SetFontSafe then
@@ -417,13 +701,14 @@ local function CreateDragHandlers(frame, frameName)
     else
         frame.moveSubtext:SetFont(cfg.FONT_PATH, 9, "OUTLINE")
     end
-    frame.moveSubtext:SetText("Shift+Drag to move")
+    frame.moveSubtext:SetText(GetDragHintText())
     frame.moveSubtext:SetPoint("TOP", frame.moveHint, "BOTTOM", 0, -2)
     frame.moveSubtext:SetTextColor(0.7, 0.7, 0.7)
     frame.moveSubtext:Hide()
 
     frame:HookScript("OnEnter", function(self)
         if not InCombatLockdown() and MattMinimalFramesDB.showMoveHints then
+            self.moveSubtext:SetText(GetDragHintText())
             self.moveHint:Show()
             self.moveSubtext:Show()
         end
@@ -432,6 +717,19 @@ local function CreateDragHandlers(frame, frameName)
     frame:HookScript("OnLeave", function(self)
         self.moveHint:Hide()
         self.moveSubtext:Hide()
+    end)
+
+    frame:HookScript("OnMouseUp", function(self, button)
+        if button ~= "LeftButton" then
+            return
+        end
+        if not IsEditModeDragEnabled() then
+            return
+        end
+        if self.mmfDragInProgress or self.mmfSuppressClickPopup then
+            return
+        end
+        ShowFrameResetPopup(self, frameName)
     end)
 end
 
@@ -499,8 +797,7 @@ local function SetupPowerBar(frame, unit)
     end
 
     frame.powerBarFrame:SetScript("OnDragStart", function(self)
-        local isLocked = MattMinimalFramesDB and MattMinimalFramesDB.locked
-        if not isLocked and not InCombatLockdown() and IsShiftKeyDown() then
+        if CanStartFrameDrag(self) then
             self:StartMoving()
         end
     end)
@@ -522,7 +819,7 @@ local function SetupPowerBar(frame, unit)
         else
             GameTooltip:SetText("Target Power Bar", 1, 1, 1)
         end
-        GameTooltip:AddLine("Shift+Drag to move", 0.5, 0.5, 0.5)
+        GameTooltip:AddLine(GetDragHintText(), 0.5, 0.5, 0.5)
         GameTooltip:Show()
     end)
 
@@ -668,6 +965,11 @@ local function CreateNameText(frame, unit)
         targettarget = { point = "CENTER", relPoint = "TOP", x = 0, y = 0, justify = "CENTER" },
         pet = { point = "CENTER", relPoint = "TOP", x = 0, y = 0, justify = "CENTER" },
         focus = { point = "CENTER", relPoint = "TOP", x = 0, y = 0, justify = "CENTER" },
+        boss1 = { point = "CENTER", relPoint = "TOP", x = 0, y = 0, justify = "CENTER" },
+        boss2 = { point = "CENTER", relPoint = "TOP", x = 0, y = 0, justify = "CENTER" },
+        boss3 = { point = "CENTER", relPoint = "TOP", x = 0, y = 0, justify = "CENTER" },
+        boss4 = { point = "CENTER", relPoint = "TOP", x = 0, y = 0, justify = "CENTER" },
+        boss5 = { point = "CENTER", relPoint = "TOP", x = 0, y = 0, justify = "CENTER" },
     }
     
     local pos = positions[unit] or positions.focus
@@ -716,8 +1018,7 @@ local function CreateResourceText(frame, unit)
         frame.powerTextDragFrame:RegisterForDrag("LeftButton")
 
         frame.powerTextDragFrame:SetScript("OnDragStart", function(self)
-            local isLocked = MattMinimalFramesDB and MattMinimalFramesDB.locked
-            if not isLocked and not InCombatLockdown() and IsShiftKeyDown() then
+            if CanStartFrameDrag(self) then
                 self:StartMoving()
             end
         end)
@@ -740,7 +1041,7 @@ local function CreateResourceText(frame, unit)
             else
                 GameTooltip:SetText("Target Power Text", 1, 1, 1)
             end
-            GameTooltip:AddLine("Shift+Drag to move", 0.5, 0.5, 0.5)
+            GameTooltip:AddLine(GetDragHintText(), 0.5, 0.5, 0.5)
             GameTooltip:Show()
         end)
 
@@ -757,12 +1058,9 @@ local function CreateResourceText(frame, unit)
     elseif unit == "target" then
         frame.hpText:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 2 + hpX, -14.5 + hpY)
         ApplyPowerTextPosition(frame, unit)
-    elseif unit == "targettarget" or unit == "pet" then
+    elseif unit == "targettarget" or unit == "pet" or unit == "focus" or unit == "boss1" or unit == "boss2" or unit == "boss3" or unit == "boss4" or unit == "boss5" then
         frame.hpText:SetPoint("BOTTOM", frame, "BOTTOM", 0 + hpX, 0 + hpY)
         ApplyPowerTextPosition(frame, unit)
-    elseif unit == "focus" then
-        frame.hpText:Hide()
-        frame.powerText:Hide()
     else
         frame.hpText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -3 + hpX, 3 + hpY)
         ApplyPowerTextPosition(frame, unit)
@@ -929,13 +1227,19 @@ local function CreateCastBar(frame, unit)
     
     frame.castBarFrame = CreateFrame("Frame", nil, frame)
     frame.castBarFrame:SetFrameLevel(frame.healthBar:GetFrameLevel() + 5)
-    frame.castBarFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 1)
-    frame.castBarFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
+    frame.castBarFrame:SetMovable(true)
+    frame.castBarFrame:EnableMouse(true)
+    frame.castBarFrame:RegisterForDrag("LeftButton")
     frame.castBarFrame:SetHeight(8)
     
     frame.castBarBG = frame.castBarFrame:CreateTexture(nil, "BACKGROUND")
     frame.castBarBG:SetAllPoints(frame.castBarFrame)
     frame.castBarBG:SetColorTexture(0, 0, 0, 0.5)
+
+    frame.castBarBorder = frame.castBarFrame:CreateTexture(nil, "ARTWORK", nil, 0)
+    frame.castBarBorder:SetPoint("TOPLEFT", frame.castBarFrame, "TOPLEFT", -1, 1)
+    frame.castBarBorder:SetPoint("BOTTOMRIGHT", frame.castBarFrame, "BOTTOMRIGHT", 1, -1)
+    frame.castBarBorder:SetColorTexture(0, 0, 0, 1)
 
     frame.castBar = CreateFrame("StatusBar", nil, frame.castBarFrame)
     frame.castBar:SetAllPoints(frame.castBarFrame)
@@ -961,6 +1265,31 @@ local function CreateCastBar(frame, unit)
     frame.castBarText:SetPoint("CENTER", frame.castBarTextOverlay, "CENTER", 0, 0)
     frame.castBarText:SetJustifyH("CENTER")
     frame.castBarText:SetWidth(frame.originalWidth - 8)
+
+    ApplyCastBarPosition(frame, unit)
+
+    frame.castBarFrame:SetScript("OnDragStart", function(self)
+        if CanStartFrameDrag(self) then
+            self:StartMoving()
+        end
+    end)
+
+    frame.castBarFrame:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        SaveCastBarPosition(frame, unit)
+    end)
+
+    frame.castBarFrame:SetScript("OnEnter", function(self)
+        if CanStartFrameDrag(self) then
+            GameTooltip:SetOwner(self, "ANCHOR_TOP")
+            GameTooltip:SetText("Cast Bar", 1, 1, 1)
+            GameTooltip:AddLine(GetDragHintText(), 0.6, 0.6, 0.6)
+            GameTooltip:Show()
+        end
+    end)
+    frame.castBarFrame:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
     frame.castBarFrame:Hide()
     
     frame.castInfo = {
@@ -1328,13 +1657,7 @@ function MMF_GetTargetFrameIconMode()
 end
 
 function MMF_UpdateTargetMarkers()
-    local frames = {
-        MMF_PlayerFrame,
-        MMF_TargetFrame,
-        MMF_TargetOfTargetFrame,
-        MMF_PetFrame,
-        MMF_FocusFrame,
-    }
+    local frames = MMF_GetAllFrames and MMF_GetAllFrames() or {}
     for _, frame in ipairs(frames) do
         UpdateFrameTargetMarker(frame)
     end

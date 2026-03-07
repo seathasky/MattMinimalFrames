@@ -225,10 +225,15 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         { value = "targettarget", label = "Target of Target" },
         { value = "pet", label = "Pet" },
         { value = "focus", label = "Focus" },
+        { value = "boss", label = "Boss" },
     }
     local hpUnitOptions = {
         { value = "player", label = "Player" },
         { value = "target", label = "Target" },
+        { value = "targettarget", label = "Target of Target" },
+        { value = "pet", label = "Pet" },
+        { value = "focus", label = "Focus" },
+        { value = "boss", label = "Boss" },
     }
     MattMinimalFramesDB.textOffsetNameUnit = MattMinimalFramesDB.textOffsetNameUnit or "player"
     MattMinimalFramesDB.textOffsetHPUnit = MattMinimalFramesDB.textOffsetHPUnit or "player"
@@ -248,6 +253,13 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local UpdateVisibleNameOffsetSliders = function() end
     local UpdateVisibleHPOffsetSliders = function() end
+    local function GetPopupUnitPrefix(unit)
+        if unit == "targettarget" then return "tot" end
+        if unit == "boss" then return "boss" end
+        if unit == "playerCastBar" then return "playerCastBar" end
+        if unit == "targetCastBar" then return "targetCastBar" end
+        return unit
+    end
 
     local nameUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
@@ -272,7 +284,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local nameXSliders = {}
     local nameYSliders = {}
     for _, opt in ipairs(nameUnitOptions) do
-        local prefix = opt.value == "targettarget" and "tot" or opt.value
+        local prefix = GetPopupUnitPrefix(opt.value)
         nameXSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Name X Offset", LEFT_COL_X, -458 + LEFT_LOWER_Y_OFFSET, LEFT_COL_WIDTH, prefix .. "NameTextXOffset", -60, 60, 1, 0, function()
             if MMF_UpdateFrameTextOffsets then MMF_UpdateFrameTextOffsets() end
         end, true)
@@ -321,7 +333,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local hpXSliders = {}
     local hpYSliders = {}
     for _, opt in ipairs(hpUnitOptions) do
-        local prefix = opt.value == "targettarget" and "tot" or opt.value
+        local prefix = GetPopupUnitPrefix(opt.value)
         hpXSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "HP X Offset", LEFT_COL_X, -538 + LEFT_LOWER_Y_OFFSET, LEFT_COL_WIDTH, prefix .. "HPTextXOffset", -60, 60, 1, 0, function()
             if MMF_UpdateFrameTextOffsets then MMF_UpdateFrameTextOffsets() end
         end, true)
@@ -1369,6 +1381,8 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         { value = "targettarget", label = "Target of Target" },
         { value = "pet", label = "Pet" },
         { value = "focus", label = "Focus" },
+        { value = "boss", label = "Boss" },
+        { value = "playerCastBar", label = "Player Cast Bar" },
     }
     MattMinimalFramesDB.frameScaleUnit = MattMinimalFramesDB.frameScaleUnit or "player"
 
@@ -1395,7 +1409,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local scaleXSliders = {}
     local scaleYSliders = {}
     for _, opt in ipairs(scaleUnitOptions) do
-        local prefix = (opt.value == "targettarget") and "tot" or opt.value
+        local prefix = GetPopupUnitPrefix(opt.value)
         scaleXSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Scale X", LEFT_COL_X, -82, LEFT_COL_WIDTH, prefix .. "FrameScaleX", 0.5, 3.0, 0.05, 1.0, function()
             if MMF_UpdateFrameScale then
                 MMF_UpdateFrameScale(opt.value)
@@ -1488,6 +1502,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local function GetTextSizePrefix(unit)
         if unit == nil then return "player" end
         if unit == "targettarget" then return "tot" end
+        if unit == "boss" then return "boss" end
         return unit
     end
 
@@ -1683,6 +1698,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         { value = "targettarget", label = "Target of Target" },
         { value = "pet", label = "Pet" },
         { value = "focus", label = "Focus" },
+        { value = "boss", label = "Boss" },
     }
 
     MattMinimalFramesDB.textHideNameUnit = MattMinimalFramesDB.textHideNameUnit or "player"
@@ -1690,6 +1706,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local function GetUnitPrefix(unit)
         if unit == "targettarget" then return "tot" end
+        if unit == "boss" then return "boss" end
         return unit
     end
 
@@ -1713,6 +1730,15 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local function ApplyTextVisibilityForUnit(unit)
         if not unit then return end
+        if unit == "boss" and MMF_UpdateUnitFrame and MMF_GetFrameForUnit then
+            for i = 1, 5 do
+                local frame = MMF_GetFrameForUnit("boss" .. i)
+                if frame then
+                    MMF_UpdateUnitFrame(frame)
+                end
+            end
+            return
+        end
         if MMF_GetFrameForUnit and MMF_UpdateUnitFrame then
             local frame = MMF_GetFrameForUnit(unit)
             if frame then

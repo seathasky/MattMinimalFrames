@@ -622,6 +622,41 @@ local function UpdateAbsorbBar(frame)
     frame.absorbBar:Show()
 end
 
+local function UpdatePlayerCastBarForEditMode(frame, unit, unlockedEditMode, db)
+    if not frame or unit ~= "player" or not frame.castBarFrame then
+        return
+    end
+
+    if db and db.showPlayerCastBar == false then
+        frame.castBarFrame:Hide()
+        return
+    end
+
+    local castInfo = frame.castInfo
+    local activelyCasting = castInfo and (castInfo.casting == true or castInfo.channeling == true)
+
+    if unlockedEditMode then
+        if not activelyCasting then
+            local colorKey = (db and db.castBarColor) or "yellow"
+            local r, g, b = MMF_Config.GetCastBarColor(colorKey)
+            if frame.castBar then
+                frame.castBar:SetStatusBarColor(r, g, b, 1)
+                frame.castBar:SetMinMaxValues(0, 1)
+                frame.castBar:SetValue(0.55)
+            end
+            if frame.castBarText then
+                frame.castBarText:SetText("Player Cast Bar")
+            end
+            frame.castBarFrame:Show()
+        end
+        return
+    end
+
+    if not activelyCasting then
+        frame.castBarFrame:Hide()
+    end
+end
+
 --------------------------------------------------
 -- UNIT FRAME UPDATE
 --------------------------------------------------
@@ -645,12 +680,18 @@ local function UpdateUnitFrame(frame)
     local hideNameText = MMF_IsNameTextHidden and MMF_IsNameTextHidden(unit)
     local hideHPText = MMF_IsHPTextHidden and MMF_IsHPTextHidden(unit)
 
+    local unlockedEditMode = (db.unlockFramesEditMode == true)
+
     if hideNameText then
         frame.nameText:SetText("")
         frame.nameText:Hide()
         ApplyNameTextFontSize(frame, MMF_GetNameTextSize and MMF_GetNameTextSize(unit) or tonumber(db.nameTextSize) or 12)
     elseif not UnitExists(unit) then
-        frame.nameText:SetText("")
+        if unlockedEditMode then
+            frame.nameText:SetText((frame.frameLabel and (frame.frameLabel .. " (Edit)")) or (unit .. " (Edit)"))
+        else
+            frame.nameText:SetText("")
+        end
         frame.nameText:Show()
         ApplyNameTextFontSize(frame, MMF_GetNameTextSize and MMF_GetNameTextSize(unit) or tonumber(db.nameTextSize) or 12)
     else
@@ -680,11 +721,27 @@ local function UpdateUnitFrame(frame)
         frame.healthBar:SetValue(hp)
     end
 
-    if frame.hpText and (unit == "player" or unit == "target") then
+    local supportsHPText = (
+        unit == "player"
+        or unit == "target"
+        or unit == "targettarget"
+        or unit == "pet"
+        or unit == "focus"
+        or unit == "boss1"
+        or unit == "boss2"
+        or unit == "boss3"
+        or unit == "boss4"
+        or unit == "boss5"
+    )
+
+    if frame.hpText and supportsHPText then
         ApplyHPTextFontSize(frame, MMF_GetHPTextSize and MMF_GetHPTextSize(unit) or tonumber(db.hpTextSize) or 13)
         if hideHPText then
             frame.hpText:SetText("")
             frame.hpText:Hide()
+        elseif unlockedEditMode and not UnitExists(unit) then
+            frame.hpText:SetText("100% | 999k")
+            frame.hpText:Show()
         else
             local hpPercentText = GetHealthPercentText(unit, hp, maxHP)
             local showHPPercentText = (db.showHPPercentText ~= false)
@@ -696,8 +753,11 @@ local function UpdateUnitFrame(frame)
 
     UpdateHealPrediction(frame)
     UpdateAbsorbBar(frame)
+    UpdatePlayerCastBarForEditMode(frame, unit, unlockedEditMode, db)
 
-    if unit ~= "player" and unit ~= "target" then
+    if unit ~= "player" and unit ~= "target"
+        and unit ~= "targettarget" and unit ~= "pet" and unit ~= "focus"
+        and unit ~= "boss1" and unit ~= "boss2" and unit ~= "boss3" and unit ~= "boss4" and unit ~= "boss5" then
         if frame.hpText then frame.hpText:Hide() end
         if frame.powerText then frame.powerText:Hide() end
     end

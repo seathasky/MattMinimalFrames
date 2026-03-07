@@ -51,6 +51,7 @@ local VALID_TEXT_SIZE_UNITS = {
     targettarget = true,
     pet = true,
     focus = true,
+    boss = true,
 }
 
 local function SanitizeProfileTextSettings(profile)
@@ -61,7 +62,7 @@ local function SanitizeProfileTextSettings(profile)
     profile.nameTextSize = NormalizePositiveNumber(profile.nameTextSize, 12)
     profile.hpTextSize = NormalizePositiveNumber(profile.hpTextSize, 13)
 
-    local unitPrefixes = { "player", "target", "tot", "pet", "focus" }
+    local unitPrefixes = { "player", "target", "tot", "pet", "focus", "boss" }
     for _, prefix in ipairs(unitPrefixes) do
         local nameKey = prefix .. "NameTextSize"
         if profile[nameKey] ~= nil then
@@ -95,11 +96,13 @@ local function SanitizeProfileTextSettings(profile)
         "totHideNameText",
         "petHideNameText",
         "focusHideNameText",
+        "bossHideNameText",
         "playerHideHPText",
         "targetHideHPText",
         "totHideHPText",
         "petHideHPText",
         "focusHideHPText",
+        "bossHideHPText",
     }
     for _, key in ipairs(hideTextKeys) do
         profile[key] = NormalizeToggle(profile[key])
@@ -158,8 +161,14 @@ local PROFILE_LAYOUT_KEYS = {
     "MMF_TargetOfTargetFrame",
     "MMF_PetFrame",
     "MMF_FocusFrame",
+    "MMF_Boss1Frame",
+    "MMF_Boss2Frame",
+    "MMF_Boss3Frame",
+    "MMF_Boss4Frame",
+    "MMF_Boss5Frame",
     "powerBarPositions",
     "powerTextPositions",
+    "castBarPositions",
     "popupPosition",
 }
 

@@ -1,10 +1,200 @@
 local LibCustomGlow = LibStub("LibCustomGlow-1.0")
 
+local function IsEditModeActive()
+    return MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
+end
+
+local function GetEffectiveLockedState()
+    if IsEditModeActive() then
+        return false
+    end
+    return MattMinimalFramesDB and MattMinimalFramesDB.locked == true
+end
+
+local function ApplyEditModeAlignmentGrid(isEnabled)
+    if not MMF_ToggleAlignmentGrid then
+        return
+    end
+
+    if isEnabled then
+        if MattMinimalFramesDB.mmfGridBeforeEditMode == nil then
+            MattMinimalFramesDB.mmfGridBeforeEditMode = MattMinimalFramesDB.showAlignmentGrid == true
+        end
+        MattMinimalFramesDB.showAlignmentGrid = true
+        MMF_ToggleAlignmentGrid(true)
+        return
+    end
+
+    local restoreGrid = MattMinimalFramesDB.mmfGridBeforeEditMode == true
+    MattMinimalFramesDB.showAlignmentGrid = restoreGrid
+    MMF_ToggleAlignmentGrid(restoreGrid)
+    MattMinimalFramesDB.mmfGridBeforeEditMode = nil
+end
+
+local function GetPetActionBarFrame()
+    return _G.PetActionBarFrame or _G.PetActionBar
+end
+
+local function SavePetActionBarPosition(frame)
+    if not frame then
+        return
+    end
+    if not MattMinimalFramesDB then
+        MattMinimalFramesDB = {}
+    end
+    local left = frame:GetLeft()
+    local top = frame:GetTop()
+    if left and top then
+        MattMinimalFramesDB.petActionBarPosition = { left = left, top = top }
+    end
+end
+
+local function ApplyPetActionBarSavedPosition()
+    local frame = GetPetActionBarFrame()
+    if not frame or not MattMinimalFramesDB then
+        return
+    end
+    local pos = MattMinimalFramesDB.petActionBarPosition
+    if type(pos) ~= "table" or pos.left == nil or pos.top == nil then
+        return
+    end
+    frame:ClearAllPoints()
+    frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.left, pos.top)
+end
+
+local function EnsurePetActionBarEditBackdrop(frame)
+    if not frame or frame.mmfEditDragBackdrop then
+        return
+    end
+
+    local backdrop = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
+    backdrop:SetFrameStrata("DIALOG")
+    backdrop:SetFrameLevel(frame:GetFrameLevel() + 20)
+    backdrop:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    backdrop:SetBackdropColor(0.02, 0.02, 0.03, 0.35)
+    backdrop:SetBackdropBorderColor(0.2, 0.2, 0.24, 0.9)
+    backdrop:EnableMouse(true)
+    backdrop:RegisterForDrag("LeftButton")
+
+    local title = backdrop:CreateFontString(nil, "OVERLAY")
+    title:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
+    title:SetPoint("BOTTOM", backdrop, "TOP", 0, 2)
+    title:SetTextColor(1, 1, 1)
+    title:SetText("Pet Ability Bar")
+
+    backdrop:SetScript("OnDragStart", function(self)
+        if InCombatLockdown and InCombatLockdown() then
+            return
+        end
+        if not MattMinimalFramesDB or MattMinimalFramesDB.unlockFramesEditMode ~= true then
+            return
+        end
+        frame:StartMoving()
+        self.mmfDragInProgress = true
+    end)
+
+    backdrop:SetScript("OnDragStop", function(self)
+        frame:StopMovingOrSizing()
+        SavePetActionBarPosition(frame)
+        self.mmfDragInProgress = nil
+    end)
+
+    frame.mmfEditDragBackdrop = backdrop
+    frame.mmfEditDragBackdropTitle = title
+    backdrop:Hide()
+end
+
+local function EnsurePetActionBarMover()
+    local frame = GetPetActionBarFrame()
+    if not frame or frame.mmfMoverHooked then
+        return
+    end
+
+    frame:SetMovable(true)
+    frame:RegisterForDrag("LeftButton")
+
+    frame:HookScript("OnDragStart", function(self)
+        if InCombatLockdown and InCombatLockdown() then
+            return
+        end
+        if not MattMinimalFramesDB or MattMinimalFramesDB.unlockFramesEditMode ~= true then
+            return
+        end
+        self:StartMoving()
+    end)
+
+    frame:HookScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        SavePetActionBarPosition(self)
+    end)
+
+    EnsurePetActionBarEditBackdrop(frame)
+    frame.mmfMoverHooked = true
+end
+
+function MMF_UpdatePetActionBarEditMode()
+    local frame = GetPetActionBarFrame()
+    if not frame then
+        return
+    end
+    EnsurePetActionBarMover()
+    ApplyPetActionBarSavedPosition()
+    frame:SetMovable(true)
+    local backdrop = frame.mmfEditDragBackdrop
+    local editMode = MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
+    if editMode then
+        if not (InCombatLockdown and InCombatLockdown()) then
+            pcall(frame.Show, frame)
+        end
+        if backdrop then
+            backdrop:ClearAllPoints()
+            backdrop:SetPoint("TOPLEFT", frame, "TOPLEFT", -12, 10)
+            backdrop:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 12, -10)
+            if not (InCombatLockdown and InCombatLockdown()) then
+                backdrop:Show()
+            else
+                backdrop:Hide()
+            end
+        end
+    elseif backdrop then
+        backdrop:Hide()
+    end
+end
+
+function MMF_ApplyPetActionBarPosition()
+    EnsurePetActionBarMover()
+    ApplyPetActionBarSavedPosition()
+end
+
 --------------------------------------------------
 -- FRAME LOCKING
 --------------------------------------------------
 
+local function SetUnitWatchState(frame, enabled)
+    if not frame then
+        return
+    end
+    if enabled then
+        if type(RegisterUnitWatch) == "function" then
+            pcall(RegisterUnitWatch, frame)
+        end
+        frame.mmfUnitWatchSuspended = nil
+    else
+        if type(UnregisterUnitWatch) == "function" then
+            local ok = pcall(UnregisterUnitWatch, frame)
+            if ok then
+                frame.mmfUnitWatchSuspended = true
+            end
+        end
+    end
+end
+
 local function ApplyFrameLockState(locked)
+    local revealHiddenFrames = MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
     for _, frm in ipairs(MMF_GetAllFrames()) do
         if frm then
             frm:SetMovable(true)
@@ -19,12 +209,78 @@ local function ApplyFrameLockState(locked)
             if LibCustomGlow then
                 LibCustomGlow.PixelGlow_Stop(frm)
             end
+            if revealHiddenFrames then
+                SetUnitWatchState(frm, false)
+                frm:Show()
+            else
+                SetUnitWatchState(frm, true)
+            end
+        end
+    end
+
+    if MMF_RequestAllFramesUpdate then
+        MMF_RequestAllFramesUpdate()
+    elseif MMF_UpdateUnitFrame then
+        for _, frm in ipairs(MMF_GetAllFrames()) do
+            if frm then
+                MMF_UpdateUnitFrame(frm)
+            end
         end
     end
 end
 
+function MMF_RefreshFrameLockState()
+    if IsEditModeActive() and MattMinimalFramesDB then
+        MattMinimalFramesDB.locked = false
+    end
+    local locked = GetEffectiveLockedState()
+    if InCombatLockdown and InCombatLockdown() then
+        if MMF_RunAfterCombat then
+            MMF_RunAfterCombat("frame_lock_state_refresh", function()
+                MMF_RefreshFrameLockState()
+            end)
+        end
+        return
+    end
+    ApplyFrameLockState(locked)
+end
+
+function MMF_SetEditMode(enabled)
+    if not MattMinimalFramesDB then
+        MattMinimalFramesDB = {}
+    end
+
+    local isEnabled = enabled == true
+    local wasEnabled = MattMinimalFramesDB.unlockFramesEditMode == true
+
+    if isEnabled and not wasEnabled then
+        MattMinimalFramesDB.mmfLockedBeforeEditMode = MattMinimalFramesDB.locked == true
+        MattMinimalFramesDB.locked = false
+    elseif (not isEnabled) and wasEnabled then
+        if MattMinimalFramesDB.mmfLockedBeforeEditMode ~= nil then
+            MattMinimalFramesDB.locked = MattMinimalFramesDB.mmfLockedBeforeEditMode == true
+        end
+        MattMinimalFramesDB.mmfLockedBeforeEditMode = nil
+    end
+
+    MattMinimalFramesDB.unlockFramesEditMode = isEnabled
+    ApplyEditModeAlignmentGrid(isEnabled)
+    MMF_UpdatePetActionBarEditMode()
+    MMF_RefreshFrameLockState()
+end
+
 function MMF_LockFrames()
     if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
+
+    if IsEditModeActive() then
+        MattMinimalFramesDB.mmfLockedBeforeEditMode = true
+        MattMinimalFramesDB.locked = false
+        if MMF_RefreshFrameLockState then
+            MMF_RefreshFrameLockState()
+        end
+        return
+    end
+
     MattMinimalFramesDB.locked = true
 
     local queuedMessage = "|cff00ff00Matt's Minimal Frames|r: Locking frames after combat."
@@ -45,6 +301,16 @@ end
 
 function MMF_UnlockFrames()
     if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
+
+    if IsEditModeActive() then
+        MattMinimalFramesDB.mmfLockedBeforeEditMode = false
+        MattMinimalFramesDB.locked = false
+        if MMF_RefreshFrameLockState then
+            MMF_RefreshFrameLockState()
+        end
+        return
+    end
+
     MattMinimalFramesDB.locked = false
 
     local queuedMessage = "|cff00ff00Matt's Minimal Frames|r: Unlocking frames after combat."

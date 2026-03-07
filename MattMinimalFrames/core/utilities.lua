@@ -74,7 +74,7 @@ function MMF_AddEditModeHighlight(frame, name)
     if frame and name then
         frame.editModeHighlight = frame:CreateTexture(nil, "OVERLAY")
         frame.editModeHighlight:SetAllPoints()
-        frame.editModeHighlight:SetColorTexture(1, 1, 1, 0.3)
+        frame.editModeHighlight:SetColorTexture(0, 0, 0, 0.35)
         frame.editModeHighlight:Hide()
         frame.editModeName = name
     end

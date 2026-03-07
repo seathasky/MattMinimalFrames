@@ -823,6 +823,9 @@ function MMF_CreateSubTabBar(parent, config)
             self.underline:SetAlpha(0)
         end)
         button:SetScript("OnClick", function()
+            if PlaySoundFile and MMF_IsPopupUISoundsEnabled and MMF_IsPopupUISoundsEnabled() then
+                PlaySoundFile("Interface\\AddOns\\MattMinimalFrames\\Sounds\\click.mp3", "Master")
+            end
             SetActive(index)
         end)
 

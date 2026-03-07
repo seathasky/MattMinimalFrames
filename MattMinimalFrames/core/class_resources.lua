@@ -405,6 +405,28 @@ local function MigrateLegacyPosition(frame, prefix)
     SaveCenterOffsets(frame, prefix)
 end
 
+local function IsEditModeDragEnabled()
+    return MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
+end
+
+local function CanStartResourceBarDrag(frame)
+    if InCombatLockdown() then
+        return false
+    end
+    if IsEditModeDragEnabled() then
+        return frame and frame:IsMovable()
+    end
+    local isLocked = MattMinimalFramesDB and MattMinimalFramesDB.locked
+    return (not isLocked) and IsShiftKeyDown() and frame and frame:IsMovable()
+end
+
+local function GetResourceBarDragHint()
+    if IsEditModeDragEnabled() then
+        return "Drag to move"
+    end
+    return "Shift+Drag to move"
+end
+
 local function CreateBaseResourceBar(frameName, prefix, moveLabel, color, numRunes, initialValue)
     local frame = CreateFrame("Frame", frameName, UIParent)
     frame.mmfLayoutKey = prefix
@@ -433,8 +455,7 @@ local function CreateBaseResourceBar(frameName, prefix, moveLabel, color, numRun
     end
 
     frame:SetScript("OnDragStart", function(self)
-        local isLocked = MattMinimalFramesDB and MattMinimalFramesDB.locked
-        if not isLocked and IsShiftKeyDown() then
+        if CanStartResourceBarDrag(self) then
             self:StartMoving()
         end
     end)
@@ -459,13 +480,14 @@ local function CreateBaseResourceBar(frameName, prefix, moveLabel, color, numRun
     else
         frame.moveSubtext:SetFont((MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "OUTLINE")
     end
-    frame.moveSubtext:SetText("Shift+Drag to move")
+    frame.moveSubtext:SetText(GetResourceBarDragHint())
     frame.moveSubtext:SetPoint("TOP", frame.moveHint, "BOTTOM", 0, -2)
     frame.moveSubtext:SetTextColor(0.7, 0.7, 0.7)
     frame.moveSubtext:Hide()
 
     frame:SetScript("OnEnter", function(self)
         if not InCombatLockdown() and MattMinimalFramesDB and MattMinimalFramesDB.showMoveHints then
+            self.moveSubtext:SetText(GetResourceBarDragHint())
             self.moveHint:Show()
             self.moveSubtext:Show()
         end

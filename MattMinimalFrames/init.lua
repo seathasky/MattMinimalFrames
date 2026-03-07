@@ -4,6 +4,12 @@ local function HideBlizzardFrames()
         TargetFrame,
         FocusFrame,
         PetFrame,
+        _G.Boss1TargetFrame,
+        _G.Boss2TargetFrame,
+        _G.Boss3TargetFrame,
+        _G.Boss4TargetFrame,
+        _G.Boss5TargetFrame,
+        _G.BossTargetFrameContainer,
     }
     for _, frame in pairs(framesToHide) do
         if frame then
@@ -219,6 +225,7 @@ function MMF_ApplyActiveProfileLive()
     if MMF_InitializeClassResources then MMF_InitializeClassResources() end
     if MMF_UpdateClassBarLayoutForCurrentClass then MMF_UpdateClassBarLayoutForCurrentClass() end
     if MMF_ApplyGlobalFont then MMF_ApplyGlobalFont() end
+    if MMF_ApplyPetActionBarPosition then MMF_ApplyPetActionBarPosition() end
 
     if _G.MMF_RuneBar then _G.MMF_RuneBar:SetShown(MattMinimalFramesDB.showRuneBar ~= false) end
     if _G.MMF_HolyPowerBar then _G.MMF_HolyPowerBar:SetShown(MattMinimalFramesDB.showHolyPowerBar ~= false) end
@@ -269,6 +276,16 @@ local function Initialize()
         end
     end
     NormalizeGUIScaleSetting()
+    if MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true then
+        reopenMainGUIAfterEditModeReset = true
+        MattMinimalFramesDB.unlockFramesEditMode = false
+        MattMinimalFramesDB.mmfLockedBeforeEditMode = nil
+        MattMinimalFramesDB.mmfGridBeforeEditMode = nil
+        MattMinimalFramesDB.showAlignmentGrid = false
+        if MMF_ToggleAlignmentGrid then
+            MMF_ToggleAlignmentGrid(false)
+        end
+    end
     if MMF_EnsureStatusBarTextureSelection then
         MMF_EnsureStatusBarTextureSelection()
     end
@@ -282,6 +299,9 @@ local function Initialize()
     MMF_ApplyAllFrameScales()
     MMF_InitializeClassResources()
     MMF_ApplyStatusBarTexture()
+    if MMF_ApplyPetActionBarPosition then
+        MMF_ApplyPetActionBarPosition()
+    end
     if MMF_ApplyGlobalFont then
         MMF_ApplyGlobalFont()
     end
@@ -306,6 +326,7 @@ end
 
 local isInitialized = false
 local startupStyleRetryToken = 0
+local reopenMainGUIAfterEditModeReset = false
 
 local function RequestAllFrameTextRefresh()
     if MMF_RequestAllFramesUpdate then
@@ -357,6 +378,7 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
     end
 
     if event == "PLAYER_LOGIN" and isInitialized then
+        HideBlizzardFrames()
         if MMF_ResolveCharacterProfile then
             MMF_ResolveCharacterProfile(true)
         elseif MMF_NormalizeActiveProfile then
@@ -370,5 +392,12 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
         ReapplySharedMediaSelections()
         UpdateBlizzardPlayerCastBarVisibility()
         ScheduleStartupStyleReapply()
+        if reopenMainGUIAfterEditModeReset and MMF_ShowWelcomePopup then
+            reopenMainGUIAfterEditModeReset = false
+            MMF_ShowWelcomePopup(true)
+        end
+        if MMF_ShowNewsPopup then
+            MMF_ShowNewsPopup(false)
+        end
     end
 end)

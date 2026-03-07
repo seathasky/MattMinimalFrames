@@ -93,6 +93,7 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
         MattMinimalFramesDB.totNameTextSize = d.nameTextSize
         MattMinimalFramesDB.petNameTextSize = d.nameTextSize
         MattMinimalFramesDB.focusNameTextSize = d.nameTextSize
+        MattMinimalFramesDB.bossNameTextSize = d.bossNameTextSize or d.nameTextSize
         MattMinimalFramesDB.enableNameTruncation = d.enableNameTruncation
         MattMinimalFramesDB.autoResizeTextOnLongName = d.autoResizeTextOnLongName
         MattMinimalFramesDB.nameTruncationLength = d.nameTruncationLength
@@ -110,12 +111,15 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
         MattMinimalFramesDB.petNameTextYOffset = d.petNameTextYOffset
         MattMinimalFramesDB.focusNameTextXOffset = d.focusNameTextXOffset
         MattMinimalFramesDB.focusNameTextYOffset = d.focusNameTextYOffset
+        MattMinimalFramesDB.bossNameTextXOffset = d.bossNameTextXOffset or 0
+        MattMinimalFramesDB.bossNameTextYOffset = d.bossNameTextYOffset or 0
         MattMinimalFramesDB.hpTextSize = d.hpTextSize
         MattMinimalFramesDB.playerHPTextSize = d.hpTextSize
         MattMinimalFramesDB.targetHPTextSize = d.hpTextSize
         MattMinimalFramesDB.totHPTextSize = d.hpTextSize
         MattMinimalFramesDB.petHPTextSize = d.hpTextSize
         MattMinimalFramesDB.focusHPTextSize = d.hpTextSize
+        MattMinimalFramesDB.bossHPTextSize = d.bossHPTextSize or d.hpTextSize
         MattMinimalFramesDB.hpTextXOffset = d.hpTextXOffset
         MattMinimalFramesDB.hpTextYOffset = d.hpTextYOffset
         MattMinimalFramesDB.hpTextScaleX = d.hpTextScaleX or 1.0
@@ -124,6 +128,14 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
         MattMinimalFramesDB.playerHPTextYOffset = d.playerHPTextYOffset
         MattMinimalFramesDB.targetHPTextXOffset = d.targetHPTextXOffset
         MattMinimalFramesDB.targetHPTextYOffset = d.targetHPTextYOffset
+        MattMinimalFramesDB.totHPTextXOffset = d.totHPTextXOffset or 0
+        MattMinimalFramesDB.totHPTextYOffset = d.totHPTextYOffset or 0
+        MattMinimalFramesDB.petHPTextXOffset = d.petHPTextXOffset or 0
+        MattMinimalFramesDB.petHPTextYOffset = d.petHPTextYOffset or 0
+        MattMinimalFramesDB.focusHPTextXOffset = d.focusHPTextXOffset or 0
+        MattMinimalFramesDB.focusHPTextYOffset = d.focusHPTextYOffset or 0
+        MattMinimalFramesDB.bossHPTextXOffset = d.bossHPTextXOffset or 0
+        MattMinimalFramesDB.bossHPTextYOffset = d.bossHPTextYOffset or 0
         MattMinimalFramesDB.showHPPercentText = d.showHPPercentText
         MattMinimalFramesDB.hpTextUseShortValue = d.hpTextUseShortValue
         -- Power bar size
@@ -152,6 +164,7 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
         MattMinimalFramesDB.powerBarHorizontalOffset = d.powerBarHorizontalOffset or 4
         MattMinimalFramesDB.powerBarPositions = nil
         MattMinimalFramesDB.powerTextPositions = nil
+        MattMinimalFramesDB.castBarPositions = nil
         MattMinimalFramesDB.powerBarSizeUnit = "player"
         if MMF_UpdatePowerBarVisibility then
             MMF_UpdatePowerBarVisibility()
@@ -222,6 +235,8 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
         MattMinimalFramesDB.focusFrameScaleY = d.focusFrameScaleY
         MattMinimalFramesDB.petFrameScaleX = d.petFrameScaleX
         MattMinimalFramesDB.petFrameScaleY = d.petFrameScaleY
+        MattMinimalFramesDB.bossFrameScaleX = d.bossFrameScaleX or 1.0
+        MattMinimalFramesDB.bossFrameScaleY = d.bossFrameScaleY or 1.0
         MattMinimalFramesDB.playerFrameIconScale = d.playerFrameIconScale or 1.0
         MattMinimalFramesDB.targetFrameIconScale = d.targetFrameIconScale or 1.0
         MattMinimalFramesDB.popupSize = {

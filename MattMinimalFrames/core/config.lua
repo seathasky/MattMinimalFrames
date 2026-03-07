@@ -16,6 +16,11 @@ MMF_Config = {
         { unit = "targettarget", name = "MMF_TargetOfTargetFrame", width = 100, height = 28, x = 0,    y = -100, label = "Target of Target" },
         { unit = "pet",          name = "MMF_PetFrame",            width = 100, height = 28, x = -300, y = -100, label = "Pet Frame" },
         { unit = "focus",        name = "MMF_FocusFrame",          width = 100, height = 28, x = 300,  y = -100, label = "Focus Frame" },
+        { unit = "boss1",        name = "MMF_Boss1Frame",          width = 100, height = 28, x = 500,  y = 140,  label = "Boss 1 Frame" },
+        { unit = "boss2",        name = "MMF_Boss2Frame",          width = 100, height = 28, x = 500,  y = 104,  label = "Boss 2 Frame" },
+        { unit = "boss3",        name = "MMF_Boss3Frame",          width = 100, height = 28, x = 500,  y = 68,   label = "Boss 3 Frame" },
+        { unit = "boss4",        name = "MMF_Boss4Frame",          width = 100, height = 28, x = 500,  y = 32,   label = "Boss 4 Frame" },
+        { unit = "boss5",        name = "MMF_Boss5Frame",          width = 100, height = 28, x = 500,  y = -4,   label = "Boss 5 Frame" },
     },
     CAST_BAR_COLORS = {
         { value = "white",  label = "White",   r = 1,   g = 1,   b = 1 },
@@ -538,24 +543,26 @@ if LSM and LSM.RegisterCallback then
 end
 
 function MMF_GetAllFrames()
-    return {
-        MMF_PlayerFrame,
-        MMF_TargetFrame,
-        MMF_TargetOfTargetFrame,
-        MMF_PetFrame,
-        MMF_FocusFrame
-    }
+    local frames = {}
+    for _, def in ipairs(MMF_Config.FRAME_DEFINITIONS) do
+        local frame = _G[def.name]
+        if frame then
+            frames[#frames + 1] = frame
+        end
+    end
+    return frames
 end
 
 function MMF_GetFrameForUnit(unit)
-    local map = {
-        player = MMF_PlayerFrame,
-        target = MMF_TargetFrame,
-        targettarget = MMF_TargetOfTargetFrame,
-        pet = MMF_PetFrame,
-        focus = MMF_FocusFrame,
-    }
-    return map[unit]
+    if type(unit) ~= "string" or unit == "" then
+        return nil
+    end
+    for _, def in ipairs(MMF_Config.FRAME_DEFINITIONS) do
+        if def.unit == unit then
+            return _G[def.name]
+        end
+    end
+    return nil
 end
 
 function MMF_GetFrameDefinition(unit)
@@ -700,6 +707,9 @@ end
 
 local function GetUnitPrefix(unit)
     if unit == "targettarget" then return "tot" end
+    if unit == "boss" or unit == "boss1" or unit == "boss2" or unit == "boss3" or unit == "boss4" or unit == "boss5" then
+        return "boss"
+    end
     return unit
 end
 
@@ -796,6 +806,11 @@ local function ApplyFrameTextOffsets(frame)
             targettarget = { point = "CENTER", relPoint = "TOP", x = 0, y = 0, justify = "CENTER" },
             pet = { point = "CENTER", relPoint = "TOP", x = 0, y = 0, justify = "CENTER" },
             focus = { point = "CENTER", relPoint = "TOP", x = 0, y = 0, justify = "CENTER" },
+            boss1 = { point = "CENTER", relPoint = "TOP", x = 0, y = 0, justify = "CENTER" },
+            boss2 = { point = "CENTER", relPoint = "TOP", x = 0, y = 0, justify = "CENTER" },
+            boss3 = { point = "CENTER", relPoint = "TOP", x = 0, y = 0, justify = "CENTER" },
+            boss4 = { point = "CENTER", relPoint = "TOP", x = 0, y = 0, justify = "CENTER" },
+            boss5 = { point = "CENTER", relPoint = "TOP", x = 0, y = 0, justify = "CENTER" },
         }
         local pos = positions[unit] or positions.focus
         frame.nameText:ClearAllPoints()
@@ -809,23 +824,16 @@ local function ApplyFrameTextOffsets(frame)
             frame.hpText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0 + hpX, -14.5 + hpY)
         elseif frame.unit == "target" then
             frame.hpText:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 2 + hpX, -14.5 + hpY)
-        elseif frame.unit == "targettarget" or frame.unit == "pet" then
+        elseif frame.unit == "targettarget" or frame.unit == "pet" or frame.unit == "focus" or frame.unit == "boss1" or frame.unit == "boss2" or frame.unit == "boss3" or frame.unit == "boss4" or frame.unit == "boss5" then
             frame.hpText:SetPoint("BOTTOM", frame, "BOTTOM", 0 + hpX, 0 + hpY)
-        elseif frame.unit ~= "focus" then
+        else
             frame.hpText:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -3 + hpX, 3 + hpY)
         end
     end
 end
 
 function MMF_UpdateFrameTextOffsets()
-    local frames = {
-        MMF_PlayerFrame,
-        MMF_TargetFrame,
-        MMF_TargetOfTargetFrame,
-        MMF_PetFrame,
-        MMF_FocusFrame
-    }
-    for _, frame in ipairs(frames) do
+    for _, frame in ipairs(MMF_GetAllFrames()) do
         ApplyFrameTextOffsets(frame)
     end
 end
@@ -835,24 +843,18 @@ local function ForEachUnitFrame(unit, callback)
         return
     end
     if unit then
+        if unit == "boss" then
+            for i = 1, 5 do
+                callback(MMF_GetFrameForUnit and MMF_GetFrameForUnit("boss" .. i))
+            end
+            return
+        end
         local frame = (MMF_GetFrameForUnit and MMF_GetFrameForUnit(unit))
-            or (unit == "player" and MMF_PlayerFrame)
-            or (unit == "target" and MMF_TargetFrame)
-            or (unit == "targettarget" and MMF_TargetOfTargetFrame)
-            or (unit == "pet" and MMF_PetFrame)
-            or (unit == "focus" and MMF_FocusFrame)
         callback(frame)
         return
     end
 
-    local frames = {
-        MMF_PlayerFrame,
-        MMF_TargetFrame,
-        MMF_TargetOfTargetFrame,
-        MMF_PetFrame,
-        MMF_FocusFrame
-    }
-    for _, frame in ipairs(frames) do
+    for _, frame in ipairs(MMF_GetAllFrames()) do
         callback(frame)
     end
 end
@@ -932,17 +934,34 @@ end
 
 function MMF_GetFrameScaleX(unit)
     if not MattMinimalFramesDB then return 1.0 end
-    local key = unit:gsub("targettarget", "tot") .. "FrameScaleX"
+    local prefix = GetUnitPrefix(unit or "player")
+    local key = prefix .. "FrameScaleX"
     return MattMinimalFramesDB[key] or 1.0
 end
 
 function MMF_GetFrameScaleY(unit)
     if not MattMinimalFramesDB then return 1.0 end
-    local key = unit:gsub("targettarget", "tot") .. "FrameScaleY"
+    local prefix = GetUnitPrefix(unit or "player")
+    local key = prefix .. "FrameScaleY"
     return MattMinimalFramesDB[key] or 1.0
 end
 
 function MMF_UpdateFrameScale(unit)
+    if unit == "playerCastBar" or unit == "targetCastBar" then
+        local ownerFrame = (unit == "playerCastBar") and MMF_GetFrameForUnit("player") or MMF_GetFrameForUnit("target")
+        if ownerFrame and ownerFrame.castBarFrame and MMF_ApplyCastBarPosition then
+            MMF_ApplyCastBarPosition(ownerFrame, ownerFrame.unit)
+        end
+        return
+    end
+
+    if unit == "boss" then
+        for i = 1, 5 do
+            MMF_UpdateFrameScale("boss" .. i)
+        end
+        return
+    end
+
     local frame = MMF_GetFrameForUnit(unit)
     if not frame then return end
     local def = MMF_GetFrameDefinition(unit)
@@ -968,14 +987,10 @@ function MMF_UpdateFrameScale(unit)
     end
     ApplyFrameTextOffsets(frame)
     if frame.castBarFrame then
-        frame.castBarFrame:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 1, 1)
-        frame.castBarFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
-        if frame.castBarText then
-            if frame.unit == "target" then
-                frame.castBarText:SetWidth(newWidth - 8)
-            else
-                frame.castBarText:SetWidth(newWidth - 2)
-            end
+        if MMF_ApplyCastBarPosition then
+            MMF_ApplyCastBarPosition(frame, frame.unit)
+        else
+            frame.castBarFrame:SetPoint("BOTTOM", frame, "BOTTOM", 0, 1)
         end
     end
     if frame.classIcon then
@@ -1013,7 +1028,7 @@ function MMF_UpdateFrameScale(unit)
 end
 
 function MMF_ApplyAllFrameScales()
-    local units = {"player", "target", "targettarget", "focus", "pet"}
+    local units = {"player", "target", "targettarget", "focus", "pet", "boss", "playerCastBar", "targetCastBar"}
     for _, unit in ipairs(units) do
         MMF_UpdateFrameScale(unit)
     end
