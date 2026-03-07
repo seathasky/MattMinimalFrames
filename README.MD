@@ -2,7 +2,7 @@
 
 Minimal unit frames for World of Warcraft. Clean, lightweight, and standalone.
 
-![](https://media.forgecdn.net/attachments/description/1362998/description_301dae89-2feb-4fd8-b5f0-e12a8e7dac5c.png)
+![](https://media.forgecdn.net/attachments/description/1362998/description_7519b4ad-51cd-4616-bd1e-8703dd1b068d.png)
 
 ## Support
 - Retail (Midnight)
