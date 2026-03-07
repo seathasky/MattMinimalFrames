@@ -349,6 +349,31 @@ local function GetDisplayUnitName(unit, unitName)
     return truncated
 end
 
+local function TryApplyFont(region, fontPath, size, flags)
+    if not region then
+        return false
+    end
+    if MMF_SetFontSafe then
+        return MMF_SetFontSafe(region, fontPath, size, flags)
+    end
+    if not region.SetFont then
+        return false
+    end
+
+    local requestedFlags = flags or ""
+    local ok, applied = pcall(region.SetFont, region, fontPath, size, requestedFlags)
+    if ok and applied ~= false then
+        return true
+    end
+    if requestedFlags ~= "" then
+        ok, applied = pcall(region.SetFont, region, fontPath, size, "")
+        if ok and applied ~= false then
+            return true
+        end
+    end
+    return false
+end
+
 local function ApplyNameTextFontSize(frame, size, minSize)
     if not frame or not frame.nameText then return end
     size = tonumber(size) or 12
@@ -360,12 +385,11 @@ local function ApplyNameTextFontSize(frame, size, minSize)
         return
     end
     local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or cfg.FONT_PATH
-    if MMF_SetFontSafe then
-        MMF_SetFontSafe(frame.nameText, fontPath, rounded, "OUTLINE")
+    if TryApplyFont(frame.nameText, fontPath, rounded, "OUTLINE") then
+        frame.mmfAppliedNameFontSize = rounded
     else
-        frame.nameText:SetFont(fontPath, rounded, "OUTLINE")
+        frame.mmfAppliedNameFontSize = nil
     end
-    frame.mmfAppliedNameFontSize = rounded
 end
 
 local function ApplyHPTextFontSize(frame, size)
@@ -377,12 +401,11 @@ local function ApplyHPTextFontSize(frame, size)
         return
     end
     local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or cfg.FONT_PATH
-    if MMF_SetFontSafe then
-        MMF_SetFontSafe(frame.hpText, fontPath, rounded, "OUTLINE")
+    if TryApplyFont(frame.hpText, fontPath, rounded, "OUTLINE") then
+        frame.mmfAppliedHPFontSize = rounded
     else
-        frame.hpText:SetFont(fontPath, rounded, "OUTLINE")
+        frame.mmfAppliedHPFontSize = nil
     end
-    frame.mmfAppliedHPFontSize = rounded
 end
 
 local function ApplyPowerTextFontSize(frame, scale)
@@ -399,12 +422,11 @@ local function ApplyPowerTextFontSize(frame, scale)
     end
 
     local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or cfg.FONT_PATH
-    if MMF_SetFontSafe then
-        MMF_SetFontSafe(frame.powerText, fontPath, size, "OUTLINE")
+    if TryApplyFont(frame.powerText, fontPath, size, "OUTLINE") then
+        frame.mmfAppliedPowerFontSize = size
     else
-        frame.powerText:SetFont(fontPath, size, "OUTLINE")
+        frame.mmfAppliedPowerFontSize = nil
     end
-    frame.mmfAppliedPowerFontSize = size
 end
 
 local function GetNameTextWidthNoWrap(nameText)

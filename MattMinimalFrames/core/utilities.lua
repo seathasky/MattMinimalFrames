@@ -224,6 +224,9 @@ local function ApplyFontToPopupTree(frame, fontPath)
         if not region or not region.GetObjectType or region:GetObjectType() ~= "FontString" then
             return
         end
+        if region.mmfSkipGlobalFont then
+            return
+        end
         local _, size, flags = region:GetFont()
         if IsFiniteNumber(size) and size > 0 then
             SafeSetFont(region, fontPath, size, flags or "")
@@ -264,11 +267,26 @@ function MMF_ApplyGlobalFont()
             if powerScale < 0.5 then powerScale = 0.5 end
             if powerScale > 2.0 then powerScale = 2.0 end
             local powerSize = math.max(6, math.floor((13 * powerScale) + 0.5))
-            if frame.nameText then SafeSetFont(frame.nameText, fontPath, nameSize, "OUTLINE") end
-            if frame.hpText then SafeSetFont(frame.hpText, fontPath, hpSize, "OUTLINE") end
+            if frame.nameText then
+                if SafeSetFont(frame.nameText, fontPath, nameSize, "OUTLINE") then
+                    frame.mmfAppliedNameFontSize = math.floor((tonumber(nameSize) or 12) + 0.5)
+                else
+                    frame.mmfAppliedNameFontSize = nil
+                end
+            end
+            if frame.hpText then
+                if SafeSetFont(frame.hpText, fontPath, hpSize, "OUTLINE") then
+                    frame.mmfAppliedHPFontSize = math.floor((tonumber(hpSize) or 13) + 0.5)
+                else
+                    frame.mmfAppliedHPFontSize = nil
+                end
+            end
             if frame.powerText then
-                SafeSetFont(frame.powerText, fontPath, powerSize, "OUTLINE")
-                frame.mmfAppliedPowerFontSize = powerSize
+                if SafeSetFont(frame.powerText, fontPath, powerSize, "OUTLINE") then
+                    frame.mmfAppliedPowerFontSize = powerSize
+                else
+                    frame.mmfAppliedPowerFontSize = nil
+                end
             end
             if frame.castBarText then SafeSetFont(frame.castBarText, fontPath, 9, "OUTLINE") end
             if frame.moveHint then SafeSetFont(frame.moveHint, fontPath, 10, "OUTLINE") end

@@ -238,6 +238,51 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
     local rowHeight = 20
     local listPadding = 2
     local listFrameLevel = (config and config.listFrameLevel) or 1000
+    local previewOptionFonts = (config and config.previewOptionFonts) == true
+    local preserveWidgetFont = (config and config.preserveWidgetFont) == true
+
+    local function TrySetFont(region, requestedPath, size, flags)
+        if not region or not region.SetFont then
+            return false
+        end
+
+        local targetSize = tonumber(size) or 10
+        if targetSize <= 0 then
+            targetSize = 10
+        end
+
+        local targetFlags = flags or ""
+        local fallbackPath = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
+
+        if type(requestedPath) == "string" and requestedPath ~= "" then
+            local ok, applied = pcall(region.SetFont, region, requestedPath, targetSize, targetFlags)
+            if ok and applied ~= false then
+                return true
+            end
+            ok, applied = pcall(region.SetFont, region, requestedPath, targetSize, "")
+            if ok and applied ~= false then
+                return true
+            end
+        end
+
+        if type(fontPath) == "string" and fontPath ~= "" and requestedPath ~= fontPath then
+            local ok, applied = pcall(region.SetFont, region, fontPath, targetSize, targetFlags)
+            if ok and applied ~= false then
+                return true
+            end
+            ok, applied = pcall(region.SetFont, region, fontPath, targetSize, "")
+            if ok and applied ~= false then
+                return true
+            end
+        end
+
+        local ok, applied = pcall(region.SetFont, region, fallbackPath, targetSize, targetFlags)
+        if ok and applied ~= false then
+            return true
+        end
+        ok, applied = pcall(region.SetFont, region, fallbackPath, targetSize, "")
+        return ok and applied ~= false
+    end
 
     local function NormalizeOptions(raw)
         local out = {}
@@ -260,13 +305,20 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
                     local label = opt.label
                     local normalizedLabel = NormalizeString(label)
                     if value ~= nil and normalizedLabel then
+                        local optionFontPath = nil
+                        if type(opt.fontPath) == "string" then
+                            local trimmedFontPath = opt.fontPath:match("^%s*(.-)%s*$")
+                            if trimmedFontPath and trimmedFontPath ~= "" then
+                                optionFontPath = trimmedFontPath
+                            end
+                        end
                         if type(value) == "string" then
                             local normalizedValue = NormalizeString(value)
                             if normalizedValue then
-                                out[#out + 1] = { value = normalizedValue, label = normalizedLabel }
+                                out[#out + 1] = { value = normalizedValue, label = normalizedLabel, fontPath = optionFontPath }
                             end
                         else
-                            out[#out + 1] = { value = value, label = normalizedLabel }
+                            out[#out + 1] = { value = value, label = normalizedLabel, fontPath = optionFontPath }
                         end
                     end
                 end
@@ -295,12 +347,16 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
         return value:gsub("|", "||")
     end
 
+    local function HasVisibleCharacters(text)
+        return type(text) == "string" and text:match("%S") ~= nil
+    end
+
     local container = CreateFrame("Frame", nil, parent)
     container:SetSize(width, 24)
     container:SetPoint((config and config.anchor) or "TOPLEFT", (config and config.x) or 0, (config and config.y) or 0)
 
     local label = container:CreateFontString(nil, "OVERLAY")
-    label:SetFont(fontPath, 10, "")
+    TrySetFont(label, fontPath, 10, "")
     label:SetPoint("LEFT", 0, 0)
     label:SetTextColor(0.8, 0.8, 0.8)
     label:SetWidth(labelWidth)
@@ -318,16 +374,22 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
     button:SetBackdropColor(0.06, 0.06, 0.08, 1)
     button:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
     local buttonText = button:CreateFontString(nil, "OVERLAY")
-    buttonText:SetFont(fontPath, 10, "")
+    TrySetFont(buttonText, fontPath, 10, "")
     buttonText:SetPoint("LEFT", 6, 0)
     buttonText:SetJustifyH("LEFT")
     buttonText:SetWidth(buttonWidth - 24)
 
     local arrowText = button:CreateFontString(nil, "OVERLAY")
-    arrowText:SetFont(fontPath, 9, "")
+    TrySetFont(arrowText, fontPath, 9, "")
     arrowText:SetPoint("RIGHT", -6, 0)
     arrowText:SetTextColor(0.92, 0.92, 0.92)
     arrowText:SetText("v")
+
+    if preserveWidgetFont then
+        label.mmfSkipGlobalFont = true
+        buttonText.mmfSkipGlobalFont = true
+        arrowText.mmfSkipGlobalFont = true
+    end
 
     button:SetScript("OnEnter", function(self)
         self:SetBackdropBorderColor(accent[1], accent[2], accent[3], 0.6)
@@ -384,17 +446,31 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
     end
 
     local function UpdateButtonTextFromSelection()
+        TrySetFont(buttonText, fontPath, 10, "")
         local selectedOpt = GetOptionByValue(selectedValue)
         if selectedOpt then
+            local selectedLabel = tostring(selectedOpt.label or "")
             buttonText:SetTextColor(0.92, 0.92, 0.92)
-            buttonText:SetText(EscapeDisplayText(selectedOpt.label))
+            if HasVisibleCharacters(selectedLabel) then
+                buttonText:SetText(EscapeDisplayText(selectedLabel))
+            else
+                buttonText:SetText("Selected")
+            end
+            local okWidth, measuredWidth = pcall(buttonText.GetStringWidth, buttonText)
+            if okWidth and type(measuredWidth) == "number" and measuredWidth <= 0 then
+                buttonText:SetText("Selected")
+            end
             return
         end
         if selectedValue ~= nil then
             local fallbackText = tostring(selectedValue)
-            if fallbackText ~= "" then
+            if HasVisibleCharacters(fallbackText) then
                 buttonText:SetTextColor(0.75, 0.75, 0.75)
                 buttonText:SetText(EscapeDisplayText(fallbackText))
+                local okWidth, measuredWidth = pcall(buttonText.GetStringWidth, buttonText)
+                if okWidth and type(measuredWidth) == "number" and measuredWidth <= 0 then
+                    buttonText:SetText("Selected")
+                end
                 return
             end
         end
@@ -422,6 +498,13 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
             local row = rows[rowIndex]
             if option then
                 row.option = option
+                local rowFontPath = fontPath
+                if option.divider then
+                    rowFontPath = fontPath
+                elseif previewOptionFonts and type(option.fontPath) == "string" and option.fontPath ~= "" then
+                    rowFontPath = option.fontPath
+                end
+                TrySetFont(row.text, rowFontPath, 10, "")
                 row.text:SetText(EscapeDisplayText(option.label))
                 if option.divider then
                     row.text:SetTextColor(0.35, 0.35, 0.4)
@@ -490,10 +573,13 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
         row.bg:SetAllPoints()
         row.bg:SetColorTexture(0, 0, 0, 0)
         row.text = row:CreateFontString(nil, "OVERLAY")
-        row.text:SetFont(fontPath, 10, "")
+        TrySetFont(row.text, fontPath, 10, "")
         row.text:SetPoint("LEFT", 6, 0)
         row.text:SetJustifyH("LEFT")
         row.text:SetTextColor(0.9, 0.9, 0.9)
+        if preserveWidgetFont then
+            row.text.mmfSkipGlobalFont = true
+        end
         row:SetScript("OnEnter", function(self)
             if self.option and self.option.divider then
                 return

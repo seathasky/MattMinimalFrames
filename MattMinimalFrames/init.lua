@@ -304,14 +304,54 @@ local function ReapplySharedMediaSelections()
     end
 end
 
+local isInitialized = false
+local startupStyleRetryToken = 0
+
+local function RequestAllFrameTextRefresh()
+    if MMF_RequestAllFramesUpdate then
+        MMF_RequestAllFramesUpdate()
+        return
+    end
+    if InCombatLockdown and InCombatLockdown() then
+        return
+    end
+    if MMF_GetAllFrames and MMF_UpdateUnitFrame then
+        for _, frame in ipairs(MMF_GetAllFrames()) do
+            if frame then
+                MMF_UpdateUnitFrame(frame)
+            end
+        end
+    end
+end
+
+local function ScheduleStartupStyleReapply()
+    if not C_Timer or not C_Timer.After then
+        return
+    end
+
+    startupStyleRetryToken = startupStyleRetryToken + 1
+    local token = startupStyleRetryToken
+    local retryDelays = { 0, 0.25, 0.75, 1.5 }
+
+    for _, delay in ipairs(retryDelays) do
+        C_Timer.After(delay, function()
+            if token ~= startupStyleRetryToken or not isInitialized then
+                return
+            end
+            ReapplySharedMediaSelections()
+            RequestAllFrameTextRefresh()
+        end)
+    end
+end
+
 local initFrame = CreateFrame("Frame")
 initFrame:RegisterEvent("ADDON_LOADED")
 initFrame:RegisterEvent("PLAYER_LOGIN")
-local isInitialized = false
 initFrame:SetScript("OnEvent", function(self, event, addonName)
     if event == "ADDON_LOADED" and addonName == "MattMinimalFrames" then
         Initialize()
         isInitialized = true
+        ScheduleStartupStyleReapply()
         self:UnregisterEvent("ADDON_LOADED")
         return
     end
@@ -329,5 +369,6 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
         -- Apply selected SharedMedia again after all addons have loaded.
         ReapplySharedMediaSelections()
         UpdateBlizzardPlayerCastBarVisibility()
+        ScheduleStartupStyleReapply()
     end
 end)

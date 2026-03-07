@@ -447,6 +447,10 @@ local function GetGlobalFontPathByName(fontName)
     return MMF_FONT_DEFAULT_PATH, selected == MMF_FONT_DEFAULT
 end
 
+function MMF_GetGlobalFontPathByName(fontName)
+    return GetGlobalFontPathByName(fontName)
+end
+
 function MMF_SetGlobalFont(fontName)
     fontName = NormalizeMediaName(fontName)
     if not fontName then return end
@@ -853,16 +857,43 @@ local function ForEachUnitFrame(unit, callback)
     end
 end
 
+local function TryApplyFrameFont(region, fontPath, size, flags)
+    if not region then
+        return false
+    end
+    if MMF_SetFontSafe then
+        return MMF_SetFontSafe(region, fontPath, size, flags)
+    end
+    if not region.SetFont then
+        return false
+    end
+
+    local requestedFlags = flags or ""
+    local ok, applied = pcall(region.SetFont, region, fontPath, size, requestedFlags)
+    if ok and applied ~= false then
+        return true
+    end
+    if requestedFlags ~= "" then
+        ok, applied = pcall(region.SetFont, region, fontPath, size, "")
+        if ok and applied ~= false then
+            return true
+        end
+    end
+    return false
+end
+
 function MMF_UpdateNameTextSize(size, unit)
+    size = tonumber(size) or 12
+    if size < 6 then size = 6 end
+    size = math.floor(size + 0.5)
     local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or MMF_Config.FONT_PATH
     ForEachUnitFrame(unit, function(frame)
         if frame and frame.nameText then
-            if MMF_SetFontSafe then
-                MMF_SetFontSafe(frame.nameText, fontPath, size, "OUTLINE")
+            if TryApplyFrameFont(frame.nameText, fontPath, size, "OUTLINE") then
+                frame.mmfAppliedNameFontSize = size
             else
-                frame.nameText:SetFont(fontPath, size, "OUTLINE")
+                frame.mmfAppliedNameFontSize = nil
             end
-            frame.mmfAppliedNameFontSize = math.floor((tonumber(size) or 12) + 0.5)
             if frame.unit and UnitExists(frame.unit) then
                 local currentText = frame.nameText:GetText()
                 frame.nameText:SetText("")
@@ -873,13 +904,16 @@ function MMF_UpdateNameTextSize(size, unit)
 end
 
 function MMF_UpdateHPTextSize(size, unit)
+    size = tonumber(size) or 13
+    if size < 6 then size = 6 end
+    size = math.floor(size + 0.5)
     local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or MMF_Config.FONT_PATH
     ForEachUnitFrame(unit, function(frame)
         if frame and frame.hpText then
-            if MMF_SetFontSafe then
-                MMF_SetFontSafe(frame.hpText, fontPath, size, "OUTLINE")
+            if TryApplyFrameFont(frame.hpText, fontPath, size, "OUTLINE") then
+                frame.mmfAppliedHPFontSize = size
             else
-                frame.hpText:SetFont(fontPath, size, "OUTLINE")
+                frame.mmfAppliedHPFontSize = nil
             end
             pcall(function()
                 if frame.unit and UnitExists(frame.unit) then

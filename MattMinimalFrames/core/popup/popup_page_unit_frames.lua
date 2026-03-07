@@ -55,7 +55,7 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
         { label = "Visibility", subtitle = "Choose when name and HP text are shown.", x = 0, y = 300, width = 288, height = 124 },
         { label = "Offsets", subtitle = "Adjust text positions for each supported unit.", x = 0, y = 434, width = 288, height = 174 },
         { label = "Cast Bars", subtitle = "HP text format and cast bar options.", x = 300, y = 6, width = 288, height = 234 },
-        { label = "Combat", subtitle = "Out-of-combat fading and visibility rules.", x = 300, y = 258, width = 288, height = 184 },
+        { label = "OOC", subtitle = "Out-of-combat visibility and fade rules.", x = 300, y = 258, width = 288, height = 184 },
         { label = "Media", subtitle = "Textures, fonts, and frame colors.", x = 588, y = 6, width = 300, height = 220 },
         { label = "Icons", subtitle = "Icon positions, sizes, and target markers.", x = 588, y = 236, width = 300, height = 266 },
         { label = "Overlays", subtitle = "Heal prediction and absorb overlay settings.", x = 588, y = 512, width = 300, height = 78 },
@@ -467,7 +467,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     combatVisibilityTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
     combatVisibilityTitle:SetPoint("TOPLEFT", MIDDLE_COL_X, -288 + RIGHT_COL_Y_OFFSET)
     combatVisibilityTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
-    combatVisibilityTitle:SetText("COMBAT VISIBILITY")
+    combatVisibilityTitle:SetText("OOC VISIBILITY")
 
     local combatVisibilitySubtext = unitFramesCol:CreateFontString(nil, "OVERLAY")
     combatVisibilitySubtext:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
@@ -554,7 +554,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         end
     end, false)
 
-    fadeTimeSlider = CreateMinimalSlider(unitFramesCol, "Fade Time", MIDDLE_COL_X, -442 + RIGHT_COL_Y_OFFSET, MIDDLE_COL_WIDTH, "combatVisibilityFadeTime", 0.0, 2.0, 0.05, 0.4, function(value)
+    fadeTimeSlider = CreateMinimalSlider(unitFramesCol, "OOC Fade Time", MIDDLE_COL_X, -442 + RIGHT_COL_Y_OFFSET, MIDDLE_COL_WIDTH, "combatVisibilityFadeTime", 0.0, 2.0, 0.05, 0.4, function(value)
         MattMinimalFramesDB.combatVisibilityFadeTime = value
         if MMF_UpdateCombatFrameVisibility then
             MMF_UpdateCombatFrameVisibility()
@@ -680,14 +680,51 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local function BuildFontDropdownOptions()
         local out = {}
         for _, optionName in ipairs(fontOptions) do
-            out[#out + 1] = { value = optionName, label = optionName }
+            local previewPath = nil
+            if MMF_GetGlobalFontPathByName then
+                local resolvedPath = MMF_GetGlobalFontPathByName(optionName)
+                if type(resolvedPath) == "string" and resolvedPath ~= "" then
+                    previewPath = resolvedPath
+                end
+            end
+            out[#out + 1] = { value = optionName, label = optionName, fontPath = previewPath }
         end
         return out
     end
 
     local unitFontDropdown
+
+    local function ApplySelectedFont(name)
+        local selected = NormalizeSelectionValue(name, "MMF Naowh")
+        local previous = GetSelectedFont()
+        if selected == previous then
+            return
+        end
+
+        if MMF_SetGlobalFont then
+            MMF_SetGlobalFont(selected)
+        else
+            MattMinimalFramesDB.globalFont = selected
+            if MMF_ApplyGlobalFont then
+                MMF_ApplyGlobalFont()
+            end
+        end
+
+        EnsureValidSelectedFont()
+        if unitFontDropdown then
+            unitFontDropdown.SetSelectedValue(GetSelectedFont())
+        end
+
+        if StaticPopup_Show then
+            StaticPopup_Show("MMF_RELOADUI")
+        end
+    end
+
     unitFontDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
+        fontPath = STANDARD_TEXT_FONT or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf",
+        preserveWidgetFont = true,
+        previewOptionFonts = true,
         x = RIGHT_COL_X,
         y = -402 + RIGHT_STACK_Y_OFFSET,
         width = RIGHT_COL_WIDTH,
@@ -711,13 +748,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
             end
         end,
         onSelect = function(value)
-            if MMF_SetGlobalFont then
-                MMF_SetGlobalFont(value)
-            else
-                MattMinimalFramesDB.globalFont = value
-            end
-            EnsureValidSelectedFont()
-            unitFontDropdown.SetSelectedValue(GetSelectedFont())
+            ApplySelectedFont(value)
         end,
     })
     unitFontList = unitFontDropdown.list

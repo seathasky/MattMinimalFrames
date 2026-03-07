@@ -22,6 +22,90 @@ local function ApplyDefaults(target, defaults)
     end
 end
 
+local function NormalizeMediaName(value)
+    if type(value) ~= "string" then
+        return nil
+    end
+    local trimmed = value:match("^%s*(.-)%s*$")
+    if not trimmed or trimmed == "" then
+        return nil
+    end
+    return trimmed
+end
+
+local function NormalizePositiveNumber(value, fallback)
+    local num = tonumber(value)
+    if type(num) ~= "number" or num ~= num or num <= 0 then
+        num = fallback
+    end
+    return num
+end
+
+local function NormalizeToggle(value)
+    return (value == true or value == 1)
+end
+
+local VALID_TEXT_SIZE_UNITS = {
+    player = true,
+    target = true,
+    targettarget = true,
+    pet = true,
+    focus = true,
+}
+
+local function SanitizeProfileTextSettings(profile)
+    if type(profile) ~= "table" then
+        return
+    end
+
+    profile.nameTextSize = NormalizePositiveNumber(profile.nameTextSize, 12)
+    profile.hpTextSize = NormalizePositiveNumber(profile.hpTextSize, 13)
+
+    local unitPrefixes = { "player", "target", "tot", "pet", "focus" }
+    for _, prefix in ipairs(unitPrefixes) do
+        local nameKey = prefix .. "NameTextSize"
+        if profile[nameKey] ~= nil then
+            profile[nameKey] = NormalizePositiveNumber(profile[nameKey], profile.nameTextSize)
+        end
+
+        local hpKey = prefix .. "HPTextSize"
+        if profile[hpKey] ~= nil then
+            profile[hpKey] = NormalizePositiveNumber(profile[hpKey], profile.hpTextSize)
+        end
+    end
+
+    profile.powerTextScale = NormalizePositiveNumber(profile.powerTextScale, 1.0)
+    profile.playerPowerTextScale = NormalizePositiveNumber(profile.playerPowerTextScale, profile.powerTextScale)
+    profile.targetPowerTextScale = NormalizePositiveNumber(profile.targetPowerTextScale, profile.powerTextScale)
+
+    local normalizedFont = NormalizeMediaName(profile.globalFont)
+    if normalizedFont then
+        profile.globalFont = normalizedFont
+    else
+        profile.globalFont = "MMF Naowh"
+    end
+
+    if type(profile.textSizeUnit) ~= "string" or not VALID_TEXT_SIZE_UNITS[profile.textSizeUnit] then
+        profile.textSizeUnit = "player"
+    end
+
+    local hideTextKeys = {
+        "playerHideNameText",
+        "targetHideNameText",
+        "totHideNameText",
+        "petHideNameText",
+        "focusHideNameText",
+        "playerHideHPText",
+        "targetHideHPText",
+        "totHideHPText",
+        "petHideHPText",
+        "focusHideHPText",
+    }
+    for _, key in ipairs(hideTextKeys) do
+        profile[key] = NormalizeToggle(profile[key])
+    end
+end
+
 local function MigrateProfile(profile)
     if type(profile) ~= "table" then return end
 
@@ -215,6 +299,7 @@ local function EnsureProfile(name)
     if len < 5 then len = 5 end
     if len > 30 then len = 30 end
     profile.nameTruncationLength = len
+    SanitizeProfileTextSettings(profile)
     profile.dbVersion = PROFILE_DB_VERSION
     return profile
 end
