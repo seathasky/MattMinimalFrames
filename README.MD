@@ -2,7 +2,7 @@
 
 Minimal unit frames for World of Warcraft. Clean, lightweight, and standalone.
 
-![](https://media.forgecdn.net/attachments/description/1362998/description_301dae89-2feb-4fd8-b5f0-e12a8e7dac5c.png)
+![](https://media.forgecdn.net/attachments/description/1362998/description_7519b4ad-51cd-4616-bd1e-8703dd1b068d.png)
 
 ## Support
 - Retail (Midnight)
@@ -18,7 +18,8 @@ Clean, minimal unit frames for WoW (Retail Midnight + TBC Anniversary).
 *   Player portrait icons including support for [Jiberish Fabled Icons](https://www.curseforge.com/wow/addons/jiberish-fabled-icons)
 *   Class/resource bars (Retail) + power bars
 *   SharedMedia texture + global font styling
-*   Range fade and SHIFT+drag frame movement
+*   Full Edit mode for moving frames w/ optional SHIFT+drag frame movement out of edit mode.
+*   Range fade
 *   PvP detection for TBC anniversary.
 
 ## Command
