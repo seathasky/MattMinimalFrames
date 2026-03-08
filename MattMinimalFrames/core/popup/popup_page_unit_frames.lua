@@ -47,14 +47,14 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
 
     local legacyContent = CreateFrame("Frame", nil, sectionViewport)
     legacyContent:SetPoint("TOPLEFT", 0, 0)
-    legacyContent:SetSize(900, 680)
+    legacyContent:SetSize(900, 760)
 
     local sectionDefs = {
         { label = "Layout", subtitle = "Scale and frame sizing controls.", x = 0, y = 8, width = 288, height = 122 },
-        { label = "Text", subtitle = "Font sizes, truncation, and name behavior.", x = 0, y = 126, width = 288, height = 160, maskTop = 12 },
-        { label = "Visibility", subtitle = "Choose when name and HP text are shown.", x = 0, y = 300, width = 288, height = 124 },
-        { label = "Offsets", subtitle = "Adjust text positions for each supported unit.", x = 0, y = 434, width = 288, height = 174 },
-        { label = "Cast Bars", subtitle = "HP text format and cast bar options.", x = 300, y = 6, width = 288, height = 234 },
+        { label = "Text", subtitle = "Font sizes, truncation, HP text format, and name behavior.", x = 0, y = 126, width = 288, height = 270, maskTop = 12 },
+        { label = "Visibility", subtitle = "Choose when name and HP text are shown.", x = 0, y = 410, width = 288, height = 124 },
+        { label = "Offsets", subtitle = "Adjust text positions for each supported unit.", x = 0, y = 544, width = 288, height = 174 },
+        { label = "Cast Bars", subtitle = "Cast bar settings.", x = 300, y = 112, width = 288, height = 146 },
         { label = "OOC", subtitle = "Out-of-combat visibility and fade rules.", x = 300, y = 258, width = 288, height = 184 },
         { label = "Media", subtitle = "Textures, fonts, and frame colors.", x = 588, y = 6, width = 300, height = 220 },
         { label = "Icons", subtitle = "Icon positions, sizes, and target markers.", x = 588, y = 236, width = 300, height = 266 },
@@ -193,7 +193,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local RIGHT_COL_Y_OFFSET = 24
     local RIGHT_STACK_Y_OFFSET = RIGHT_COL_Y_OFFSET + 252
     local RIGHT_FRAME_OPTIONS_Y_SHIFT = 76
-    local LEFT_LOWER_Y_OFFSET = -24
+    local LEFT_LOWER_Y_OFFSET = -134
 
     local function NormalizeSelectionValue(value, fallback)
         if type(value) ~= "string" then
@@ -369,15 +369,20 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     offsetsDivider:SetPoint("TOPLEFT", LEFT_COL_X, -404 + LEFT_LOWER_Y_OFFSET)
     offsetsDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
 
+    local textFormatDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
+    textFormatDivider:SetSize(LEFT_COL_WIDTH, 1)
+    textFormatDivider:SetPoint("TOPLEFT", LEFT_COL_X, -286)
+    textFormatDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
+
     local textFormatTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     textFormatTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    textFormatTitle:SetPoint("TOPLEFT", MIDDLE_COL_X, -36 + RIGHT_COL_Y_OFFSET)
+    textFormatTitle:SetPoint("TOPLEFT", LEFT_COL_X, -298)
     textFormatTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     textFormatTitle:SetText("TEXT FORMAT")
 
     local textFormatSubtext = unitFramesCol:CreateFontString(nil, "OVERLAY")
     textFormatSubtext:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    textFormatSubtext:SetPoint("TOPLEFT", MIDDLE_COL_X, -56 + RIGHT_COL_Y_OFFSET)
+    textFormatSubtext:SetPoint("TOPLEFT", LEFT_COL_X, -318)
     textFormatSubtext:SetTextColor(0.65, 0.65, 0.7)
     textFormatSubtext:SetText("HP text format options")
 
@@ -389,18 +394,13 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         MattMinimalFramesDB.hpTextUseShortValue = true
     end
 
-    CreateMinimalCheckbox(unitFramesCol, "HP Text: % | Value", MIDDLE_COL_X, -76 + RIGHT_COL_Y_OFFSET, "showHPPercentText", true, function()
+    CreateMinimalCheckbox(unitFramesCol, "HP Text: % | Value", LEFT_COL_X, -338, "showHPPercentText", true, function()
         RefreshPredictionVisuals()
     end)
 
-    CreateMinimalCheckbox(unitFramesCol, "HP Text: Short Value (K/M)", MIDDLE_COL_X, -100 + RIGHT_COL_Y_OFFSET, "hpTextUseShortValue", true, function()
+    CreateMinimalCheckbox(unitFramesCol, "HP Text: Short Value (K/M)", LEFT_COL_X, -362, "hpTextUseShortValue", true, function()
         RefreshPredictionVisuals()
     end)
-
-    local textFormatCastDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
-    textFormatCastDivider:SetSize(MIDDLE_COL_WIDTH, 1)
-    textFormatCastDivider:SetPoint("TOPLEFT", MIDDLE_COL_X, -128 + RIGHT_COL_Y_OFFSET)
-    textFormatCastDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     local castBarsTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     castBarsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
@@ -444,11 +444,6 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         end,
     })
     castBarColorList = castBarColorDropdown.list
-
-    local castStyleDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
-    castStyleDivider:SetSize(MIDDLE_COL_WIDTH, 1)
-    castStyleDivider:SetPoint("TOPLEFT", MIDDLE_COL_X, -276 + RIGHT_COL_Y_OFFSET)
-    castStyleDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     if MattMinimalFramesDB.enableCombatFrameVisibility == nil then
         MattMinimalFramesDB.enableCombatFrameVisibility = false
@@ -1807,7 +1802,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local textVisibilityTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     textVisibilityTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    textVisibilityTitle:SetPoint("TOPLEFT", LEFT_COL_X, -306)
+    textVisibilityTitle:SetPoint("TOPLEFT", LEFT_COL_X, -416)
     textVisibilityTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     textVisibilityTitle:SetText("TEXT VISIBILITY")
 
@@ -1898,7 +1893,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local hideNameUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = LEFT_COL_X,
-        y = -322,
+        y = -432,
         width = LEFT_COL_WIDTH,
         labelWidth = LEFT_LABEL_WIDTH,
         buttonOffset = LEFT_BUTTON_OFFSET,
@@ -1916,7 +1911,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     })
     hideNameTextUnitList = hideNameUnitDropdown.list
 
-    hideNameTextCheckbox = CreateMinimalCheckbox(unitFramesCol, "Hide Name Text", LEFT_COL_X, -346, "__tempHideNameText", false, function(checked)
+    hideNameTextCheckbox = CreateMinimalCheckbox(unitFramesCol, "Hide Name Text", LEFT_COL_X, -456, "__tempHideNameText", false, function(checked)
         local unit = MattMinimalFramesDB.textHideNameUnit
         local prefix = GetUnitPrefix(unit)
         MattMinimalFramesDB[prefix .. "HideNameText"] = checked and true or false
@@ -1929,7 +1924,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local hideHPUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = LEFT_COL_X,
-        y = -376,
+        y = -486,
         width = LEFT_COL_WIDTH,
         labelWidth = LEFT_LABEL_WIDTH,
         buttonOffset = LEFT_BUTTON_OFFSET,
@@ -1947,7 +1942,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     })
     hideHPTextUnitList = hideHPUnitDropdown.list
 
-    hideHPTextCheckbox = CreateMinimalCheckbox(unitFramesCol, "Hide HP Text", LEFT_COL_X, -400, "__tempHideHPText", false, function(checked)
+    hideHPTextCheckbox = CreateMinimalCheckbox(unitFramesCol, "Hide HP Text", LEFT_COL_X, -510, "__tempHideHPText", false, function(checked)
         local unit = MattMinimalFramesDB.textHideHPUnit
         local prefix = GetUnitPrefix(unit)
         MattMinimalFramesDB[prefix .. "HideHPText"] = checked and true or false
