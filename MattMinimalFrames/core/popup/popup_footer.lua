@@ -47,7 +47,7 @@ function MMF_CreatePopupFooter(popup, popupWidth, accentColor, footerHeight)
     versionText:SetPoint("LEFT", footer, "LEFT", 12, 0)
     versionText:SetJustifyH("LEFT")
     versionText:SetTextColor(1.0, 0.86, 0.2)
-    versionText:SetText("v.6.1.0")
+    versionText:SetText("v.6.1.1")
 
     -- Current class display (bottom-right)
     local classInfo = CreateFrame("Frame", nil, footer)

@@ -1383,6 +1383,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         { value = "focus", label = "Focus" },
         { value = "boss", label = "Boss" },
         { value = "playerCastBar", label = "Player Cast Bar" },
+        { value = "targetCastBar", label = "Target Cast Bar" },
     }
     MattMinimalFramesDB.frameScaleUnit = MattMinimalFramesDB.frameScaleUnit or "player"
 
@@ -1506,6 +1507,10 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         return unit
     end
 
+    local function IsCastBarTextUnit(unit)
+        return unit == "playerCastBar" or unit == "targetCastBar"
+    end
+
     local function GetNameTextSizeForUnit(unit)
         local prefix = GetTextSizePrefix(unit)
         local key = prefix .. "NameTextSize"
@@ -1532,6 +1537,37 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         return value
     end
 
+    local function GetSpellNameTextSizeForUnit(unit)
+        if not IsCastBarTextUnit(unit) then
+            return 12
+        end
+        local key = unit .. "SpellNameTextSize"
+        local ownerUnit = (unit == "playerCastBar") and "player" or "target"
+        local fallback = tonumber(MMF_GetNameTextSize and MMF_GetNameTextSize(ownerUnit)) or 12
+        local value = tonumber(MattMinimalFramesDB[key])
+        if not value then
+            value = fallback
+        end
+        if value < 8 then value = 8 end
+        if value > 20 then value = 20 end
+        return value
+    end
+
+    local function GetCastTimeTextSizeForUnit(unit)
+        if not IsCastBarTextUnit(unit) then
+            return 9
+        end
+        local key = unit .. "CastTimeTextSize"
+        local fallback = 9
+        local value = tonumber(MattMinimalFramesDB[key])
+        if not value then
+            value = fallback
+        end
+        if value < 8 then value = 8 end
+        if value > 20 then value = 20 end
+        return value
+    end
+
     MattMinimalFramesDB.textSizeUnit = MattMinimalFramesDB.textSizeUnit or "player"
     local frameTextUnitValid = false
     for _, option in ipairs(scaleUnitOptions) do
@@ -1546,14 +1582,62 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local nameTextSlider
     local hpTextSlider
+    local spellNameTextSlider
+    local castTimeTextSlider
+    local truncateNameCheck
+    local autoResizeNameCheck
+    local truncateNameSlider
     local syncingFrameTextSize = false
+
+    local function SetSliderEnabled(sliderFrame, enabled)
+        if not sliderFrame then return end
+        sliderFrame:SetAlpha(enabled and 1 or 0.45)
+        if sliderFrame.slider then
+            sliderFrame.slider:SetEnabled(enabled)
+            sliderFrame.slider:EnableMouse(enabled)
+        end
+        if sliderFrame.valueText then
+            sliderFrame.valueText:SetEnabled(enabled)
+            sliderFrame.valueText:EnableMouse(enabled)
+        end
+    end
+
+    local function UpdateFrameTextModeVisibility()
+        local unit = MattMinimalFramesDB.textSizeUnit or "player"
+        local isCastBarMode = IsCastBarTextUnit(unit)
+        SetSliderEnabled(nameTextSlider, not isCastBarMode)
+        SetSliderEnabled(hpTextSlider, not isCastBarMode)
+        if spellNameTextSlider then
+            spellNameTextSlider:SetShown(isCastBarMode)
+        end
+        if castTimeTextSlider then
+            castTimeTextSlider:SetShown(isCastBarMode)
+        end
+        if truncateNameCheck then
+            truncateNameCheck:SetShown(not isCastBarMode)
+        end
+        if truncateNameSlider then
+            truncateNameSlider:SetShown(not isCastBarMode)
+        end
+        if autoResizeNameCheck then
+            autoResizeNameCheck:SetShown(not isCastBarMode)
+        end
+    end
+
     local function SyncFrameTextSizeSliders()
         if not nameTextSlider or not hpTextSlider then return end
         local unit = MattMinimalFramesDB.textSizeUnit or "player"
         syncingFrameTextSize = true
         nameTextSlider.slider:SetValue(GetNameTextSizeForUnit(unit))
         hpTextSlider.slider:SetValue(GetHPTextSizeForUnit(unit))
+        if spellNameTextSlider then
+            spellNameTextSlider.slider:SetValue(GetSpellNameTextSizeForUnit(unit))
+        end
+        if castTimeTextSlider then
+            castTimeTextSlider.slider:SetValue(GetCastTimeTextSizeForUnit(unit))
+        end
         syncingFrameTextSize = false
+        UpdateFrameTextModeVisibility()
     end
 
     local frameTextUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
@@ -1573,6 +1657,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         onSelect = function(value)
             MattMinimalFramesDB.textSizeUnit = value
             SyncFrameTextSizeSliders()
+            UpdateFrameTextModeVisibility()
         end,
     })
     frameTextUnitList = frameTextUnitDropdown.list
@@ -1604,8 +1689,45 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
             MMF_UpdateHPTextSize(value, unit)
         end
     end, true)
+
+    spellNameTextSlider = CreateMinimalSlider(unitFramesCol, "Spell Name", LEFT_COL_X, -216, LEFT_COL_WIDTH, "__tempSpellNameTextSize", 8, 20, 1, 12, function(value)
+        if syncingFrameTextSize then return end
+        local unit = MattMinimalFramesDB.textSizeUnit or "player"
+        if not IsCastBarTextUnit(unit) then return end
+        MattMinimalFramesDB[unit .. "SpellNameTextSize"] = value
+        if MMF_GetFrameForUnit and MMF_UpdateUnitFrame then
+            local ownerUnit = (unit == "playerCastBar") and "player" or "target"
+            local frame = MMF_GetFrameForUnit(ownerUnit)
+            if frame then
+                MMF_UpdateUnitFrame(frame)
+            end
+        elseif MMF_RequestAllFramesUpdate then
+            MMF_RequestAllFramesUpdate()
+        end
+    end, true)
+    spellNameTextSlider:Hide()
+
+    castTimeTextSlider = CreateMinimalSlider(unitFramesCol, "Cast Time", LEFT_COL_X, -240, LEFT_COL_WIDTH, "__tempCastTimeTextSize", 8, 20, 1, 9, function(value)
+        if syncingFrameTextSize then return end
+        local unit = MattMinimalFramesDB.textSizeUnit or "player"
+        if not IsCastBarTextUnit(unit) then return end
+        MattMinimalFramesDB[unit .. "CastTimeTextSize"] = value
+        if MMF_GetFrameForUnit and MMF_UpdateUnitFrame then
+            local ownerUnit = (unit == "playerCastBar") and "player" or "target"
+            local frame = MMF_GetFrameForUnit(ownerUnit)
+            if frame then
+                MMF_UpdateUnitFrame(frame)
+            end
+        elseif MMF_RequestAllFramesUpdate then
+            MMF_RequestAllFramesUpdate()
+        end
+    end, true)
+    castTimeTextSlider:Hide()
+
     MattMinimalFramesDB.__tempNameTextSize = nil
     MattMinimalFramesDB.__tempHPTextSize = nil
+    MattMinimalFramesDB.__tempSpellNameTextSize = nil
+    MattMinimalFramesDB.__tempCastTimeTextSize = nil
     SyncFrameTextSizeSliders()
 
     if MattMinimalFramesDB.enableNameTruncation == nil then
@@ -1624,10 +1746,6 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     if MattMinimalFramesDB.enableNameTruncation and MattMinimalFramesDB.autoResizeTextOnLongName then
         MattMinimalFramesDB.autoResizeTextOnLongName = false
     end
-
-    local truncateNameCheck
-    local autoResizeNameCheck
-    local truncateNameSlider
 
     local function SetCheckboxEnabled(container, enabled)
         if not container then return end
@@ -1685,6 +1803,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         RequestNameTextRefresh()
     end)
     UpdateNameFeatureState()
+    UpdateFrameTextModeVisibility()
 
     local textVisibilityTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     textVisibilityTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")

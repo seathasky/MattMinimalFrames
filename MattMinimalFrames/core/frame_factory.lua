@@ -397,8 +397,12 @@ local function ApplyCastBarPosition(frame, unit)
         frame.castBarFrame:SetPoint("BOTTOM", frame, "BOTTOM", 0, 1)
     end
 
+    local timeWidth = 36
+    if frame.castBarTime then
+        frame.castBarTime:SetWidth(timeWidth)
+    end
     if frame.castBarText then
-        frame.castBarText:SetWidth(math.max(8, width - 6))
+        frame.castBarText:SetWidth(math.max(8, width - timeWidth - 8))
     end
 end
 
@@ -562,19 +566,27 @@ local function ShowFrameResetPopup(frame, frameName)
     popup.currentFrameName = frameName
     popup.title:SetText((frame.frameLabel or frame.unit or "Frame") .. " Options")
 
+    local function ResetUnitCastBarToDefaults(unitToReset)
+        if unitToReset ~= "player" and unitToReset ~= "target" then
+            return
+        end
+        if not MattMinimalFramesDB then
+            MattMinimalFramesDB = {}
+        end
+        local defaults = MattMinimalFrames_Defaults or {}
+        local prefix = (unitToReset == "player") and "playerCastBar" or "targetCastBar"
+        MattMinimalFramesDB[prefix .. "FrameScaleX"] = tonumber(defaults[prefix .. "FrameScaleX"]) or 1.0
+        MattMinimalFramesDB[prefix .. "FrameScaleY"] = tonumber(defaults[prefix .. "FrameScaleY"]) or 1.0
+        if MattMinimalFramesDB.castBarPositions then
+            MattMinimalFramesDB.castBarPositions[unitToReset] = nil
+        end
+    end
+
     popup.resetPositionBtn:SetScript("OnClick", function()
         ResetFrameToDefaultPosition(frame, frameName)
-        if frame.unit == "player" then
-            local defaults = MattMinimalFrames_Defaults or {}
-            if not MattMinimalFramesDB then
-                MattMinimalFramesDB = {}
-            end
-            MattMinimalFramesDB.playerCastBarFrameScaleX = tonumber(defaults.playerCastBarFrameScaleX) or 1.0
-            MattMinimalFramesDB.playerCastBarFrameScaleY = tonumber(defaults.playerCastBarFrameScaleY) or 1.0
-            if MattMinimalFramesDB.castBarPositions then
-                MattMinimalFramesDB.castBarPositions.player = nil
-            end
-            ApplyCastBarPosition(frame, "player")
+        if frame.unit == "player" or frame.unit == "target" then
+            ResetUnitCastBarToDefaults(frame.unit)
+            ApplyCastBarPosition(frame, frame.unit)
         end
         if MMF_RequestFrameUpdate then
             MMF_RequestFrameUpdate(frame)
@@ -584,7 +596,7 @@ local function ShowFrameResetPopup(frame, frameName)
         popup:Hide()
     end)
 
-    local hasCastBar = (frame.castBarFrame ~= nil and frame.unit == "player")
+    local hasCastBar = (frame.castBarFrame ~= nil and (frame.unit == "player" or frame.unit == "target"))
     popup.resetCastBarBtn:SetShown(hasCastBar)
     popup:SetHeight(hasCastBar and 112 or 82)
     if hasCastBar then
@@ -594,15 +606,7 @@ local function ShowFrameResetPopup(frame, frameName)
 
     if hasCastBar then
         popup.resetCastBarBtn:SetScript("OnClick", function()
-            if not MattMinimalFramesDB then
-                MattMinimalFramesDB = {}
-            end
-            local defaults = MattMinimalFrames_Defaults or {}
-            MattMinimalFramesDB.playerCastBarFrameScaleX = tonumber(defaults.playerCastBarFrameScaleX) or 1.0
-            MattMinimalFramesDB.playerCastBarFrameScaleY = tonumber(defaults.playerCastBarFrameScaleY) or 1.0
-            if MattMinimalFramesDB.castBarPositions then
-                MattMinimalFramesDB.castBarPositions[frame.unit] = nil
-            end
+            ResetUnitCastBarToDefaults(frame.unit)
             ApplyCastBarPosition(frame, frame.unit)
             popup:Hide()
         end)
@@ -1262,9 +1266,21 @@ local function CreateCastBar(frame, unit)
     frame.castBarText:SetTextColor(0.9, 0.9, 0.9, 1)
     frame.castBarText:SetWordWrap(false)
     
-    frame.castBarText:SetPoint("CENTER", frame.castBarTextOverlay, "CENTER", 0, 0)
-    frame.castBarText:SetJustifyH("CENTER")
-    frame.castBarText:SetWidth(frame.originalWidth - 8)
+    frame.castBarTime = frame.castBarTextOverlay:CreateFontString(nil, "OVERLAY")
+    if MMF_SetFontSafe then
+        MMF_SetFontSafe(frame.castBarTime, cfg.FONT_PATH, 9, "OUTLINE")
+    else
+        frame.castBarTime:SetFont(cfg.FONT_PATH, 9, "OUTLINE")
+    end
+    frame.castBarTime:SetTextColor(0.9, 0.9, 0.9, 1)
+    frame.castBarTime:SetWordWrap(false)
+    frame.castBarTime:SetPoint("RIGHT", frame.castBarTextOverlay, "RIGHT", -3, 0)
+    frame.castBarTime:SetJustifyH("RIGHT")
+    frame.castBarTime:SetWidth(36)
+    
+    frame.castBarText:SetPoint("LEFT", frame.castBarTextOverlay, "LEFT", 3, 0)
+    frame.castBarText:SetPoint("RIGHT", frame.castBarTime, "LEFT", -4, 0)
+    frame.castBarText:SetJustifyH("LEFT")
 
     ApplyCastBarPosition(frame, unit)
 
@@ -1299,7 +1315,27 @@ local function CreateCastBar(frame, unit)
         startTimeMs = nil,  -- TBC only: from UnitCastingInfo/UnitChannelInfo (ms)
         endTimeMs = nil,    -- TBC only
     }
-    
+
+    local function SetCastTimeText(seconds)
+        if frame.castBarTime then
+            if NotSecretValue(seconds) and type(seconds) == "number" and seconds > 0 then
+                frame.castBarTime:SetFormattedText("%.1f", seconds)
+                return true
+            else
+                frame.castBarTime:SetText("")
+                return false
+            end
+        end
+        return false
+    end
+
+    local function GetSafeRemainingSeconds(endTimeMs)
+        if not NotSecretValue(endTimeMs) or type(endTimeMs) ~= "number" then
+            return nil
+        end
+        return (endTimeMs / 1000) - GetTime()
+    end
+
     local function ShowCastBar(spellName, notInterruptible, startTimeMs, endTimeMs)
         local r, g, b = MMF_Config.GetCastBarColor(MattMinimalFramesDB and MattMinimalFramesDB.castBarColor or "yellow")
         if unit == "target" then
@@ -1317,6 +1353,11 @@ local function CreateCastBar(frame, unit)
             if not ok then frame.castBarText:SetText("") end
         else
             frame.castBarText:SetText("")
+        end
+        if Compat.IsTBC then
+            SetCastTimeText(GetSafeRemainingSeconds(endTimeMs))
+        else
+            SetCastTimeText(nil)
         end
         if Compat.IsTBC and startTimeMs and endTimeMs then
             frame.castInfo.startTimeMs = startTimeMs
@@ -1337,6 +1378,7 @@ local function CreateCastBar(frame, unit)
         frame.castInfo.channeling = false
         frame.castInfo.startTimeMs = nil
         frame.castInfo.endTimeMs = nil
+        SetCastTimeText(nil)
         frame.castBarFrame:Hide()
     end
     
@@ -1358,6 +1400,7 @@ local function CreateCastBar(frame, unit)
                 end
                 frame.castBar:SetMinMaxValues(0, maxVal)
                 frame.castBar:SetValue(val)
+                SetCastTimeText(maxVal - val)
             elseif info.channeling and info.startTimeMs and info.endTimeMs then
                 local now = GetTime()
                 local endSec = info.endTimeMs / 1000
@@ -1370,11 +1413,20 @@ local function CreateCastBar(frame, unit)
                 end
                 frame.castBar:SetMinMaxValues(0, maxVal)
                 frame.castBar:SetValue(val)
+                SetCastTimeText(val)
             end
         end)
     else
         local StatusBarTimerDirection = Enum.StatusBarTimerDirection
         local StatusBarInterpolation = Enum.StatusBarInterpolation
+        local function GetRemainingFromDurationObject(durationObject)
+            if durationObject and durationObject.GetRemainingDuration then
+                local ok, remaining = pcall(durationObject.GetRemainingDuration, durationObject)
+                if ok and type(remaining) == "number" and NotSecretValue(remaining) then
+                    return remaining
+                end
+            end
+        end
         frame.castBarFrame:SetScript("OnUpdate", function(self, elapsed)
             local info = frame.castInfo
             if info.casting then
@@ -1386,6 +1438,9 @@ local function CreateCastBar(frame, unit)
                 local duration = UnitCastingDuration(unit)
                 if duration then
                     frame.castBar:SetTimerDuration(duration, StatusBarInterpolation.Immediate, StatusBarTimerDirection.ElapsedTime)
+                    SetCastTimeText(GetRemainingFromDurationObject(duration))
+                else
+                    SetCastTimeText(nil)
                 end
             elseif info.channeling then
                 local name = UnitChannelInfo(unit)
@@ -1396,6 +1451,9 @@ local function CreateCastBar(frame, unit)
                 local duration = UnitChannelDuration(unit)
                 if duration then
                     frame.castBar:SetTimerDuration(duration, StatusBarInterpolation.Immediate, StatusBarTimerDirection.RemainingTime)
+                    SetCastTimeText(GetRemainingFromDurationObject(duration))
+                else
+                    SetCastTimeText(nil)
                 end
             end
         end)
@@ -1424,7 +1482,7 @@ local function CreateCastBar(frame, unit)
                 frame.castInfo.casting = true
                 frame.castInfo.channeling = false
                 frame.castInfo.castID = (unit == "player" and NotSecretValue(castID) and castID) or nil
-                ShowCastBar(name, notInterruptible, Compat.IsTBC and startTime or nil, Compat.IsTBC and endTime or nil)
+                ShowCastBar(name, notInterruptible, startTime, endTime)
                 return
             end
             name, _, _, startTime, endTime, _, notInterruptible = UnitChannelInfo(unit)
@@ -1432,7 +1490,7 @@ local function CreateCastBar(frame, unit)
                 frame.castInfo.casting = false
                 frame.castInfo.channeling = true
                 frame.castInfo.castID = nil
-                ShowCastBar(name, notInterruptible, Compat.IsTBC and startTime or nil, Compat.IsTBC and endTime or nil)
+                ShowCastBar(name, notInterruptible, startTime, endTime)
                 return
             end
             HideCastBar()
@@ -1443,7 +1501,7 @@ local function CreateCastBar(frame, unit)
                 frame.castInfo.casting = true
                 frame.castInfo.channeling = false
                 frame.castInfo.castID = (unit == "player" and NotSecretValue(castID) and castID) or nil
-                ShowCastBar(name, notInterruptible, Compat.IsTBC and startTime or nil, Compat.IsTBC and endTime or nil)
+                ShowCastBar(name, notInterruptible, startTime, endTime)
             end
             
         elseif event == "UNIT_SPELLCAST_CHANNEL_START" then
@@ -1453,7 +1511,7 @@ local function CreateCastBar(frame, unit)
                 frame.castInfo.casting = false
                 frame.castInfo.channeling = true
                 frame.castInfo.castID = nil
-                ShowCastBar(name, notInterruptible, Compat.IsTBC and startTime or nil, Compat.IsTBC and endTime or nil)
+                ShowCastBar(name, notInterruptible, startTime, endTime)
             end
         
         elseif Compat.IsTBC and event == "UNIT_SPELLCAST_DELAYED" then

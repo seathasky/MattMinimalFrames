@@ -429,6 +429,39 @@ local function ApplyPowerTextFontSize(frame, scale)
     end
 end
 
+local function ApplyCastBarFontSizes(frame, unit)
+    if not frame or not unit then return end
+    if unit ~= "player" and unit ~= "target" then return end
+
+    local castPrefix = (unit == "player") and "playerCastBar" or "targetCastBar"
+    local spellNameSize = tonumber(MattMinimalFramesDB and MattMinimalFramesDB[castPrefix .. "SpellNameTextSize"])
+    if not spellNameSize then
+        spellNameSize = tonumber(MMF_GetNameTextSize and MMF_GetNameTextSize(unit)) or 12
+    end
+    if spellNameSize < 6 then spellNameSize = 6 end
+    local roundedSpellName = math.floor(spellNameSize + 0.5)
+
+    local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or cfg.FONT_PATH
+    if frame.castBarText and frame.mmfAppliedCastBarNameFontSize ~= roundedSpellName then
+        if TryApplyFont(frame.castBarText, fontPath, roundedSpellName, "OUTLINE") then
+            frame.mmfAppliedCastBarNameFontSize = roundedSpellName
+        else
+            frame.mmfAppliedCastBarNameFontSize = nil
+        end
+    end
+
+    local castTimeSize = tonumber(MattMinimalFramesDB and MattMinimalFramesDB[castPrefix .. "CastTimeTextSize"]) or 9
+    if castTimeSize < 6 then castTimeSize = 6 end
+    castTimeSize = math.floor(castTimeSize + 0.5)
+    if frame.castBarTime and frame.mmfAppliedCastBarHPFontSize ~= castTimeSize then
+        if TryApplyFont(frame.castBarTime, fontPath, castTimeSize, "OUTLINE") then
+            frame.mmfAppliedCastBarHPFontSize = castTimeSize
+        else
+            frame.mmfAppliedCastBarHPFontSize = nil
+        end
+    end
+end
+
 local function GetNameTextWidthNoWrap(nameText)
     if not nameText then return 0 end
     local okUnbounded, unboundedWidth = pcall(nameText.GetUnboundedStringWidth, nameText)
@@ -622,12 +655,16 @@ local function UpdateAbsorbBar(frame)
     frame.absorbBar:Show()
 end
 
-local function UpdatePlayerCastBarForEditMode(frame, unit, unlockedEditMode, db)
-    if not frame or unit ~= "player" or not frame.castBarFrame then
+local function UpdateCastBarForEditMode(frame, unit, unlockedEditMode, db)
+    if not frame or not frame.castBarFrame then
+        return
+    end
+    if unit ~= "player" and unit ~= "target" then
         return
     end
 
-    if db and db.showPlayerCastBar == false then
+    local enabledKey = (unit == "player") and "showPlayerCastBar" or "showTargetCastBar"
+    if db and db[enabledKey] == false then
         frame.castBarFrame:Hide()
         return
     end
@@ -645,7 +682,14 @@ local function UpdatePlayerCastBarForEditMode(frame, unit, unlockedEditMode, db)
                 frame.castBar:SetValue(0.55)
             end
             if frame.castBarText then
-                frame.castBarText:SetText("Player Cast Bar")
+                if unit == "player" then
+                    frame.castBarText:SetText("Player Cast Bar")
+                else
+                    frame.castBarText:SetText("Target Cast Bar")
+                end
+            end
+            if frame.castBarTime then
+                frame.castBarTime:SetText("1.8")
             end
             frame.castBarFrame:Show()
         end
@@ -665,6 +709,7 @@ local function UpdateUnitFrame(frame)
     if not frame or not frame.unit or not frame.nameText then return end
     local unit = frame.unit
     local db = MattMinimalFramesDB or {}
+    ApplyCastBarFontSizes(frame, unit)
     local manualTruncateEnabled = IsCheckedFlag(db.enableNameTruncation)
     local autoResizeEnabled = IsCheckedFlag(db.autoResizeTextOnLongName)
     local forceSingleLine = manualTruncateEnabled or autoResizeEnabled
@@ -753,7 +798,7 @@ local function UpdateUnitFrame(frame)
 
     UpdateHealPrediction(frame)
     UpdateAbsorbBar(frame)
-    UpdatePlayerCastBarForEditMode(frame, unit, unlockedEditMode, db)
+    UpdateCastBarForEditMode(frame, unit, unlockedEditMode, db)
 
     if unit ~= "player" and unit ~= "target"
         and unit ~= "targettarget" and unit ~= "pet" and unit ~= "focus"

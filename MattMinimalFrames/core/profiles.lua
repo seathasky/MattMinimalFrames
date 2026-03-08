@@ -52,6 +52,8 @@ local VALID_TEXT_SIZE_UNITS = {
     pet = true,
     focus = true,
     boss = true,
+    playerCastBar = true,
+    targetCastBar = true,
 }
 
 local function SanitizeProfileTextSettings(profile)
@@ -72,6 +74,19 @@ local function SanitizeProfileTextSettings(profile)
         local hpKey = prefix .. "HPTextSize"
         if profile[hpKey] ~= nil then
             profile[hpKey] = NormalizePositiveNumber(profile[hpKey], profile.hpTextSize)
+        end
+    end
+
+    local castbarPrefixes = { "playerCastBar", "targetCastBar" }
+    for _, prefix in ipairs(castbarPrefixes) do
+        local spellNameKey = prefix .. "SpellNameTextSize"
+        if profile[spellNameKey] ~= nil then
+            profile[spellNameKey] = NormalizePositiveNumber(profile[spellNameKey], profile.nameTextSize)
+        end
+
+        local castTimeKey = prefix .. "CastTimeTextSize"
+        if profile[castTimeKey] ~= nil then
+            profile[castTimeKey] = NormalizePositiveNumber(profile[castTimeKey], 9)
         end
     end
 

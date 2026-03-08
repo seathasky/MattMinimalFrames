@@ -288,7 +288,26 @@ function MMF_ApplyGlobalFont()
                     frame.mmfAppliedPowerFontSize = nil
                 end
             end
-            if frame.castBarText then SafeSetFont(frame.castBarText, fontPath, 9, "OUTLINE") end
+            if frame.castBarText then
+                local castNameSize = 12
+                if unit == "player" or unit == "target" then
+                    local prefix = (unit == "player") and "playerCastBar" or "targetCastBar"
+                    castNameSize = tonumber(MattMinimalFramesDB and MattMinimalFramesDB[prefix .. "SpellNameTextSize"])
+                        or tonumber(MMF_GetNameTextSize and MMF_GetNameTextSize(unit))
+                        or 12
+                end
+                castNameSize = math.max(6, math.floor((tonumber(castNameSize) or 12) + 0.5))
+                SafeSetFont(frame.castBarText, fontPath, castNameSize, "OUTLINE")
+            end
+            if frame.castBarTime then
+                local castTimeSize = 9
+                if unit == "player" or unit == "target" then
+                    local prefix = (unit == "player") and "playerCastBar" or "targetCastBar"
+                    castTimeSize = tonumber(MattMinimalFramesDB and MattMinimalFramesDB[prefix .. "CastTimeTextSize"]) or 9
+                end
+                castTimeSize = math.max(6, math.floor((tonumber(castTimeSize) or 9) + 0.5))
+                SafeSetFont(frame.castBarTime, fontPath, castTimeSize, "OUTLINE")
+            end
             if frame.moveHint then SafeSetFont(frame.moveHint, fontPath, 10, "OUTLINE") end
             if frame.moveSubtext then SafeSetFont(frame.moveSubtext, fontPath, 9, "OUTLINE") end
         end
