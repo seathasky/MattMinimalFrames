@@ -1,5 +1,27 @@
 local NEWS_ID = "2026-03-edit-mode"
 
+local function GetNewsGlobalDB()
+    if type(_G.MattMinimalFramesGlobalDB) ~= "table" then
+        _G.MattMinimalFramesGlobalDB = {}
+    end
+    return _G.MattMinimalFramesGlobalDB
+end
+
+local function IsNewsDismissed()
+    local globalDB = GetNewsGlobalDB()
+    if globalDB.newsDismissedId == NEWS_ID then
+        return true
+    end
+
+    -- One-time compatibility fallback from older local/profile storage.
+    if MattMinimalFramesDB and MattMinimalFramesDB.newsDismissedId == NEWS_ID then
+        globalDB.newsDismissedId = NEWS_ID
+        return true
+    end
+
+    return false
+end
+
 local function BuildNewsPopup()
     if _G.MMF_NewsPopup then
         return _G.MMF_NewsPopup
@@ -156,13 +178,11 @@ local function BuildNewsPopup()
     dismissContainer:SetPoint("TOPLEFT", warning, "BOTTOMLEFT", 0, -16)
 
     local function ApplyDismiss(checked)
-        if not MattMinimalFramesDB then
-            MattMinimalFramesDB = {}
-        end
+        local globalDB = GetNewsGlobalDB()
         dismissCheckbox:SetChecked(checked == true)
         dismissCheckbox.check:SetShown(checked == true)
         if checked then
-            MattMinimalFramesDB.newsDismissedId = NEWS_ID
+            globalDB.newsDismissedId = NEWS_ID
             popup:Hide()
         end
     end
@@ -216,11 +236,7 @@ local function BuildNewsPopup()
 end
 
 function MMF_ShowNewsPopup(forceShow)
-    if not MattMinimalFramesDB then
-        MattMinimalFramesDB = {}
-    end
-
-    local dismissed = (MattMinimalFramesDB.newsDismissedId == NEWS_ID)
+    local dismissed = IsNewsDismissed()
     if dismissed and not forceShow then
         return
     end
