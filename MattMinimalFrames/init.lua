@@ -256,7 +256,11 @@ function MMF_ApplyActiveProfileLive()
 
     if MMF_WelcomePopup then
         local guiScale = (MMF_ClampGUIScale and MMF_ClampGUIScale(MattMinimalFramesDB.guiScale)) or 1.0
-        MMF_WelcomePopup:SetScale(guiScale)
+        if MMF_WelcomePopup.ApplyGUIScale then
+            MMF_WelcomePopup:ApplyGUIScale(guiScale, true)
+        else
+            MMF_WelcomePopup:SetScale(guiScale)
+        end
     end
 end
 

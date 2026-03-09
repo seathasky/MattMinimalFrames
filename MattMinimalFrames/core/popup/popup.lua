@@ -59,6 +59,15 @@ function MMF_ShowWelcomePopup(forceShow)
 
     -- If popup already exists, just show it and return
     if MMF_WelcomePopup then
+        local currentScale = (MMF_ClampGUIScale and MMF_ClampGUIScale(MattMinimalFramesDB and MattMinimalFramesDB.guiScale)) or 1.0
+        if MMF_WelcomePopup.ApplyGUIScale then
+            MMF_WelcomePopup:ApplyGUIScale(currentScale, false)
+        else
+            MMF_WelcomePopup:SetScale(currentScale)
+        end
+        if MMF_WelcomePopup.ClampToScreen then
+            MMF_WelcomePopup:ClampToScreen()
+        end
         MMF_WelcomePopup:Show()
         if MMF_ApplyGlobalFont then
             MMF_ApplyGlobalFont()
@@ -98,56 +107,112 @@ function MMF_ShowWelcomePopup(forceShow)
             height = math.floor((popup:GetHeight() or POPUP_LAYOUT.height) + 0.5),
         }
     end
+    local function GetParentBounds()
+        local parentLeft = UIParent and (UIParent:GetLeft() or 0) or 0
+        local parentRight = UIParent and UIParent:GetRight()
+        if not parentRight and UIParent and UIParent.GetWidth then
+            parentRight = parentLeft + (UIParent:GetWidth() or 0)
+        end
+        local parentBottom = UIParent and (UIParent:GetBottom() or 0) or 0
+        local parentTop = UIParent and UIParent:GetTop()
+        if not parentTop and UIParent and UIParent.GetHeight then
+            parentTop = parentBottom + (UIParent:GetHeight() or 0)
+        end
+        return parentLeft, parentRight or parentLeft, parentBottom, parentTop or parentBottom
+    end
+    local function NormalizePopupAnchorToCenter(self)
+        if not self or not UIParent then return nil, nil end
+        local left = self:GetLeft()
+        local right = self:GetRight()
+        local top = self:GetTop()
+        local bottom = self:GetBottom()
+        if not left or not right or not top or not bottom then return nil, nil end
+        local parentLeft, parentRight, parentBottom, parentTop = GetParentBounds()
+        local x = ((left + right) * 0.5) - ((parentLeft + parentRight) * 0.5)
+        local y = ((top + bottom) * 0.5) - ((parentTop + parentBottom) * 0.5)
+        self:ClearAllPoints()
+        self:SetPoint("CENTER", UIParent, "CENTER", x, y)
+        return x, y
+    end
+    local function GetPopupCenterOffsets(self)
+        if not self or not UIParent then return nil, nil end
+        local point, relTo, relPoint, x, y = self:GetPoint(1)
+        if point == "CENTER" and (relTo == UIParent or relTo == nil) and (relPoint == "CENTER" or relPoint == nil) then
+            return x or 0, y or 0
+        end
+        return NormalizePopupAnchorToCenter(self)
+    end
     local function PersistPopupPosition()
-        local left = popup:GetLeft()
-        local top = popup:GetTop()
-        if left and top then
+        local x, y = GetPopupCenterOffsets(popup)
+        if x and y then
             if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
-            MattMinimalFramesDB.popupPosition = { left = left, top = top }
+            MattMinimalFramesDB.popupPosition = { x = x, y = y, anchor = "CENTER" }
         end
     end
     local function ClampPopupHorizontal(self)
         if not self or not UIParent then return end
-        local left = self:GetLeft()
-        local right = self:GetRight()
-        local top = self:GetTop()
-        if not left or not right or not top then return end
+        local x, y = GetPopupCenterOffsets(self)
+        if not x or not y then return end
+        local parentLeft, parentRight, parentBottom, parentTop = GetParentBounds()
+        local parentWidth = math.max(1, parentRight - parentLeft)
+        local parentHeight = math.max(1, parentTop - parentBottom)
+        local frameScale = self:GetScale() or 1
+        local halfW = ((self:GetWidth() or 0) * frameScale) * 0.5
+        local halfH = ((self:GetHeight() or 0) * frameScale) * 0.5
 
-        local parentLeft = UIParent:GetLeft() or 0
-        local parentRight = UIParent:GetRight()
-        if not parentRight then
-            local parentWidth = UIParent.GetWidth and UIParent:GetWidth() or 0
-            parentRight = parentLeft + parentWidth
+        local minX = (-parentWidth * 0.5) + halfW
+        local maxX = (parentWidth * 0.5) - halfW
+        local minY = (-parentHeight * 0.5) + halfH
+        local maxY = (parentHeight * 0.5) - halfH
+        if minX > maxX then
+            minX, maxX = 0, 0
+        end
+        if minY > maxY then
+            minY, maxY = 0, 0
         end
 
-        local width = right - left
-        local clampedLeft = left
-        if width >= (parentRight - parentLeft) then
-            clampedLeft = parentLeft
-        else
-            if left < parentLeft then
-                clampedLeft = parentLeft
-            end
-            if right > parentRight then
-                clampedLeft = parentRight - width
-            end
-        end
-
-        if math.abs(clampedLeft - left) > 0.5 then
+        local clampedX = math.max(minX, math.min(maxX, x))
+        local clampedY = math.max(minY, math.min(maxY, y))
+        if math.abs(clampedX - x) > 0.5 or math.abs(clampedY - y) > 0.5 then
             self:ClearAllPoints()
-            self:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", clampedLeft, top)
+            self:SetPoint("CENTER", UIParent, "CENTER", clampedX, clampedY)
         end
+    end
+    local function ApplyPopupScale(scale, preservePosition)
+        local targetScale = (MMF_ClampGUIScale and MMF_ClampGUIScale(scale)) or scale or 1.0
+        local x, y
+
+        if preservePosition and popup and popup.IsVisible and popup:IsVisible() then
+            x, y = GetPopupCenterOffsets(popup)
+        end
+
+        popup:SetScale(targetScale)
+
+        if x and y then
+            popup:ClearAllPoints()
+            popup:SetPoint("CENTER", UIParent, "CENTER", x, y)
+        end
+        ClampPopupHorizontal(popup)
+        PersistPopupPosition()
     end
     
     -- Apply saved GUI scale
     local guiScale = (MMF_ClampGUIScale and MMF_ClampGUIScale(MattMinimalFramesDB.guiScale)) or 1.0
     MattMinimalFramesDB.guiScale = guiScale
-    popup:SetScale(guiScale)
+    ApplyPopupScale(guiScale, false)
     
     -- Restore saved position or use default
     if MattMinimalFramesDB and MattMinimalFramesDB.popupPosition then
         local pos = MattMinimalFramesDB.popupPosition
-        popup:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.left, pos.top)
+        if pos.x and pos.y then
+            popup:SetPoint("CENTER", UIParent, "CENTER", pos.x, pos.y)
+        elseif pos.left and pos.top then
+            popup:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.left, pos.top)
+            NormalizePopupAnchorToCenter(popup)
+            PersistPopupPosition()
+        else
+            popup:SetPoint("CENTER", UIParent, "CENTER", 0, POPUP_LAYOUT.centerY)
+        end
     else
         popup:SetPoint("CENTER", UIParent, "CENTER", 0, POPUP_LAYOUT.centerY)
     end
@@ -182,6 +247,17 @@ function MMF_ShowWelcomePopup(forceShow)
         PersistPopupPosition()
     end)
     popup:SetFrameStrata("DIALOG")
+    popup.ApplyGUIScale = function(self, scale, preservePosition)
+        ApplyPopupScale(scale, preservePosition)
+    end
+    popup.ClampToScreen = function(self)
+        ClampPopupHorizontal(self)
+        PersistPopupPosition()
+    end
+    popup:HookScript("OnShow", function(self)
+        ClampPopupHorizontal(self)
+        PersistPopupPosition()
+    end)
 
     -- Title bar
     local titleBar = CreateFrame("Frame", nil, popup)
@@ -668,7 +744,9 @@ function MMF_ShowWelcomePopup(forceShow)
         num = (MMF_ClampGUIScale and MMF_ClampGUIScale(num)) or num
         guiScaleSlider:SetValue(num)
         MattMinimalFramesDB.guiScale = num
-        if popup and popup:IsShown() then popup:SetScale(num) end
+        if popup and popup.IsVisible and popup:IsVisible() then
+            ApplyPopupScale(num, true)
+        end
     end)
     scaleValue:SetScript("OnEscapePressed", function(self)
         self:SetText(string.format("%.1f", guiScaleSlider:GetValue()))
@@ -688,7 +766,7 @@ function MMF_ShowWelcomePopup(forceShow)
         local value = (MMF_ClampGUIScale and MMF_ClampGUIScale(MattMinimalFramesDB.guiScale)) or 1.0
         MattMinimalFramesDB.guiScale = value
         if popup and popup:IsShown() then
-            popup:SetScale(value)
+            ApplyPopupScale(value, true)
         end
     end)
 

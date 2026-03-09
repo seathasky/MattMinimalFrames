@@ -1672,7 +1672,11 @@ function MMF_SetGUIScale(scale)
         MattMinimalFramesDB.guiScale = normalized
     end
     if MMF_WelcomePopup then
-        MMF_WelcomePopup:SetScale(normalized)
+        if MMF_WelcomePopup.ApplyGUIScale then
+            MMF_WelcomePopup:ApplyGUIScale(normalized, true)
+        else
+            MMF_WelcomePopup:SetScale(normalized)
+        end
     end
 end
 
