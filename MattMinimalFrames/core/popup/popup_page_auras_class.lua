@@ -1,7 +1,8 @@
 local Compat = _G.MMF_Compat or {}
 
-local function MMF_SetupAurasPowerHeader(leftCol, accentColor)
+local function MMF_SetupAurasPowerHeader(leftCol, accentColor, requestScrollRefresh)
     local ACCENT_COLOR = accentColor or { 0.6, 0.4, 0.9 }
+    local RequestScrollRefresh = requestScrollRefresh or function() end
 
     local sectionCard = CreateFrame("Frame", nil, leftCol, "BackdropTemplate")
     sectionCard:SetPoint("TOPLEFT", 12, -60)
@@ -60,6 +61,7 @@ local function MMF_SetupAurasPowerHeader(leftCol, accentColor)
         legacyContent:ClearAllPoints()
         legacyContent:SetPoint("TOPLEFT", sectionViewport, "TOPLEFT", -section.x, section.y)
         leftCol:SetHeight(section.height + 182)
+        RequestScrollRefresh()
     end
 
     local subTabs = MMF_CreateSubTabBar and MMF_CreateSubTabBar(leftCol, {
@@ -90,7 +92,7 @@ local function MMF_SetupAurasPowerHeader(leftCol, accentColor)
     }
 end
 
-function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalCheckbox, createMinimalSlider)
+function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalCheckbox, createMinimalSlider, requestScrollRefresh)
     local _, playerClass = UnitClass("player")
     local isPlayerDruid = (playerClass == "DRUID")
     local isComboClass = (playerClass == "ROGUE" or playerClass == "DRUID")
@@ -98,7 +100,7 @@ function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalC
     local ACCENT_COLOR = accentColor or { 0.6, 0.4, 0.9 }
     local CreateMinimalCheckbox = createMinimalCheckbox or MMF_CreateMinimalCheckbox
     local CreateMinimalSlider = createMinimalSlider or MMF_CreateMinimalSlider
-    local headerState = MMF_SetupAurasPowerHeader(leftCol, ACCENT_COLOR)
+    local headerState = MMF_SetupAurasPowerHeader(leftCol, ACCENT_COLOR, requestScrollRefresh)
     leftCol = headerState and headerState.contentRoot or leftCol
     local AURA_COL_X = 12
     local AURA_COL_WIDTH = 280

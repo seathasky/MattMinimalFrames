@@ -1286,7 +1286,7 @@ function MMF_ShowWelcomePopup(forceShow)
     RegisterClosableList(hideNameTextUnitList)
     RegisterClosableList(hideHPTextUnitList)
 
-    local aurasState = MMF_CreateAurasPowerSection(leftCol, popup, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider)
+    local aurasState = MMF_CreateAurasPowerSection(leftCol, popup, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider, UpdateSharedScrollBounds)
     if type(aurasState) == "table" then
         auraTypeList = aurasState.auraTypeList
     end
