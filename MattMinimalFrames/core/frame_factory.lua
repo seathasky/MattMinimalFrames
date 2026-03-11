@@ -372,12 +372,18 @@ local function ApplyCastBarPosition(frame, unit)
         return
     end
 
-    local castBarPrefix = (unit == "player") and "playerCastBar" or ((unit == "target") and "targetCastBar" or nil)
+    local castBarPrefix = (unit == "player" and "playerCastBar")
+        or (unit == "target" and "targetCastBar")
+        or (unit == "focus" and "focusCastBar")
+        or nil
     local scaleX = 1.0
     local scaleY = 1.0
     if castBarPrefix and MattMinimalFramesDB then
         scaleX = tonumber(MattMinimalFramesDB[castBarPrefix .. "FrameScaleX"]) or 1.0
         scaleY = tonumber(MattMinimalFramesDB[castBarPrefix .. "FrameScaleY"]) or 1.0
+    elseif unit == "focus" then
+        scaleX = tonumber(MMF_GetFrameScaleX and MMF_GetFrameScaleX("focus")) or 1.0
+        scaleY = tonumber(MMF_GetFrameScaleY and MMF_GetFrameScaleY("focus")) or 1.0
     end
     if scaleX < 0.5 then scaleX = 0.5 end
     if scaleX > 3.0 then scaleX = 3.0 end
@@ -567,16 +573,20 @@ local function ShowFrameResetPopup(frame, frameName)
     popup.title:SetText((frame.frameLabel or frame.unit or "Frame") .. " Options")
 
     local function ResetUnitCastBarToDefaults(unitToReset)
-        if unitToReset ~= "player" and unitToReset ~= "target" then
+        if unitToReset ~= "player" and unitToReset ~= "target" and unitToReset ~= "focus" then
             return
         end
         if not MattMinimalFramesDB then
             MattMinimalFramesDB = {}
         end
-        local defaults = MattMinimalFrames_Defaults or {}
-        local prefix = (unitToReset == "player") and "playerCastBar" or "targetCastBar"
-        MattMinimalFramesDB[prefix .. "FrameScaleX"] = tonumber(defaults[prefix .. "FrameScaleX"]) or 1.0
-        MattMinimalFramesDB[prefix .. "FrameScaleY"] = tonumber(defaults[prefix .. "FrameScaleY"]) or 1.0
+        if unitToReset == "player" or unitToReset == "target" or unitToReset == "focus" then
+            local defaults = MattMinimalFrames_Defaults or {}
+            local prefix = (unitToReset == "player" and "playerCastBar")
+                or (unitToReset == "target" and "targetCastBar")
+                or "focusCastBar"
+            MattMinimalFramesDB[prefix .. "FrameScaleX"] = tonumber(defaults[prefix .. "FrameScaleX"]) or 1.0
+            MattMinimalFramesDB[prefix .. "FrameScaleY"] = tonumber(defaults[prefix .. "FrameScaleY"]) or 1.0
+        end
         if MattMinimalFramesDB.castBarPositions then
             MattMinimalFramesDB.castBarPositions[unitToReset] = nil
         end
@@ -584,7 +594,7 @@ local function ShowFrameResetPopup(frame, frameName)
 
     popup.resetPositionBtn:SetScript("OnClick", function()
         ResetFrameToDefaultPosition(frame, frameName)
-        if frame.unit == "player" or frame.unit == "target" then
+        if frame.unit == "player" or frame.unit == "target" or frame.unit == "focus" then
             ResetUnitCastBarToDefaults(frame.unit)
             ApplyCastBarPosition(frame, frame.unit)
         end
@@ -596,7 +606,7 @@ local function ShowFrameResetPopup(frame, frameName)
         popup:Hide()
     end)
 
-    local hasCastBar = (frame.castBarFrame ~= nil and (frame.unit == "player" or frame.unit == "target"))
+    local hasCastBar = (frame.castBarFrame ~= nil and (frame.unit == "player" or frame.unit == "target" or frame.unit == "focus"))
     popup.resetCastBarBtn:SetShown(hasCastBar)
     popup:SetHeight(hasCastBar and 112 or 82)
     if hasCastBar then
@@ -625,12 +635,19 @@ local function IsEditModeDragEnabled()
     return MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
 end
 
+local function IsTestModeShiftDragEnabled()
+    return MattMinimalFramesDB and (MattMinimalFramesDB.layoutTestMode == true or MattMinimalFramesDB.auraTestMode == true)
+end
+
 local function CanStartFrameDrag(frame)
     if InCombatLockdown() then
         return false
     end
     if IsEditModeDragEnabled() then
         return frame and frame:IsMovable()
+    end
+    if IsTestModeShiftDragEnabled() then
+        return IsShiftKeyDown() and frame and frame:IsMovable()
     end
     local isLocked = MattMinimalFramesDB and MattMinimalFramesDB.locked
     return (not isLocked) and IsShiftKeyDown() and frame and frame:IsMovable()
@@ -1217,12 +1234,14 @@ local function UpdatePVPFlagIndicator(frame)
     end
 end
 
---------------------------------------------------
--- CAST BAR (Player and Target)
+-- CAST BAR (Player, Target, Focus)
 --------------------------------------------------
 
 local function CreateCastBar(frame, unit)
-    local settingKey = (unit == "player") and "showPlayerCastBar" or "showTargetCastBar"
+    local settingKey = (unit == "player" and "showPlayerCastBar")
+        or (unit == "target" and "showTargetCastBar")
+        or (unit == "focus" and "showFocusCastBar")
+        or "showTargetCastBar"
     local showCastBar = MattMinimalFramesDB and MattMinimalFramesDB[settingKey]
     if showCastBar == nil then
         showCastBar = true
@@ -1469,6 +1488,8 @@ local function CreateCastBar(frame, unit)
     eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_STOP", unit)
     if unit == "target" then
         eventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
+    elseif unit == "focus" then
+        eventFrame:RegisterEvent("PLAYER_FOCUS_CHANGED")
     end
     if Compat.IsTBC then
         eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_DELAYED", unit)
@@ -1476,7 +1497,7 @@ local function CreateCastBar(frame, unit)
     end
     
     eventFrame:SetScript("OnEvent", function(self, event, ...)
-        if event == "PLAYER_TARGET_CHANGED" then
+        if event == "PLAYER_TARGET_CHANGED" or event == "PLAYER_FOCUS_CHANGED" then
             local name, _, _, startTime, endTime, _, castID, notInterruptible = UnitCastingInfo(unit)
             if name then
                 frame.castInfo.casting = true
@@ -1636,7 +1657,7 @@ function MMF_CreateSecureUnitFrame(unit, frameName, width, height, point, relPoi
         CreateTargetFrameIcon(f)
     end
 
-    if unit == "player" or unit == "target" then
+    if unit == "player" or unit == "target" or unit == "focus" then
         CreateCastBar(f, unit)
     end
 

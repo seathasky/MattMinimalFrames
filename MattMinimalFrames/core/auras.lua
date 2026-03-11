@@ -2,7 +2,6 @@ local Compat = _G.MMF_Compat
 local cfg = MMF_Config
 local AURA_ICON_SPACING = cfg.AURA_ICON_SPACING
 local MAX_AURA_ICONS = cfg.MAX_AURA_ICONS
-local ROW_ICONS = cfg.AURA_ROW_ICONS
 local GetUnitAuras = Compat.GetUnitAuras
 local SetAuraCooldown = Compat.SetAuraCooldown
 local GetAuraCount = Compat.GetAuraCount
@@ -16,6 +15,104 @@ local issecretvalue = issecretvalue
 
 local function NotSecretValue(value)
     return not issecretvalue or not issecretvalue(value)
+end
+
+local function GetAuraIconsPerRow()
+    local perRow = math.floor(tonumber(MattMinimalFramesDB and MattMinimalFramesDB.auraIconsPerRow) or cfg.AURA_ROW_ICONS or 4)
+    if perRow < 1 then perRow = 1 end
+    if perRow > MAX_AURA_ICONS then perRow = MAX_AURA_ICONS end
+    return perRow
+end
+
+local function GetAuraRows()
+    local rows = math.floor(tonumber(MattMinimalFramesDB and MattMinimalFramesDB.auraRows) or 3)
+    if rows < 1 then rows = 1 end
+    if rows > MAX_AURA_ICONS then rows = MAX_AURA_ICONS end
+    return rows
+end
+
+local function GetVisibleAuraLimit()
+    return math.min(MAX_AURA_ICONS, GetAuraIconsPerRow() * GetAuraRows())
+end
+
+local function IsAuraTestModeEnabled()
+    return MattMinimalFramesDB and MattMinimalFramesDB.auraTestMode == true
+end
+
+local function SetAuraTestPreviewFrameState(enabled)
+    local targetFrame = _G.MMF_TargetFrame
+    if not targetFrame then
+        return
+    end
+
+    local function ApplyState()
+        if enabled then
+            if not targetFrame.mmfAuraTestUnitWatchSuspended
+                and not targetFrame.mmfUnitWatchSuspended
+                and type(UnregisterUnitWatch) == "function" then
+                local ok = pcall(UnregisterUnitWatch, targetFrame)
+                if ok then
+                    targetFrame.mmfAuraTestUnitWatchSuspended = true
+                end
+            end
+            targetFrame:Show()
+        else
+            if targetFrame.mmfAuraTestUnitWatchSuspended and type(RegisterUnitWatch) == "function" then
+                pcall(RegisterUnitWatch, targetFrame)
+                targetFrame.mmfAuraTestUnitWatchSuspended = nil
+            end
+            local editMode = MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
+            local layoutTestMode = MattMinimalFramesDB and MattMinimalFramesDB.layoutTestMode == true
+            if not editMode and not layoutTestMode and type(UnitExists) == "function" and not UnitExists("target") then
+                targetFrame:Hide()
+            end
+        end
+
+        if MMF_UpdateCombatFrameVisibility then
+            MMF_UpdateCombatFrameVisibility()
+        end
+        if MMF_RequestUnitUpdate then
+            MMF_RequestUnitUpdate("target")
+        elseif MMF_UpdateUnitFrame then
+            MMF_UpdateUnitFrame(targetFrame)
+        end
+    end
+
+    if (type(InCombatLockdown) == "function") and InCombatLockdown() then
+        if MMF_RunAfterCombat then
+            MMF_RunAfterCombat("mmf_aura_test_preview_frame_state", ApplyState)
+        end
+        return
+    end
+
+    ApplyState()
+end
+
+local function LayoutAuraContainer(container, isDebuff, size)
+    if not container or not container.auras then
+        return
+    end
+
+    local iconSize = math.floor(tonumber(size) or MMF_GetAuraIconSize() or 18)
+    local perRow = GetAuraIconsPerRow()
+    local rows = GetAuraRows()
+
+    container:SetSize(
+        (iconSize + AURA_ICON_SPACING) * perRow - AURA_ICON_SPACING,
+        (iconSize + AURA_ICON_SPACING) * rows - AURA_ICON_SPACING
+    )
+
+    for i, aura in ipairs(container.auras) do
+        aura:SetSize(iconSize, iconSize)
+        local row = math.floor((i - 1) / perRow)
+        local col = (i - 1) % perRow
+        aura:ClearAllPoints()
+        if isDebuff then
+            aura:SetPoint("TOPLEFT", container, "TOPLEFT", col * (iconSize + AURA_ICON_SPACING), row * (iconSize + AURA_ICON_SPACING))
+        else
+            aura:SetPoint("TOPRIGHT", container, "TOPRIGHT", -col * (iconSize + AURA_ICON_SPACING), -row * (iconSize + AURA_ICON_SPACING))
+        end
+    end
 end
 
 --------------------------------------------------
@@ -62,31 +159,22 @@ end
 
 function MMF_UpdateAuraIconSize(size)
     if not MMF_TargetFrame then return end
-    
+
     size = math.floor(size)
-    
-    local function updateContainer(container, anchorPoint, getX, getY)
-        if not container or not container.auras then return end
-        
-        container:SetSize(
-            (size + AURA_ICON_SPACING) * ROW_ICONS - AURA_ICON_SPACING,
-            (size + AURA_ICON_SPACING) * 3 - AURA_ICON_SPACING
-        )
-        
-        for i, aura in ipairs(container.auras) do
-            aura:SetSize(size, size)
-            local row = math.floor((i - 1) / ROW_ICONS)
-            local col = (i - 1) % ROW_ICONS
-            aura:ClearAllPoints()
-            aura:SetPoint(anchorPoint, container, anchorPoint, getX(col, size), getY(row, size))
-        end
+    LayoutAuraContainer(MMF_TargetFrame.BuffContainer, false, size)
+    LayoutAuraContainer(MMF_TargetFrame.DebuffContainer, true, size)
+end
+
+function MMF_UpdateAuraLayout()
+    if not MMF_TargetFrame then
+        return
     end
-    updateContainer(MMF_TargetFrame.BuffContainer, "TOPRIGHT",
-        function(col, s) return -col * (s + AURA_ICON_SPACING) end,
-        function(row, s) return -row * (s + AURA_ICON_SPACING) end)
-    updateContainer(MMF_TargetFrame.DebuffContainer, "TOPLEFT",
-        function(col, s) return col * (s + AURA_ICON_SPACING) end,
-        function(row, s) return row * (s + AURA_ICON_SPACING) end)
+    local size = MMF_GetAuraIconSize()
+    LayoutAuraContainer(MMF_TargetFrame.BuffContainer, false, size)
+    LayoutAuraContainer(MMF_TargetFrame.DebuffContainer, true, size)
+    if MMF_UpdateTargetAuras then
+        MMF_UpdateTargetAuras()
+    end
 end
 
 function MMF_UpdateBuffPosition(x, y)
@@ -108,19 +196,7 @@ end
 local function CreateAuraIcon(parent, index, isDebuff, iconSize)
     local aura = CreateFrame("Frame", nil, parent)
     aura:SetSize(iconSize, iconSize)
-    
-    local row = math.floor((index - 1) / ROW_ICONS)
-    local col = (index - 1) % ROW_ICONS
-    
-    if isDebuff then
-        aura:SetPoint("TOPLEFT", parent, "TOPLEFT",
-            col * (iconSize + AURA_ICON_SPACING),
-            row * (iconSize + AURA_ICON_SPACING))
-    else
-        aura:SetPoint("TOPRIGHT", parent, "TOPRIGHT",
-            -col * (iconSize + AURA_ICON_SPACING),
-            -row * (iconSize + AURA_ICON_SPACING))
-    end
+
     aura.icon = aura:CreateTexture(nil, "ARTWORK")
     aura.icon:SetAllPoints(aura)
     aura.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
@@ -164,24 +240,22 @@ end
 
 local function CreateAuraContainer(parent, isDebuff)
     local iconSize = MMF_GetAuraIconSize()
-    
+
     local container = CreateFrame("Frame", nil, parent)
-    container:SetSize(
-        (iconSize + AURA_ICON_SPACING) * ROW_ICONS - AURA_ICON_SPACING,
-        (iconSize + AURA_ICON_SPACING) * 3 - AURA_ICON_SPACING
-    )
-    
+
     if isDebuff then
         container:SetPoint("TOPLEFT", parent, "TOPLEFT", MMF_GetDebuffXOffset(), MMF_GetDebuffYOffset())
     else
         container:SetPoint("BOTTOMRIGHT", parent, "BOTTOMRIGHT", MMF_GetBuffXOffset(), MMF_GetBuffYOffset())
     end
-    
+
     container.auras = {}
     for i = 1, MAX_AURA_ICONS do
         container.auras[i] = CreateAuraIcon(container, i, isDebuff, iconSize)
     end
-    
+
+    LayoutAuraContainer(container, isDebuff, iconSize)
+
     return container
 end
 
@@ -236,8 +310,88 @@ local function UpdateAuraIcon(auraFrame, auraData, filter, unit, index)
     auraFrame:Show()
 end
 
+local function UpdateFakeAuraIcon(auraFrame, index, isDebuff)
+    if not auraFrame then
+        return
+    end
+
+    auraFrame.auraData = nil
+    auraFrame.auraIndex = nil
+    auraFrame.auraFilter = nil
+    auraFrame.icon:SetTexture("Interface\\AddOns\\MattMinimalFrames\\Images\\MMF.png")
+
+    if not auraFrame.count then
+        auraFrame.count = auraFrame:CreateFontString(nil, "OVERLAY")
+        auraFrame.count:SetPoint("BOTTOMRIGHT", auraFrame, "BOTTOMRIGHT", -1, 1)
+    end
+    local scale = MMF_GetAuraTextScale()
+    auraFrame.count:SetFont("Fonts\\FRIZQT__.TTF", math.max(6, math.floor(10 * scale)), "OUTLINE")
+    local count = (index % 4) + 1
+    auraFrame.count:SetText(count > 1 and count or "")
+    auraFrame.count:Show()
+
+    if auraFrame.cooldown then
+        auraFrame.cooldown:Hide()
+    end
+    if auraFrame.timerText then
+        auraFrame.timerText:Hide()
+    end
+
+    if auraFrame.border then
+        if isDebuff then
+            auraFrame.border:SetVertexColor(1, 0.25, 0.25)
+        else
+            auraFrame.border:SetVertexColor(1, 1, 1)
+        end
+    end
+
+    auraFrame:Show()
+end
+
+local function PopulateFakeAuras(container, isDebuff)
+    if not container or not container.auras then
+        return
+    end
+
+    local fakeCount = GetVisibleAuraLimit()
+    if fakeCount > 16 then
+        fakeCount = 16
+    end
+
+    for i, aura in ipairs(container.auras) do
+        if i <= fakeCount then
+            UpdateFakeAuraIcon(aura, i, isDebuff)
+        else
+            aura:Hide()
+            if aura.timerText then aura.timerText:Hide() end
+        end
+    end
+end
+
 function MMF_UpdateTargetAuras()
     if not MMF_TargetFrame or not MMF_TargetFrame.BuffContainer then return end
+
+    if IsAuraTestModeEnabled() then
+        SetAuraTestPreviewFrameState(true)
+        local buffContainer = MMF_TargetFrame.BuffContainer
+        if MattMinimalFramesDB.showBuffs == false then
+            buffContainer:Hide()
+        else
+            buffContainer:Show()
+            PopulateFakeAuras(buffContainer, false)
+        end
+
+        local debuffContainer = MMF_TargetFrame.DebuffContainer
+        if MattMinimalFramesDB.showDebuffs == false then
+            debuffContainer:Hide()
+        else
+            debuffContainer:Show()
+            PopulateFakeAuras(debuffContainer, true)
+        end
+        return
+    end
+
+    SetAuraTestPreviewFrameState(false)
 
     local unit = "target"
     local buffs = GetUnitAuras(unit, "HELPFUL")
@@ -252,7 +406,7 @@ function MMF_UpdateTargetAuras()
             if aura.timerText then aura.timerText:Hide() end
         end
         
-        for i = 1, math.min(#buffs, MAX_AURA_ICONS) do
+        for i = 1, math.min(#buffs, GetVisibleAuraLimit()) do
             local auraFrame = buffContainer.auras[i]
             if auraFrame then
                 UpdateAuraIcon(auraFrame, buffs[i], "HELPFUL", unit, i)
@@ -269,7 +423,7 @@ function MMF_UpdateTargetAuras()
             if aura.timerText then aura.timerText:Hide() end
         end
         
-        for i = 1, math.min(#debuffs, MAX_AURA_ICONS) do
+        for i = 1, math.min(#debuffs, GetVisibleAuraLimit()) do
             local auraFrame = debuffContainer.auras[i]
             if auraFrame then
                 UpdateAuraIcon(auraFrame, debuffs[i], "HARMFUL", unit, i)

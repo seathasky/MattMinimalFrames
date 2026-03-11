@@ -4,7 +4,7 @@ MMF_Config = {
     POWER_BAR_VERTICAL_OFFSET = -24,
     POWER_BAR_HORIZONTAL_OFFSET = 1,
     AURA_ICON_SPACING = 2,
-    MAX_AURA_ICONS = 12,
+    MAX_AURA_ICONS = 16,
     AURA_ROW_ICONS = 4,
     UPDATE_INTERVAL = 0.1,
     FONT_PATH = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf",
@@ -947,8 +947,11 @@ function MMF_GetFrameScaleY(unit)
 end
 
 function MMF_UpdateFrameScale(unit)
-    if unit == "playerCastBar" or unit == "targetCastBar" then
-        local ownerFrame = (unit == "playerCastBar") and MMF_GetFrameForUnit("player") or MMF_GetFrameForUnit("target")
+    if unit == "playerCastBar" or unit == "targetCastBar" or unit == "focusCastBar" then
+        local ownerUnit = (unit == "playerCastBar" and "player")
+            or (unit == "targetCastBar" and "target")
+            or "focus"
+        local ownerFrame = MMF_GetFrameForUnit(ownerUnit)
         if ownerFrame and ownerFrame.castBarFrame and MMF_ApplyCastBarPosition then
             MMF_ApplyCastBarPosition(ownerFrame, ownerFrame.unit)
         end
@@ -1028,7 +1031,7 @@ function MMF_UpdateFrameScale(unit)
 end
 
 function MMF_ApplyAllFrameScales()
-    local units = {"player", "target", "targettarget", "focus", "pet", "boss", "playerCastBar", "targetCastBar"}
+    local units = {"player", "target", "targettarget", "focus", "pet", "boss", "playerCastBar", "targetCastBar", "focusCastBar"}
     for _, unit in ipairs(units) do
         MMF_UpdateFrameScale(unit)
     end

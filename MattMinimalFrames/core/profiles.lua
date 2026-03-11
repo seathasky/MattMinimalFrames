@@ -122,6 +122,7 @@ local function SanitizeProfileTextSettings(profile)
     for _, key in ipairs(hideTextKeys) do
         profile[key] = NormalizeToggle(profile[key])
     end
+    profile.hideBossFrames = NormalizeToggle(profile.hideBossFrames)
 end
 
 local function MigrateProfile(profile)

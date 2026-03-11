@@ -60,6 +60,7 @@ function MMF_CreateMinimalCheckbox(parent, label, x, y, settingKey, defaultVal, 
     text:SetText(label)
 
     container.checkbox = cb
+    container.labelText = text
     return container
 end
 

@@ -237,6 +237,20 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
         MattMinimalFramesDB.petFrameScaleY = d.petFrameScaleY
         MattMinimalFramesDB.bossFrameScaleX = d.bossFrameScaleX or 1.0
         MattMinimalFramesDB.bossFrameScaleY = d.bossFrameScaleY or 1.0
+        -- Cast bar scales (all supported cast bars)
+        MattMinimalFramesDB.playerCastBarFrameScaleX = d.playerCastBarFrameScaleX or 1.0
+        MattMinimalFramesDB.playerCastBarFrameScaleY = d.playerCastBarFrameScaleY or 1.0
+        MattMinimalFramesDB.targetCastBarFrameScaleX = d.targetCastBarFrameScaleX or 1.0
+        MattMinimalFramesDB.targetCastBarFrameScaleY = d.targetCastBarFrameScaleY or 1.0
+        MattMinimalFramesDB.focusCastBarFrameScaleX = d.focusCastBarFrameScaleX or 1.0
+        MattMinimalFramesDB.focusCastBarFrameScaleY = d.focusCastBarFrameScaleY or 1.0
+        -- Cast bar text sizes (all supported cast bars)
+        MattMinimalFramesDB.playerCastBarSpellNameTextSize = d.playerCastBarSpellNameTextSize or 12
+        MattMinimalFramesDB.playerCastBarCastTimeTextSize = d.playerCastBarCastTimeTextSize or 9
+        MattMinimalFramesDB.targetCastBarSpellNameTextSize = d.targetCastBarSpellNameTextSize or 12
+        MattMinimalFramesDB.targetCastBarCastTimeTextSize = d.targetCastBarCastTimeTextSize or 9
+        MattMinimalFramesDB.focusCastBarSpellNameTextSize = d.focusCastBarSpellNameTextSize or 12
+        MattMinimalFramesDB.focusCastBarCastTimeTextSize = d.focusCastBarCastTimeTextSize or 9
         MattMinimalFramesDB.playerFrameIconScale = d.playerFrameIconScale or 1.0
         MattMinimalFramesDB.targetFrameIconScale = d.targetFrameIconScale or 1.0
         MattMinimalFramesDB.popupSize = {
@@ -322,6 +336,6 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
     infoText:SetSpacing(3)
     infoText:SetTextColor(0.6, 0.6, 0.6)
     local highlightColor = ACCENT_HEX_PREFIX
-    infoText:SetText("Hold " .. highlightColor .. "SHIFT|r + drag frames to reposition.\n\nType " .. highlightColor .. "/mmf|r to open this panel.\n\nChanges to some checkboxes may require a UI reload.")
+    infoText:SetText("Hold " .. highlightColor .. "SHIFT|r + mouse drag to reposition frames outside of Edit Mode.\n\nType " .. highlightColor .. "/mmf|r to open this panel.\n\nChanges to some checkboxes may require a UI reload.")
 
 end

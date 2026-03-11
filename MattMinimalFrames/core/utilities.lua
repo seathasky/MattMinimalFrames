@@ -290,8 +290,11 @@ function MMF_ApplyGlobalFont()
             end
             if frame.castBarText then
                 local castNameSize = 12
-                if unit == "player" or unit == "target" then
-                    local prefix = (unit == "player") and "playerCastBar" or "targetCastBar"
+                if unit == "player" or unit == "target" or unit == "focus" then
+                    local prefix = (unit == "player" and "playerCastBar")
+                        or (unit == "target" and "targetCastBar")
+                        or (unit == "focus" and "focusCastBar")
+                        or "targetCastBar"
                     castNameSize = tonumber(MattMinimalFramesDB and MattMinimalFramesDB[prefix .. "SpellNameTextSize"])
                         or tonumber(MMF_GetNameTextSize and MMF_GetNameTextSize(unit))
                         or 12
@@ -301,8 +304,11 @@ function MMF_ApplyGlobalFont()
             end
             if frame.castBarTime then
                 local castTimeSize = 9
-                if unit == "player" or unit == "target" then
-                    local prefix = (unit == "player") and "playerCastBar" or "targetCastBar"
+                if unit == "player" or unit == "target" or unit == "focus" then
+                    local prefix = (unit == "player" and "playerCastBar")
+                        or (unit == "target" and "targetCastBar")
+                        or (unit == "focus" and "focusCastBar")
+                        or "targetCastBar"
                     castTimeSize = tonumber(MattMinimalFramesDB and MattMinimalFramesDB[prefix .. "CastTimeTextSize"]) or 9
                 end
                 castTimeSize = math.max(6, math.floor((tonumber(castTimeSize) or 9) + 0.5))

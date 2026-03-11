@@ -86,7 +86,8 @@ function MMF_ShowWelcomePopup(forceShow)
         + (POPUP_LAYOUT.tabHeight or 24)
         + (POPUP_LAYOUT.pageGap or 4)
     local MIN_POPUP_HEIGHT = chromeHeight + 8
-    local MAX_POPUP_HEIGHT = (POPUP_LAYOUT.unitFramesContentHeight or 980) + chromeHeight
+    -- Keep a large hard cap, then enforce an actual dynamic cap from screen bounds.
+    local MAX_POPUP_HEIGHT = math.max((POPUP_LAYOUT.unitFramesContentHeight or 980) + chromeHeight, 5000)
     if MattMinimalFramesDB and type(MattMinimalFramesDB.popupSize) == "table" then
         local h = tonumber(MattMinimalFramesDB.popupSize.height)
         if h and h > (MIN_POPUP_HEIGHT - 40) then popupHeight = h end
@@ -119,6 +120,28 @@ function MMF_ShowWelcomePopup(forceShow)
             parentTop = parentBottom + (UIParent:GetHeight() or 0)
         end
         return parentLeft, parentRight or parentLeft, parentBottom, parentTop or parentBottom
+    end
+    local function GetDynamicMaxPopupHeight(self)
+        local _, _, parentBottom, parentTop = GetParentBounds()
+        local parentHeight = math.max(1, parentTop - parentBottom)
+        local scale = (self and self.GetScale and self:GetScale()) or 1
+        if scale <= 0 then
+            scale = 1
+        end
+        local screenBoundMax = math.floor((parentHeight / scale) - 8)
+        if screenBoundMax < MIN_POPUP_HEIGHT then
+            screenBoundMax = MIN_POPUP_HEIGHT
+        end
+        return math.max(MIN_POPUP_HEIGHT, math.min(MAX_POPUP_HEIGHT, screenBoundMax))
+    end
+    local function ClampPopupHeightToBounds(self)
+        if not self then return end
+        local current = self:GetHeight() or POPUP_LAYOUT.height
+        local maxAllowed = GetDynamicMaxPopupHeight(self)
+        local clamped = math.max(MIN_POPUP_HEIGHT, math.min(maxAllowed, current))
+        if math.abs(clamped - current) > 0.5 then
+            self:SetHeight(clamped)
+        end
     end
     local function NormalizePopupAnchorToCenter(self)
         if not self or not UIParent then return nil, nil end
@@ -187,6 +210,7 @@ function MMF_ShowWelcomePopup(forceShow)
         end
 
         popup:SetScale(targetScale)
+        ClampPopupHeightToBounds(popup)
 
         if x and y then
             popup:ClearAllPoints()
@@ -389,13 +413,105 @@ function MMF_ShowWelcomePopup(forceShow)
             end
         end)
 
+        checkbox.labelText = label
+        container.labelText = label
+
         return container, checkbox
+    end
+
+    local function CreateTitleButton(anchor, xOffset, labelText, onClick, width)
+        local containerWidth = tonumber(width) or 88
+        if containerWidth < 72 then
+            containerWidth = 72
+        end
+        local container = CreateFrame("Frame", nil, titleBar)
+        container:SetSize(containerWidth, 20)
+        container:SetPoint("RIGHT", anchor, "LEFT", xOffset, 0)
+
+        local button = CreateFrame("Button", nil, container, "BackdropTemplate")
+        button:SetSize(containerWidth - 4, 18)
+        button:SetPoint("LEFT", 0, 0)
+        button:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8x8",
+            edgeFile = "Interface\\Buttons\\WHITE8x8",
+            edgeSize = 1,
+        })
+        button:SetBackdropColor(0.08, 0.08, 0.1, 1)
+        button:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+
+        local label = button:CreateFontString(nil, "OVERLAY")
+        label:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+        label:SetPoint("CENTER")
+        label:SetTextColor(0.9, 0.9, 0.9)
+        label:SetText(labelText)
+
+        button:SetScript("OnEnter", function(self)
+            self:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.8)
+            label:SetTextColor(1, 1, 1)
+        end)
+        button:SetScript("OnLeave", function(self)
+            if self.mmfActive then
+                if self.mmfActiveBorderColor then
+                    self:SetBackdropBorderColor(
+                        self.mmfActiveBorderColor[1] or 0.25,
+                        self.mmfActiveBorderColor[2] or 0.25,
+                        self.mmfActiveBorderColor[3] or 0.3,
+                        self.mmfActiveBorderColor[4] or 1
+                    )
+                else
+                    self:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+                end
+                if self.mmfActiveTextColor then
+                    label:SetTextColor(
+                        self.mmfActiveTextColor[1] or 1,
+                        self.mmfActiveTextColor[2] or 0.93,
+                        self.mmfActiveTextColor[3] or 0.45
+                    )
+                else
+                    label:SetTextColor(1, 0.93, 0.45)
+                end
+            else
+                if self.mmfInactiveBorderColor then
+                    self:SetBackdropBorderColor(
+                        self.mmfInactiveBorderColor[1] or 0.25,
+                        self.mmfInactiveBorderColor[2] or 0.25,
+                        self.mmfInactiveBorderColor[3] or 0.3,
+                        self.mmfInactiveBorderColor[4] or 1
+                    )
+                else
+                    self:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+                end
+                if self.mmfInactiveTextColor then
+                    label:SetTextColor(
+                        self.mmfInactiveTextColor[1] or 0.9,
+                        self.mmfInactiveTextColor[2] or 0.9,
+                        self.mmfInactiveTextColor[3] or 0.9
+                    )
+                else
+                    label:SetTextColor(0.9, 0.9, 0.9)
+                end
+            end
+        end)
+        button:SetScript("OnClick", function()
+            if onClick then
+                onClick()
+            end
+        end)
+
+        button.labelText = label
+        container.button = button
+        container.labelText = label
+
+        return container, button
     end
 
     local lockFramesContainer = nil
     local editModeContainer = nil
-    local lockFramesCheckbox = nil
-    local editModeCheckbox = nil
+    local testModeContainer = nil
+    local lockFramesButton = nil
+    local editModeButton = nil
+    local testModeCheckbox = nil
+    local testModeTextPulseFrame = nil
     local editModePopup = nil
 
     local function SetTitleCheckboxVisual(checkbox, checked)
@@ -406,32 +522,153 @@ function MMF_ShowWelcomePopup(forceShow)
         end
     end
 
+    local function HSVToRGB(h, s, v)
+        h = (tonumber(h) or 0) % 1
+        s = math.max(0, math.min(1, tonumber(s) or 1))
+        v = math.max(0, math.min(1, tonumber(v) or 1))
+        local i = math.floor(h * 6)
+        local f = h * 6 - i
+        local p = v * (1 - s)
+        local q = v * (1 - f * s)
+        local t = v * (1 - (1 - f) * s)
+        i = i % 6
+        if i == 0 then return v, t, p end
+        if i == 1 then return q, v, p end
+        if i == 2 then return p, v, t end
+        if i == 3 then return p, q, v end
+        if i == 4 then return t, p, v end
+        return v, p, q
+    end
+
+    local function EnsureTestModeRainbowText()
+        if testModeTextPulseFrame or not testModeContainer then
+            return
+        end
+        local pulse = CreateFrame("Frame", nil, titleBar)
+        pulse:SetAllPoints(titleBar)
+        pulse:Hide()
+        testModeTextPulseFrame = pulse
+
+        pulse:SetScript("OnUpdate", function(self, elapsed)
+            local speed = 0.22
+            self._mmfHue = ((self._mmfHue or 0) + (elapsed or 0) * speed) % 1
+            local r, g, b = HSVToRGB(self._mmfHue, 1, 1)
+            if testModeContainer and testModeContainer.labelText then
+                testModeContainer.labelText:SetTextColor(r, g, b)
+            end
+        end)
+    end
+
+    local function SetTestModeCheckboxState(checked)
+        SetTitleCheckboxVisual(testModeCheckbox, checked)
+        EnsureTestModeRainbowText()
+        if testModeTextPulseFrame then
+            if checked then
+                testModeTextPulseFrame:Show()
+            else
+                testModeTextPulseFrame:Hide()
+            end
+        end
+        if testModeContainer and testModeContainer.labelText and not checked then
+            testModeContainer.labelText:SetTextColor(0.9, 0.9, 0.9)
+        end
+    end
+
     local function SyncTitleLockCheckboxState()
         local editModeEnabled = MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
         local effectiveLocked = MattMinimalFramesDB and MattMinimalFramesDB.locked == true
 
-        if editModeEnabled then
-            SetTitleCheckboxVisual(lockFramesCheckbox, false)
-            if lockFramesCheckbox and lockFramesCheckbox.Disable then
-                lockFramesCheckbox:Disable()
+        local function ApplyLockButtonState(isLocked, disabled)
+            if not lockFramesButton then
+                return
             end
+            lockFramesButton.mmfActive = isLocked == true
+            lockFramesButton.mmfActiveTextColor = { 0.45, 1.0, 0.45 }
+            lockFramesButton.mmfInactiveTextColor = { 1.0, 0.35, 0.35 }
+            lockFramesButton.mmfActiveBorderColor = { 0.25, 0.55, 0.25, 1 }
+            lockFramesButton.mmfInactiveBorderColor = { 0.55, 0.25, 0.25, 1 }
+            if isLocked then
+                if lockFramesButton.labelText then
+                    lockFramesButton.labelText:SetText("Frames Locked")
+                    lockFramesButton.labelText:SetTextColor(0.45, 1.0, 0.45)
+                end
+                lockFramesButton:SetBackdropBorderColor(0.25, 0.55, 0.25, 1)
+            else
+                if lockFramesButton.labelText then
+                    lockFramesButton.labelText:SetText("Frames Unlocked")
+                    lockFramesButton.labelText:SetTextColor(1.0, 0.35, 0.35)
+                end
+                lockFramesButton:SetBackdropBorderColor(0.55, 0.25, 0.25, 1)
+            end
+            if disabled then
+                if lockFramesButton.Disable then
+                    lockFramesButton:Disable()
+                end
+            else
+                if lockFramesButton.Enable then
+                    lockFramesButton:Enable()
+                end
+            end
+        end
+
+        if editModeEnabled then
             if lockFramesContainer then
                 lockFramesContainer:SetAlpha(0.45)
             end
+            ApplyLockButtonState(false, true)
             return
         end
 
-        SetTitleCheckboxVisual(lockFramesCheckbox, effectiveLocked)
-        if lockFramesCheckbox and lockFramesCheckbox.Enable then
-            lockFramesCheckbox:Enable()
-        end
         if lockFramesContainer then
             lockFramesContainer:SetAlpha(1)
         end
+        ApplyLockButtonState(effectiveLocked, false)
     end
 
-    local function SetEditModeCheckboxState(checked)
-        SetTitleCheckboxVisual(editModeCheckbox, checked)
+    local function SetEditModeButtonState(checked)
+        if not editModeButton then
+            return
+        end
+        editModeButton.mmfActive = checked == true
+        if checked then
+            editModeButton:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.95)
+            if editModeButton.labelText then
+                editModeButton.labelText:SetTextColor(1, 0.93, 0.45)
+            end
+        else
+            editModeButton:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+            if editModeButton.labelText then
+                editModeButton.labelText:SetTextColor(0.9, 0.9, 0.9)
+            end
+        end
+    end
+
+    local function IsGlobalTestModeEnabled()
+        return MattMinimalFramesDB and (MattMinimalFramesDB.layoutTestMode == true or MattMinimalFramesDB.auraTestMode == true)
+    end
+
+    local function SetGlobalTestMode(enabled)
+        if not MattMinimalFramesDB then
+            MattMinimalFramesDB = {}
+        end
+        local active = enabled == true
+        MattMinimalFramesDB.layoutTestMode = active
+        MattMinimalFramesDB.auraTestMode = active
+        if MMF_RefreshFrameLockState then
+            MMF_RefreshFrameLockState()
+        end
+        if MMF_UpdateTargetAuras then
+            MMF_UpdateTargetAuras()
+        end
+        if MMF_RequestAllFramesUpdate then
+            MMF_RequestAllFramesUpdate()
+        elseif MMF_GetAllFrames and MMF_UpdateUnitFrame then
+            for _, frame in ipairs(MMF_GetAllFrames()) do
+                if frame then
+                    MMF_UpdateUnitFrame(frame)
+                end
+            end
+        end
     end
 
     local function EnsureEditModePopup()
@@ -610,7 +847,7 @@ function MMF_ShowWelcomePopup(forceShow)
                     MMF_RefreshFrameLockState()
                 end
             end
-            SetEditModeCheckboxState(false)
+            SetEditModeButtonState(false)
             SyncTitleLockCheckboxState()
             editModePopup:Hide()
             popup:Show()
@@ -637,35 +874,55 @@ function MMF_ShowWelcomePopup(forceShow)
         return editModePopup
     end
 
-    editModeContainer, editModeCheckbox = CreateTitleCheckbox(closeX, -248, "Edit Mode", MattMinimalFramesDB.unlockFramesEditMode == true, function(checked)
-        if MMF_SetEditMode then
-            MMF_SetEditMode(checked)
-        else
-            MattMinimalFramesDB.unlockFramesEditMode = checked and true or false
-            if MMF_RefreshFrameLockState then
-                MMF_RefreshFrameLockState()
+    editModeContainer, editModeButton = CreateTitleButton(closeX, -276, "Edit Mode", function()
+        local currentlyEnabled = MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
+        if not currentlyEnabled then
+            if MMF_SetEditMode then
+                MMF_SetEditMode(true)
+            else
+                MattMinimalFramesDB.unlockFramesEditMode = true
+                if MMF_RefreshFrameLockState then
+                    MMF_RefreshFrameLockState()
+                end
             end
         end
+        SetEditModeButtonState(true)
         SyncTitleLockCheckboxState()
-        if checked then
-            local modePopup = EnsureEditModePopup()
-            popup:Hide()
-            modePopup:Show()
-        else
-            if editModePopup then
-                editModePopup:Hide()
-            end
-        end
-    end)
+        local modePopup = EnsureEditModePopup()
+        popup:Hide()
+        modePopup:Show()
+    end, 92)
+    SetEditModeButtonState(MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true)
 
-    lockFramesContainer, lockFramesCheckbox = CreateTitleCheckbox(closeX, -136, "Lock Frames", MattMinimalFramesDB.locked == true, function(checked)
+    testModeContainer, testModeCheckbox = CreateTitleCheckbox(editModeContainer, -8, "Test Mode", IsGlobalTestModeEnabled(), function(checked)
+        SetGlobalTestMode(checked)
+        SetTestModeCheckboxState(checked)
+    end)
+    if testModeContainer then
+        testModeContainer:SetWidth(96)
+        testModeContainer:EnableMouse(true)
+        testModeContainer:HookScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_NONE")
+            GameTooltip:ClearAllPoints()
+            GameTooltip:SetPoint("LEFT", self, "RIGHT", 14, 0)
+            GameTooltip:SetText("Test Mode", 1, 1, 1)
+            GameTooltip:AddLine("Use this while adjusting elements outside Edit Mode, such as text size, aura previews, and cast bar text/scale.", 0.75, 0.75, 0.75, true)
+            GameTooltip:Show()
+        end)
+        testModeContainer:HookScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
+    end
+    SetTestModeCheckboxState(IsGlobalTestModeEnabled())
+
+    lockFramesContainer, lockFramesButton = CreateTitleButton(closeX, -136, "Frames Unlocked", function()
         if MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true then
-            SetTitleCheckboxVisual(lockFramesCheckbox, false)
             return
         end
-
-        MattMinimalFramesDB.locked = checked and true or false
-        if checked then
+        local currentlyLocked = MattMinimalFramesDB and MattMinimalFramesDB.locked == true
+        local newLocked = not currentlyLocked
+        MattMinimalFramesDB.locked = newLocked
+        if newLocked then
             if MMF_LockFrames then
                 MMF_LockFrames()
             end
@@ -675,7 +932,20 @@ function MMF_ShowWelcomePopup(forceShow)
             end
         end
         SyncTitleLockCheckboxState()
-    end)
+    end, 128)
+    if lockFramesButton then
+        lockFramesButton:HookScript("OnEnter", function(self)
+            GameTooltip:SetOwner(self, "ANCHOR_NONE")
+            GameTooltip:ClearAllPoints()
+            GameTooltip:SetPoint("LEFT", self, "RIGHT", 14, 0)
+            GameTooltip:SetText("Frame Lock", 1, 1, 1)
+            GameTooltip:AddLine("While unlocked, hold SHIFT + mouse drag to move frames outside of Edit Mode.", 0.75, 0.75, 0.75, true)
+            GameTooltip:Show()
+        end)
+        lockFramesButton:HookScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
+    end
 
     SyncTitleLockCheckboxState()
 
@@ -1345,7 +1615,8 @@ function MMF_ShowWelcomePopup(forceShow)
             if math.abs(dy) < 1 then
                 return
             end
-            local newH = math.max(MIN_POPUP_HEIGHT, math.min(MAX_POPUP_HEIGHT, (self.mmfResizeStartH or POPUP_LAYOUT.height) + dy))
+            local maxAllowed = GetDynamicMaxPopupHeight(self)
+            local newH = math.max(MIN_POPUP_HEIGHT, math.min(maxAllowed, (self.mmfResizeStartH or POPUP_LAYOUT.height) + dy))
             self:SetSize(MIN_POPUP_WIDTH, newH)
         end)
     end)
@@ -1370,12 +1641,13 @@ function MMF_ShowWelcomePopup(forceShow)
             width = MIN_POPUP_WIDTH
         end
         local currentHeight = self:GetHeight() or height or POPUP_LAYOUT.height
+        local dynamicMaxHeight = GetDynamicMaxPopupHeight(self)
         if currentHeight < MIN_POPUP_HEIGHT then
             self:SetHeight(MIN_POPUP_HEIGHT)
             currentHeight = MIN_POPUP_HEIGHT
-        elseif currentHeight > MAX_POPUP_HEIGHT then
-            self:SetHeight(MAX_POPUP_HEIGHT)
-            currentHeight = MAX_POPUP_HEIGHT
+        elseif currentHeight > dynamicMaxHeight then
+            self:SetHeight(dynamicMaxHeight)
+            currentHeight = dynamicMaxHeight
         end
         height = currentHeight
         ClampPopupHorizontal(self)

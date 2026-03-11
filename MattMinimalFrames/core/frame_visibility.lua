@@ -353,10 +353,62 @@ function MMF_GetCombatVisibilityFadeTime()
     return MattMinimalFramesDB.combatVisibilityFadeTime
 end
 
+local function IsPreviewRevealModeActive()
+    if not MattMinimalFramesDB then
+        return false
+    end
+    return MattMinimalFramesDB.unlockFramesEditMode == true or MattMinimalFramesDB.layoutTestMode == true
+end
+
+local function ApplyBossFrameVisibility()
+    if not MattMinimalFramesDB then
+        return
+    end
+
+    if (type(InCombatLockdown) == "function") and InCombatLockdown() then
+        if MMF_RunAfterCombat then
+            MMF_RunAfterCombat("mmf_apply_boss_frame_visibility", function()
+                if MMF_UpdateCombatFrameVisibility then
+                    MMF_UpdateCombatFrameVisibility()
+                end
+            end)
+        end
+        return
+    end
+
+    local hideBossFrames = IsCheckedFlag(MattMinimalFramesDB.hideBossFrames)
+    local revealHiddenFrames = IsPreviewRevealModeActive()
+
+    for i = 1, 5 do
+        local unit = "boss" .. i
+        local frame = MMF_GetFrameForUnit and MMF_GetFrameForUnit(unit) or _G["MMF_Boss" .. i .. "Frame"]
+        if frame then
+            if hideBossFrames and not revealHiddenFrames then
+                SuspendUnitWatch(frame)
+                StopAlphaDriver(frame)
+                frame:SetAlpha(1)
+                frame.mmfSuppressCombatVisibilityOnShow = true
+                frame:Hide()
+            else
+                ResumeUnitWatch(frame)
+                if revealHiddenFrames or (type(UnitExists) == "function" and UnitExists(unit)) then
+                    frame.mmfSuppressCombatVisibilityOnShow = true
+                    frame:Show()
+                else
+                    frame.mmfSuppressCombatVisibilityOnShow = true
+                    frame:Hide()
+                end
+            end
+        end
+    end
+end
+
 function MMF_UpdateCombatFrameVisibility()
     local playerFrame = MMF_GetFrameForUnit and MMF_GetFrameForUnit("player") or _G.MMF_PlayerFrame
     local targetFrame = MMF_GetFrameForUnit and MMF_GetFrameForUnit("target") or _G.MMF_TargetFrame
     local totFrame = MMF_GetFrameForUnit and MMF_GetFrameForUnit("targettarget") or _G.MMF_TargetOfTargetFrame
+
+    ApplyBossFrameVisibility()
 
     if not playerFrame and not targetFrame and not totFrame then
         return

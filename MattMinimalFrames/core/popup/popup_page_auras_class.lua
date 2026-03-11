@@ -39,7 +39,7 @@ local function MMF_SetupAurasPowerHeader(leftCol, accentColor, requestScrollRefr
     legacyContent:SetSize(640, 760)
 
     local sectionDefs = {
-        { label = "Auras", subtitle = "Target aura position and appearance.", x = 0, y = 12, width = 300, height = 260 },
+        { label = "Auras", subtitle = "Target aura position and appearance.", x = 0, y = 12, width = 300, height = 356 },
         { label = "Power", subtitle = "Player and target power bars and text.", x = 304, y = 12, width = 228, height = 460 },
     }
 
@@ -131,12 +131,28 @@ function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalC
     aurasTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     aurasTitle:SetText("TARGET AURA POSITION")
 
-    local buffsCheck = CreateMinimalCheckbox(leftCol, "Buffs", AURA_COL_X, -32, "showBuffs", true, function()
-        StaticPopup_Show("MMF_RELOADUI")
+    local auraTestModeCheck = CreateMinimalCheckbox(leftCol, "Aura Test Mode", AURA_COL_X, -32, "auraTestMode", false, function()
+        if MMF_RefreshFrameLockState then
+            MMF_RefreshFrameLockState()
+        end
+        if MMF_UpdateTargetAuras then
+            MMF_UpdateTargetAuras()
+        end
+    end)
+    if auraTestModeCheck and auraTestModeCheck.labelText then
+        auraTestModeCheck.labelText:SetTextColor(1, 0.93, 0.45)
+    end
+
+    local buffsCheck = CreateMinimalCheckbox(leftCol, "Buffs", AURA_COL_X, -56, "showBuffs", true, function()
+        if MMF_UpdateTargetAuras then
+            MMF_UpdateTargetAuras()
+        end
     end)
 
-    local debuffsCheck = CreateMinimalCheckbox(leftCol, "Debuffs", AURA_COL_X + 120, -32, "showDebuffs", true, function()
-        StaticPopup_Show("MMF_RELOADUI")
+    local debuffsCheck = CreateMinimalCheckbox(leftCol, "Debuffs", AURA_COL_X + 120, -56, "showDebuffs", true, function()
+        if MMF_UpdateTargetAuras then
+            MMF_UpdateTargetAuras()
+        end
     end)
 
     local auraTypeOptions = {
@@ -153,7 +169,7 @@ function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalC
     local auraTypeDropdown = MMF_CreateMinimalDropdown(leftCol, popup, {
         accentColor = ACCENT_COLOR,
         x = AURA_COL_X,
-        y = -56,
+        y = -104,
         width = AURA_COL_WIDTH,
         labelWidth = 74,
         buttonOffset = 78,
@@ -177,7 +193,7 @@ function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalC
         return "buffXOffset", "buffYOffset", -2, -64
     end
 
-    local auraXSlider = CreateMinimalSlider(leftCol, "X Offset", AURA_COL_X, -80, AURA_COL_WIDTH, "__tempAuraOffsetX", -200, 200, 1, -2, function(value)
+    local auraXSlider = CreateMinimalSlider(leftCol, "X Offset", AURA_COL_X, -128, AURA_COL_WIDTH, "__tempAuraOffsetX", -200, 200, 1, -2, function(value)
         local xKey, yKey = GetAuraOffsetKeys()
         MattMinimalFramesDB[xKey] = value
         if xKey == "debuffXOffset" then
@@ -191,7 +207,7 @@ function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalC
         end
     end, true)
 
-    local auraYSlider = CreateMinimalSlider(leftCol, "Y Offset", AURA_COL_X, -104, AURA_COL_WIDTH, "__tempAuraOffsetY", -200, 200, 1, -64, function(value)
+    local auraYSlider = CreateMinimalSlider(leftCol, "Y Offset", AURA_COL_X, -152, AURA_COL_WIDTH, "__tempAuraOffsetY", -200, 200, 1, -64, function(value)
         local xKey, yKey = GetAuraOffsetKeys()
         MattMinimalFramesDB[yKey] = value
         if yKey == "debuffYOffset" then
@@ -215,7 +231,7 @@ function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalC
     -- Divider
     local divider1 = leftCol:CreateTexture(nil, "ARTWORK")
     divider1:SetSize(AURA_COL_WIDTH, 1)
-    divider1:SetPoint("TOPLEFT", AURA_COL_X, -132)
+    divider1:SetPoint("TOPLEFT", AURA_COL_X, -180)
     divider1:SetColorTexture(0.12, 0.12, 0.15, 1)
 
     ---------------------------------------------------
@@ -223,23 +239,35 @@ function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalC
     ---------------------------------------------------
     local auraTitle = leftCol:CreateFontString(nil, "OVERLAY")
     auraTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    auraTitle:SetPoint("TOPLEFT", AURA_COL_X, -144)
+    auraTitle:SetPoint("TOPLEFT", AURA_COL_X, -192)
     auraTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     auraTitle:SetText("TARGET AURA APPEARANCE")
 
-    local auraIconSlider = CreateMinimalSlider(leftCol, "Icon Size", AURA_COL_X, -168, AURA_COL_WIDTH, "auraIconSize", 12, 40, 1, 18, function(value)
+    local auraIconSlider = CreateMinimalSlider(leftCol, "Icon Size", AURA_COL_X, -216, AURA_COL_WIDTH, "auraIconSize", 12, 40, 1, 18, function(value)
         if MMF_UpdateAuraIconSize then
             MMF_UpdateAuraIconSize(value)
         end
     end, true)
 
-    local auraTextSlider = CreateMinimalSlider(leftCol, "Stack Text", AURA_COL_X, -192, AURA_COL_WIDTH, "auraTextScale", 0.5, 2.0, 0.1, 1.0, function(value)
+    local auraPerRowSlider = CreateMinimalSlider(leftCol, "Icons Per Row", AURA_COL_X, -240, AURA_COL_WIDTH, "auraIconsPerRow", 1, 16, 1, 4, function()
+        if MMF_UpdateAuraLayout then
+            MMF_UpdateAuraLayout()
+        end
+    end, true)
+
+    local auraRowsSlider = CreateMinimalSlider(leftCol, "Rows", AURA_COL_X, -264, AURA_COL_WIDTH, "auraRows", 1, 16, 1, 3, function()
+        if MMF_UpdateAuraLayout then
+            MMF_UpdateAuraLayout()
+        end
+    end, true)
+
+    local auraTextSlider = CreateMinimalSlider(leftCol, "Stack Text", AURA_COL_X, -288, AURA_COL_WIDTH, "auraTextScale", 0.5, 2.0, 0.1, 1.0, function(value)
         if MMF_UpdateAuraTextScale then
             MMF_UpdateAuraTextScale(value)
         end
     end, false)
 
-    local timerTextSlider = CreateMinimalSlider(leftCol, "Timer Text", AURA_COL_X, -216, AURA_COL_WIDTH, "timerTextScale", 0.5, 2.0, 0.1, 1.0, function(value)
+    local timerTextSlider = CreateMinimalSlider(leftCol, "Timer Text", AURA_COL_X, -312, AURA_COL_WIDTH, "timerTextScale", 0.5, 2.0, 0.1, 1.0, function(value)
         if MMF_UpdateTimerTextScale then
             MMF_UpdateTimerTextScale(value)
         end
@@ -248,7 +276,7 @@ function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalC
     -- Divider
     local divider4 = leftCol:CreateTexture(nil, "ARTWORK")
     divider4:SetSize(AURA_COL_WIDTH, 1)
-    divider4:SetPoint("TOPLEFT", AURA_COL_X, -244)
+    divider4:SetPoint("TOPLEFT", AURA_COL_X, -340)
     divider4:SetColorTexture(0.12, 0.12, 0.15, 1)
 
     local generalTitle = leftCol:CreateFontString(nil, "OVERLAY")

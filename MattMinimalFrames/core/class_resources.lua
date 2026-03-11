@@ -409,12 +409,19 @@ local function IsEditModeDragEnabled()
     return MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
 end
 
+local function IsTestModeShiftDragEnabled()
+    return MattMinimalFramesDB and (MattMinimalFramesDB.layoutTestMode == true or MattMinimalFramesDB.auraTestMode == true)
+end
+
 local function CanStartResourceBarDrag(frame)
     if InCombatLockdown() then
         return false
     end
     if IsEditModeDragEnabled() then
         return frame and frame:IsMovable()
+    end
+    if IsTestModeShiftDragEnabled() then
+        return IsShiftKeyDown() and frame and frame:IsMovable()
     end
     local isLocked = MattMinimalFramesDB and MattMinimalFramesDB.locked
     return (not isLocked) and IsShiftKeyDown() and frame and frame:IsMovable()

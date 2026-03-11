@@ -279,6 +279,11 @@ local function Initialize()
             ApplyDefaultsSafe(MattMinimalFramesDB, MattMinimalFrames_Defaults)
         end
     end
+    if MattMinimalFramesDB then
+        -- Always reset preview-only aura test mode on UI load/reload.
+        MattMinimalFramesDB.auraTestMode = false
+        MattMinimalFramesDB.layoutTestMode = false
+    end
     NormalizeGUIScaleSetting()
     if MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true then
         reopenMainGUIAfterEditModeReset = true
@@ -391,6 +396,13 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
                 MMF_ApplyActiveProfileLive()
             end
         end
+        if MattMinimalFramesDB then
+            MattMinimalFramesDB.auraTestMode = false
+            MattMinimalFramesDB.layoutTestMode = false
+        end
+        if MMF_UpdateTargetAuras then
+            MMF_UpdateTargetAuras()
+        end
 
         -- Apply selected SharedMedia again after all addons have loaded.
         ReapplySharedMediaSelections()
@@ -399,9 +411,6 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
         if reopenMainGUIAfterEditModeReset and MMF_ShowWelcomePopup then
             reopenMainGUIAfterEditModeReset = false
             MMF_ShowWelcomePopup(true)
-        end
-        if MMF_ShowNewsPopup then
-            MMF_ShowNewsPopup(false)
         end
     end
 end)

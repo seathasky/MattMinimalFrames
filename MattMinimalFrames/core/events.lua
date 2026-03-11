@@ -4,8 +4,16 @@ local function IsEditModeActive()
     return MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
 end
 
+local function IsAnyTestModeActive()
+    return MattMinimalFramesDB and (MattMinimalFramesDB.layoutTestMode == true or MattMinimalFramesDB.auraTestMode == true)
+end
+
+local function IsLayoutPreviewModeActive()
+    return MattMinimalFramesDB and MattMinimalFramesDB.layoutTestMode == true
+end
+
 local function GetEffectiveLockedState()
-    if IsEditModeActive() then
+    if IsEditModeActive() or IsLayoutPreviewModeActive() then
         return false
     end
     return MattMinimalFramesDB and MattMinimalFramesDB.locked == true
@@ -90,7 +98,9 @@ local function EnsurePetActionBarEditBackdrop(frame)
         if InCombatLockdown and InCombatLockdown() then
             return
         end
-        if not MattMinimalFramesDB or MattMinimalFramesDB.unlockFramesEditMode ~= true then
+        local editMode = MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
+        local testModeShiftDrag = IsAnyTestModeActive() and IsShiftKeyDown()
+        if not editMode and not testModeShiftDrag then
             return
         end
         frame:StartMoving()
@@ -121,7 +131,9 @@ local function EnsurePetActionBarMover()
         if InCombatLockdown and InCombatLockdown() then
             return
         end
-        if not MattMinimalFramesDB or MattMinimalFramesDB.unlockFramesEditMode ~= true then
+        local editMode = MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
+        local testModeShiftDrag = IsAnyTestModeActive() and IsShiftKeyDown()
+        if not editMode and not testModeShiftDrag then
             return
         end
         self:StartMoving()
@@ -194,7 +206,7 @@ local function SetUnitWatchState(frame, enabled)
 end
 
 local function ApplyFrameLockState(locked)
-    local revealHiddenFrames = MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
+    local revealHiddenFrames = IsEditModeActive() or IsLayoutPreviewModeActive()
     for _, frm in ipairs(MMF_GetAllFrames()) do
         if frm then
             frm:SetMovable(true)

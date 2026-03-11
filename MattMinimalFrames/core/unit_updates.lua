@@ -431,9 +431,12 @@ end
 
 local function ApplyCastBarFontSizes(frame, unit)
     if not frame or not unit then return end
-    if unit ~= "player" and unit ~= "target" then return end
+    if unit ~= "player" and unit ~= "target" and unit ~= "focus" then return end
 
-    local castPrefix = (unit == "player") and "playerCastBar" or "targetCastBar"
+    local castPrefix = (unit == "player" and "playerCastBar")
+        or (unit == "target" and "targetCastBar")
+        or (unit == "focus" and "focusCastBar")
+        or "targetCastBar"
     local spellNameSize = tonumber(MattMinimalFramesDB and MattMinimalFramesDB[castPrefix .. "SpellNameTextSize"])
     if not spellNameSize then
         spellNameSize = tonumber(MMF_GetNameTextSize and MMF_GetNameTextSize(unit)) or 12
@@ -570,37 +573,59 @@ local function UpdateHealPrediction(frame)
     local maxHealth = UnitHealthMax(unit)
     local healthTexture = frame.healthBar:GetStatusBarTexture()
     local barWidth = frame.healthBar:GetWidth()
+    local showOverhealPrediction = MattMinimalFramesDB and MattMinimalFramesDB.showOverhealPrediction == true
+    local overflowPixels = 0
+    if showOverhealPrediction then
+        overflowPixels = math.floor(barWidth * 0.08 + 0.5)
+        if overflowPixels < 4 then overflowPixels = 4 end
+        if overflowPixels > 16 then overflowPixels = 16 end
+    end
+
+    if frame.healPredictionClip then
+        frame.healPredictionClip:ClearAllPoints()
+        frame.healPredictionClip:SetPoint("TOPLEFT", frame.healthBar, "TOPLEFT", 0, 0)
+        frame.healPredictionClip:SetPoint("BOTTOMLEFT", frame.healthBar, "BOTTOMLEFT", 0, 0)
+        frame.healPredictionClip:SetWidth(barWidth + overflowPixels)
+    end
 
     frame.myHealPrediction:ClearAllPoints()
     frame.myHealPrediction:SetPoint("TOPLEFT", healthTexture, "TOPRIGHT", 0, 0)
     frame.myHealPrediction:SetPoint("BOTTOMLEFT", healthTexture, "BOTTOMRIGHT", 0, 0)
-    frame.myHealPrediction:SetWidth(barWidth)
+    frame.myHealPrediction:SetWidth(barWidth + overflowPixels)
     frame.myHealPrediction:SetMinMaxValues(0, maxHealth)
 
     local myHealTexture = frame.myHealPrediction:GetStatusBarTexture()
     frame.otherHealPrediction:ClearAllPoints()
     frame.otherHealPrediction:SetPoint("TOPLEFT", myHealTexture, "TOPRIGHT", 0, 0)
     frame.otherHealPrediction:SetPoint("BOTTOMLEFT", myHealTexture, "BOTTOMRIGHT", 0, 0)
-    frame.otherHealPrediction:SetWidth(barWidth)
+    frame.otherHealPrediction:SetWidth(barWidth + overflowPixels)
     frame.otherHealPrediction:SetMinMaxValues(0, maxHealth)
+
+    local myHeal = 0
+    local otherHeal = 0
 
     if Compat.IsRetail and frame.healPredictionCalculator and UnitGetDetailedHealPrediction then
         pcall(function()
             UnitGetDetailedHealPrediction(unit, "player", frame.healPredictionCalculator)
-            local _, playerHeal, otherHeal = frame.healPredictionCalculator:GetIncomingHeals()
-            frame.myHealPrediction:SetValue(playerHeal or 0)
-            frame.otherHealPrediction:SetValue(otherHeal or 0)
+            local _, playerHeal, incomingOtherHeal = frame.healPredictionCalculator:GetIncomingHeals()
+            myHeal = playerHeal or 0
+            otherHeal = incomingOtherHeal or 0
         end)
     elseif UnitGetIncomingHeals then
-        local myHeal = UnitGetIncomingHeals(unit, "player") or 0
+        myHeal = UnitGetIncomingHeals(unit, "player") or 0
         local allHeal = UnitGetIncomingHeals(unit) or 0
-        frame.myHealPrediction:SetValue(myHeal)
-        local otherHeal = 0
+        otherHeal = 0
         pcall(function()
             otherHeal = allHeal - myHeal
         end)
-        frame.otherHealPrediction:SetValue(otherHeal)
     end
+
+    if SafeIsLess(otherHeal, 0) then
+        otherHeal = 0
+    end
+
+    frame.myHealPrediction:SetValue(myHeal)
+    frame.otherHealPrediction:SetValue(otherHeal)
 
     frame.myHealPrediction:Show()
     frame.otherHealPrediction:Show()
@@ -659,12 +684,15 @@ local function UpdateCastBarForEditMode(frame, unit, unlockedEditMode, db)
     if not frame or not frame.castBarFrame then
         return
     end
-    if unit ~= "player" and unit ~= "target" then
+    if unit ~= "player" and unit ~= "target" and unit ~= "focus" then
         return
     end
 
-    local enabledKey = (unit == "player") and "showPlayerCastBar" or "showTargetCastBar"
-    if db and db[enabledKey] == false then
+    local enabledKey = (unit == "player" and "showPlayerCastBar")
+        or (unit == "target" and "showTargetCastBar")
+        or (unit == "focus" and "showFocusCastBar")
+        or "showTargetCastBar"
+    if db and db[enabledKey] == false and unlockedEditMode ~= true then
         frame.castBarFrame:Hide()
         return
     end
@@ -684,6 +712,8 @@ local function UpdateCastBarForEditMode(frame, unit, unlockedEditMode, db)
             if frame.castBarText then
                 if unit == "player" then
                     frame.castBarText:SetText("Player Cast Bar")
+                elseif unit == "focus" then
+                    frame.castBarText:SetText("Focus Cast Bar")
                 else
                     frame.castBarText:SetText("Target Cast Bar")
                 end
@@ -726,14 +756,19 @@ local function UpdateUnitFrame(frame)
     local hideHPText = MMF_IsHPTextHidden and MMF_IsHPTextHidden(unit)
 
     local unlockedEditMode = (db.unlockFramesEditMode == true)
+    local layoutTestMode = (db.layoutTestMode == true)
+    local previewMode = (unlockedEditMode or layoutTestMode)
+    local auraTestPreviewTarget = (unit == "target" and db.auraTestMode == true and not UnitExists(unit))
 
     if hideNameText then
         frame.nameText:SetText("")
         frame.nameText:Hide()
         ApplyNameTextFontSize(frame, MMF_GetNameTextSize and MMF_GetNameTextSize(unit) or tonumber(db.nameTextSize) or 12)
     elseif not UnitExists(unit) then
-        if unlockedEditMode then
+        if previewMode then
             frame.nameText:SetText((frame.frameLabel and (frame.frameLabel .. " (Edit)")) or (unit .. " (Edit)"))
+        elseif auraTestPreviewTarget then
+            frame.nameText:SetText("Target (Preview)")
         else
             frame.nameText:SetText("")
         end
@@ -760,6 +795,10 @@ local function UpdateUnitFrame(frame)
 
     local maxHP = UnitHealthMax(unit)
     local hp = UnitHealth(unit)
+    if auraTestPreviewTarget then
+        maxHP = 1000000
+        hp = 1000000
+    end
 
     if frame.healthBar then
         frame.healthBar:SetMinMaxValues(0, maxHP)
@@ -784,7 +823,7 @@ local function UpdateUnitFrame(frame)
         if hideHPText then
             frame.hpText:SetText("")
             frame.hpText:Hide()
-        elseif unlockedEditMode and not UnitExists(unit) then
+        elseif (previewMode or auraTestPreviewTarget) and not UnitExists(unit) then
             frame.hpText:SetText("100% | 999k")
             frame.hpText:Show()
         else
@@ -798,7 +837,7 @@ local function UpdateUnitFrame(frame)
 
     UpdateHealPrediction(frame)
     UpdateAbsorbBar(frame)
-    UpdateCastBarForEditMode(frame, unit, unlockedEditMode, db)
+    UpdateCastBarForEditMode(frame, unit, previewMode, db)
 
     if unit ~= "player" and unit ~= "target"
         and unit ~= "targettarget" and unit ~= "pet" and unit ~= "focus"
@@ -843,6 +882,10 @@ local function UpdateUnitFrame(frame)
                 maxPower = UnitPowerMax(unit)
                 power = UnitPower(unit)
             end
+        end
+        if previewMode and not UnitExists(unit) then
+            maxPower = 100
+            power = 72
         end
         local hasPower = false
         pcall(function()

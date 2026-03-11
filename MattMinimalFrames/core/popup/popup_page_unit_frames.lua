@@ -51,14 +51,14 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
 
     local sectionDefs = {
         { label = "Layout", subtitle = "Scale and frame sizing controls.", x = 0, y = 8, width = 288, height = 122 },
-        { label = "Text", subtitle = "Font sizes, truncation, HP text format, and name behavior.", x = 0, y = 126, width = 288, height = 270, maskTop = 12 },
+        { label = "Text", subtitle = "Font sizes, truncation, HP text format, and name behavior.", x = 0, y = 98, width = 288, height = 300, maskTop = 12 },
         { label = "Visibility", subtitle = "Choose when name and HP text are shown.", x = 0, y = 410, width = 288, height = 124 },
         { label = "Offsets", subtitle = "Adjust text positions for each supported unit.", x = 0, y = 544, width = 288, height = 174 },
-        { label = "Cast Bars", subtitle = "Cast bar settings.", x = 300, y = 112, width = 288, height = 146 },
+        { label = "Cast Bars", subtitle = "Cast bar settings.", x = 300, y = 112, width = 288, height = 170 },
         { label = "OOC", subtitle = "Out-of-combat visibility and fade rules.", x = 300, y = 258, width = 288, height = 184 },
         { label = "Media", subtitle = "Textures, fonts, and frame colors.", x = 588, y = 6, width = 300, height = 220 },
         { label = "Icons", subtitle = "Icon positions, sizes, and target markers.", x = 588, y = 236, width = 300, height = 266 },
-        { label = "Overlays", subtitle = "Heal prediction and absorb overlay settings.", x = 588, y = 512, width = 300, height = 78 },
+        { label = "Overlays", subtitle = "Heal prediction and absorb overlay settings.", x = 588, y = 512, width = 300, height = 102 },
     }
 
     local activeSectionIndex = tonumber(MattMinimalFramesDB.unitFramesSubTab) or 1
@@ -150,22 +150,10 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local GetCurrentPlayerIconModeValue = getCurrentPlayerIconModeValue or function() return "off" end
     local GetCurrentTargetIconModeValue = getCurrentTargetIconModeValue or function() return "off" end
     local pageShell = unitFramesCol
-    local castBarColorList
-    local unitTextureList
-    local unitFontList
-    local playerBarColorList
-    local targetBarColorList
-    local totBarColorList
-    local playerIconModeList
-    local targetIconModeList
-    local scaleUnitList
-    local frameTextUnitList
-    local nameTextUnitList
-    local hpTextUnitList
-    local hideNameTextUnitList
-    local hideHPTextUnitList
+    local dropdownLists = {}
     local UpdatePlayerIconModeButtonText = function() end
     local RefreshPredictionVisuals
+    local frameTextTitle
     local headerState = MMF_SetupUnitFramesHeader(pageShell, ACCENT_COLOR, createSubTabBar, scrollToSectionOffset, requestScrollRefresh)
     unitFramesCol = headerState and headerState.contentRoot or unitFramesCol
     local LEFT_COL_X = 12
@@ -258,6 +246,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         if unit == "boss" then return "boss" end
         if unit == "playerCastBar" then return "playerCastBar" end
         if unit == "targetCastBar" then return "targetCastBar" end
+        if unit == "focusCastBar" then return "focusCastBar" end
         return unit
     end
 
@@ -308,7 +297,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         end
     end
 
-    nameTextUnitList = nameUnitDropdown.list
+    dropdownLists.nameTextUnitList = nameUnitDropdown.list
 
     local hpUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
@@ -357,7 +346,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         end
     end
 
-    hpTextUnitList = hpUnitDropdown.list
+    dropdownLists.hpTextUnitList = hpUnitDropdown.list
 
     UpdateNameUnitButtonText()
     UpdateVisibleNameOffsetSliders()
@@ -416,7 +405,11 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         StaticPopup_Show("MMF_RELOADUI")
     end)
 
-    local hideBlizzardCastBarCheck = CreateMinimalCheckbox(unitFramesCol, "Hide Blizzard Cast Bar", MIDDLE_COL_X, -212 + RIGHT_COL_Y_OFFSET, "hideBlizzardPlayerCastBar", false, function()
+    CreateMinimalCheckbox(unitFramesCol, "Focus Cast Bar", MIDDLE_COL_X, -212 + RIGHT_COL_Y_OFFSET, "showFocusCastBar", true, function()
+        StaticPopup_Show("MMF_RELOADUI")
+    end)
+
+    local hideBlizzardCastBarCheck = CreateMinimalCheckbox(unitFramesCol, "Hide Blizzard Cast Bar", MIDDLE_COL_X, -236 + RIGHT_COL_Y_OFFSET, "hideBlizzardPlayerCastBar", false, function()
         if MMF_UpdateBlizzardPlayerCastBarVisibility then
             MMF_UpdateBlizzardPlayerCastBarVisibility()
         end
@@ -426,7 +419,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local castBarColorDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = MIDDLE_COL_X,
-        y = -236 + RIGHT_COL_Y_OFFSET,
+        y = -260 + RIGHT_COL_Y_OFFSET,
         width = MIDDLE_COL_WIDTH,
         labelWidth = MIDDLE_LABEL_WIDTH,
         buttonOffset = MIDDLE_BUTTON_OFFSET,
@@ -443,7 +436,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
             StaticPopup_Show("MMF_RELOADUI")
         end,
     })
-    castBarColorList = castBarColorDropdown.list
+    dropdownLists.castBarColorList = castBarColorDropdown.list
 
     if MattMinimalFramesDB.enableCombatFrameVisibility == nil then
         MattMinimalFramesDB.enableCombatFrameVisibility = false
@@ -489,6 +482,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     combatVisibilityWarning:SetText("Range Check Disabled")
     combatVisibilityWarning:SetShown(IsCheckedFlag(MattMinimalFramesDB.enableCombatFrameVisibility))
 
+    local hidePlayerOOCCheck
     local playerOpacitySlider
     local targetOpacitySlider
     local fadeTimeSlider
@@ -534,7 +528,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         end
     end
 
-    CreateMinimalCheckbox(unitFramesCol, "Hide Player OOC", MIDDLE_COL_X, -346 + RIGHT_COL_Y_OFFSET, "enableCombatFrameVisibility", false, function()
+    hidePlayerOOCCheck = CreateMinimalCheckbox(unitFramesCol, "Hide Player OOC", MIDDLE_COL_X, -346 + RIGHT_COL_Y_OFFSET, "enableCombatFrameVisibility", false, function()
         RefreshCombatVisibilityControlStates()
         if MMF_UpdateCombatFrameVisibility then
             MMF_UpdateCombatFrameVisibility()
@@ -671,7 +665,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
             ApplySelectedTexture(value)
         end,
     })
-    unitTextureList = unitTextureDropdown.list
+    dropdownLists.unitTextureList = unitTextureDropdown.list
 
     local fontOptions = MMF_GetFontOptions and MMF_GetFontOptions() or { "MMF Naowh" }
 
@@ -758,7 +752,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
             ApplySelectedFont(value)
         end,
     })
-    unitFontList = unitFontDropdown.list
+    dropdownLists.unitFontList = unitFontDropdown.list
 
     local playerBarColorOptions = (MMF_Config and MMF_Config.PLAYER_BAR_COLORS) or {
         { value = "class", label = "Class (Default)" },
@@ -809,7 +803,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
             end
         end,
     })
-    playerBarColorList = playerBarColorDropdown.list
+    dropdownLists.playerBarColorList = playerBarColorDropdown.list
 
     local targetBarColorOptions = (MMF_Config and MMF_Config.TARGET_BAR_COLORS) or {
         { value = "default", label = "Default" },
@@ -856,7 +850,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
             end
         end,
     })
-    targetBarColorList = targetBarColorDropdown.list
+    dropdownLists.targetBarColorList = targetBarColorDropdown.list
 
     local function GetSelectedTOTBarColorMode()
         local selected = NormalizeSelectionValue(MattMinimalFramesDB and MattMinimalFramesDB.totBarColorMode, "default")
@@ -894,7 +888,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
             end
         end,
     })
-    totBarColorList = totBarColorDropdown.list
+    dropdownLists.totBarColorList = totBarColorDropdown.list
 
     local styleDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     styleDivider:SetSize(RIGHT_COL_WIDTH, 1)
@@ -1039,7 +1033,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
             UpdatePlayerIconModeButtonText()
         end,
     })
-    playerIconModeList = playerIconModeDropdown.list
+    dropdownLists.playerIconModeList = playerIconModeDropdown.list
 
     UpdatePlayerIconModeButtonText = function()
         playerIconModeDropdown.SetSelectedValue(GetCurrentPlayerIconDropdownValue())
@@ -1095,7 +1089,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
             end
         end,
     })
-    targetIconModeList = targetIconModeDropdown.list
+    dropdownLists.targetIconModeList = targetIconModeDropdown.list
 
     local function NormalizeIconOffset(value)
         local offset = tonumber(value) or 0
@@ -1358,7 +1352,11 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         52
     )
 
-    local absorbBarCheck = CreateMinimalCheckbox(unitFramesCol, "Absorb Bar", RIGHT_COL_X, (-766 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showAbsorbBar", true, function()
+    local overhealPredictionCheck = CreateMinimalCheckbox(unitFramesCol, "Overheal", RIGHT_COL_X, (-766 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showOverhealPrediction", false, function()
+        RefreshPredictionVisuals()
+    end)
+
+    local absorbBarCheck = CreateMinimalCheckbox(unitFramesCol, "Absorb Bar", RIGHT_COL_X, (-790 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showAbsorbBar", true, function()
         RefreshPredictionVisuals()
     end)
     CreateHintIcon(
@@ -1379,6 +1377,18 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         { value = "boss", label = "Boss" },
         { value = "playerCastBar", label = "Player Cast Bar" },
         { value = "targetCastBar", label = "Target Cast Bar" },
+        { value = "focusCastBar", label = "Focus Cast Bar" },
+    }
+    local textUnitOptions = {
+        { value = "player", label = "Player" },
+        { value = "target", label = "Target" },
+        { value = "targettarget", label = "Target of Target" },
+        { value = "pet", label = "Pet" },
+        { value = "focus", label = "Focus" },
+        { value = "boss", label = "Boss" },
+        { value = "playerCastBar", label = "Player Cast Bar" },
+        { value = "targetCastBar", label = "Target Cast Bar" },
+        { value = "focusCastBar", label = "Focus Cast Bar" },
     }
     MattMinimalFramesDB.frameScaleUnit = MattMinimalFramesDB.frameScaleUnit or "player"
 
@@ -1406,12 +1416,12 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local scaleYSliders = {}
     for _, opt in ipairs(scaleUnitOptions) do
         local prefix = GetPopupUnitPrefix(opt.value)
-        scaleXSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Scale X", LEFT_COL_X, -82, LEFT_COL_WIDTH, prefix .. "FrameScaleX", 0.5, 3.0, 0.05, 1.0, function()
+        scaleXSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Scale X", LEFT_COL_X, -64, LEFT_COL_WIDTH, prefix .. "FrameScaleX", 0.5, 3.0, 0.05, 1.0, function()
             if MMF_UpdateFrameScale then
                 MMF_UpdateFrameScale(opt.value)
             end
         end, false)
-        scaleYSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Scale Y", LEFT_COL_X, -106, LEFT_COL_WIDTH, prefix .. "FrameScaleY", 0.5, 5.0, 0.05, 1.0, function()
+        scaleYSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "Scale Y", LEFT_COL_X, -88, LEFT_COL_WIDTH, prefix .. "FrameScaleY", 0.5, 5.0, 0.05, 1.0, function()
             if MMF_UpdateFrameScale then
                 MMF_UpdateFrameScale(opt.value)
             end
@@ -1432,7 +1442,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local scaleUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = LEFT_COL_X,
-        y = -56,
+        y = -40,
         width = LEFT_COL_WIDTH,
         labelWidth = LEFT_LABEL_WIDTH,
         buttonOffset = LEFT_BUTTON_OFFSET,
@@ -1448,12 +1458,38 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
             UpdateVisibleScaleSliders()
         end,
     })
-    scaleUnitList = scaleUnitDropdown.list
+    dropdownLists.scaleUnitList = scaleUnitDropdown.list
     UpdateVisibleScaleSliders()
 
     local function UpdateLayoutSectionVisibility(sectionIndex)
-        local isLayout = (tonumber(sectionIndex) == 1)
+        local numericSection = tonumber(sectionIndex)
+        local isLayout = (numericSection == 1)
+        local isText = (numericSection == 2)
+        local isOOC = (numericSection == 6)
         frameScaleTitle:SetShown(isLayout)
+        combatVisibilityTitle:SetShown(isOOC)
+        combatVisibilitySubtext:SetShown(isOOC)
+        if combatVisibilityWarning then
+            combatVisibilityWarning:SetShown(isOOC and IsCheckedFlag(MattMinimalFramesDB.enableCombatFrameVisibility))
+        end
+        if hidePlayerOOCCheck then
+            hidePlayerOOCCheck:SetShown(isOOC)
+        end
+        if showPlayerOnTargetCheck then
+            showPlayerOnTargetCheck:SetShown(isOOC)
+        end
+        if playerOpacitySlider then
+            playerOpacitySlider:SetShown(isOOC)
+        end
+        if targetOpacitySlider then
+            targetOpacitySlider:SetShown(isOOC)
+        end
+        if fadeTimeSlider then
+            fadeTimeSlider:SetShown(isOOC)
+        end
+        if frameTextTitle then
+            frameTextTitle:SetShown(isText)
+        end
         if scaleUnitDropdown and scaleUnitDropdown.container then
             scaleUnitDropdown.container:SetShown(isLayout)
         end
@@ -1475,9 +1511,9 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     end
 
     -- Frame Text section (moved here)
-    local frameTextTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    frameTextTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     frameTextTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    frameTextTitle:SetPoint("TOPLEFT", LEFT_COL_X, -132)
+    frameTextTitle:SetPoint("TOPLEFT", LEFT_COL_X, -104)
     frameTextTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     frameTextTitle:SetText("FRAME TEXT")
 
@@ -1503,7 +1539,17 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     end
 
     local function IsCastBarTextUnit(unit)
-        return unit == "playerCastBar" or unit == "targetCastBar"
+        return unit == "playerCastBar" or unit == "targetCastBar" or unit == "focusCastBar"
+    end
+
+    local function GetCastBarOwnerUnit(unit)
+        if unit == "playerCastBar" then
+            return "player"
+        end
+        if unit == "focusCastBar" then
+            return "focus"
+        end
+        return "target"
     end
 
     local function GetNameTextSizeForUnit(unit)
@@ -1537,7 +1583,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
             return 12
         end
         local key = unit .. "SpellNameTextSize"
-        local ownerUnit = (unit == "playerCastBar") and "player" or "target"
+        local ownerUnit = GetCastBarOwnerUnit(unit)
         local fallback = tonumber(MMF_GetNameTextSize and MMF_GetNameTextSize(ownerUnit)) or 12
         local value = tonumber(MattMinimalFramesDB[key])
         if not value then
@@ -1565,7 +1611,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     MattMinimalFramesDB.textSizeUnit = MattMinimalFramesDB.textSizeUnit or "player"
     local frameTextUnitValid = false
-    for _, option in ipairs(scaleUnitOptions) do
+    for _, option in ipairs(textUnitOptions) do
         if option.value == MattMinimalFramesDB.textSizeUnit then
             frameTextUnitValid = true
             break
@@ -1638,14 +1684,14 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local frameTextUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = LEFT_COL_X,
-        y = -144,
+        y = -128,
         width = LEFT_COL_WIDTH,
         labelWidth = LEFT_LABEL_WIDTH,
         buttonOffset = LEFT_BUTTON_OFFSET,
         buttonWidth = LEFT_BUTTON_WIDTH,
-        visibleRows = #scaleUnitOptions,
+        visibleRows = #textUnitOptions,
         label = "Text Unit",
-        options = scaleUnitOptions,
+        options = textUnitOptions,
         getValue = function()
             return MattMinimalFramesDB.textSizeUnit
         end,
@@ -1655,9 +1701,9 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
             UpdateFrameTextModeVisibility()
         end,
     })
-    frameTextUnitList = frameTextUnitDropdown.list
+    dropdownLists.frameTextUnitList = frameTextUnitDropdown.list
 
-    nameTextSlider = CreateMinimalSlider(unitFramesCol, "Name Size", LEFT_COL_X, -168, LEFT_COL_WIDTH, "__tempNameTextSize", 8, 20, 1, 12, function(value)
+    nameTextSlider = CreateMinimalSlider(unitFramesCol, "Name Size", LEFT_COL_X, -152, LEFT_COL_WIDTH, "__tempNameTextSize", 8, 20, 1, 12, function(value)
         if syncingFrameTextSize then return end
         local unit = MattMinimalFramesDB.textSizeUnit or "player"
         local key = GetTextSizePrefix(unit) .. "NameTextSize"
@@ -1675,7 +1721,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         end
     end, true)
 
-    hpTextSlider = CreateMinimalSlider(unitFramesCol, "HP Size", LEFT_COL_X, -192, LEFT_COL_WIDTH, "__tempHPTextSize", 8, 20, 1, 13, function(value)
+    hpTextSlider = CreateMinimalSlider(unitFramesCol, "HP Size", LEFT_COL_X, -176, LEFT_COL_WIDTH, "__tempHPTextSize", 8, 20, 1, 13, function(value)
         if syncingFrameTextSize then return end
         local unit = MattMinimalFramesDB.textSizeUnit or "player"
         local key = GetTextSizePrefix(unit) .. "HPTextSize"
@@ -1685,13 +1731,13 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         end
     end, true)
 
-    spellNameTextSlider = CreateMinimalSlider(unitFramesCol, "Spell Name", LEFT_COL_X, -216, LEFT_COL_WIDTH, "__tempSpellNameTextSize", 8, 20, 1, 12, function(value)
+    spellNameTextSlider = CreateMinimalSlider(unitFramesCol, "Spell Name", LEFT_COL_X, -200, LEFT_COL_WIDTH, "__tempSpellNameTextSize", 8, 20, 1, 12, function(value)
         if syncingFrameTextSize then return end
         local unit = MattMinimalFramesDB.textSizeUnit or "player"
         if not IsCastBarTextUnit(unit) then return end
         MattMinimalFramesDB[unit .. "SpellNameTextSize"] = value
         if MMF_GetFrameForUnit and MMF_UpdateUnitFrame then
-            local ownerUnit = (unit == "playerCastBar") and "player" or "target"
+            local ownerUnit = GetCastBarOwnerUnit(unit)
             local frame = MMF_GetFrameForUnit(ownerUnit)
             if frame then
                 MMF_UpdateUnitFrame(frame)
@@ -1702,13 +1748,13 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     end, true)
     spellNameTextSlider:Hide()
 
-    castTimeTextSlider = CreateMinimalSlider(unitFramesCol, "Cast Time", LEFT_COL_X, -240, LEFT_COL_WIDTH, "__tempCastTimeTextSize", 8, 20, 1, 9, function(value)
+    castTimeTextSlider = CreateMinimalSlider(unitFramesCol, "Cast Time", LEFT_COL_X, -224, LEFT_COL_WIDTH, "__tempCastTimeTextSize", 8, 20, 1, 9, function(value)
         if syncingFrameTextSize then return end
         local unit = MattMinimalFramesDB.textSizeUnit or "player"
         if not IsCastBarTextUnit(unit) then return end
         MattMinimalFramesDB[unit .. "CastTimeTextSize"] = value
         if MMF_GetFrameForUnit and MMF_UpdateUnitFrame then
-            local ownerUnit = (unit == "playerCastBar") and "player" or "target"
+            local ownerUnit = GetCastBarOwnerUnit(unit)
             local frame = MMF_GetFrameForUnit(ownerUnit)
             if frame then
                 MMF_UpdateUnitFrame(frame)
@@ -1768,7 +1814,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         SetCheckboxEnabled(autoResizeNameCheck, not truncEnabled)
     end
 
-    truncateNameCheck = CreateMinimalCheckbox(unitFramesCol, "Manual Name Truncate", LEFT_COL_X, -216, "enableNameTruncation", false, function(checked)
+    truncateNameCheck = CreateMinimalCheckbox(unitFramesCol, "Manual Name Truncate", LEFT_COL_X, -200, "enableNameTruncation", false, function(checked)
         MattMinimalFramesDB.enableNameTruncation = checked and true or false
         if checked and MattMinimalFramesDB.autoResizeTextOnLongName then
             MattMinimalFramesDB.autoResizeTextOnLongName = false
@@ -1781,11 +1827,11 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         RequestNameTextRefresh()
     end)
 
-    truncateNameSlider = CreateMinimalSlider(unitFramesCol, "Truncate Length", LEFT_COL_X, -240, LEFT_COL_WIDTH, "nameTruncationLength", 5, 30, 1, 14, function()
+    truncateNameSlider = CreateMinimalSlider(unitFramesCol, "Truncate Length", LEFT_COL_X, -224, LEFT_COL_WIDTH, "nameTruncationLength", 5, 30, 1, 14, function()
         RequestNameTextRefresh()
     end, true)
 
-    autoResizeNameCheck = CreateMinimalCheckbox(unitFramesCol, "Auto Resize Text On Long Name", LEFT_COL_X, -264, "autoResizeTextOnLongName", false, function(checked)
+    autoResizeNameCheck = CreateMinimalCheckbox(unitFramesCol, "Auto Resize Text On Long Name", LEFT_COL_X, -248, "autoResizeTextOnLongName", false, function(checked)
         MattMinimalFramesDB.autoResizeTextOnLongName = checked and true or false
         if checked and MattMinimalFramesDB.enableNameTruncation then
             MattMinimalFramesDB.enableNameTruncation = false
@@ -1909,7 +1955,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
             SetHideNameCheckboxFromDB()
         end,
     })
-    hideNameTextUnitList = hideNameUnitDropdown.list
+    dropdownLists.hideNameTextUnitList = hideNameUnitDropdown.list
 
     hideNameTextCheckbox = CreateMinimalCheckbox(unitFramesCol, "Hide Name Text", LEFT_COL_X, -456, "__tempHideNameText", false, function(checked)
         local unit = MattMinimalFramesDB.textHideNameUnit
@@ -1940,7 +1986,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
             SetHideHPCheckboxFromDB()
         end,
     })
-    hideHPTextUnitList = hideHPUnitDropdown.list
+    dropdownLists.hideHPTextUnitList = hideHPUnitDropdown.list
 
     hideHPTextCheckbox = CreateMinimalCheckbox(unitFramesCol, "Hide HP Text", LEFT_COL_X, -510, "__tempHideHPText", false, function(checked)
         local unit = MattMinimalFramesDB.textHideHPUnit
@@ -1952,23 +1998,29 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     MattMinimalFramesDB.__tempHideHPText = nil
     SetHideHPCheckboxFromDB()
 
+    CreateMinimalCheckbox(unitFramesCol, "Hide Boss Frames", LEFT_COL_X, -534, "hideBossFrames", false, function()
+        if MMF_UpdateCombatFrameVisibility then
+            MMF_UpdateCombatFrameVisibility()
+        end
+    end)
+
     ---------------------------------------------------
 
     return {
-        castBarColorList = castBarColorList,
-        unitTextureList = unitTextureList,
-        unitFontList = unitFontList,
-        playerBarColorList = playerBarColorList,
-        targetBarColorList = targetBarColorList,
-        totBarColorList = totBarColorList,
-        playerIconModeList = playerIconModeList,
-        targetIconModeList = targetIconModeList,
-        scaleUnitList = scaleUnitList,
-        frameTextUnitList = frameTextUnitList,
-        nameTextUnitList = nameTextUnitList,
-        hpTextUnitList = hpTextUnitList,
-        hideNameTextUnitList = hideNameTextUnitList,
-        hideHPTextUnitList = hideHPTextUnitList,
+        castBarColorList = dropdownLists.castBarColorList,
+        unitTextureList = dropdownLists.unitTextureList,
+        unitFontList = dropdownLists.unitFontList,
+        playerBarColorList = dropdownLists.playerBarColorList,
+        targetBarColorList = dropdownLists.targetBarColorList,
+        totBarColorList = dropdownLists.totBarColorList,
+        playerIconModeList = dropdownLists.playerIconModeList,
+        targetIconModeList = dropdownLists.targetIconModeList,
+        scaleUnitList = dropdownLists.scaleUnitList,
+        frameTextUnitList = dropdownLists.frameTextUnitList,
+        nameTextUnitList = dropdownLists.nameTextUnitList,
+        hpTextUnitList = dropdownLists.hpTextUnitList,
+        hideNameTextUnitList = dropdownLists.hideNameTextUnitList,
+        hideHPTextUnitList = dropdownLists.hideHPTextUnitList,
         UpdatePlayerIconModeButtonText = UpdatePlayerIconModeButtonText,
         ApplyInitialSection = headerState and headerState.ApplyInitialSection,
     }
