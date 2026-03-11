@@ -357,7 +357,9 @@ local function IsPreviewRevealModeActive()
     if not MattMinimalFramesDB then
         return false
     end
-    return MattMinimalFramesDB.unlockFramesEditMode == true or MattMinimalFramesDB.layoutTestMode == true
+    return MattMinimalFramesDB.unlockFramesEditMode == true
+        or MattMinimalFramesDB.layoutTestMode == true
+        or MattMinimalFramesDB.auraTestMode == true
 end
 
 local function ApplyBossFrameVisibility()
@@ -389,9 +391,17 @@ local function ApplyBossFrameVisibility()
                 frame:SetAlpha(1)
                 frame.mmfSuppressCombatVisibilityOnShow = true
                 frame:Hide()
+            elseif revealHiddenFrames then
+                -- Keep unit watch suspended in preview/edit mode so boss frames
+                -- do not auto-hide when no live boss unit exists.
+                SuspendUnitWatch(frame)
+                StopAlphaDriver(frame)
+                frame:SetAlpha(1)
+                frame.mmfSuppressCombatVisibilityOnShow = true
+                frame:Show()
             else
                 ResumeUnitWatch(frame)
-                if revealHiddenFrames or (type(UnitExists) == "function" and UnitExists(unit)) then
+                if type(UnitExists) == "function" and UnitExists(unit) then
                     frame.mmfSuppressCombatVisibilityOnShow = true
                     frame:Show()
                 else

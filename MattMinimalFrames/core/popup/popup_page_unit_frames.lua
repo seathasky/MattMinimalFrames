@@ -52,7 +52,7 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
     local sectionDefs = {
         { label = "Layout", subtitle = "Scale and frame sizing controls.", x = 0, y = 8, width = 288, height = 122 },
         { label = "Text", subtitle = "Font sizes, truncation, HP text format, and name behavior.", x = 0, y = 98, width = 288, height = 300, maskTop = 12 },
-        { label = "Visibility", subtitle = "Choose when name and HP text are shown.", x = 0, y = 410, width = 288, height = 124 },
+        { label = "Visibility", subtitle = "Choose when name, HP text, and boss frames are shown.", x = 0, y = 410, width = 288, height = 124 },
         { label = "Offsets", subtitle = "Adjust text positions for each supported unit.", x = 0, y = 544, width = 288, height = 174 },
         { label = "Cast Bars", subtitle = "Cast bar settings.", x = 300, y = 112, width = 288, height = 170 },
         { label = "OOC", subtitle = "Out-of-combat visibility and fade rules.", x = 300, y = 258, width = 288, height = 184 },
@@ -1848,7 +1848,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
 
     local textVisibilityTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     textVisibilityTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    textVisibilityTitle:SetPoint("TOPLEFT", LEFT_COL_X, -416)
+    textVisibilityTitle:SetPoint("TOPLEFT", LEFT_COL_X, -412)
     textVisibilityTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
     textVisibilityTitle:SetText("TEXT VISIBILITY")
 
@@ -1939,7 +1939,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local hideNameUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = LEFT_COL_X,
-        y = -432,
+        y = -428,
         width = LEFT_COL_WIDTH,
         labelWidth = LEFT_LABEL_WIDTH,
         buttonOffset = LEFT_BUTTON_OFFSET,
@@ -1957,7 +1957,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     })
     dropdownLists.hideNameTextUnitList = hideNameUnitDropdown.list
 
-    hideNameTextCheckbox = CreateMinimalCheckbox(unitFramesCol, "Hide Name Text", LEFT_COL_X, -456, "__tempHideNameText", false, function(checked)
+    hideNameTextCheckbox = CreateMinimalCheckbox(unitFramesCol, "Hide Name Text", LEFT_COL_X, -452, "__tempHideNameText", false, function(checked)
         local unit = MattMinimalFramesDB.textHideNameUnit
         local prefix = GetUnitPrefix(unit)
         MattMinimalFramesDB[prefix .. "HideNameText"] = checked and true or false
@@ -1970,7 +1970,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local hideHPUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         x = LEFT_COL_X,
-        y = -486,
+        y = -468,
         width = LEFT_COL_WIDTH,
         labelWidth = LEFT_LABEL_WIDTH,
         buttonOffset = LEFT_BUTTON_OFFSET,
@@ -1988,7 +1988,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     })
     dropdownLists.hideHPTextUnitList = hideHPUnitDropdown.list
 
-    hideHPTextCheckbox = CreateMinimalCheckbox(unitFramesCol, "Hide HP Text", LEFT_COL_X, -510, "__tempHideHPText", false, function(checked)
+    hideHPTextCheckbox = CreateMinimalCheckbox(unitFramesCol, "Hide HP Text", LEFT_COL_X, -492, "__tempHideHPText", false, function(checked)
         local unit = MattMinimalFramesDB.textHideHPUnit
         local prefix = GetUnitPrefix(unit)
         MattMinimalFramesDB[prefix .. "HideHPText"] = checked and true or false
@@ -1998,7 +1998,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     MattMinimalFramesDB.__tempHideHPText = nil
     SetHideHPCheckboxFromDB()
 
-    CreateMinimalCheckbox(unitFramesCol, "Hide Boss Frames", LEFT_COL_X, -534, "hideBossFrames", false, function()
+    CreateMinimalCheckbox(unitFramesCol, "Hide Boss Frames", LEFT_COL_X, -512, "hideBossFrames", false, function()
         if MMF_UpdateCombatFrameVisibility then
             MMF_UpdateCombatFrameVisibility()
         end

@@ -36,7 +36,18 @@ local function GetVisibleAuraLimit()
 end
 
 local function IsAuraTestModeEnabled()
-    return MattMinimalFramesDB and MattMinimalFramesDB.auraTestMode == true
+    if not MattMinimalFramesDB or MattMinimalFramesDB.auraTestMode ~= true then
+        return false
+    end
+
+    -- Outside of edit/layout preview, suppress fake aura previews in combat.
+    local isPreviewMode = (MattMinimalFramesDB.unlockFramesEditMode == true)
+        or (MattMinimalFramesDB.layoutTestMode == true)
+    if not isPreviewMode and (type(InCombatLockdown) == "function") and InCombatLockdown() then
+        return false
+    end
+
+    return true
 end
 
 local function SetAuraTestPreviewFrameState(enabled)
@@ -447,11 +458,15 @@ end
 
 local auraEventFrame = CreateFrame("Frame")
 auraEventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+auraEventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
+auraEventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 auraEventFrame:RegisterEvent("UNIT_AURA")
 auraEventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
 auraEventFrame:SetScript("OnEvent", function(self, event, unit)
     if event == "PLAYER_ENTERING_WORLD" then
         MMF_SetupTargetAuras()
+        MMF_UpdateTargetAuras()
+    elseif event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
         MMF_UpdateTargetAuras()
     elseif event == "UNIT_AURA" and unit == "target" then
         MMF_UpdateTargetAuras()

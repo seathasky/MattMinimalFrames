@@ -657,6 +657,9 @@ function MMF_ShowWelcomePopup(forceShow)
         if MMF_RefreshFrameLockState then
             MMF_RefreshFrameLockState()
         end
+        if MMF_UpdateCombatFrameVisibility then
+            MMF_UpdateCombatFrameVisibility()
+        end
         if MMF_UpdateTargetAuras then
             MMF_UpdateTargetAuras()
         end
