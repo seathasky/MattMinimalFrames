@@ -141,7 +141,8 @@ local mmfDefaults = {
     hpTextScaleX = 1.0,
     hpTextScaleY = 1.0,
     hpTextUseShortValue = true,
-    showHPPercentText = true,
+    showHPValueText = true,
+    showHPPercentText = false,
     showPowerPercentText = false,
     textOffsetNameUnit = "player",
     textOffsetHPUnit = "player",
@@ -193,6 +194,11 @@ local mmfDefaults = {
     -- Heal prediction / absorb
     showHealPrediction = true,
     showOverhealPrediction = false,
+    containOverhealWithinFrame = false,
+    healPredictionColorR = 0.0,
+    healPredictionColorG = 0.827,
+    healPredictionColorB = 0.765,
+    healPredictionColorA = 0.7,
     showAbsorbBar = true,
     -- Cast bar settings
     showPlayerCastBar = true,

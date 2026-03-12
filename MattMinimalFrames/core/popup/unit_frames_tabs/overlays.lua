@@ -2,6 +2,7 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
     local unitFramesCol = ctx.parent
     local ACCENT_COLOR = ctx.accentColor
     local CreateMinimalCheckbox = ctx.createMinimalCheckbox
+    local CreateMinimalColorPicker = ctx.createMinimalColorPicker or MMF_CreateMinimalColorPicker
     local rightSection = ctx.rightSection
     local OnPredictionChanged = ctx.onPredictionChanged or function() end
 
@@ -9,6 +10,31 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
     local RIGHT_COL_WIDTH = ctx.rightColWidth
     local RIGHT_STACK_Y_OFFSET = ctx.rightStackYOffset
     local RIGHT_FRAME_OPTIONS_Y_SHIFT = ctx.rightFrameOptionsYShift
+
+    local function ClampColorChannel(value, fallback)
+        local n = tonumber(value)
+        if not n then
+            n = tonumber(fallback) or 0
+        end
+        if n < 0 then n = 0 end
+        if n > 1 then n = 1 end
+        return n
+    end
+
+    local function SetCheckboxEnabled(checkboxContainer, enabled)
+        if not checkboxContainer then return end
+        checkboxContainer:SetAlpha(enabled and 1 or 0.45)
+        if checkboxContainer.checkbox then
+            checkboxContainer.checkbox:EnableMouse(enabled)
+        end
+        if checkboxContainer.labelText then
+            if enabled then
+                checkboxContainer.labelText:SetTextColor(0.9, 0.9, 0.9)
+            else
+                checkboxContainer.labelText:SetTextColor(0.5, 0.5, 0.55)
+            end
+        end
+    end
 
     rightSection.frameOptionsDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     rightSection.frameOptionsDivider:SetSize(RIGHT_COL_WIDTH, 1)
@@ -124,12 +150,55 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
     )
 
     rightSection.overhealPredictionCheck = CreateMinimalCheckbox(unitFramesCol, "Overheal", RIGHT_COL_X, (-766 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showOverhealPrediction", false, function()
+        if rightSection.containOverhealCheck then
+            SetCheckboxEnabled(rightSection.containOverhealCheck, MattMinimalFramesDB and MattMinimalFramesDB.showOverhealPrediction == true)
+        end
         OnPredictionChanged()
     end)
 
-    rightSection.absorbBarCheck = CreateMinimalCheckbox(unitFramesCol, "Absorb Bar", RIGHT_COL_X, (-790 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showAbsorbBar", true, function()
+    rightSection.containOverhealCheck = CreateMinimalCheckbox(unitFramesCol, "Contain Overheal In Frame", RIGHT_COL_X, (-790 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "containOverhealWithinFrame", false, function()
         OnPredictionChanged()
     end)
+
+    if CreateMinimalColorPicker then
+        rightSection.healPredictionColorPicker = CreateMinimalColorPicker(unitFramesCol, {
+            accentColor = ACCENT_COLOR,
+            x = RIGHT_COL_X,
+            y = (-814 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET,
+            width = RIGHT_COL_WIDTH,
+            height = 16,
+            labelWidth = 96,
+            buttonOffset = 102,
+            buttonWidth = RIGHT_COL_WIDTH - 102,
+            label = "Overlay Color",
+            resetLabel = "Reset",
+            getColor = function()
+                return ClampColorChannel(MattMinimalFramesDB and MattMinimalFramesDB.healPredictionColorR, 0.0),
+                    ClampColorChannel(MattMinimalFramesDB and MattMinimalFramesDB.healPredictionColorG, 0.827),
+                    ClampColorChannel(MattMinimalFramesDB and MattMinimalFramesDB.healPredictionColorB, 0.765)
+            end,
+            onColorChanged = function(r, g, b)
+                if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
+                MattMinimalFramesDB.healPredictionColorR = ClampColorChannel(r, 0.0)
+                MattMinimalFramesDB.healPredictionColorG = ClampColorChannel(g, 0.827)
+                MattMinimalFramesDB.healPredictionColorB = ClampColorChannel(b, 0.765)
+                OnPredictionChanged()
+            end,
+            onReset = function()
+                if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
+                MattMinimalFramesDB.healPredictionColorR = 0.0
+                MattMinimalFramesDB.healPredictionColorG = 0.827
+                MattMinimalFramesDB.healPredictionColorB = 0.765
+                OnPredictionChanged()
+            end,
+        })
+    end
+
+    rightSection.absorbBarCheck = CreateMinimalCheckbox(unitFramesCol, "Absorb Bar", RIGHT_COL_X, (-838 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showAbsorbBar", true, function()
+        OnPredictionChanged()
+    end)
+
+    SetCheckboxEnabled(rightSection.containOverhealCheck, MattMinimalFramesDB and MattMinimalFramesDB.showOverhealPrediction == true)
 
     CreateHintIcon(
         rightSection.absorbBarCheck,

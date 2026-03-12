@@ -136,6 +136,7 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
         MattMinimalFramesDB.focusHPTextYOffset = d.focusHPTextYOffset or 0
         MattMinimalFramesDB.bossHPTextXOffset = d.bossHPTextXOffset or 0
         MattMinimalFramesDB.bossHPTextYOffset = d.bossHPTextYOffset or 0
+        MattMinimalFramesDB.showHPValueText = d.showHPValueText
         MattMinimalFramesDB.showHPPercentText = d.showHPPercentText
         MattMinimalFramesDB.hpTextUseShortValue = d.hpTextUseShortValue
         -- Power bar size

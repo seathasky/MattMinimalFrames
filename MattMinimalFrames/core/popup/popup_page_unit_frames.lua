@@ -49,14 +49,14 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
 
     local sectionDefs = {
         { label = "Layout", subtitle = "Scale and frame sizing controls.", x = 0, y = 8, width = 288, height = 122 },
-        { label = "Text", subtitle = "Font sizes, truncation, HP text format, and name behavior.", x = 0, y = 98, width = 288, height = 300, maskTop = 12 },
+        { label = "Text", subtitle = "Font sizes, truncation, HP text format, and name behavior.", x = 0, y = 98, width = 288, height = 324, maskTop = 12 },
         { label = "Visibility", subtitle = "Choose when name, HP text, and boss frames are shown.", x = 0, y = 410, width = 288, height = 124 },
         { label = "Offsets", subtitle = "Adjust text positions for each supported unit.", x = 0, y = 544, width = 288, height = 174 },
         { label = "Cast Bars", subtitle = "Cast bar settings.", x = 300, y = 112, width = 288, height = 170 },
         { label = "OOC", subtitle = "Out-of-combat visibility and fade rules.", x = 300, y = 258, width = 288, height = 184 },
         { label = "Appearance", subtitle = "Textures, fonts, and frame colors.", x = 588, y = 6, width = 300, height = 480 },
         { label = "Icons", subtitle = "Icon positions, sizes, and target markers.", x = 588, y = 236, width = 300, height = 266 },
-        { label = "Overlays", subtitle = "Heal prediction and absorb overlay settings.", x = 588, y = 512, width = 300, height = 102 },
+        { label = "Overlays", subtitle = "Heal prediction and absorb overlay settings.", x = 588, y = 512, width = 300, height = 176 },
     }
 
     local activeSectionIndex = tonumber(MattMinimalFramesDB.unitFramesSubTab) or 1
@@ -397,6 +397,7 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
             config = {
                 accentColor = ACCENT_COLOR,
                 createMinimalCheckbox = CreateMinimalCheckbox,
+                createMinimalColorPicker = MMF_CreateMinimalColorPicker,
                 rightSection = rightSection,
                 rightColX = RIGHT_COL_X,
                 rightColWidth = RIGHT_COL_WIDTH,

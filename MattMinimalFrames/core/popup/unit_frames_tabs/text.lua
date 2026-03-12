@@ -30,19 +30,51 @@ function MMF_BuildUnitFramesTextSection(ctx)
     textFormatSubtext:SetTextColor(0.65, 0.65, 0.7)
     textFormatSubtext:SetText("HP text format options")
 
+    if MattMinimalFramesDB.showHPValueText == nil then
+        MattMinimalFramesDB.showHPValueText = true
+    end
     if MattMinimalFramesDB.showHPPercentText == nil then
-        MattMinimalFramesDB.showHPPercentText = true
+        MattMinimalFramesDB.showHPPercentText = false
     end
     if MattMinimalFramesDB.hpTextUseShortValue == nil then
         MattMinimalFramesDB.hpTextUseShortValue = true
     end
 
-    CreateMinimalCheckbox(unitFramesCol, "HP Text: % | Value", LEFT_COL_X, -338, "showHPPercentText", true, function()
+    local hpValueCheckbox
+    local hpShortValueCheckbox
+
+    local function SetCheckboxEnabled(checkboxContainer, enabled)
+        if not checkboxContainer then return end
+        checkboxContainer:SetAlpha(enabled and 1 or 0.45)
+        if checkboxContainer.checkbox then
+            checkboxContainer.checkbox:EnableMouse(enabled)
+        end
+        if checkboxContainer.labelText then
+            if enabled then
+                checkboxContainer.labelText:SetTextColor(0.9, 0.9, 0.9)
+            else
+                checkboxContainer.labelText:SetTextColor(0.5, 0.5, 0.55)
+            end
+        end
+    end
+
+    local function RefreshHPTextFormatCheckboxStates()
+        local showValue = (MattMinimalFramesDB.showHPValueText ~= false)
+        SetCheckboxEnabled(hpShortValueCheckbox, showValue)
+    end
+
+    hpValueCheckbox = CreateMinimalCheckbox(unitFramesCol, "HP Text: Value", LEFT_COL_X, -338, "showHPValueText", true, function()
+        RefreshHPTextFormatCheckboxStates()
         RefreshPredictionVisuals()
     end)
-    CreateMinimalCheckbox(unitFramesCol, "HP Text: Short Value (K/M)", LEFT_COL_X, -362, "hpTextUseShortValue", true, function()
+    hpShortValueCheckbox = CreateMinimalCheckbox(unitFramesCol, "HP Text: Short Value (K/M)", LEFT_COL_X, -362, "hpTextUseShortValue", true, function()
         RefreshPredictionVisuals()
     end)
+    CreateMinimalCheckbox(unitFramesCol, "HP Text: %", LEFT_COL_X, -386, "showHPPercentText", true, function()
+        RefreshPredictionVisuals()
+    end)
+
+    RefreshHPTextFormatCheckboxStates()
 
     local frameTextTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     frameTextTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")

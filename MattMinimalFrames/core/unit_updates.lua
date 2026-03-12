@@ -139,6 +139,42 @@ local function SafeStringLen(value)
     return nil
 end
 
+local function ClampColorChannel(value, fallback)
+    local n = SafeToNumber(value, fallback)
+    if type(n) ~= "number" then
+        n = fallback or 0
+    end
+    if n < 0 then n = 0 end
+    if n > 1 then n = 1 end
+    return n
+end
+
+local function ApplyHealPredictionBarColor(frame)
+    if not frame then return end
+
+    local db = MattMinimalFramesDB or {}
+    local r = ClampColorChannel(db.healPredictionColorR, 0.0)
+    local g = ClampColorChannel(db.healPredictionColorG, 0.827)
+    local b = ClampColorChannel(db.healPredictionColorB, 0.765)
+    local a = ClampColorChannel(db.healPredictionColorA, 0.7)
+
+    if frame.myHealPrediction then
+        frame.myHealPrediction:SetStatusBarColor(r, g, b, a)
+        local myTex = frame.myHealPrediction:GetStatusBarTexture()
+        if myTex then
+            myTex:SetVertexColor(r, g, b, a)
+        end
+    end
+
+    if frame.otherHealPrediction then
+        frame.otherHealPrediction:SetStatusBarColor(r, g, b, a)
+        local otherTex = frame.otherHealPrediction:GetStatusBarTexture()
+        if otherTex then
+            otherTex:SetVertexColor(r, g, b, a)
+        end
+    end
+end
+
 local function SafeGetRegionWidth(region, fallback)
     if not region then
         return fallback
@@ -290,16 +326,21 @@ local function IsPowerPercentEnabledForUnit(db, unit)
     return db.showPowerPercentText == true
 end
 
-local function FormatPercentAndValue(current, showPercent, useShortValue, percentText)
+local function FormatPercentAndValue(current, showPercent, showValue, useShortValue, percentText)
+    local displayPercent = percentText or "0%"
     local absolute = SafeFormatValue(current, useShortValue)
 
-    if not showPercent then
+    if showPercent and showValue then
+        return string.format("%s | %s", displayPercent, absolute)
+    end
+    if showPercent then
+        return displayPercent
+    end
+    if showValue then
         return absolute
     end
 
-    local displayPercent = percentText or "0%"
-
-    return string.format("%s | %s", displayPercent, absolute)
+    return ""
 end
 
 local function GetNameTruncationSettings()
@@ -557,6 +598,8 @@ end
 local function UpdateHealPrediction(frame)
     if not frame or not frame.myHealPrediction then return end
 
+    ApplyHealPredictionBarColor(frame)
+
     local unit = frame.unit
     if not unit or not UnitExists(unit) then
         frame.myHealPrediction:Hide()
@@ -574,6 +617,25 @@ local function UpdateHealPrediction(frame)
     local healthTexture = frame.healthBar:GetStatusBarTexture()
     local barWidth = frame.healthBar:GetWidth()
     local showOverhealPrediction = MattMinimalFramesDB and MattMinimalFramesDB.showOverhealPrediction == true
+    local containOverhealWithinFrame = MattMinimalFramesDB and MattMinimalFramesDB.containOverhealWithinFrame == true
+
+    if frame.healPredictionClip and frame.myHealPrediction and frame.otherHealPrediction then
+        if containOverhealWithinFrame then
+            local topLevel = (frame.GetFrameLevel and frame:GetFrameLevel() or 0) + 20
+            if frame.GetFrameStrata and frame.healPredictionClip.SetFrameStrata then
+                frame.healPredictionClip:SetFrameStrata(frame:GetFrameStrata())
+            end
+            frame.healPredictionClip:SetFrameLevel(topLevel)
+            frame.myHealPrediction:SetFrameLevel(topLevel + 1)
+            frame.otherHealPrediction:SetFrameLevel(topLevel + 2)
+        else
+            local baseLevel = (frame.healthBar and frame.healthBar.GetFrameLevel and frame.healthBar:GetFrameLevel() or frame:GetFrameLevel() or 0) + 1
+            frame.healPredictionClip:SetFrameLevel(baseLevel)
+            frame.myHealPrediction:SetFrameLevel(baseLevel)
+            frame.otherHealPrediction:SetFrameLevel(baseLevel)
+        end
+    end
+
     local overflowPixels = 0
     if showOverhealPrediction then
         overflowPixels = math.floor(barWidth * 0.08 + 0.5)
@@ -585,10 +647,17 @@ local function UpdateHealPrediction(frame)
         frame.healPredictionClip:ClearAllPoints()
         frame.healPredictionClip:SetPoint("TOPLEFT", frame.healthBar, "TOPLEFT", 0, 0)
         frame.healPredictionClip:SetPoint("BOTTOMLEFT", frame.healthBar, "BOTTOMLEFT", 0, 0)
-        frame.healPredictionClip:SetWidth(barWidth + overflowPixels)
+        if containOverhealWithinFrame then
+            frame.healPredictionClip:SetWidth(barWidth)
+        else
+            frame.healPredictionClip:SetWidth(barWidth + overflowPixels)
+        end
     end
 
     frame.myHealPrediction:ClearAllPoints()
+    if frame.myHealPrediction.SetReverseFill then
+        frame.myHealPrediction:SetReverseFill(false)
+    end
     frame.myHealPrediction:SetPoint("TOPLEFT", healthTexture, "TOPRIGHT", 0, 0)
     frame.myHealPrediction:SetPoint("BOTTOMLEFT", healthTexture, "BOTTOMRIGHT", 0, 0)
     frame.myHealPrediction:SetWidth(barWidth + overflowPixels)
@@ -596,27 +665,53 @@ local function UpdateHealPrediction(frame)
 
     local myHealTexture = frame.myHealPrediction:GetStatusBarTexture()
     frame.otherHealPrediction:ClearAllPoints()
-    frame.otherHealPrediction:SetPoint("TOPLEFT", myHealTexture, "TOPRIGHT", 0, 0)
-    frame.otherHealPrediction:SetPoint("BOTTOMLEFT", myHealTexture, "BOTTOMRIGHT", 0, 0)
-    frame.otherHealPrediction:SetWidth(barWidth + overflowPixels)
+    if containOverhealWithinFrame and showOverhealPrediction then
+        -- Reverse-fill from the right edge driven by actual heal value.
+        -- StatusBar:SetValue() accepts secret numbers safely; the bar
+        -- naturally shows nothing when value=0 and fills proportionally otherwise.
+        if frame.otherHealPrediction.SetReverseFill then
+            frame.otherHealPrediction:SetReverseFill(true)
+        end
+        frame.otherHealPrediction:SetPoint("TOPRIGHT", frame.healthBar, "TOPRIGHT", 0, 0)
+        frame.otherHealPrediction:SetPoint("BOTTOMRIGHT", frame.healthBar, "BOTTOMRIGHT", 0, 0)
+        frame.otherHealPrediction:SetWidth(barWidth)
+    else
+        if frame.otherHealPrediction.SetReverseFill then
+            frame.otherHealPrediction:SetReverseFill(false)
+        end
+        frame.otherHealPrediction:SetPoint("TOPLEFT", myHealTexture, "TOPRIGHT", 0, 0)
+        frame.otherHealPrediction:SetPoint("BOTTOMLEFT", myHealTexture, "BOTTOMRIGHT", 0, 0)
+        frame.otherHealPrediction:SetWidth(barWidth + overflowPixels)
+    end
     frame.otherHealPrediction:SetMinMaxValues(0, maxHealth)
 
     local myHeal = 0
     local otherHeal = 0
+    local totalIncomingHeal = 0
+    local allIncomingHeal = 0
 
     if Compat.IsRetail and frame.healPredictionCalculator and UnitGetDetailedHealPrediction then
         pcall(function()
             UnitGetDetailedHealPrediction(unit, "player", frame.healPredictionCalculator)
-            local _, playerHeal, incomingOtherHeal = frame.healPredictionCalculator:GetIncomingHeals()
+            local incomingTotalHeal, playerHeal, incomingOtherHeal = frame.healPredictionCalculator:GetIncomingHeals()
+            totalIncomingHeal = incomingTotalHeal or 0
             myHeal = playerHeal or 0
             otherHeal = incomingOtherHeal or 0
         end)
     elseif UnitGetIncomingHeals then
         myHeal = UnitGetIncomingHeals(unit, "player") or 0
         local allHeal = UnitGetIncomingHeals(unit) or 0
+        totalIncomingHeal = allHeal
+        allIncomingHeal = allHeal
         otherHeal = 0
         pcall(function()
             otherHeal = allHeal - myHeal
+        end)
+    end
+
+    if UnitGetIncomingHeals then
+        pcall(function()
+            allIncomingHeal = UnitGetIncomingHeals(unit) or allIncomingHeal or 0
         end)
     end
 
@@ -624,8 +719,48 @@ local function UpdateHealPrediction(frame)
         otherHeal = 0
     end
 
+    if not SafeIsGreater(totalIncomingHeal, 0) then
+        if SafeIsGreater(allIncomingHeal, 0) then
+            totalIncomingHeal = allIncomingHeal
+        end
+    end
+
+    if not SafeIsGreater(totalIncomingHeal, 0) then
+        local summed = SafeAdd(myHeal, otherHeal, nil)
+        if type(summed) == "number" and SafeIsGreater(summed, 0) then
+            totalIncomingHeal = summed
+        end
+    end
+
     frame.myHealPrediction:SetValue(myHeal)
-    frame.otherHealPrediction:SetValue(otherHeal)
+
+    if containOverhealWithinFrame and showOverhealPrediction then
+        -- In contain mode, use total incoming heal directly (no secret-value arithmetic).
+        -- At full HP, collapse to a small right-edge in-frame sliver as an overheal indicator.
+        local displayValue = totalIncomingHeal
+        local currentHealth = UnitHealth(unit) or 0
+        local isAtFullHealth = SafeIsLessOrEqual(maxHealth, currentHealth)
+        local hasIncoming = SafeIsGreater(totalIncomingHeal, 0)
+            or SafeIsGreater(allIncomingHeal, 0)
+            or SafeIsGreater(myHeal, 0)
+            or SafeIsGreater(otherHeal, 0)
+
+        if isAtFullHealth and hasIncoming then
+            local safeBarWidth = tonumber(barWidth) or 0
+            if safeBarWidth > 0 and maxHealth > 0 then
+                local minPixels = 2
+                local minSliverValue = (maxHealth * minPixels) / safeBarWidth
+                if minSliverValue < 1 then
+                    minSliverValue = 1
+                end
+                displayValue = minSliverValue
+            end
+        end
+
+        frame.otherHealPrediction:SetValue(displayValue or 0)
+    else
+        frame.otherHealPrediction:SetValue(otherHeal)
+    end
 
     frame.myHealPrediction:Show()
     frame.otherHealPrediction:Show()
@@ -824,13 +959,17 @@ local function UpdateUnitFrame(frame)
             frame.hpText:SetText("")
             frame.hpText:Hide()
         elseif (previewMode or auraTestPreviewTarget) and not UnitExists(unit) then
-            frame.hpText:SetText("100% | 999k")
+            local showHPValueText = (db.showHPValueText ~= false)
+            local showHPPercentText = (db.showHPPercentText == true)
+            local useShortHPValue = (db.hpTextUseShortValue ~= false)
+            frame.hpText:SetText(FormatPercentAndValue(999000, showHPPercentText, showHPValueText, useShortHPValue, "100%"))
             frame.hpText:Show()
         else
             local hpPercentText = GetHealthPercentText(unit, hp, maxHP)
-            local showHPPercentText = (db.showHPPercentText ~= false)
+            local showHPPercentText = (db.showHPPercentText == true)
+            local showHPValueText = (db.showHPValueText ~= false)
             local useShortHPValue = (db.hpTextUseShortValue ~= false)
-            frame.hpText:SetText(FormatPercentAndValue(hp, showHPPercentText, useShortHPValue, hpPercentText))
+            frame.hpText:SetText(FormatPercentAndValue(hp, showHPPercentText, showHPValueText, useShortHPValue, hpPercentText))
             frame.hpText:Show()
         end
     end

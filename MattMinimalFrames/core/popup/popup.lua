@@ -68,6 +68,9 @@ function MMF_ShowWelcomePopup(forceShow)
         if MMF_WelcomePopup.ClampToScreen then
             MMF_WelcomePopup:ClampToScreen()
         end
+        if MMF_WelcomePopup.MMFRefreshTitleBarControls then
+            MMF_WelcomePopup:MMFRefreshTitleBarControls()
+        end
         MMF_WelcomePopup:Show()
         if MMF_ApplyGlobalFont then
             MMF_ApplyGlobalFont()
@@ -373,6 +376,21 @@ function MMF_ShowWelcomePopup(forceShow)
         MattMinimalFramesDB = {}
     end
 
+    local TITLE_CONTROL_FONT = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
+    local function EnsureTitleControlFont(fontString, size)
+        if not fontString then
+            return
+        end
+        local targetSize = tonumber(size) or 10
+        if MMF_SetFontSafe then
+            MMF_SetFontSafe(fontString, TITLE_CONTROL_FONT, targetSize, "")
+        else
+            fontString:SetFont(TITLE_CONTROL_FONT, targetSize, "")
+        end
+        fontString:SetDrawLayer("OVERLAY", 7)
+        fontString:SetAlpha(1)
+    end
+
     local function CreateTitleCheckbox(anchor, xOffset, labelText, isChecked, onToggle)
         local container = CreateFrame("Frame", nil, titleBar)
         container:SetSize(120, 20)
@@ -398,10 +416,12 @@ function MMF_ShowWelcomePopup(forceShow)
         checkbox.check = check
 
         local label = container:CreateFontString(nil, "OVERLAY")
-        label:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+        EnsureTitleControlFont(label, 10)
         label:SetPoint("LEFT", checkbox, "RIGHT", 6, 0)
         label:SetTextColor(0.9, 0.9, 0.9)
         label:SetText(labelText)
+        label:SetShown(true)
+        label.mmfSkipGlobalFont = true
 
         checkbox:SetChecked(isChecked == true)
         check:SetShown(isChecked == true)
@@ -415,6 +435,12 @@ function MMF_ShowWelcomePopup(forceShow)
 
         checkbox.labelText = label
         container.labelText = label
+        container.mmfLabelRaw = labelText
+        container.MMFRefreshWidget = function()
+            if container.labelText and container.labelText.SetText then
+                container.labelText:SetText(labelText)
+            end
+        end
 
         return container, checkbox
     end
@@ -439,11 +465,23 @@ function MMF_ShowWelcomePopup(forceShow)
         button:SetBackdropColor(0.08, 0.08, 0.1, 1)
         button:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
 
-        local label = button:CreateFontString(nil, "OVERLAY")
-        label:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-        label:SetPoint("CENTER")
+        local textHost = CreateFrame("Frame", nil, button)
+        textHost:SetAllPoints(button)
+        textHost:SetFrameStrata(button:GetFrameStrata())
+        textHost:SetFrameLevel((button:GetFrameLevel() or 1) + 8)
+        textHost:EnableMouse(false)
+
+        local label = textHost:CreateFontString(nil, "OVERLAY")
+        EnsureTitleControlFont(label, 10)
+        label:SetPoint("TOPLEFT", button, "TOPLEFT", 4, -1)
+        label:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -4, 1)
+        label:SetJustifyH("CENTER")
+        label:SetJustifyV("MIDDLE")
+        label:SetWordWrap(false)
         label:SetTextColor(0.9, 0.9, 0.9)
         label:SetText(labelText)
+        label:SetShown(true)
+        label.mmfSkipGlobalFont = true
 
         button:SetScript("OnEnter", function(self)
             self:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.8)
@@ -499,8 +537,15 @@ function MMF_ShowWelcomePopup(forceShow)
         end)
 
         button.labelText = label
+        button.textHost = textHost
         container.button = button
         container.labelText = label
+        container.mmfLabelRaw = labelText
+        container.MMFRefreshWidget = function()
+            if container.labelText and container.labelText.SetText then
+                container.labelText:SetText(labelText)
+            end
+        end
 
         return container, button
     end
@@ -513,6 +558,7 @@ function MMF_ShowWelcomePopup(forceShow)
     local testModeCheckbox = nil
     local testModeTextPulseFrame = nil
     local editModePopup = nil
+    local titleStateGeneration = 0
 
     local function SetTitleCheckboxVisual(checkbox, checked)
         if not checkbox then return end
@@ -562,6 +608,10 @@ function MMF_ShowWelcomePopup(forceShow)
     local function SetTestModeCheckboxState(checked)
         SetTitleCheckboxVisual(testModeCheckbox, checked)
         EnsureTestModeRainbowText()
+        if testModeContainer and testModeContainer.labelText then
+            EnsureTitleControlFont(testModeContainer.labelText, 10)
+            testModeContainer.labelText:SetShown(true)
+        end
         if testModeTextPulseFrame then
             if checked then
                 testModeTextPulseFrame:Show()
@@ -581,6 +631,10 @@ function MMF_ShowWelcomePopup(forceShow)
         local function ApplyLockButtonState(isLocked, disabled)
             if not lockFramesButton then
                 return
+            end
+            if lockFramesButton.labelText then
+                EnsureTitleControlFont(lockFramesButton.labelText, 10)
+                lockFramesButton.labelText:SetShown(true)
             end
             lockFramesButton.mmfActive = isLocked == true
             lockFramesButton.mmfActiveTextColor = { 0.45, 1.0, 0.45 }
@@ -629,6 +683,10 @@ function MMF_ShowWelcomePopup(forceShow)
         if not editModeButton then
             return
         end
+        if editModeButton.labelText then
+            EnsureTitleControlFont(editModeButton.labelText, 10)
+            editModeButton.labelText:SetShown(true)
+        end
         editModeButton.mmfActive = checked == true
         if checked then
             editModeButton:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.95)
@@ -645,6 +703,53 @@ function MMF_ShowWelcomePopup(forceShow)
 
     local function IsGlobalTestModeEnabled()
         return MattMinimalFramesDB and (MattMinimalFramesDB.layoutTestMode == true or MattMinimalFramesDB.auraTestMode == true)
+    end
+
+    local function RefreshTitleBarControls()
+        if MMF_RefreshPopupWidgetTree then
+            MMF_RefreshPopupWidgetTree(titleBar)
+        end
+        if lockFramesButton and lockFramesButton.labelText then
+            EnsureTitleControlFont(lockFramesButton.labelText, 10)
+            lockFramesButton.labelText:SetShown(true)
+        end
+        if editModeButton and editModeButton.labelText and editModeButton.labelText.SetText then
+            EnsureTitleControlFont(editModeButton.labelText, 10)
+            editModeButton.labelText:SetText("Edit Mode")
+            editModeButton.labelText:SetShown(true)
+        end
+        if testModeContainer and testModeContainer.labelText and testModeContainer.labelText.SetText then
+            EnsureTitleControlFont(testModeContainer.labelText, 10)
+            testModeContainer.labelText:SetText("Test Mode")
+            testModeContainer.labelText:SetShown(true)
+        end
+
+        SetEditModeButtonState(MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true)
+        SetTestModeCheckboxState(IsGlobalTestModeEnabled())
+        SyncTitleLockCheckboxState()
+    end
+
+    local function ApplyInitialTitleBarState()
+        titleStateGeneration = titleStateGeneration + 1
+        local currentGeneration = titleStateGeneration
+        local function RefreshIfCurrent()
+            if currentGeneration ~= titleStateGeneration then
+                return
+            end
+            RefreshTitleBarControls()
+        end
+        RefreshIfCurrent()
+        if C_Timer and C_Timer.After then
+            C_Timer.After(0, function()
+                RefreshIfCurrent()
+            end)
+            C_Timer.After(0.05, function()
+                RefreshIfCurrent()
+            end)
+            C_Timer.After(0.2, function()
+                RefreshIfCurrent()
+            end)
+        end
     end
 
     local function SetGlobalTestMode(enabled)
@@ -951,6 +1056,13 @@ function MMF_ShowWelcomePopup(forceShow)
     end
 
     SyncTitleLockCheckboxState()
+    popup.MMFRefreshTitleBarControls = ApplyInitialTitleBarState
+
+    popup:HookScript("OnShow", function()
+        ApplyInitialTitleBarState()
+    end)
+
+    ApplyInitialTitleBarState()
 
     -- GUI Scale slider on title bar
     local guiScaleContainer = CreateFrame("Frame", nil, titleBar)
@@ -1667,6 +1779,7 @@ function MMF_ShowWelcomePopup(forceShow)
         ApplyPageWidths()
         LayoutTabButtons()
         SetActiveTab(defaultTab)
+        ApplyInitialTitleBarState()
     end
     if C_Timer and C_Timer.After then
         C_Timer.After(0, ApplyInitialPopupLayout)
@@ -1676,4 +1789,5 @@ function MMF_ShowWelcomePopup(forceShow)
     if MMF_ApplyGlobalFont then
         MMF_ApplyGlobalFont()
     end
+    ApplyInitialTitleBarState()
 end
