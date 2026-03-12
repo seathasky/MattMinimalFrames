@@ -601,10 +601,42 @@ function MMF_FormatNumber(num)
     return "0"
 end
 
+local function ClampColorChannel(value, fallback)
+    local channel = tonumber(value)
+    if not channel then
+        channel = tonumber(fallback) or 1
+    end
+    if channel < 0 then channel = 0 end
+    if channel > 1 then channel = 1 end
+    return channel
+end
+
+local function ClampUnitInterval(value, fallback)
+    local n = tonumber(value)
+    if not n then
+        n = tonumber(fallback) or 1
+    end
+    if n < 0 then n = 0 end
+    if n > 1 then n = 1 end
+    return n
+end
+
+local function GetCustomBarColor(baseKey, fallbackR, fallbackG, fallbackB)
+    if not MattMinimalFramesDB then
+        return ClampColorChannel(fallbackR, 1), ClampColorChannel(fallbackG, 1), ClampColorChannel(fallbackB, 1)
+    end
+    return ClampColorChannel(MattMinimalFramesDB[baseKey .. "R"], fallbackR),
+        ClampColorChannel(MattMinimalFramesDB[baseKey .. "G"], fallbackG),
+        ClampColorChannel(MattMinimalFramesDB[baseKey .. "B"], fallbackB)
+end
+
 function MMF_GetUnitColor(unit)
     if not unit then return 1, 1, 1 end
     if unit == "target" and MattMinimalFramesDB then
         local mode = tostring(MattMinimalFramesDB.targetBarColorMode or "default"):lower()
+        if mode == "custom" then
+            return GetCustomBarColor("targetBarCustomColor", 0.8, 0.2, 0.2)
+        end
         if mode ~= "default" then
             local colorOptions = MMF_Config and MMF_Config.TARGET_BAR_COLORS
             if type(colorOptions) == "table" then
@@ -618,6 +650,41 @@ function MMF_GetUnitColor(unit)
     end
     if unit == "targettarget" and MattMinimalFramesDB then
         local mode = tostring(MattMinimalFramesDB.totBarColorMode or "default"):lower()
+        if mode == "custom" then
+            return GetCustomBarColor("totBarCustomColor", 0.8, 0.2, 0.2)
+        end
+        if mode ~= "default" then
+            local colorOptions = MMF_Config and MMF_Config.TARGET_BAR_COLORS
+            if type(colorOptions) == "table" then
+                for _, option in ipairs(colorOptions) do
+                    if option and option.value == mode and option.r and option.g and option.b then
+                        return option.r, option.g, option.b
+                    end
+                end
+            end
+        end
+    end
+    if unit == "focus" and MattMinimalFramesDB then
+        local mode = tostring(MattMinimalFramesDB.focusBarColorMode or "default"):lower()
+        if mode == "custom" then
+            return GetCustomBarColor("focusBarCustomColor", 0.8, 0.2, 0.2)
+        end
+        if mode ~= "default" then
+            local colorOptions = MMF_Config and MMF_Config.TARGET_BAR_COLORS
+            if type(colorOptions) == "table" then
+                for _, option in ipairs(colorOptions) do
+                    if option and option.value == mode and option.r and option.g and option.b then
+                        return option.r, option.g, option.b
+                    end
+                end
+            end
+        end
+    end
+    if unit == "pet" and MattMinimalFramesDB then
+        local mode = tostring(MattMinimalFramesDB.petBarColorMode or "default"):lower()
+        if mode == "custom" then
+            return GetCustomBarColor("petBarCustomColor", 0.2, 0.8, 0.2)
+        end
         if mode ~= "default" then
             local colorOptions = MMF_Config and MMF_Config.TARGET_BAR_COLORS
             if type(colorOptions) == "table" then
@@ -634,6 +701,9 @@ function MMF_GetUnitColor(unit)
             or (type(UnitIsUnit) == "function" and UnitIsUnit(unit, "player"))
         if isPlayerUnit and MattMinimalFramesDB then
             local mode = tostring(MattMinimalFramesDB.playerBarColorMode or "class"):lower()
+            if mode == "custom" then
+                return GetCustomBarColor("playerBarCustomColor", 1, 1, 1)
+            end
             if mode ~= "class" then
                 local colorOptions = MMF_Config and MMF_Config.PLAYER_BAR_COLORS
                 if type(colorOptions) == "table" then
@@ -663,6 +733,17 @@ function MMF_GetUnitColor(unit)
     end
     
     return 1, 1, 1
+end
+
+function MMF_GetUnitColorAlpha(unit)
+    if unit == "player"
+        or unit == "target"
+        or unit == "targettarget"
+        or unit == "focus"
+        or unit == "pet" then
+        return ClampUnitInterval(MattMinimalFramesDB and MattMinimalFramesDB.frameColorAlpha, 1)
+    end
+    return 1
 end
 
 function MMF_ResetSecureAttributes(frame)
@@ -978,9 +1059,24 @@ function MMF_UpdateFrameScale(unit)
     frame:SetSize(newWidth, newHeight)
     frame.originalWidth = newWidth
     frame.originalHeight = newHeight
+    local borderSize = tonumber(MattMinimalFramesDB and MattMinimalFramesDB.healthBarBorderSize) or 1
+    borderSize = math.floor(borderSize + 0.5)
+    if borderSize < 0 then borderSize = 0 end
+    if borderSize > 3 then borderSize = 3 end
+    local healthInset = math.max(1, borderSize)
+    local borderAlpha = tonumber(MattMinimalFramesDB and MattMinimalFramesDB.healthBarBorderAlpha) or 1
     if frame.healthBar then
-        frame.healthBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
-        frame.healthBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
+        frame.healthBar:SetPoint("TOPLEFT", frame, "TOPLEFT", healthInset, -healthInset)
+        frame.healthBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -healthInset, healthInset)
+    end
+    if frame.healthBarBG then
+        frame.healthBarBG:SetPoint("TOPLEFT", frame, "TOPLEFT", healthInset, -healthInset)
+        frame.healthBarBG:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -healthInset, healthInset)
+    end
+    if frame.healthBarBorder then
+        frame.healthBarBorder:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+        frame.healthBarBorder:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+        frame.healthBarBorder:SetShown(borderSize > 0 and borderAlpha > 0)
     end
     if frame.absorbBar then
         frame.absorbBar:ClearAllPoints()

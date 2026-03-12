@@ -1,7 +1,7 @@
 local Compat = _G.MMF_Compat
 
 local POPUP_LAYOUT = (MMF_GetPopupLayout and MMF_GetPopupLayout()) or {
-    width = 820,
+    width = 840,
     height = Compat.IsTBC and 750 or 750,
     titleHeight = 28,
     footerHeight = 32,
@@ -1521,12 +1521,8 @@ function MMF_ShowWelcomePopup(forceShow)
     end
     LayoutTabButtons()
 
-    local function ScrollActivePageTo(offset)
-        sharedScrollBar:SetValue(math.max(0, tonumber(offset) or 0))
-    end
-
     ---------------------------------------------------
-    unitFramesState = MMF_CreateUnitFramesSection(unitFramesCol, popup, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider, GetCurrentPlayerIconModeValue, GetCurrentTargetIconModeValue, CreateSubTabBar, ScrollActivePageTo, UpdateSharedScrollBounds)
+    unitFramesState = MMF_CreateUnitFramesSection(unitFramesCol, popup, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider, GetCurrentPlayerIconModeValue, GetCurrentTargetIconModeValue, CreateSubTabBar, UpdateSharedScrollBounds)
     castBarColorList = unitFramesState.castBarColorList
     unitTextureList = unitFramesState.unitTextureList
     unitFontList = unitFramesState.unitFontList
@@ -1583,7 +1579,6 @@ function MMF_ShowWelcomePopup(forceShow)
     if defaultTab < 1 or defaultTab > #tabPages then
         defaultTab = 1
     end
-    SetActiveTab(defaultTab)
 
     local footer = MMF_CreatePopupFooter(popup, popupWidth, ACCENT_COLOR, POPUP_LAYOUT.footerHeight)
 
@@ -1667,12 +1662,17 @@ function MMF_ShowWelcomePopup(forceShow)
     end)
 
     popup:Show()
-    C_Timer.After(0, function()
+    local function ApplyInitialPopupLayout()
         if not popup or not popup:IsShown() then return end
         ApplyPageWidths()
         LayoutTabButtons()
-        UpdateSharedScrollBounds()
-    end)
+        SetActiveTab(defaultTab)
+    end
+    if C_Timer and C_Timer.After then
+        C_Timer.After(0, ApplyInitialPopupLayout)
+    else
+        ApplyInitialPopupLayout()
+    end
     if MMF_ApplyGlobalFont then
         MMF_ApplyGlobalFont()
     end

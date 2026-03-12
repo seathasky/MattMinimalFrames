@@ -9,8 +9,8 @@ MMF_POPUP_LAYOUT = {
     CONTENT_TOP_OFFSET = -4,
     PAGE_GAP = 4,
     DEFAULT_CENTER_Y = 50,
-    WIDTH_TBC = 820,
-    WIDTH_RETAIL = 820,
+    WIDTH_TBC = 840,
+    WIDTH_RETAIL = 840,
     HEIGHT_TBC = 580,
     HEIGHT_RETAIL = 580,
     PAGE_CONTENT_HEIGHT_UNIT_FRAMES = 460,
@@ -50,6 +50,11 @@ end
 function MMF_GetPopupAccentColor()
     local r, g, b = GetPlayerClassAccent()
     return { r, g, b }
+end
+
+function MMF_GetPopupSectionTitleColor()
+    -- Light turquoise for stronger section-title contrast.
+    return 0.62, 0.92, 0.88
 end
 
 function MMF_IsClassColorGUIEnabled()

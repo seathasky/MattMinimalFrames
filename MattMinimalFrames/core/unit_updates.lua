@@ -847,8 +847,9 @@ local function UpdateUnitFrame(frame)
     end
 
     local r, g, b = MMF_GetUnitColor(unit)
+    local colorAlpha = (MMF_GetUnitColorAlpha and MMF_GetUnitColorAlpha(unit)) or 1
     if frame.healthBar then
-        frame.healthBar:SetStatusBarColor(r, g, b, 1)
+        frame.healthBar:SetStatusBarColor(r, g, b, colorAlpha)
     end
 
     if frame.powerBar and (unit == "player" or unit == "target") then

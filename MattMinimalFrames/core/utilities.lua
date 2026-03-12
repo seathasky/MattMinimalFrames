@@ -213,6 +213,192 @@ function MMF_SetStatusBarTexture(textureName)
     MMF_ApplyStatusBarTexture()
 end
 
+function MMF_ApplyHealthBarBackgroundColor()
+    local db = MattMinimalFramesDB or {}
+    local function Clamp01(value, fallback)
+        local n = tonumber(value)
+        if not n then
+            n = tonumber(fallback) or 0
+        end
+        if n < 0 then n = 0 end
+        if n > 1 then n = 1 end
+        return n
+    end
+
+    local r = Clamp01(db.healthBarBGColorR, 0)
+    local g = Clamp01(db.healthBarBGColorG, 0)
+    local b = Clamp01(db.healthBarBGColorB, 0)
+    local a = Clamp01(db.healthBarBGAlpha, 0.65)
+
+    local function ClampBorderSize(value, fallback)
+        local n = tonumber(value)
+        if not n then
+            n = tonumber(fallback) or 1
+        end
+        n = math.floor(n + 0.5)
+        if n < 0 then n = 0 end
+        if n > 3 then n = 3 end
+        return n
+    end
+
+    local borderSize = ClampBorderSize(db.healthBarBorderSize, 1)
+    local inset = math.max(1, borderSize)
+
+    local frames = {}
+    local seen = {}
+
+    local function AddFrame(frame)
+        if not frame or seen[frame] then
+            return
+        end
+        seen[frame] = true
+        frames[#frames + 1] = frame
+    end
+
+    if MMF_GetAllFrames then
+        for _, frame in ipairs(MMF_GetAllFrames() or {}) do
+            AddFrame(frame)
+        end
+    end
+
+    AddFrame(_G.MMF_PlayerFrame)
+    AddFrame(_G.MMF_TargetFrame)
+    AddFrame(_G.MMF_TargetOfTargetFrame)
+    AddFrame(_G.MMF_FocusFrame)
+    AddFrame(_G.MMF_PetFrame)
+
+    for _, frame in ipairs(frames) do
+        if frame and frame.healthBarBG and frame.healthBarBG.SetColorTexture then
+            if frame.healthBarBG.ClearAllPoints then
+                frame.healthBarBG:ClearAllPoints()
+                frame.healthBarBG:SetPoint("TOPLEFT", frame, "TOPLEFT", inset, -inset)
+                frame.healthBarBG:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -inset, inset)
+            end
+            frame.healthBarBG:SetColorTexture(r, g, b, a)
+        end
+        if frame and frame.healthBar and frame.healthBar.ClearAllPoints then
+            frame.healthBar:ClearAllPoints()
+            frame.healthBar:SetPoint("TOPLEFT", frame, "TOPLEFT", inset, -inset)
+            frame.healthBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -inset, inset)
+        end
+    end
+
+    if MMF_RequestAllFramesUpdate then
+        MMF_RequestAllFramesUpdate()
+    end
+end
+
+function MMF_ApplyHealthBarBorderStyle()
+    local db = MattMinimalFramesDB or {}
+
+    local function Clamp01(value, fallback)
+        local n = tonumber(value)
+        if not n then
+            n = tonumber(fallback) or 0
+        end
+        if n < 0 then n = 0 end
+        if n > 1 then n = 1 end
+        return n
+    end
+
+    local function ClampBorderSize(value, fallback)
+        local n = tonumber(value)
+        if not n then
+            n = tonumber(fallback) or 1
+        end
+        n = math.floor(n + 0.5)
+        if n < 0 then n = 0 end
+        if n > 3 then n = 3 end
+        return n
+    end
+
+    local r = Clamp01(db.healthBarBorderColorR, 0)
+    local g = Clamp01(db.healthBarBorderColorG, 0)
+    local b = Clamp01(db.healthBarBorderColorB, 0)
+    local a = Clamp01(db.healthBarBorderAlpha, 1)
+    local size = ClampBorderSize(db.healthBarBorderSize, 1)
+    local inset = math.max(1, size)
+
+    local function EnsureHealthBarBorderEdges(frame)
+        if not frame then
+            return nil
+        end
+
+        if not frame.healthBarBorderEdges and frame.healthBarBorder and frame.healthBarBorder.SetColorTexture then
+            frame.healthBarBorder:Hide()
+            frame.healthBarBorder = nil
+        end
+
+        if not frame.healthBarBorder then
+            frame.healthBarBorder = CreateFrame("Frame", nil, frame)
+            frame.healthBarBorder:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+            frame.healthBarBorder:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+        end
+
+        if not frame.healthBarBorderEdges then
+            frame.healthBarBorderEdges = {
+                top = frame.healthBarBorder:CreateTexture(nil, "ARTWORK"),
+                right = frame.healthBarBorder:CreateTexture(nil, "ARTWORK"),
+                bottom = frame.healthBarBorder:CreateTexture(nil, "ARTWORK"),
+                left = frame.healthBarBorder:CreateTexture(nil, "ARTWORK"),
+            }
+        end
+
+        return frame.healthBarBorderEdges
+    end
+
+    local function ApplyBorderOutline(frame, edges, edgeSize)
+        if not frame or not edges then
+            return
+        end
+
+        edges.top:ClearAllPoints()
+        edges.top:SetPoint("TOPLEFT", frame.healthBarBorder, "TOPLEFT", 0, 0)
+        edges.top:SetPoint("TOPRIGHT", frame.healthBarBorder, "TOPRIGHT", 0, 0)
+        edges.top:SetHeight(edgeSize)
+
+        edges.bottom:ClearAllPoints()
+        edges.bottom:SetPoint("BOTTOMLEFT", frame.healthBarBorder, "BOTTOMLEFT", 0, 0)
+        edges.bottom:SetPoint("BOTTOMRIGHT", frame.healthBarBorder, "BOTTOMRIGHT", 0, 0)
+        edges.bottom:SetHeight(edgeSize)
+
+        edges.left:ClearAllPoints()
+        edges.left:SetPoint("TOPLEFT", frame.healthBarBorder, "TOPLEFT", 0, -edgeSize)
+        edges.left:SetPoint("BOTTOMLEFT", frame.healthBarBorder, "BOTTOMLEFT", 0, edgeSize)
+        edges.left:SetWidth(edgeSize)
+
+        edges.right:ClearAllPoints()
+        edges.right:SetPoint("TOPRIGHT", frame.healthBarBorder, "TOPRIGHT", 0, -edgeSize)
+        edges.right:SetPoint("BOTTOMRIGHT", frame.healthBarBorder, "BOTTOMRIGHT", 0, edgeSize)
+        edges.right:SetWidth(edgeSize)
+    end
+
+    local frames = MMF_GetAllFrames and MMF_GetAllFrames() or {}
+    for _, frame in ipairs(frames) do
+        if frame and frame.healthBar and frame.healthBar.ClearAllPoints then
+            frame.healthBar:ClearAllPoints()
+            frame.healthBar:SetPoint("TOPLEFT", frame, "TOPLEFT", inset, -inset)
+            frame.healthBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -inset, inset)
+        end
+        if frame and frame.healthBarBG and frame.healthBarBG.ClearAllPoints then
+            frame.healthBarBG:ClearAllPoints()
+            frame.healthBarBG:SetPoint("TOPLEFT", frame, "TOPLEFT", inset, -inset)
+            frame.healthBarBG:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -inset, inset)
+        end
+        if frame then
+            local edges = EnsureHealthBarBorderEdges(frame)
+            frame.healthBarBorder:ClearAllPoints()
+            frame.healthBarBorder:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+            frame.healthBarBorder:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+            for _, edge in pairs(edges) do
+                edge:SetColorTexture(r, g, b, a)
+            end
+            ApplyBorderOutline(frame, edges, size)
+            frame.healthBarBorder:SetShown(size > 0 and a > 0)
+        end
+    end
+end
+
 --------------------------------------------------
 -- GLOBAL FONT
 --------------------------------------------------
@@ -228,9 +414,11 @@ local function ApplyFontToPopupTree(frame, fontPath)
             return
         end
         local _, size, flags = region:GetFont()
-        if IsFiniteNumber(size) and size > 0 then
-            SafeSetFont(region, fontPath, size, flags or "")
+        if not IsFiniteNumber(size) or size <= 0 then
+            size = 10
+            flags = ""
         end
+        SafeSetFont(region, fontPath, size, flags or "")
     end
 
     local regions = { frame:GetRegions() }

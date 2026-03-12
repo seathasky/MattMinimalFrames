@@ -1,7 +1,7 @@
 ## Interface: 20505
 ## Title: Matt's Minimal Frames
 ## Author: Seathasky
-## Version: 6.1.6
+## Version: 6.1.7
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
 ## SavedVariables: MattMinimalFramesDB, MattMinimalFramesProfilesDB, MattMinimalFramesGlobalDB
 ## Notes: Minimal unit frames for TBC Anniversary
@@ -31,6 +31,15 @@ core/frames.lua
 core/popup/popup_constants.lua
 core/popup/popup_widgets.lua
 core/popup/popup_dialogs.lua
+core/popup/unit_frames_tabs/layout.lua
+core/popup/unit_frames_tabs/text.lua
+core/popup/unit_frames_tabs/visibility.lua
+core/popup/unit_frames_tabs/offsets.lua
+core/popup/unit_frames_tabs/cast_bars.lua
+core/popup/unit_frames_tabs/ooc.lua
+core/popup/unit_frames_tabs/media.lua
+core/popup/unit_frames_tabs/icons.lua
+core/popup/unit_frames_tabs/overlays.lua
 core/popup/popup_page_unit_frames.lua
 core/popup/popup_page_tools.lua
 core/popup/popup_page_profiles.lua

@@ -48,7 +48,7 @@ function MMF_CreateProfilesPage(popup, parent, accentColor)
     local profilesTitle = parent:CreateFontString(nil, "OVERLAY")
     profilesTitle:SetFont(fontPath, 12, "")
     profilesTitle:SetPoint("TOPLEFT", 12, -12)
-    profilesTitle:SetTextColor(accentColor[1], accentColor[2], accentColor[3])
+    profilesTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
     profilesTitle:SetText("PROFILES")
 
     local profilesSubtext = parent:CreateFontString(nil, "OVERLAY")
@@ -207,7 +207,7 @@ function MMF_CreateProfilesPage(popup, parent, accentColor)
     local deleteSectionTitle = parent:CreateFontString(nil, "OVERLAY")
     deleteSectionTitle:SetFont(fontPath, 10, "")
     deleteSectionTitle:SetPoint("TOPLEFT", 12, -194)
-    deleteSectionTitle:SetTextColor(accentColor[1], accentColor[2], accentColor[3])
+    deleteSectionTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
     deleteSectionTitle:SetText("DELETE / RESET")
 
     deleteDropdown = MMF_CreateMinimalDropdown(parent, popup, {

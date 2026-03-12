@@ -11,7 +11,7 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
     local infoTitle = rightCol:CreateFontString(nil, "OVERLAY")
     infoTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
     infoTitle:SetPoint("TOPLEFT", 12, -12)
-    infoTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    infoTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
     infoTitle:SetText("TOOLS")
 
     local showHintsCheck = CreateMinimalCheckbox(rightCol, "Show Move Hints", 12, -32, "showMoveHints", false, nil)
@@ -75,7 +75,7 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
     local toolsActionsTitle = rightCol:CreateFontString(nil, "OVERLAY")
     toolsActionsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
     toolsActionsTitle:SetPoint("TOPLEFT", 12, -124)
-    toolsActionsTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    toolsActionsTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
     toolsActionsTitle:SetText("ACTIONS")
 
     CreateMinimalCheckbox(rightCol, "UI Sounds", 12, -148, "uiSoundsEnabled", true, nil)
@@ -151,6 +151,24 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
         MattMinimalFramesDB.playerBarColorMode = d.playerBarColorMode or "class"
         MattMinimalFramesDB.targetBarColorMode = d.targetBarColorMode or "default"
         MattMinimalFramesDB.totBarColorMode = d.totBarColorMode or "default"
+        MattMinimalFramesDB.focusBarColorMode = d.focusBarColorMode or "default"
+        MattMinimalFramesDB.petBarColorMode = d.petBarColorMode or "default"
+        MattMinimalFramesDB.playerBarCustomColorR = d.playerBarCustomColorR or 1.0
+        MattMinimalFramesDB.playerBarCustomColorG = d.playerBarCustomColorG or 1.0
+        MattMinimalFramesDB.playerBarCustomColorB = d.playerBarCustomColorB or 1.0
+        MattMinimalFramesDB.targetBarCustomColorR = d.targetBarCustomColorR or 0.8
+        MattMinimalFramesDB.targetBarCustomColorG = d.targetBarCustomColorG or 0.2
+        MattMinimalFramesDB.targetBarCustomColorB = d.targetBarCustomColorB or 0.2
+        MattMinimalFramesDB.totBarCustomColorR = d.totBarCustomColorR or 0.8
+        MattMinimalFramesDB.totBarCustomColorG = d.totBarCustomColorG or 0.2
+        MattMinimalFramesDB.totBarCustomColorB = d.totBarCustomColorB or 0.2
+        MattMinimalFramesDB.focusBarCustomColorR = d.focusBarCustomColorR or 0.8
+        MattMinimalFramesDB.focusBarCustomColorG = d.focusBarCustomColorG or 0.2
+        MattMinimalFramesDB.focusBarCustomColorB = d.focusBarCustomColorB or 0.2
+        MattMinimalFramesDB.petBarCustomColorR = d.petBarCustomColorR or 0.2
+        MattMinimalFramesDB.petBarCustomColorG = d.petBarCustomColorG or 0.8
+        MattMinimalFramesDB.petBarCustomColorB = d.petBarCustomColorB or 0.2
+        MattMinimalFramesDB.frameColorAlpha = d.frameColorAlpha or 1.0
         MattMinimalFramesDB.powerBarWidth = d.powerBarWidth
         MattMinimalFramesDB.powerBarHeight = d.powerBarHeight
         MattMinimalFramesDB.powerTextScale = d.powerTextScale or 1.0
@@ -325,7 +343,7 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
     local toolsInfoTitle = rightCol:CreateFontString(nil, "OVERLAY")
     toolsInfoTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
     toolsInfoTitle:SetPoint("TOPLEFT", 12, -244)
-    toolsInfoTitle:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
+    toolsInfoTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
     toolsInfoTitle:SetText("INFO")
 
     local infoText = rightCol:CreateFontString(nil, "OVERLAY")
@@ -339,3 +357,4 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
     infoText:SetText("Hold " .. highlightColor .. "SHIFT|r + mouse drag to reposition frames outside of Edit Mode.\n\nType " .. highlightColor .. "/mmf|r to open this panel.\n\nChanges to some checkboxes may require a UI reload.")
 
 end
+

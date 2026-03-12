@@ -400,7 +400,11 @@ local function ApplyCastBarPosition(frame, unit)
     if dbPos and dbPos.x and dbPos.y then
         frame.castBarFrame:SetPoint("CENTER", frame, "CENTER", dbPos.x, dbPos.y)
     else
-        frame.castBarFrame:SetPoint("BOTTOM", frame, "BOTTOM", 0, 1)
+        if unit == "focus" then
+            frame.castBarFrame:SetPoint("TOP", frame, "BOTTOM", 0, -1)
+        else
+            frame.castBarFrame:SetPoint("BOTTOM", frame, "BOTTOM", 0, 1)
+        end
     end
 
     local timeWidth = 36
@@ -758,14 +762,96 @@ end
 -- HEALTH BAR CREATION
 --------------------------------------------------
 
+local function ClampUnitInterval(value, fallback)
+    local n = tonumber(value)
+    if not n then
+        n = tonumber(fallback) or 0
+    end
+    if n < 0 then n = 0 end
+    if n > 1 then n = 1 end
+    return n
+end
+
+local function GetHealthBarBGColorFromDB()
+    local db = MattMinimalFramesDB or {}
+    return ClampUnitInterval(db.healthBarBGColorR, 0),
+        ClampUnitInterval(db.healthBarBGColorG, 0),
+        ClampUnitInterval(db.healthBarBGColorB, 0),
+        ClampUnitInterval(db.healthBarBGAlpha, 0.65)
+end
+
+local function ClampBorderSize(value, fallback)
+    local n = tonumber(value)
+    if not n then
+        n = tonumber(fallback) or 1
+    end
+    n = math.floor(n + 0.5)
+    if n < 0 then n = 0 end
+    if n > 3 then n = 3 end
+    return n
+end
+
+local function GetHealthBarBorderStyleFromDB()
+    local db = MattMinimalFramesDB or {}
+    return ClampUnitInterval(db.healthBarBorderColorR, 0),
+        ClampUnitInterval(db.healthBarBorderColorG, 0),
+        ClampUnitInterval(db.healthBarBorderColorB, 0),
+        ClampUnitInterval(db.healthBarBorderAlpha, 1),
+        ClampBorderSize(db.healthBarBorderSize, 1)
+end
+
 local function CreateHealthBar(frame)
     frame.healthBarBG = frame:CreateTexture(nil, "BACKGROUND")
-    frame.healthBarBG:SetAllPoints(frame)
-    frame.healthBarBG:SetColorTexture(0, 0, 0, 0.5)
+    local borderR, borderG, borderB, borderA, borderSize = GetHealthBarBorderStyleFromDB()
+    local contentInset = math.max(1, borderSize)
+    frame.healthBarBG:SetPoint("TOPLEFT", frame, "TOPLEFT", contentInset, -contentInset)
+    frame.healthBarBG:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -contentInset, contentInset)
+    local bgR, bgG, bgB, bgA = GetHealthBarBGColorFromDB()
+    frame.healthBarBG:SetColorTexture(bgR, bgG, bgB, bgA)
+
+    frame.healthBarBorder = CreateFrame("Frame", nil, frame)
+    frame.healthBarBorder:SetPoint("TOPLEFT", frame, "TOPLEFT", 0, 0)
+    frame.healthBarBorder:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0)
+
+    frame.healthBarBorderEdges = {
+        top = frame.healthBarBorder:CreateTexture(nil, "ARTWORK"),
+        right = frame.healthBarBorder:CreateTexture(nil, "ARTWORK"),
+        bottom = frame.healthBarBorder:CreateTexture(nil, "ARTWORK"),
+        left = frame.healthBarBorder:CreateTexture(nil, "ARTWORK"),
+    }
+
+    local function ApplyHealthBorderOutline(size)
+        local edgeSize = math.max(0, math.floor((tonumber(size) or 0) + 0.5))
+        frame.healthBarBorderEdges.top:ClearAllPoints()
+        frame.healthBarBorderEdges.top:SetPoint("TOPLEFT", frame.healthBarBorder, "TOPLEFT", 0, 0)
+        frame.healthBarBorderEdges.top:SetPoint("TOPRIGHT", frame.healthBarBorder, "TOPRIGHT", 0, 0)
+        frame.healthBarBorderEdges.top:SetHeight(edgeSize)
+
+        frame.healthBarBorderEdges.bottom:ClearAllPoints()
+        frame.healthBarBorderEdges.bottom:SetPoint("BOTTOMLEFT", frame.healthBarBorder, "BOTTOMLEFT", 0, 0)
+        frame.healthBarBorderEdges.bottom:SetPoint("BOTTOMRIGHT", frame.healthBarBorder, "BOTTOMRIGHT", 0, 0)
+        frame.healthBarBorderEdges.bottom:SetHeight(edgeSize)
+
+        frame.healthBarBorderEdges.left:ClearAllPoints()
+        frame.healthBarBorderEdges.left:SetPoint("TOPLEFT", frame.healthBarBorder, "TOPLEFT", 0, -edgeSize)
+        frame.healthBarBorderEdges.left:SetPoint("BOTTOMLEFT", frame.healthBarBorder, "BOTTOMLEFT", 0, edgeSize)
+        frame.healthBarBorderEdges.left:SetWidth(edgeSize)
+
+        frame.healthBarBorderEdges.right:ClearAllPoints()
+        frame.healthBarBorderEdges.right:SetPoint("TOPRIGHT", frame.healthBarBorder, "TOPRIGHT", 0, -edgeSize)
+        frame.healthBarBorderEdges.right:SetPoint("BOTTOMRIGHT", frame.healthBarBorder, "BOTTOMRIGHT", 0, edgeSize)
+        frame.healthBarBorderEdges.right:SetWidth(edgeSize)
+    end
+
+    for _, edge in pairs(frame.healthBarBorderEdges) do
+        edge:SetColorTexture(borderR, borderG, borderB, borderA)
+    end
+    ApplyHealthBorderOutline(borderSize)
+    frame.healthBarBorder:SetShown(borderSize > 0 and borderA > 0)
 
     frame.healthBar = CreateFrame("StatusBar", nil, frame)
-    frame.healthBar:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
-    frame.healthBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
+    frame.healthBar:SetPoint("TOPLEFT", frame, "TOPLEFT", contentInset, -contentInset)
+    frame.healthBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -contentInset, contentInset)
     frame.healthBar:SetStatusBarTexture(GetStatusBarTexturePath())
     frame.healthBar:SetMinMaxValues(0, 1)
     frame.healthBar:SetValue(1)
@@ -914,8 +1000,8 @@ end
 local function CreateAbsorbBar(frame)
     frame.absorbBar = CreateFrame("StatusBar", nil, frame.healPredictionClip)
     frame.absorbBar:SetStatusBarTexture("Interface\\AddOns\\MattMinimalFrames\\Textures\\shield.tga")
-    frame.absorbBar:SetStatusBarColor(0.62, 0.84, 1, 1)
-    frame.absorbBar:GetStatusBarTexture():SetVertexColor(0.62, 0.84, 1, 1)
+    frame.absorbBar:SetStatusBarColor(0.62, 0.84, 1, 0.7)
+    frame.absorbBar:GetStatusBarTexture():SetVertexColor(0.62, 0.84, 1, 0.7)
 
     local absorbTex = frame.absorbBar:GetStatusBarTexture()
     absorbTex:SetHorizTile(true)
