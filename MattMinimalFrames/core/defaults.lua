@@ -244,7 +244,6 @@ local mmfDefaults = {
     healthBarBorderSize = 1,
     statusBarTexture = "MMF Melli",
     globalFont = "MMF Naowh",
-    newsDismissedId = "",
 }
 
 -- Power bar configuration constants (for convenience)

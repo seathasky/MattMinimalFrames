@@ -113,20 +113,31 @@ function MMF.GetUnitAuras(unit, filter)
     local isHelpful = (filter == "HELPFUL")
     
     if MMF.HasRetailAuraAPI then
-        local GetAuraSlots = C_UnitAuras.GetAuraSlots
-        local GetAuraDataBySlot = C_UnitAuras.GetAuraDataBySlot
-        
-        local token
-        repeat
-            local slots = {GetAuraSlots(unit, filter, 40, token)}
-            token = table.remove(slots, 1)
-            for _, slot in ipairs(slots) do
-                local aura = GetAuraDataBySlot(unit, slot)
-                if aura then
-                    table.insert(auras, aura)
+        local GetAuraDataByIndex = C_UnitAuras.GetAuraDataByIndex
+        if GetAuraDataByIndex then
+            for i = 1, 40 do
+                local aura = GetAuraDataByIndex(unit, i, filter)
+                if not aura then
+                    break
                 end
+                aura._index = i
+                table.insert(auras, aura)
             end
-        until not token
+        else
+            local GetAuraSlots = C_UnitAuras.GetAuraSlots
+            local GetAuraDataBySlot = C_UnitAuras.GetAuraDataBySlot
+            local token
+            repeat
+                local slots = {GetAuraSlots(unit, filter, 40, token)}
+                token = table.remove(slots, 1)
+                for _, slot in ipairs(slots) do
+                    local aura = GetAuraDataBySlot(unit, slot)
+                    if aura then
+                        table.insert(auras, aura)
+                    end
+                end
+            until not token
+        end
     else
         if AuraUtil and AuraUtil.ForEachAura then
             local filterString = isHelpful and "HELPFUL" or "HARMFUL"

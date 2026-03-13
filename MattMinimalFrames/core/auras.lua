@@ -17,6 +17,40 @@ local function NotSecretValue(value)
     return not issecretvalue or not issecretvalue(value)
 end
 
+local function ClearAuraFrameState(auraFrame)
+    if not auraFrame then
+        return
+    end
+
+    auraFrame.auraData = nil
+    auraFrame.auraIndex = nil
+    auraFrame.auraFilter = nil
+    auraFrame.auraUnit = nil
+    auraFrame.auraInstanceID = nil
+
+    if auraFrame.count then
+        auraFrame.count:Hide()
+    end
+    if auraFrame.cooldown then
+        auraFrame.cooldown:Clear()
+    end
+    if auraFrame.timerText then
+        auraFrame.timerText:Hide()
+    end
+
+    auraFrame:Hide()
+end
+
+local function ClearAuraContainer(container)
+    if not container or not container.auras then
+        return
+    end
+
+    for _, aura in ipairs(container.auras) do
+        ClearAuraFrameState(aura)
+    end
+end
+
 local function GetAuraIconsPerRow()
     local perRow = math.floor(tonumber(MattMinimalFramesDB and MattMinimalFramesDB.auraIconsPerRow) or cfg.AURA_ROW_ICONS or 4)
     if perRow < 1 then perRow = 1 end
@@ -229,12 +263,22 @@ local function CreateAuraIcon(parent, index, isDebuff, iconSize)
     end
     aura:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        if self.auraData and self.auraData.auraInstanceID and GameTooltip.SetUnitAuraByAuraInstanceID then
-            GameTooltip:SetUnitAuraByAuraInstanceID("target", self.auraData.auraInstanceID, self.auraFilter)
-        elseif self.auraIndex then
-            GameTooltip:SetUnitAura("target", self.auraIndex, self.auraFilter)
+
+        local unit = self.auraUnit or "target"
+        local tooltipSet = false
+
+        if self.auraInstanceID and GameTooltip.SetUnitAuraByAuraInstanceID then
+            tooltipSet = GameTooltip:SetUnitAuraByAuraInstanceID(unit, self.auraInstanceID, self.auraFilter) and true or false
         end
-        GameTooltip:Show()
+        if not tooltipSet and self.auraIndex then
+            tooltipSet = GameTooltip:SetUnitAura(unit, self.auraIndex, self.auraFilter) and true or false
+        end
+
+        if tooltipSet then
+            GameTooltip:Show()
+        else
+            GameTooltip:Hide()
+        end
     end)
     
     aura:SetScript("OnLeave", function(self)
@@ -282,12 +326,15 @@ end
 --------------------------------------------------
 
 local function UpdateAuraIcon(auraFrame, auraData, filter, unit, index)
+    local auraInstanceID = NotSecretValue(auraData and auraData.auraInstanceID) and auraData.auraInstanceID or nil
+
     auraFrame.icon:SetTexture(auraData.icon or "Interface\\Icons\\INV_Misc_QuestionMark")
     auraFrame.auraData = auraData
     auraFrame.auraIndex = index or auraData._index
     auraFrame.auraFilter = filter
+    auraFrame.auraUnit = unit
+    auraFrame.auraInstanceID = auraInstanceID
     
-    local auraInstanceID = auraData.auraInstanceID
     if auraFrame.count then auraFrame.count:Hide() end
     if auraInstanceID and C_UnitAuras and C_UnitAuras.GetAuraApplicationDisplayCount then
         if not auraFrame.count then
@@ -329,6 +376,8 @@ local function UpdateFakeAuraIcon(auraFrame, index, isDebuff)
     auraFrame.auraData = nil
     auraFrame.auraIndex = nil
     auraFrame.auraFilter = nil
+    auraFrame.auraUnit = nil
+    auraFrame.auraInstanceID = nil
     auraFrame.icon:SetTexture("Interface\\AddOns\\MattMinimalFrames\\Images\\MMF.png")
 
     if not auraFrame.count then
@@ -369,14 +418,13 @@ local function PopulateFakeAuras(container, isDebuff)
         fakeCount = 16
     end
 
-    for i, aura in ipairs(container.auras) do
-        if i <= fakeCount then
-            UpdateFakeAuraIcon(aura, i, isDebuff)
-        else
-            aura:Hide()
-            if aura.timerText then aura.timerText:Hide() end
+        for i, aura in ipairs(container.auras) do
+            if i <= fakeCount then
+                UpdateFakeAuraIcon(aura, i, isDebuff)
+            else
+            ClearAuraFrameState(aura)
+            end
         end
-    end
 end
 
 function MMF_UpdateTargetAuras()
@@ -405,6 +453,12 @@ function MMF_UpdateTargetAuras()
     SetAuraTestPreviewFrameState(false)
 
     local unit = "target"
+    if type(UnitExists) == "function" and not UnitExists(unit) then
+        ClearAuraContainer(MMF_TargetFrame.BuffContainer)
+        ClearAuraContainer(MMF_TargetFrame.DebuffContainer)
+        return
+    end
+
     local buffs = GetUnitAuras(unit, "HELPFUL")
     local debuffs = GetUnitAuras(unit, "HARMFUL")
     local buffContainer = MMF_TargetFrame.BuffContainer
@@ -412,10 +466,7 @@ function MMF_UpdateTargetAuras()
         buffContainer:Hide()
     else
         buffContainer:Show()
-        for _, aura in ipairs(buffContainer.auras) do
-            aura:Hide()
-            if aura.timerText then aura.timerText:Hide() end
-        end
+        ClearAuraContainer(buffContainer)
         
         for i = 1, math.min(#buffs, GetVisibleAuraLimit()) do
             local auraFrame = buffContainer.auras[i]
@@ -429,10 +480,7 @@ function MMF_UpdateTargetAuras()
         debuffContainer:Hide()
     else
         debuffContainer:Show()
-        for _, aura in ipairs(debuffContainer.auras) do
-            aura:Hide()
-            if aura.timerText then aura.timerText:Hide() end
-        end
+        ClearAuraContainer(debuffContainer)
         
         for i = 1, math.min(#debuffs, GetVisibleAuraLimit()) do
             local auraFrame = debuffContainer.auras[i]
@@ -471,10 +519,9 @@ auraEventFrame:SetScript("OnEvent", function(self, event, unit)
     elseif event == "UNIT_AURA" and unit == "target" then
         MMF_UpdateTargetAuras()
     elseif event == "PLAYER_TARGET_CHANGED" then
-        if MMF_TargetFrame and MMF_TargetFrame.DebuffContainer then
-            for _, aura in ipairs(MMF_TargetFrame.DebuffContainer.auras) do
-                aura:Hide()
-            end
+        if MMF_TargetFrame then
+            ClearAuraContainer(MMF_TargetFrame.BuffContainer)
+            ClearAuraContainer(MMF_TargetFrame.DebuffContainer)
         end
         MMF_UpdateTargetAuras()
     end
