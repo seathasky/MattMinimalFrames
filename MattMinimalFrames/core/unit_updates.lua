@@ -648,7 +648,8 @@ local function UpdateHealPrediction(frame)
         frame.healPredictionClip:SetPoint("TOPLEFT", frame.healthBar, "TOPLEFT", 0, 0)
         frame.healPredictionClip:SetPoint("BOTTOMLEFT", frame.healthBar, "BOTTOMLEFT", 0, 0)
         if containOverhealWithinFrame then
-            frame.healPredictionClip:SetWidth(barWidth)
+
+            frame.healPredictionClip:SetWidth(barWidth * 1.01)
         else
             frame.healPredictionClip:SetWidth(barWidth + overflowPixels)
         end
@@ -665,24 +666,12 @@ local function UpdateHealPrediction(frame)
 
     local myHealTexture = frame.myHealPrediction:GetStatusBarTexture()
     frame.otherHealPrediction:ClearAllPoints()
-    if containOverhealWithinFrame and showOverhealPrediction then
-        -- Reverse-fill from the right edge driven by actual heal value.
-        -- StatusBar:SetValue() accepts secret numbers safely; the bar
-        -- naturally shows nothing when value=0 and fills proportionally otherwise.
-        if frame.otherHealPrediction.SetReverseFill then
-            frame.otherHealPrediction:SetReverseFill(true)
-        end
-        frame.otherHealPrediction:SetPoint("TOPRIGHT", frame.healthBar, "TOPRIGHT", 0, 0)
-        frame.otherHealPrediction:SetPoint("BOTTOMRIGHT", frame.healthBar, "BOTTOMRIGHT", 0, 0)
-        frame.otherHealPrediction:SetWidth(barWidth)
-    else
-        if frame.otherHealPrediction.SetReverseFill then
-            frame.otherHealPrediction:SetReverseFill(false)
-        end
-        frame.otherHealPrediction:SetPoint("TOPLEFT", myHealTexture, "TOPRIGHT", 0, 0)
-        frame.otherHealPrediction:SetPoint("BOTTOMLEFT", myHealTexture, "BOTTOMRIGHT", 0, 0)
-        frame.otherHealPrediction:SetWidth(barWidth + overflowPixels)
+    if frame.otherHealPrediction.SetReverseFill then
+        frame.otherHealPrediction:SetReverseFill(false)
     end
+    frame.otherHealPrediction:SetPoint("TOPLEFT", myHealTexture, "TOPRIGHT", 0, 0)
+    frame.otherHealPrediction:SetPoint("BOTTOMLEFT", myHealTexture, "BOTTOMRIGHT", 0, 0)
+    frame.otherHealPrediction:SetWidth(barWidth + overflowPixels)
     frame.otherHealPrediction:SetMinMaxValues(0, maxHealth)
 
     local myHeal = 0
@@ -733,34 +722,7 @@ local function UpdateHealPrediction(frame)
     end
 
     frame.myHealPrediction:SetValue(myHeal)
-
-    if containOverhealWithinFrame and showOverhealPrediction then
-        -- In contain mode, use total incoming heal directly (no secret-value arithmetic).
-        -- At full HP, collapse to a small right-edge in-frame sliver as an overheal indicator.
-        local displayValue = totalIncomingHeal
-        local currentHealth = UnitHealth(unit) or 0
-        local isAtFullHealth = SafeIsLessOrEqual(maxHealth, currentHealth)
-        local hasIncoming = SafeIsGreater(totalIncomingHeal, 0)
-            or SafeIsGreater(allIncomingHeal, 0)
-            or SafeIsGreater(myHeal, 0)
-            or SafeIsGreater(otherHeal, 0)
-
-        if isAtFullHealth and hasIncoming then
-            local safeBarWidth = tonumber(barWidth) or 0
-            if safeBarWidth > 0 and maxHealth > 0 then
-                local minPixels = 2
-                local minSliverValue = (maxHealth * minPixels) / safeBarWidth
-                if minSliverValue < 1 then
-                    minSliverValue = 1
-                end
-                displayValue = minSliverValue
-            end
-        end
-
-        frame.otherHealPrediction:SetValue(displayValue or 0)
-    else
-        frame.otherHealPrediction:SetValue(otherHeal)
-    end
+    frame.otherHealPrediction:SetValue(otherHeal)
 
     frame.myHealPrediction:Show()
     frame.otherHealPrediction:Show()
