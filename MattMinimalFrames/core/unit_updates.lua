@@ -175,6 +175,22 @@ local function ApplyHealPredictionBarColor(frame)
     end
 end
 
+local function ApplyAbsorbBarColor(frame)
+    if not frame or not frame.absorbBar then return end
+
+    local db = MattMinimalFramesDB or {}
+    local r = ClampColorChannel(db.absorbBarColorR, 0.62)
+    local g = ClampColorChannel(db.absorbBarColorG, 0.84)
+    local b = ClampColorChannel(db.absorbBarColorB, 1.0)
+    local a = ClampColorChannel(db.absorbBarColorA, 0.7)
+
+    frame.absorbBar:SetStatusBarColor(r, g, b, a)
+    local absorbTex = frame.absorbBar:GetStatusBarTexture()
+    if absorbTex then
+        absorbTex:SetVertexColor(r, g, b, a)
+    end
+end
+
 local function SafeGetRegionWidth(region, fallback)
     if not region then
         return fallback
@@ -734,6 +750,8 @@ end
 
 local function UpdateAbsorbBar(frame)
     if not frame or not frame.absorbBar then return end
+
+    ApplyAbsorbBarColor(frame)
 
     local unit = frame.unit
     if not unit or not UnitExists(unit) then

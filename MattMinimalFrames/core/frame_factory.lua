@@ -998,10 +998,16 @@ end
 --------------------------------------------------
 
 local function CreateAbsorbBar(frame)
+    local db = MattMinimalFramesDB or {}
+    local r = ClampUnitInterval(db.absorbBarColorR, 0.62)
+    local g = ClampUnitInterval(db.absorbBarColorG, 0.84)
+    local b = ClampUnitInterval(db.absorbBarColorB, 1.0)
+    local a = ClampUnitInterval(db.absorbBarColorA, 0.7)
+
     frame.absorbBar = CreateFrame("StatusBar", nil, frame.healPredictionClip)
     frame.absorbBar:SetStatusBarTexture("Interface\\AddOns\\MattMinimalFrames\\Textures\\shield.tga")
-    frame.absorbBar:SetStatusBarColor(0.62, 0.84, 1, 0.7)
-    frame.absorbBar:GetStatusBarTexture():SetVertexColor(0.62, 0.84, 1, 0.7)
+    frame.absorbBar:SetStatusBarColor(r, g, b, a)
+    frame.absorbBar:GetStatusBarTexture():SetVertexColor(r, g, b, a)
 
     local absorbTex = frame.absorbBar:GetStatusBarTexture()
     absorbTex:SetHorizTile(true)

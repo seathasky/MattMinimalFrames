@@ -775,7 +775,7 @@ function MMF_GetBuffXOffset()
 end
 
 function MMF_GetBuffYOffset()
-    return (MattMinimalFramesDB and MattMinimalFramesDB.buffYOffset) or -60
+    return (MattMinimalFramesDB and MattMinimalFramesDB.buffYOffset) or -6
 end
 
 function MMF_GetDebuffXOffset()

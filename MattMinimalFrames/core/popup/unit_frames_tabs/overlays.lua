@@ -198,6 +198,40 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
         OnPredictionChanged()
     end)
 
+    if CreateMinimalColorPicker then
+        rightSection.absorbBarColorPicker = CreateMinimalColorPicker(unitFramesCol, {
+            accentColor = ACCENT_COLOR,
+            x = RIGHT_COL_X,
+            y = (-862 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET,
+            width = RIGHT_COL_WIDTH,
+            height = 16,
+            labelWidth = 96,
+            buttonOffset = 102,
+            buttonWidth = RIGHT_COL_WIDTH - 102,
+            label = "Absorb Color",
+            resetLabel = "Reset",
+            getColor = function()
+                return ClampColorChannel(MattMinimalFramesDB and MattMinimalFramesDB.absorbBarColorR, 0.62),
+                    ClampColorChannel(MattMinimalFramesDB and MattMinimalFramesDB.absorbBarColorG, 0.84),
+                    ClampColorChannel(MattMinimalFramesDB and MattMinimalFramesDB.absorbBarColorB, 1.0)
+            end,
+            onColorChanged = function(r, g, b)
+                if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
+                MattMinimalFramesDB.absorbBarColorR = ClampColorChannel(r, 0.62)
+                MattMinimalFramesDB.absorbBarColorG = ClampColorChannel(g, 0.84)
+                MattMinimalFramesDB.absorbBarColorB = ClampColorChannel(b, 1.0)
+                OnPredictionChanged()
+            end,
+            onReset = function()
+                if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
+                MattMinimalFramesDB.absorbBarColorR = 0.62
+                MattMinimalFramesDB.absorbBarColorG = 0.84
+                MattMinimalFramesDB.absorbBarColorB = 1.0
+                OnPredictionChanged()
+            end,
+        })
+    end
+
     SetCheckboxEnabled(rightSection.containOverhealCheck, MattMinimalFramesDB and MattMinimalFramesDB.showOverhealPrediction == true)
 
     CreateHintIcon(
@@ -209,4 +243,3 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
         86
     )
 end
-

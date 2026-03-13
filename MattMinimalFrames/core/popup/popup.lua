@@ -1344,6 +1344,8 @@ function MMF_ShowWelcomePopup(forceShow)
     local hideNameTextUnitList
     local hideHPTextUnitList
     local auraTypeList
+    local buffAuraDirectionList
+    local debuffAuraDirectionList
     local profileSelectList
     local deleteProfileSelectList
     local closableLists = {}
@@ -1670,8 +1672,12 @@ function MMF_ShowWelcomePopup(forceShow)
     local aurasState = MMF_CreateAurasPowerSection(leftCol, popup, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider, UpdateSharedScrollBounds)
     if type(aurasState) == "table" then
         auraTypeList = aurasState.auraTypeList
+        buffAuraDirectionList = aurasState.buffAuraDirectionList
+        debuffAuraDirectionList = aurasState.debuffAuraDirectionList
     end
     RegisterClosableList(auraTypeList)
+    RegisterClosableList(buffAuraDirectionList)
+    RegisterClosableList(debuffAuraDirectionList)
 
     MMF_CreateCurrentClassSection(middleCol, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider, UpdatePlayerIconModeButtonText, GetCurrentPlayerIconModeValue)
 

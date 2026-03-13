@@ -34,6 +34,7 @@ local mmfDefaults = {
     targetPowerTextScale = 1.0,
     showBuffs = true,
     showDebuffs = true,
+    onlyShowPlayerDebuffsOnTarget = false,
     auraTestMode = false,
     showRuneBar = true,
     runeBarScale = 1.0,
@@ -160,12 +161,14 @@ local mmfDefaults = {
     petHideHPText = false,
     focusHideHPText = false,
     bossHideHPText = false,
-    -- Buff position (relative to BOTTOMRIGHT of target frame)
+    -- Buff position (TOPRIGHT of buff list relative to BOTTOMRIGHT of target frame)
     buffXOffset = -2,
-    buffYOffset = -64,
-    -- Debuff position (relative to TOPLEFT of target frame)
+    buffYOffset = -6,
+    buffAuraDirection = "left_down",
+    -- Debuff position (relative to selected debuff direction anchor on target frame)
     debuffXOffset = 3,
     debuffYOffset = 27,
+    debuffAuraDirection = "right_up",
     -- Popup position (nil = default center)
     popupPosition = nil,
     -- Move hints
@@ -200,6 +203,10 @@ local mmfDefaults = {
     healPredictionColorB = 0.765,
     healPredictionColorA = 0.7,
     showAbsorbBar = true,
+    absorbBarColorR = 0.62,
+    absorbBarColorG = 0.84,
+    absorbBarColorB = 1.0,
+    absorbBarColorA = 0.7,
     -- Cast bar settings
     showPlayerCastBar = true,
     showTargetCastBar = true,
