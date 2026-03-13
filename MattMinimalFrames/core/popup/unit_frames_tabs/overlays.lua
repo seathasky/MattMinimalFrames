@@ -198,11 +198,15 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
         OnPredictionChanged()
     end)
 
+    rightSection.solidAbsorbCheck = CreateMinimalCheckbox(unitFramesCol, "Solid Absorb Color", RIGHT_COL_X, (-862 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "useSolidAbsorbBar", false, function()
+        OnPredictionChanged()
+    end)
+
     if CreateMinimalColorPicker then
         rightSection.absorbBarColorPicker = CreateMinimalColorPicker(unitFramesCol, {
             accentColor = ACCENT_COLOR,
             x = RIGHT_COL_X,
-            y = (-862 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET,
+            y = (-886 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET,
             width = RIGHT_COL_WIDTH,
             height = 16,
             labelWidth = 96,

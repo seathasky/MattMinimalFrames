@@ -183,10 +183,28 @@ local function ApplyAbsorbBarColor(frame)
     local g = ClampColorChannel(db.absorbBarColorG, 0.84)
     local b = ClampColorChannel(db.absorbBarColorB, 1.0)
     local a = ClampColorChannel(db.absorbBarColorA, 0.7)
+    local useSolid = (db.useSolidAbsorbBar == true)
+
+    local desiredTexture = nil
+    if useSolid and MMF_GetStatusBarTexturePath then
+        desiredTexture = MMF_GetStatusBarTexturePath()
+    else
+        desiredTexture = "Interface\\AddOns\\MattMinimalFrames\\Textures\\shield.tga"
+    end
+    if desiredTexture then
+        frame.absorbBar:SetStatusBarTexture(desiredTexture)
+    end
 
     frame.absorbBar:SetStatusBarColor(r, g, b, a)
     local absorbTex = frame.absorbBar:GetStatusBarTexture()
     if absorbTex then
+        absorbTex:SetHorizTile(not useSolid)
+        absorbTex:SetVertTile(not useSolid)
+        if useSolid then
+            absorbTex:SetTexCoord(0, 1, 0, 1)
+        else
+            absorbTex:SetTexCoord(0, 8, 0, 1)
+        end
         absorbTex:SetVertexColor(r, g, b, a)
     end
 end

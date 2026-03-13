@@ -56,7 +56,7 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
         { label = "OOC", subtitle = "Out-of-combat visibility and fade rules.", x = 300, y = 258, width = 288, height = 184 },
         { label = "Appearance", subtitle = "Textures, fonts, and frame colors.", x = 588, y = 6, width = 300, height = 480 },
         { label = "Icons", subtitle = "Icon positions, sizes, and target markers.", x = 588, y = 236, width = 300, height = 266 },
-        { label = "Overlays", subtitle = "Heal prediction and absorb overlay settings.", x = 588, y = 512, width = 300, height = 176 },
+        { label = "Overlays", subtitle = "Heal prediction and absorb overlay settings.", x = 588, y = 512, width = 300, height = 208 },
     }
 
     local activeSectionIndex = tonumber(MattMinimalFramesDB.unitFramesSubTab) or 1
@@ -464,4 +464,3 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         ApplyInitialSection = headerState and headerState.ApplyInitialSection,
     }
 end
-

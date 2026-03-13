@@ -1003,16 +1003,27 @@ local function CreateAbsorbBar(frame)
     local g = ClampUnitInterval(db.absorbBarColorG, 0.84)
     local b = ClampUnitInterval(db.absorbBarColorB, 1.0)
     local a = ClampUnitInterval(db.absorbBarColorA, 0.7)
+    local useSolid = (db.useSolidAbsorbBar == true)
 
     frame.absorbBar = CreateFrame("StatusBar", nil, frame.healPredictionClip)
-    frame.absorbBar:SetStatusBarTexture("Interface\\AddOns\\MattMinimalFrames\\Textures\\shield.tga")
+    if useSolid and MMF_GetStatusBarTexturePath then
+        frame.absorbBar:SetStatusBarTexture(MMF_GetStatusBarTexturePath())
+    else
+        frame.absorbBar:SetStatusBarTexture("Interface\\AddOns\\MattMinimalFrames\\Textures\\shield.tga")
+    end
     frame.absorbBar:SetStatusBarColor(r, g, b, a)
     frame.absorbBar:GetStatusBarTexture():SetVertexColor(r, g, b, a)
 
     local absorbTex = frame.absorbBar:GetStatusBarTexture()
-    absorbTex:SetHorizTile(true)
-    absorbTex:SetVertTile(true)
-    absorbTex:SetTexCoord(0, 8, 0, 1)
+    if absorbTex then
+        absorbTex:SetHorizTile(not useSolid)
+        absorbTex:SetVertTile(not useSolid)
+        if useSolid then
+            absorbTex:SetTexCoord(0, 1, 0, 1)
+        else
+            absorbTex:SetTexCoord(0, 8, 0, 1)
+        end
+    end
 
     frame.absorbBar:SetFrameLevel(frame.healthBar:GetFrameLevel() + 1)
     frame.absorbBar:Hide()

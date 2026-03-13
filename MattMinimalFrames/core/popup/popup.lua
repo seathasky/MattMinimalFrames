@@ -768,6 +768,9 @@ function MMF_ShowWelcomePopup(forceShow)
         if MMF_UpdateTargetAuras then
             MMF_UpdateTargetAuras()
         end
+        if MMF_UpdatePlayerAuras then
+            MMF_UpdatePlayerAuras()
+        end
         if MMF_RequestAllFramesUpdate then
             MMF_RequestAllFramesUpdate()
         elseif MMF_GetAllFrames and MMF_UpdateUnitFrame then
@@ -1346,6 +1349,11 @@ function MMF_ShowWelcomePopup(forceShow)
     local auraTypeList
     local buffAuraDirectionList
     local debuffAuraDirectionList
+    local auraAppearanceTypeList
+    local playerAuraTypeList
+    local playerBuffAuraDirectionList
+    local playerDebuffAuraDirectionList
+    local playerAuraAppearanceTypeList
     local profileSelectList
     local deleteProfileSelectList
     local closableLists = {}
@@ -1674,10 +1682,20 @@ function MMF_ShowWelcomePopup(forceShow)
         auraTypeList = aurasState.auraTypeList
         buffAuraDirectionList = aurasState.buffAuraDirectionList
         debuffAuraDirectionList = aurasState.debuffAuraDirectionList
+        auraAppearanceTypeList = aurasState.auraAppearanceTypeList
+        playerAuraTypeList = aurasState.playerAuraTypeList
+        playerBuffAuraDirectionList = aurasState.playerBuffAuraDirectionList
+        playerDebuffAuraDirectionList = aurasState.playerDebuffAuraDirectionList
+        playerAuraAppearanceTypeList = aurasState.playerAuraAppearanceTypeList
     end
     RegisterClosableList(auraTypeList)
     RegisterClosableList(buffAuraDirectionList)
     RegisterClosableList(debuffAuraDirectionList)
+    RegisterClosableList(auraAppearanceTypeList)
+    RegisterClosableList(playerAuraTypeList)
+    RegisterClosableList(playerBuffAuraDirectionList)
+    RegisterClosableList(playerDebuffAuraDirectionList)
+    RegisterClosableList(playerAuraAppearanceTypeList)
 
     MMF_CreateCurrentClassSection(middleCol, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider, UpdatePlayerIconModeButtonText, GetCurrentPlayerIconModeValue)
 
