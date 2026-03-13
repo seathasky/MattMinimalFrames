@@ -1,6 +1,6 @@
 # Matt's Minimal Frames
 
-Minimal unit frames for World of Warcraft. Clean, lightweight, and standalone.
+Minimal unit frames for World of Warcraft. Clean, lightweight, and standalone
 
 ***
 
