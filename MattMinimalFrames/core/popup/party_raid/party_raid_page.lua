@@ -22,7 +22,7 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
 
     local quickGuide = CreateFrame("Frame", nil, page, "BackdropTemplate")
     quickGuide:SetPoint("TOPRIGHT", -16, -12)
-    quickGuide:SetSize(236, 122)
+    quickGuide:SetSize(236, 148)
     quickGuide:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -41,15 +41,16 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
     quickGuideBody:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
     quickGuideBody:SetPoint("TOPLEFT", quickGuideTitle, "BOTTOMLEFT", 0, -8)
     quickGuideBody:SetPoint("TOPRIGHT", -12, -30)
+    quickGuideBody:SetPoint("BOTTOMLEFT", quickGuide, "BOTTOMLEFT", 12, 34)
+    quickGuideBody:SetPoint("BOTTOMRIGHT", quickGuide, "BOTTOMRIGHT", -12, 34)
     quickGuideBody:SetJustifyH("LEFT")
     quickGuideBody:SetJustifyV("TOP")
     quickGuideBody:SetTextColor(0.78, 0.90, 0.96)
     quickGuideBody:SetText(
-        "Enable Use Appearance Font for Names.\n" ..
-        "Adjust Font Size and Outline.\n" ..
-        "If Center is disabled, switch Party\n" ..
-        "Frames to Raid-Style in Edit Mode.\n" ..
-        "Labels can be hidden separately."
+        "Use this page to style Blizzard Party\n" ..
+        "and Raid frame names.\n" ..
+        "Adjust font size, outline, centering,\n" ..
+        "and label visibility."
     )
 
     local function SetCheckboxEnabled(container, enabled)
@@ -313,6 +314,56 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
     hint:SetJustifyH("LEFT")
     hint:SetTextColor(0.58, 0.63, 0.67)
     hint:SetText("Uses your Appearance font selection for Blizzard Compact Party/Raid name text.")
+
+    local openAppearanceButton = CreateFrame("Button", nil, quickGuide, "BackdropTemplate")
+    openAppearanceButton:SetSize(132, 20)
+    openAppearanceButton:SetPoint("BOTTOMLEFT", quickGuide, "BOTTOMLEFT", 12, 10)
+    openAppearanceButton:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    openAppearanceButton:SetBackdropColor(0.08, 0.08, 0.1, 1)
+    openAppearanceButton:SetBackdropBorderColor(0.15, 0.15, 0.18, 1)
+
+    local openAppearanceButtonText = openAppearanceButton:CreateFontString(nil, "OVERLAY")
+    openAppearanceButtonText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
+    openAppearanceButtonText:SetPoint("CENTER")
+    openAppearanceButtonText:SetText("Change Font Here")
+    openAppearanceButtonText:SetTextColor(0.8, 0.8, 0.8)
+
+    openAppearanceButton:SetScript("OnEnter", function(self)
+        self:SetBackdropColor(0.12, 0.12, 0.15, 1)
+        self:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.7)
+        openAppearanceButtonText:SetTextColor(1, 1, 1)
+    end)
+    openAppearanceButton:SetScript("OnLeave", function(self)
+        self:SetBackdropColor(0.08, 0.08, 0.1, 1)
+        self:SetBackdropBorderColor(0.15, 0.15, 0.18, 1)
+        openAppearanceButtonText:SetTextColor(0.8, 0.8, 0.8)
+    end)
+    openAppearanceButton:SetScript("OnClick", function()
+        if not MattMinimalFramesDB then
+            MattMinimalFramesDB = {}
+        end
+        -- Jump to Unit Frames -> Appearance sub-tab (index 7).
+        MattMinimalFramesDB.popupActiveTab = 1
+        MattMinimalFramesDB.unitFramesSubTab = 7
+
+        local popup = _G.MMF_WelcomePopup
+        if popup and type(popup.MMFSetActiveTab) == "function" then
+            popup:MMFSetActiveTab(1)
+            return
+        end
+
+        if MMF_ShowWelcomePopup then
+            MMF_ShowWelcomePopup(true)
+            popup = _G.MMF_WelcomePopup
+            if popup and type(popup.MMFSetActiveTab) == "function" then
+                popup:MMFSetActiveTab(1)
+            end
+        end
+    end)
 
     local labelDivider = page:CreateTexture(nil, "ARTWORK")
     labelDivider:SetSize(240, 1)

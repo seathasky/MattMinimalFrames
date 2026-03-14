@@ -541,6 +541,13 @@ function MMF_ShowWelcomePopup(forceShow)
     local SetActiveTab = navigationController.SetActiveTab
     tabButtons = navigationController.tabButtons
     LayoutTabButtons()
+    popup.MMFSetActiveTab = function(_, tabIndex)
+        local index = tonumber(tabIndex) or 1
+        if index < 1 or index > #tabPages then
+            index = 1
+        end
+        SetActiveTab(index)
+    end
 
     ---------------------------------------------------
     unitFramesState = MMF_CreateUnitFramesSection(unitFramesCol, popup, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider, GetCurrentPlayerIconModeValue, GetCurrentTargetIconModeValue, CreateSubTabBar, UpdateSharedScrollBounds)
