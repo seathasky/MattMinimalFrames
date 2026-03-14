@@ -1,7 +1,7 @@
 ## Interface: 120001
 ## Title: Matt's Minimal Frames
 ## Author: Seathasky
-## Version: 7.0.0
+## Version: 6.2.2
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
 ## SavedVariables: MattMinimalFramesDB, MattMinimalFramesProfilesDB, MattMinimalFramesGlobalDB
 
@@ -27,21 +27,9 @@ core/auras.lua
 core/frame_visibility.lua
 core/events.lua
 core/frames.lua
-
-# Popup: shared internals + shared widget controls
-core/popup/shared/constants.lua
-core/popup/shared/helpers.lua
-core/popup/widgets/checkbox.lua
-core/popup/widgets/slider.lua
-core/popup/widgets/color_picker.lua
-core/popup/widgets/dropdown.lua
-core/popup/widgets/sub_tab_bar.lua
-core/popup/widgets/refresh.lua
-
-# Popup: dialogs
-core/popup/shared/dialogs.lua
-
-# Popup: Unit Frames tab sections
+core/popup/popup_constants.lua
+core/popup/popup_widgets.lua
+core/popup/popup_dialogs.lua
 core/popup/unit_frames_tabs/layout.lua
 core/popup/unit_frames_tabs/text.lua
 core/popup/unit_frames_tabs/visibility.lua
@@ -51,45 +39,15 @@ core/popup/unit_frames_tabs/ooc.lua
 core/popup/unit_frames_tabs/media.lua
 core/popup/unit_frames_tabs/icons.lua
 core/popup/unit_frames_tabs/overlays.lua
-
-# Popup: page builders
-core/popup/unit_frames/unit_frames_page.lua
-core/popup/tools/reset.lua
-core/popup/tools/tools_page.lua
-core/popup/profiles/profiles_page.lua
-
-# Popup: Auras / Power tab sections
-core/popup/auras_power_tabs/power.lua
-core/popup/auras_power_tabs/player_auras.lua
-core/popup/auras_power_tabs/target_auras.lua
-core/popup/auras_power_tabs/filters.lua
-
-# Popup: remaining pages + shell
-core/popup/auras_power/auras_power_page.lua
-core/popup/current_class/current_class_page.lua
-core/popup/header/gui_scale_control.lua
-core/popup/header/edit_mode_popup.lua
-core/popup/header/tooltips.lua
-core/popup/header/title_branding.lua
-core/popup/header/title_bar_shell.lua
-core/popup/header/title_controls.lua
-core/popup/header/mode_controls.lua
-core/popup/header/constants.lua
-core/popup/header/layout.lua
-core/popup/header/actions.lua
-core/popup/header/popup_header.lua
-core/popup/footer/version.lua
-core/popup/footer/class_display.lua
-core/popup/footer/footer.lua
-core/popup/window.lua
-core/popup/navigation.lua
+core/popup/popup_page_unit_frames.lua
+core/popup/popup_page_tools.lua
+core/popup/popup_page_profiles.lua
+core/popup/popup_page_auras_class.lua
+core/popup/popup_footer.lua
 core/popup/popup.lua
-
-# Other feature modules
 core/minimap.lua
 core/clique_support.lua
 
-# Entrypoint + runtime feature modules
 init.lua
 core/range_check.lua
 core/class_resources.lua
