@@ -13,6 +13,15 @@ function MMF_CreateAllMinimalFrames()
             def.y
         )
         RegisterUnitWatch(frame)
+
+        frame:HookScript("OnShow", function(self)
+            self.mmfAppliedNameFontSize = nil
+            self.mmfAppliedHPFontSize = nil
+            self.mmfAppliedPowerFontSize = nil
+            self.mmfAppliedCastBarNameFontSize = nil
+            self.mmfAppliedCastBarTimeFontSize = nil
+        end)
+
         _G[def.name] = frame
     end
 
