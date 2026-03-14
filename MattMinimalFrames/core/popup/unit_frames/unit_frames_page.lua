@@ -80,7 +80,7 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
         { label = "Cast Bars", subtitle = "Cast bar settings.", x = 300, y = 112, width = 288, height = 170, guide = "Use this page to customize cast bars.\nAdjust cast bar size, style, and cast text readability." },
         { label = "OOC", subtitle = "Out-of-combat visibility and fade rules.", x = 300, y = 258, width = 288, height = 184, guide = "Use this page to control how frames look out of combat.\nYou can fade frames when they are less important." },
         { label = "Appearance", subtitle = "Textures, fonts, and frame colors.", x = 588, y = 6, width = 300, height = 480, guide = "Use this page to style your frames.\nChange textures, fonts, and colors to match your UI." },
-        { label = "Icons", subtitle = "Icon positions, sizes, and target markers.", x = 588, y = 236, width = 300, height = 266, guide = "Use this page for class/target icon options.\nAdjust icon size and position for better visibility." },
+        { label = "Icons", subtitle = "Icon positions, sizes, and target markers.", x = 588, y = 236, width = 300, height = 360, guide = "Use this page for class/target icon options.\nAdjust icon size and position for better visibility." },
         { label = "Overlays", subtitle = "Heal prediction and absorb overlay settings.", x = 588, y = 512, width = 300, height = 208, guide = "Use this page for heal and absorb overlay visuals.\nSet how strong or subtle those effects should be." },
     }
 

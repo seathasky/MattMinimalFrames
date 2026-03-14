@@ -468,6 +468,9 @@ function MMF_SetGlobalFont(fontName)
     if MMF_ApplyGlobalFont then
         MMF_ApplyGlobalFont()
     end
+    if MMF_UpdateBlizzardPartyRaidNameFonts then
+        MMF_UpdateBlizzardPartyRaidNameFonts()
+    end
 
     -- Some SharedMedia fonts can register slightly later on reload/login.
     -- Retry briefly so a single selection applies immediately and persists.
@@ -484,6 +487,9 @@ function MMF_SetGlobalFont(fontName)
             end
             if MMF_ApplyGlobalFont then
                 MMF_ApplyGlobalFont()
+            end
+            if MMF_UpdateBlizzardPartyRaidNameFonts then
+                MMF_UpdateBlizzardPartyRaidNameFonts()
             end
 
             if (not retryMatched) and attempts < 40 then
@@ -517,6 +523,9 @@ if LSM and LSM.RegisterCallback then
             MMF_Config.FONT_PATH = MMF_GetGlobalFontPath() or MMF_Config.FONT_PATH
             if MMF_ApplyGlobalFont then
                 MMF_ApplyGlobalFont()
+            end
+            if MMF_UpdateBlizzardPartyRaidNameFonts then
+                MMF_UpdateBlizzardPartyRaidNameFonts()
             end
         elseif mediaType == STATUSBAR and normalizedKey and normalizedKey == NormalizeMediaName(MattMinimalFramesDB.statusBarTexture) then
             if MMF_ApplyStatusBarTexture then

@@ -322,7 +322,7 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         return button
     end
 
-    rightSection.resetPlayerIconButton = CreateIconResetButton("Reset Player Icon", RIGHT_COL_X, (-650 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, function()
+    rightSection.resetPlayerIconButton = CreateIconResetButton("Reset Player Icon", RIGHT_COL_X, (-656 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, function()
         MattMinimalFramesDB.playerFrameIconXOffset = 0
         MattMinimalFramesDB.playerFrameIconYOffset = 0
         MattMinimalFramesDB.playerFrameIconScale = 1.0
@@ -334,7 +334,7 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         end
     end)
 
-    rightSection.resetTargetIconButton = CreateIconResetButton("Reset Target Icon", RIGHT_COL_X + ICON_RESET_BUTTON_WIDTH + ICON_RESET_BUTTON_GAP, (-650 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, function()
+    rightSection.resetTargetIconButton = CreateIconResetButton("Reset Target Icon", RIGHT_COL_X + ICON_RESET_BUTTON_WIDTH + ICON_RESET_BUTTON_GAP, (-656 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, function()
         MattMinimalFramesDB.targetFrameIconXOffset = 0
         MattMinimalFramesDB.targetFrameIconYOffset = 0
         MattMinimalFramesDB.targetFrameIconScale = 1.0
@@ -346,7 +346,7 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         end
     end)
 
-    rightSection.targetMarkersCheck = CreateMinimalCheckbox(unitFramesCol, "Target Markers", RIGHT_COL_X, (-678 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showTargetMarkers", false, function(checked)
+    rightSection.targetMarkersCheck = CreateMinimalCheckbox(unitFramesCol, "Target Markers", RIGHT_COL_X, (-690 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showTargetMarkers", false, function(checked)
         if MMF_UpdateTargetMarkerVisibility then
             MMF_UpdateTargetMarkerVisibility(checked)
         end
@@ -360,5 +360,23 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         "|TInterface\\TargetingFrame\\UI-RaidTargetingIcons:14:14:0:0:256:256:64:128:0:64|t" ..
         "|TInterface\\TargetingFrame\\UI-RaidTargetingIcons:14:14:0:0:256:256:128:192:0:64|t"
     )
+
+    rightSection.animatedRestingIconCheck = CreateMinimalCheckbox(unitFramesCol, "Animated Resting Icon", RIGHT_COL_X, (-714 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "animatedRestingIcon", true, function(checked)
+        if MMF_UpdateAnimatedRestingIconSetting then
+            MMF_UpdateAnimatedRestingIconSetting(checked)
+        end
+    end)
+
+    rightSection.animatedCombatIconCheck = CreateMinimalCheckbox(unitFramesCol, "Animated Combat Icon", RIGHT_COL_X, (-738 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "animatedCombatIcon", true, function(checked)
+        if MMF_UpdateAnimatedCombatIconSetting then
+            MMF_UpdateAnimatedCombatIconSetting(checked)
+        end
+    end)
+
+    rightSection.combatFrameOutlineCheck = CreateMinimalCheckbox(unitFramesCol, "Combat Frame Outline", RIGHT_COL_X, (-762 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "combatFrameOutline", false, function(checked)
+        if MMF_UpdateCombatFrameOutlineSetting then
+            MMF_UpdateCombatFrameOutlineSetting(checked)
+        end
+    end)
 end
 

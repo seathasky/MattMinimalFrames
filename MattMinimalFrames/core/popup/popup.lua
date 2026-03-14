@@ -13,6 +13,7 @@ local POPUP_LAYOUT = (MMF_GetPopupLayout and MMF_GetPopupLayout()) or {
     centerY = 50,
     unitFramesContentHeight = 680,
     aurasPowerContentHeight = 680,
+    partyRaidContentHeight = 680,
     currentClassContentHeight = 680,
     profilesContentHeight = 680,
     toolsContentHeight = 680,
@@ -329,6 +330,7 @@ function MMF_ShowWelcomePopup(forceShow)
     end
 
     local leftCol = CreatePageFrame(pageScrollFrame, POPUP_LAYOUT.aurasPowerContentHeight)
+    local partyRaidCol = CreatePageFrame(pageScrollFrame, POPUP_LAYOUT.partyRaidContentHeight)
     local unitFramesCol = CreatePageFrame(pageScrollFrame, POPUP_LAYOUT.unitFramesContentHeight)
     local middleCol = CreatePageFrame(pageScrollFrame, POPUP_LAYOUT.currentClassContentHeight)
     local rightCol = CreatePageFrame(pageScrollFrame, POPUP_LAYOUT.toolsContentHeight)
@@ -392,6 +394,7 @@ function MMF_ShowWelcomePopup(forceShow)
     local allPages = {
         unitFramesCol,
         leftCol,
+        partyRaidCol,
         middleCol,
         rightCol,
         profilesCol,
@@ -478,12 +481,14 @@ function MMF_ShowWelcomePopup(forceShow)
         tabPages = {
             unitFramesCol,
             leftCol,
+            partyRaidCol,
             profilesCol,
             rightCol,
         }
         tabDefs = {
             { label = "Unit Frames" },
             { label = "Auras / Power" },
+            { label = "Party / Raid" },
             { label = "Profiles" },
             { label = "Tools" },
         }
@@ -491,6 +496,7 @@ function MMF_ShowWelcomePopup(forceShow)
         tabPages = {
             unitFramesCol,
             leftCol,
+            partyRaidCol,
             middleCol,
             profilesCol,
             rightCol,
@@ -498,6 +504,7 @@ function MMF_ShowWelcomePopup(forceShow)
         tabDefs = {
             { label = "Unit Frames" },
             { label = "Auras / Power" },
+            { label = "Party / Raid" },
             { label = "Current Class" },
             { label = "Profiles" },
             { label = "Tools" },
@@ -588,6 +595,8 @@ function MMF_ShowWelcomePopup(forceShow)
     RegisterClosableList(playerBuffAuraDirectionList)
     RegisterClosableList(playerDebuffAuraDirectionList)
     RegisterClosableList(playerAuraAppearanceTypeList)
+
+    MMF_CreatePartyRaidPage(partyRaidCol, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider)
 
     MMF_CreateCurrentClassSection(middleCol, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider, UpdatePlayerIconModeButtonText, GetCurrentPlayerIconModeValue)
 

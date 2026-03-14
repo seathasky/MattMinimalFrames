@@ -432,17 +432,26 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
         if MMF_FlushCombatQueue then
             MMF_FlushCombatQueue()
         end
-        if MMF_PlayerFrame and MMF_PlayerFrame.combatTexture then
+        if MMF_UpdatePlayerCombatIndicator then
+            MMF_UpdatePlayerCombatIndicator()
+        elseif MMF_PlayerFrame and MMF_PlayerFrame.combatTexture then
             MMF_PlayerFrame.combatTexture:Hide()
         end
 
     elseif event == "PLAYER_REGEN_DISABLED" then
-        if MMF_PlayerFrame and MMF_PlayerFrame.combatTexture then
+        if MMF_UpdatePlayerCombatIndicator then
+            MMF_UpdatePlayerCombatIndicator()
+        elseif MMF_PlayerFrame and MMF_PlayerFrame.combatTexture then
             MMF_PlayerFrame.combatTexture:Show()
         end
 
     elseif event == "PLAYER_ENTERING_WORLD" or event == "PLAYER_UPDATE_RESTING" then
-        if MMF_PlayerFrame and MMF_PlayerFrame.restingTexture then
+        if MMF_UpdatePlayerCombatIndicator then
+            MMF_UpdatePlayerCombatIndicator()
+        end
+        if MMF_UpdatePlayerRestingIndicator then
+            MMF_UpdatePlayerRestingIndicator()
+        elseif MMF_PlayerFrame and MMF_PlayerFrame.restingTexture then
             MMF_PlayerFrame.restingTexture:SetShown(IsResting())
         end
         if event == "PLAYER_ENTERING_WORLD" then

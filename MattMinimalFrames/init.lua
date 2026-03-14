@@ -70,6 +70,607 @@ end
 
 MMF_UpdateBlizzardPlayerCastBarVisibility = UpdateBlizzardPlayerCastBarVisibility
 
+local trackedPartyRaidNameStyles = setmetatable({}, { __mode = "k" })
+local compactPartyRaidNameHookInstalled = false
+local compactPartyRaidLabelHookInstalled = false
+
+local function IsFontString(region)
+    return region and region.GetObjectType and region:GetObjectType() == "FontString"
+end
+
+local function IsBlizzardPartyRaidUnitFrame(frame)
+    if not frame then
+        return false
+    end
+
+    local frameName = frame.GetName and frame:GetName()
+    if type(frameName) == "string" then
+        if frameName:match("^CompactPartyFrame") or frameName:match("^CompactRaidFrame") then
+            return true
+        end
+    end
+
+    local parent = frame
+    for _ = 1, 10 do
+        parent = parent.GetParent and parent:GetParent() or nil
+        if not parent then
+            break
+        end
+        if parent == _G.CompactPartyFrame or parent == _G.CompactRaidFrameContainer then
+            return true
+        end
+        local parentName = parent.GetName and parent:GetName()
+        if type(parentName) == "string" then
+            if parentName:match("^CompactPartyFrame") or parentName:match("^CompactRaidFrame") then
+                return true
+            end
+        end
+    end
+
+    return false
+end
+
+local function IsBlizzardNonRaidPartyMemberFrame(frame)
+    if not frame then
+        return false
+    end
+    local unitToken = frame.unitToken
+    if type(unitToken) == "string" and unitToken:match("^party%d+$") then
+        return true
+    end
+    local frameName = frame.GetName and frame:GetName()
+    if type(frameName) == "string" and frameName:match("^PartyMemberFrame%d+$") then
+        return true
+    end
+    return false
+end
+
+local function IsBlizzardCompactRaidMemberFrame(frame)
+    if not frame then
+        return false
+    end
+    local unitToken = frame.unit or frame.displayedUnit or frame.unitToken
+    if type(unitToken) == "string" and unitToken:match("^raid%d+$") then
+        return true
+    end
+    local frameName = frame.GetName and frame:GetName()
+    if type(frameName) == "string" and frameName:match("^CompactRaidFrame%d+$") then
+        return true
+    end
+    -- Fallback: member frames usually live under the raid container hierarchy.
+    local parent = frame
+    for _ = 1, 8 do
+        parent = parent and parent.GetParent and parent:GetParent() or nil
+        if not parent then
+            break
+        end
+        if parent == _G.CompactRaidFrameContainer then
+            return true
+        end
+    end
+    return false
+end
+
+local function IsPartyRaidNameStylingEnabled()
+    if not MattMinimalFramesDB then
+        return false
+    end
+    return MattMinimalFramesDB.useSharedPartyRaidNameFont == true
+end
+
+local function ApplyPartyRaidLabelVisibilityForFrame(frame)
+    if not frame then
+        return
+    end
+    if not MattMinimalFramesDB then
+        return
+    end
+
+    if frame == _G.CompactPartyFrame then
+        if frame.title then
+            frame.title:SetShown(MattMinimalFramesDB.hidePartyFrameLabel ~= true)
+        end
+        return
+    end
+
+    if frame.GetName and type(frame:GetName()) == "string" and frame:GetName():match("^CompactRaidGroup%d+$") then
+        if frame.title then
+            frame.title:SetShown(MattMinimalFramesDB.hideRaidGroupLabels ~= true)
+        end
+        return
+    end
+end
+
+local function ApplyPartyRaidLabelVisibilityToAllFrames()
+    if _G.CompactPartyFrame then
+        ApplyPartyRaidLabelVisibilityForFrame(_G.CompactPartyFrame)
+    end
+
+    for groupIndex = 1, 8 do
+        local groupFrame = _G["CompactRaidGroup" .. groupIndex]
+        if groupFrame then
+            ApplyPartyRaidLabelVisibilityForFrame(groupFrame)
+        end
+    end
+
+    local container = _G.CompactRaidFrameContainer
+    if container and type(container.flowFrames) == "table" then
+        for _, frame in ipairs(container.flowFrames) do
+            ApplyPartyRaidLabelVisibilityForFrame(frame)
+        end
+    end
+end
+
+local function EnsurePartyRaidLabelHook()
+    if compactPartyRaidLabelHookInstalled then
+        return
+    end
+    if type(hooksecurefunc) ~= "function" then
+        return
+    end
+
+    if type(_G.CompactRaidGroup_InitializeForGroup) == "function" then
+        hooksecurefunc("CompactRaidGroup_InitializeForGroup", function(frame)
+            ApplyPartyRaidLabelVisibilityForFrame(frame)
+        end)
+    end
+    if type(_G.CompactRaidGroup_UpdateLayout) == "function" then
+        hooksecurefunc("CompactRaidGroup_UpdateLayout", function(frame)
+            ApplyPartyRaidLabelVisibilityForFrame(frame)
+        end)
+    end
+    if type(_G.CompactPartyFrame_Generate) == "function" then
+        hooksecurefunc("CompactPartyFrame_Generate", function()
+            if _G.CompactPartyFrame then
+                ApplyPartyRaidLabelVisibilityForFrame(_G.CompactPartyFrame)
+            end
+        end)
+    end
+    if type(_G.CompactRaidFrameContainer_LayoutFrames) == "function" then
+        hooksecurefunc("CompactRaidFrameContainer_LayoutFrames", function()
+            ApplyPartyRaidLabelVisibilityToAllFrames()
+        end)
+    end
+
+    compactPartyRaidLabelHookInstalled = true
+end
+
+local function CapturePartyRaidNameStyle(fontString)
+    if not IsFontString(fontString) then
+        return
+    end
+
+    if trackedPartyRaidNameStyles[fontString] then
+        return
+    end
+
+    local currentPath, currentSize, currentFlags = fontString:GetFont()
+    local pointCount = (fontString.GetNumPoints and fontString:GetNumPoints()) or 0
+    local points = {}
+    for i = 1, pointCount do
+        local point, relativeTo, relativePoint, xOfs, yOfs = fontString:GetPoint(i)
+        points[#points + 1] = {
+            point = point,
+            relativeTo = relativeTo,
+            relativePoint = relativePoint,
+            xOfs = xOfs,
+            yOfs = yOfs,
+        }
+    end
+
+    trackedPartyRaidNameStyles[fontString] = {
+        path = currentPath,
+        size = currentSize,
+        flags = currentFlags,
+        justifyH = fontString.GetJustifyH and fontString:GetJustifyH() or "LEFT",
+        justifyV = fontString.GetJustifyV and fontString:GetJustifyV() or "MIDDLE",
+        points = points,
+    }
+end
+
+local function SplitFontFlags(flags)
+    local out = {}
+    if type(flags) ~= "string" then
+        return out
+    end
+    for token in flags:gmatch("%S+") do
+        out[#out + 1] = token
+    end
+    return out
+end
+
+local function JoinFontFlags(tokens)
+    if type(tokens) ~= "table" or #tokens == 0 then
+        return ""
+    end
+    return table.concat(tokens, ",")
+end
+
+local function EnsureOutlineFlag(flags)
+    local tokens = SplitFontFlags(flags)
+    local hasOutline = false
+    for _, token in ipairs(tokens) do
+        if token == "OUTLINE" then
+            hasOutline = true
+            break
+        end
+    end
+    if not hasOutline then
+        tokens[#tokens + 1] = "OUTLINE"
+    end
+    return JoinFontFlags(tokens)
+end
+
+local function RestorePartyRaidNameFont(fontString, original)
+    local path = original and original.path
+    local size = tonumber((fontString.GetFont and select(2, fontString:GetFont())) or (original and original.size)) or 10
+    local flags = (original and original.flags) or ""
+    if type(path) == "string" and path ~= "" then
+        pcall(fontString.SetFont, fontString, path, size, flags)
+    elseif MMF_SetFontSafe then
+        MMF_SetFontSafe(fontString, STANDARD_TEXT_FONT, size, flags)
+    else
+        pcall(fontString.SetFont, fontString, STANDARD_TEXT_FONT, size, flags)
+    end
+end
+
+local function RestorePartyRaidNameLayout(fontString, original)
+    if not fontString or not fontString.ClearAllPoints or not fontString.SetPoint then
+        return
+    end
+    fontString:ClearAllPoints()
+    local restored = false
+    if original and type(original.points) == "table" then
+        for _, pointData in ipairs(original.points) do
+            if pointData and pointData.point then
+                fontString:SetPoint(
+                    pointData.point,
+                    pointData.relativeTo,
+                    pointData.relativePoint,
+                    pointData.xOfs,
+                    pointData.yOfs
+                )
+                restored = true
+            end
+        end
+    end
+    if not restored then
+        fontString:SetPoint("LEFT")
+    end
+
+    if original and fontString.SetJustifyH then
+        fontString:SetJustifyH(original.justifyH or "LEFT")
+    end
+    if original and fontString.SetJustifyV then
+        fontString:SetJustifyV(original.justifyV or "MIDDLE")
+    end
+end
+
+local function ApplyPartyRaidNameFont(fontString, frame)
+    if not IsFontString(fontString) then
+        return
+    end
+    CapturePartyRaidNameStyle(fontString)
+
+    local original = trackedPartyRaidNameStyles[fontString]
+    local fontPath = (original and original.path) or STANDARD_TEXT_FONT
+    if MattMinimalFramesDB and MattMinimalFramesDB.useSharedPartyRaidNameFont == true then
+        fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or STANDARD_TEXT_FONT
+    end
+    local _, currentSize, currentFlags = fontString:GetFont()
+    local size = tonumber(currentSize) or 10
+    local sizeSetting = nil
+    if MattMinimalFramesDB then
+        if IsBlizzardCompactRaidMemberFrame(frame) then
+            sizeSetting = MattMinimalFramesDB.raidNameFontSize
+        else
+            sizeSetting = MattMinimalFramesDB.partyNameFontSize
+        end
+        if sizeSetting == nil then
+            sizeSetting = MattMinimalFramesDB.partyRaidNameFontSize
+        end
+    end
+    if tonumber(sizeSetting) then
+        size = math.floor(tonumber(sizeSetting) + 0.5)
+        if size < 6 then size = 6 end
+        if size > 32 then size = 32 end
+    end
+    local flags = (original and original.flags) or currentFlags or ""
+    if MattMinimalFramesDB and MattMinimalFramesDB.partyRaidNameOutline == true then
+        flags = EnsureOutlineFlag(flags)
+    end
+
+    if MMF_SetFontSafe then
+        MMF_SetFontSafe(fontString, fontPath, size, flags)
+    else
+        pcall(fontString.SetFont, fontString, fontPath, size, flags)
+    end
+end
+
+local function ApplyPartyRaidNameCenter(fontString, frame)
+    if not IsFontString(fontString) then
+        return
+    end
+    CapturePartyRaidNameStyle(fontString)
+
+    if fontString.SetJustifyH then
+        fontString:SetJustifyH("CENTER")
+    end
+    if fontString.SetJustifyV then
+        fontString:SetJustifyV("MIDDLE")
+    end
+
+    -- Anchor to the unit frame itself to avoid tainting Blizzard health bar state.
+    local anchor = frame
+    if anchor and fontString.ClearAllPoints and fontString.SetPoint then
+        fontString:ClearAllPoints()
+        fontString:SetPoint("CENTER", anchor, "CENTER", 0, 0)
+    end
+end
+
+local function TruncatePartyRaidNameText(text, maxChars)
+    if type(text) ~= "string" then
+        return text
+    end
+    local limit = tonumber(maxChars) or 0
+    if limit <= 0 then
+        return text
+    end
+    if utf8len and utf8sub then
+        local len = utf8len(text) or 0
+        if len > limit then
+            return utf8sub(text, 1, limit) .. "..."
+        end
+        return text
+    end
+    if #text > limit then
+        return string.sub(text, 1, limit) .. "..."
+    end
+    return text
+end
+
+local function ApplyRaidNameTruncation(fontString, frame)
+    if not IsFontString(fontString) then
+        return
+    end
+    if not IsBlizzardCompactRaidMemberFrame(frame) then
+        return
+    end
+
+    local truncateLen = tonumber(MattMinimalFramesDB and MattMinimalFramesDB.raidNameTruncateLength) or 0
+    if truncateLen < 0 then
+        truncateLen = 0
+    end
+    if truncateLen > 24 then
+        truncateLen = 24
+    end
+
+    local unitToken = frame and (frame.unit or frame.displayedUnit or frame.unitToken) or nil
+    local fullName = nil
+    if type(unitToken) == "string" and UnitExists and UnitExists(unitToken) and UnitName then
+        local unitName = UnitName(unitToken)
+        if type(unitName) == "string" and unitName ~= "" then
+            fullName = unitName
+        end
+    end
+    if not fullName or fullName == "" then
+        fullName = fontString.GetText and fontString:GetText() or nil
+    end
+    if type(fullName) ~= "string" or fullName == "" then
+        return
+    end
+
+    local nextText = TruncatePartyRaidNameText(fullName, truncateLen)
+    local currentText = fontString.GetText and fontString:GetText() or nil
+    if nextText and nextText ~= currentText then
+        pcall(fontString.SetText, fontString, nextText)
+    end
+end
+
+local function RestoreTrackedPartyRaidNameStyles()
+    for fontString, original in pairs(trackedPartyRaidNameStyles) do
+        if IsFontString(fontString) and type(original) == "table" then
+            RestorePartyRaidNameFont(fontString, original)
+            RestorePartyRaidNameLayout(fontString, original)
+        end
+        trackedPartyRaidNameStyles[fontString] = nil
+    end
+end
+
+local function ApplyPartyRaidNameStyleForFontString(fontString, frame)
+    if not IsFontString(fontString) then
+        return
+    end
+    CapturePartyRaidNameStyle(fontString)
+    local original = trackedPartyRaidNameStyles[fontString]
+
+    if MattMinimalFramesDB and MattMinimalFramesDB.useSharedPartyRaidNameFont == true then
+        ApplyPartyRaidNameFont(fontString, frame)
+    elseif original then
+        RestorePartyRaidNameFont(fontString, original)
+    end
+    if MattMinimalFramesDB
+        and MattMinimalFramesDB.useSharedPartyRaidNameFont == true
+        and MattMinimalFramesDB.centerPartyRaidNames == true
+        and not IsBlizzardNonRaidPartyMemberFrame(frame)
+    then
+        ApplyPartyRaidNameCenter(fontString, frame)
+    elseif original then
+        RestorePartyRaidNameLayout(fontString, original)
+    end
+    if MattMinimalFramesDB and MattMinimalFramesDB.useSharedPartyRaidNameFont == true then
+        ApplyRaidNameTruncation(fontString, frame)
+    end
+end
+
+local function ApplyPartyRaidNameStyleForFrame(frame)
+    if not IsBlizzardPartyRaidUnitFrame(frame) and not IsBlizzardNonRaidPartyMemberFrame(frame) then
+        return
+    end
+
+    if IsFontString(frame.name) then
+        ApplyPartyRaidNameStyleForFontString(frame.name, frame)
+    end
+    if IsFontString(frame.Name) then
+        ApplyPartyRaidNameStyleForFontString(frame.Name, frame)
+    end
+    if IsFontString(frame.nameText) then
+        ApplyPartyRaidNameStyleForFontString(frame.nameText, frame)
+    end
+end
+
+local function TraverseFrameTree(frame, visitor, seen)
+    if not frame or seen[frame] then
+        return
+    end
+    seen[frame] = true
+    visitor(frame)
+
+    local children = { frame:GetChildren() }
+    for _, child in ipairs(children) do
+        TraverseFrameTree(child, visitor, seen)
+    end
+end
+
+local function ApplyPartyRaidNameStyleToAllFrames()
+    local seen = {}
+    if _G.CompactPartyFrame then
+        TraverseFrameTree(_G.CompactPartyFrame, ApplyPartyRaidNameStyleForFrame, seen)
+    end
+    if _G.CompactRaidFrameContainer then
+        TraverseFrameTree(_G.CompactRaidFrameContainer, ApplyPartyRaidNameStyleForFrame, seen)
+    end
+
+    if _G.PartyFrame and _G.PartyFrame.PartyMemberFramePool and _G.PartyFrame.PartyMemberFramePool.EnumerateActive then
+        for memberFrame in _G.PartyFrame.PartyMemberFramePool:EnumerateActive() do
+            ApplyPartyRaidNameStyleForFrame(memberFrame)
+        end
+    end
+
+    for i = 1, 4 do
+        local legacyFrame = _G["PartyMemberFrame" .. i]
+        if legacyFrame then
+            ApplyPartyRaidNameStyleForFrame(legacyFrame)
+        end
+    end
+end
+
+function MMF_ApplyRaidNameTruncationPreview()
+    if not MattMinimalFramesDB then
+        return
+    end
+    local seen = {}
+    local function Visit(frame)
+        if not IsBlizzardCompactRaidMemberFrame(frame) then
+            return
+        end
+        if IsFontString(frame.name) then
+            ApplyRaidNameTruncation(frame.name, frame)
+        end
+        if IsFontString(frame.Name) then
+            ApplyRaidNameTruncation(frame.Name, frame)
+        end
+        if IsFontString(frame.nameText) then
+            ApplyRaidNameTruncation(frame.nameText, frame)
+        end
+    end
+    if _G.CompactRaidFrameContainer then
+        TraverseFrameTree(_G.CompactRaidFrameContainer, Visit, seen)
+    end
+end
+
+function MMF_RefreshBlizzardPartyRaidNameFonts()
+    local seen = {}
+    local function Visit(frame)
+        if not IsBlizzardPartyRaidUnitFrame(frame) and not IsBlizzardNonRaidPartyMemberFrame(frame) then
+            return
+        end
+        if IsPartyRaidNameStylingEnabled() then
+            ApplyPartyRaidNameStyleForFrame(frame)
+        end
+    end
+    if _G.CompactPartyFrame then
+        TraverseFrameTree(_G.CompactPartyFrame, Visit, seen)
+    end
+    if _G.CompactRaidFrameContainer then
+        TraverseFrameTree(_G.CompactRaidFrameContainer, Visit, seen)
+    end
+
+    if _G.PartyFrame and _G.PartyFrame.PartyMemberFramePool and _G.PartyFrame.PartyMemberFramePool.EnumerateActive then
+        for memberFrame in _G.PartyFrame.PartyMemberFramePool:EnumerateActive() do
+            Visit(memberFrame)
+        end
+    end
+
+    for i = 1, 4 do
+        local legacyFrame = _G["PartyMemberFrame" .. i]
+        if legacyFrame then
+            Visit(legacyFrame)
+        end
+    end
+end
+
+function MMF_UpdateBlizzardPartyRaidLabels()
+    if not MattMinimalFramesDB then
+        return
+    end
+
+    EnsurePartyRaidLabelHook()
+    ApplyPartyRaidLabelVisibilityToAllFrames()
+end
+
+local function EnsurePartyRaidNameHook()
+    if compactPartyRaidNameHookInstalled then
+        return
+    end
+    if type(hooksecurefunc) ~= "function" then
+        return
+    end
+    if type(_G.CompactUnitFrame_UpdateName) == "function" then
+        hooksecurefunc("CompactUnitFrame_UpdateName", function(frame)
+            if IsPartyRaidNameStylingEnabled() then
+                ApplyPartyRaidNameStyleForFrame(frame)
+            end
+        end)
+    end
+    if type(_G.PartyMemberFrameMixin) == "table" then
+        if type(_G.PartyMemberFrameMixin.UpdateMember) == "function" then
+            hooksecurefunc(_G.PartyMemberFrameMixin, "UpdateMember", function(self)
+                if IsPartyRaidNameStylingEnabled() then
+                    ApplyPartyRaidNameStyleForFrame(self)
+                end
+            end)
+        end
+        if type(_G.PartyMemberFrameMixin.UpdateNameTextAnchors) == "function" then
+            hooksecurefunc(_G.PartyMemberFrameMixin, "UpdateNameTextAnchors", function(self)
+                if IsPartyRaidNameStylingEnabled() then
+                    ApplyPartyRaidNameStyleForFrame(self)
+                end
+            end)
+        end
+    end
+    compactPartyRaidNameHookInstalled = true
+end
+
+function MMF_UpdateBlizzardPartyRaidNameFonts()
+    if not MattMinimalFramesDB then
+        return
+    end
+
+    EnsurePartyRaidNameHook()
+
+    if IsPartyRaidNameStylingEnabled() then
+        ApplyPartyRaidNameStyleToAllFrames()
+        MMF_RefreshBlizzardPartyRaidNameFonts()
+    else
+        RestoreTrackedPartyRaidNameStyles()
+        MMF_RefreshBlizzardPartyRaidNameFonts()
+    end
+    if MMF_UpdateBlizzardPartyRaidLabels then
+        MMF_UpdateBlizzardPartyRaidLabels()
+    end
+end
+
 
 SLASH_MATTMINIMALFRAMES1 = "/mmf"
 SlashCmdList["MATTMINIMALFRAMES"] = function()
@@ -110,6 +711,26 @@ local function NormalizeLegacyIconModes(db)
     end
     if db.targetFrameIconMode == nil and db.showTargetFrameIcon ~= nil then
         db.targetFrameIconMode = db.showTargetFrameIcon and "class" or "off"
+    end
+end
+
+local function NormalizeLegacyPartyRaidFontSetting(db)
+    if type(db) ~= "table" then
+        return
+    end
+    if db.useNaowhPartyRaidNames ~= nil then
+        if db.useSharedPartyRaidNameFont == nil then
+            db.useSharedPartyRaidNameFont = (db.useNaowhPartyRaidNames == true)
+        elseif db.useNaowhPartyRaidNames == true and db.useSharedPartyRaidNameFont ~= true then
+            db.useSharedPartyRaidNameFont = true
+        end
+        db.useNaowhPartyRaidNames = nil
+    end
+    if db.partyNameFontSize == nil then
+        db.partyNameFontSize = tonumber(db.partyRaidNameFontSize) or 16
+    end
+    if db.raidNameFontSize == nil then
+        db.raidNameFontSize = tonumber(db.partyRaidNameFontSize) or 16
     end
 end
 
@@ -215,11 +836,23 @@ function MMF_ApplyActiveProfileLive()
     if MMF_UpdateTargetMarkerVisibility then
         MMF_UpdateTargetMarkerVisibility(MattMinimalFramesDB.showTargetMarkers == true)
     end
+    if MMF_UpdateAnimatedRestingIconSetting then
+        MMF_UpdateAnimatedRestingIconSetting(MattMinimalFramesDB.animatedRestingIcon ~= false)
+    end
+    if MMF_UpdateAnimatedCombatIconSetting then
+        MMF_UpdateAnimatedCombatIconSetting(MattMinimalFramesDB.animatedCombatIcon ~= false)
+    end
+    if MMF_UpdateCombatFrameOutlineSetting then
+        MMF_UpdateCombatFrameOutlineSetting(MattMinimalFramesDB.combatFrameOutline == true)
+    end
     if MMF_UpdateCombatFrameVisibility then
         MMF_UpdateCombatFrameVisibility()
     end
     if MMF_UpdateBlizzardPlayerCastBarVisibility then
         MMF_UpdateBlizzardPlayerCastBarVisibility()
+    end
+    if MMF_UpdateBlizzardPartyRaidNameFonts then
+        MMF_UpdateBlizzardPartyRaidNameFonts()
     end
 
     if MMF_InitializeClassResources then MMF_InitializeClassResources() end
@@ -279,6 +912,7 @@ local function Initialize()
             ApplyDefaultsSafe(MattMinimalFramesDB, MattMinimalFrames_Defaults)
         end
     end
+    NormalizeLegacyPartyRaidFontSetting(MattMinimalFramesDB)
     if MattMinimalFramesDB then
         -- Always reset preview-only aura test mode on UI load/reload.
         MattMinimalFramesDB.auraTestMode = false
@@ -301,6 +935,9 @@ local function Initialize()
     
     HideBlizzardFrames()
     UpdateBlizzardPlayerCastBarVisibility()
+    if MMF_UpdateBlizzardPartyRaidNameFonts then
+        MMF_UpdateBlizzardPartyRaidNameFonts()
+    end
     MMF_CreateAllMinimalFrames()
     if MMF_UpdateCombatFrameVisibility then
         MMF_UpdateCombatFrameVisibility()
@@ -407,6 +1044,9 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
         -- Apply selected SharedMedia again after all addons have loaded.
         ReapplySharedMediaSelections()
         UpdateBlizzardPlayerCastBarVisibility()
+        if MMF_UpdateBlizzardPartyRaidNameFonts then
+            MMF_UpdateBlizzardPartyRaidNameFonts()
+        end
         ScheduleStartupStyleReapply()
         if reopenMainGUIAfterEditModeReset and MMF_ShowWelcomePopup then
             reopenMainGUIAfterEditModeReset = false
