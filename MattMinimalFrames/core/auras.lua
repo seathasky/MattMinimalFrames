@@ -745,10 +745,6 @@ function MMF_UpdateAuraIconSize(size)
         MattMinimalFramesDB = {}
     end
     MattMinimalFramesDB.auraIconSize = size
-    MattMinimalFramesDB.buffAuraIconSize = size
-    MattMinimalFramesDB.debuffAuraIconSize = size
-    MattMinimalFramesDB.playerBuffAuraIconSize = size
-    MattMinimalFramesDB.playerDebuffAuraIconSize = size
     LayoutAuraContainer(MMF_TargetFrame.BuffContainer, false, size, GetActiveAuraCount(MMF_TargetFrame.BuffContainer))
     LayoutAuraContainer(MMF_TargetFrame.DebuffContainer, true, size, GetActiveAuraCount(MMF_TargetFrame.DebuffContainer))
     if MMF_PlayerFrame then
@@ -1292,20 +1288,34 @@ auraEventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 auraEventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 auraEventFrame:RegisterEvent("UNIT_AURA")
 auraEventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
+auraEventFrame:RegisterEvent("SPELLS_CHANGED")
+auraEventFrame:RegisterEvent("PLAYER_TALENT_UPDATE")
 auraEventFrame:SetScript("OnEvent", function(self, event, unit)
     if event == "PLAYER_ENTERING_WORLD" then
         MMF_SetupTargetAuras()
         MMF_UpdateBlizzardPlayerAuraVisibility()
         MMF_UpdateTargetAuras()
         MMF_UpdatePlayerAuras()
+        if MMF_UpdateDispelHighlights then
+            MMF_UpdateDispelHighlights()
+        end
     elseif event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
         MMF_UpdateTargetAuras()
         MMF_UpdatePlayerAuras()
+        if MMF_UpdateDispelHighlights then
+            MMF_UpdateDispelHighlights()
+        end
     elseif event == "UNIT_AURA" and unit == "target" then
         MMF_UpdateTargetAuras()
+        if MMF_UpdateDispelHighlights then
+            MMF_UpdateDispelHighlights()
+        end
     elseif event == "UNIT_AURA" and unit == "player" then
         MMF_UpdateBlizzardPlayerAuraVisibility()
         MMF_UpdatePlayerAuras()
+        if MMF_UpdateDispelHighlights then
+            MMF_UpdateDispelHighlights()
+        end
     elseif event == "PLAYER_TARGET_CHANGED" then
         if MMF_TargetFrame then
             ClearAuraContainer(MMF_TargetFrame.BuffContainer)
@@ -1313,5 +1323,12 @@ auraEventFrame:SetScript("OnEvent", function(self, event, unit)
         end
         MMF_UpdateTargetAuras()
         MMF_UpdatePlayerAuras()
+        if MMF_UpdateDispelHighlights then
+            MMF_UpdateDispelHighlights()
+        end
+    elseif event == "SPELLS_CHANGED" or event == "PLAYER_TALENT_UPDATE" then
+        if MMF_UpdateDispelHighlights then
+            MMF_UpdateDispelHighlights()
+        end
     end
 end)

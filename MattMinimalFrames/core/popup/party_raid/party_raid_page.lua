@@ -127,6 +127,7 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
     local outlineCheck
     local partyFontSizeSlider
     local raidFontSizeSlider
+    local partyNameTruncateSlider
     local raidNameTruncateSlider
     local UpdateNameControlsEnabledState
 
@@ -138,6 +139,7 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
         SetCheckboxEnabled(outlineCheck, enabled)
         SetSliderEnabled(partyFontSizeSlider, enabled)
         SetSliderEnabled(raidFontSizeSlider, enabled)
+        SetSliderEnabled(partyNameTruncateSlider, enabled)
         SetSliderEnabled(raidNameTruncateSlider, enabled)
         if centerNameNote then
             if nonRaidDetected then
@@ -281,13 +283,19 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
         end
     end, true)
 
-    raidNameTruncateSlider = CreateMinimalSlider(page, "Raid Name Truncate (0 = Off)", 12, -214, 240, "raidNameTruncateLength", 0, 24, 1, 0, function()
+    partyNameTruncateSlider = CreateMinimalSlider(page, "Party Name Truncate (0 = Off)", 12, -214, 240, "partyNameTruncateLength", 0, 24, 1, 0, function()
+        if MMF_ApplyPartyRaidNameTruncationPreview then
+            MMF_ApplyPartyRaidNameTruncationPreview()
+        end
+    end, true)
+
+    raidNameTruncateSlider = CreateMinimalSlider(page, "Raid Name Truncate (0 = Off)", 12, -240, 240, "raidNameTruncateLength", 0, 24, 1, 0, function()
         if MMF_ApplyRaidNameTruncationPreview then
             MMF_ApplyRaidNameTruncationPreview()
         end
     end, true)
 
-    local function ApplyRaidTruncateNow()
+    local function ApplyPartyRaidTruncateNow()
         if MMF_UpdateBlizzardPartyRaidNameFonts then
             MMF_UpdateBlizzardPartyRaidNameFonts()
         end
@@ -296,20 +304,31 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
         end
     end
 
+    if partyNameTruncateSlider and partyNameTruncateSlider.slider and partyNameTruncateSlider.slider.HookScript then
+        partyNameTruncateSlider.slider:HookScript("OnMouseUp", function()
+            ApplyPartyRaidTruncateNow()
+        end)
+    end
+    if partyNameTruncateSlider and partyNameTruncateSlider.valueText and partyNameTruncateSlider.valueText.HookScript then
+        partyNameTruncateSlider.valueText:HookScript("OnEnterPressed", function()
+            ApplyPartyRaidTruncateNow()
+        end)
+    end
+
     if raidNameTruncateSlider and raidNameTruncateSlider.slider and raidNameTruncateSlider.slider.HookScript then
         raidNameTruncateSlider.slider:HookScript("OnMouseUp", function()
-            ApplyRaidTruncateNow()
+            ApplyPartyRaidTruncateNow()
         end)
     end
     if raidNameTruncateSlider and raidNameTruncateSlider.valueText and raidNameTruncateSlider.valueText.HookScript then
         raidNameTruncateSlider.valueText:HookScript("OnEnterPressed", function()
-            ApplyRaidTruncateNow()
+            ApplyPartyRaidTruncateNow()
         end)
     end
 
     local hint = page:CreateFontString(nil, "OVERLAY")
     hint:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
-    hint:SetPoint("TOPLEFT", 12, -244)
+    hint:SetPoint("TOPLEFT", 12, -270)
     hint:SetWidth(420)
     hint:SetJustifyH("LEFT")
     hint:SetTextColor(0.58, 0.63, 0.67)
@@ -367,22 +386,22 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
 
     local labelDivider = page:CreateTexture(nil, "ARTWORK")
     labelDivider:SetSize(240, 1)
-    labelDivider:SetPoint("TOPLEFT", 12, -274)
+    labelDivider:SetPoint("TOPLEFT", 12, -300)
     labelDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
 
     local labelsTitle = page:CreateFontString(nil, "OVERLAY")
     labelsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    labelsTitle:SetPoint("TOPLEFT", 12, -286)
+    labelsTitle:SetPoint("TOPLEFT", 12, -312)
     labelsTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
     labelsTitle:SetText("LABELS / STATE")
 
-    CreateMinimalCheckbox(page, "Hide Party Label", 12, -306, "hidePartyFrameLabel", false, function()
+    CreateMinimalCheckbox(page, "Hide Party Label", 12, -332, "hidePartyFrameLabel", false, function()
         if MMF_UpdateBlizzardPartyRaidLabels then
             MMF_UpdateBlizzardPartyRaidLabels()
         end
     end)
 
-    CreateMinimalCheckbox(page, "Hide Raid Group Labels", 12, -330, "hideRaidGroupLabels", false, function()
+    CreateMinimalCheckbox(page, "Hide Raid Group Labels", 12, -356, "hideRaidGroupLabels", false, function()
         if MMF_UpdateBlizzardPartyRaidLabels then
             MMF_UpdateBlizzardPartyRaidLabels()
         end

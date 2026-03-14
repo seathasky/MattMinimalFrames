@@ -10,6 +10,7 @@ local UnitName = UnitName
 local UnitPowerType = UnitPowerType
 local UnitPowerMax = UnitPowerMax
 local UnitPower = UnitPower
+local UnitIsFriend = UnitIsFriend
 local UnitPowerPercent = UnitPowerPercent
 local UnitClassBase = UnitClassBase
 local UnitGetIncomingHeals = UnitGetIncomingHeals
@@ -147,6 +148,96 @@ local function ClampColorChannel(value, fallback)
     if n < 0 then n = 0 end
     if n > 1 then n = 1 end
     return n
+end
+
+local function IsDispelHighlightEnabledForUnit(unit, db)
+    if unit == "player" then
+        return db.showPlayerDispelHighlight == true
+    elseif unit == "target" then
+        return db.showTargetDispelHighlight == true
+    end
+    return false
+end
+
+-- Blizzard ColorMixin objects for the color curve (same as oUF.colors.dispel)
+local DISPEL_CURVE_COLORS = {
+    [1]  = DEBUFF_TYPE_MAGIC_COLOR   or CreateColor(0.2, 0.6, 1.0, 1),
+    [2]  = DEBUFF_TYPE_CURSE_COLOR   or CreateColor(0.6, 0.0, 1.0, 1),
+    [3]  = DEBUFF_TYPE_DISEASE_COLOR or CreateColor(0.6, 0.4, 0.0, 1),
+    [4]  = DEBUFF_TYPE_POISON_COLOR  or CreateColor(0.0, 0.6, 0.0, 1),
+    [11] = DEBUFF_TYPE_BLEED_COLOR   or CreateColor(0.6, 0.0, 0.1, 1),
+}
+
+local function EnsureDispelColorCurve(frame)
+    if not frame.mmfDispelColorCurve then
+        frame.mmfDispelColorCurve = C_CurveUtil.CreateColorCurve()
+        frame.mmfDispelColorCurve:SetType(Enum.LuaCurveType.Step)
+    end
+    frame.mmfDispelColorCurve:ClearPoints()
+    for index, color in pairs(DISPEL_CURVE_COLORS) do
+        frame.mmfDispelColorCurve:AddPoint(index, color)
+    end
+    return frame.mmfDispelColorCurve
+end
+
+local function GetLibDispel()
+    if not LibStub then return nil end
+    local ok, lib = pcall(LibStub, "LibDispel-1.0", true)
+    if ok then return lib end
+    return nil
+end
+
+local function UpdateDispelHighlight(frame, db)
+    if not frame or not frame.dispelHighlight or not frame.unit then
+        return
+    end
+
+    local unit = frame.unit
+    if (unit ~= "player" and unit ~= "target") or not IsDispelHighlightEnabledForUnit(unit, db) then
+        frame.dispelHighlight:Hide()
+        return
+    end
+
+    if not UnitExists(unit) then
+        frame.dispelHighlight:Hide()
+        return
+    end
+
+    if not UnitIsUnit(unit, "player") and not UnitIsFriend("player", unit) then
+        frame.dispelHighlight:Hide()
+        return
+    end
+
+    local libDispel = GetLibDispel()
+    if not libDispel then
+        frame.dispelHighlight:Hide()
+        return
+    end
+
+    local dispelList = libDispel:GetMyDispelTypes()
+    if not dispelList or not (dispelList.Magic or dispelList.Curse or dispelList.Disease or dispelList.Poison or dispelList.Bleed) then
+        frame.dispelHighlight:Hide()
+        return
+    end
+
+    -- Use C_UnitAuras.GetAuraDispelTypeColor with a color curve, same as UUF.
+    -- This avoids touching tainted aura fields like dispelName directly.
+    local bestAura = C_UnitAuras.GetAuraDataByIndex(unit, 1, "HARMFUL|RAID")
+    local bestAuraInstanceID = bestAura and bestAura.auraInstanceID or nil
+
+    if bestAuraInstanceID then
+        local curve = EnsureDispelColorCurve(frame)
+        local color = C_UnitAuras.GetAuraDispelTypeColor(unit, bestAuraInstanceID, curve)
+        if color then
+            local r, g, b = color:GetRGB()
+            frame.dispelHighlight:SetVertexColor(r, g, b, 1)
+            frame.dispelHighlight:Show()
+        else
+            frame.dispelHighlight:Hide()
+        end
+    else
+        frame.dispelHighlight:Hide()
+    end
 end
 
 local function ApplyHealPredictionBarColor(frame)
@@ -988,6 +1079,7 @@ local function UpdateUnitFrame(frame)
     if frame.healthBar then
         frame.healthBar:SetStatusBarColor(r, g, b, colorAlpha)
     end
+    UpdateDispelHighlight(frame, db)
 
     if frame.powerBar and (unit == "player" or unit == "target") then
         local powerType, powerToken = UnitPowerType(unit)
@@ -1114,6 +1206,16 @@ local function UpdateUnitFrame(frame)
 end
 
 MMF_UpdateUnitFrame = UpdateUnitFrame
+
+function MMF_UpdateDispelHighlights()
+    local db = MattMinimalFramesDB or {}
+    if MMF_PlayerFrame then
+        UpdateDispelHighlight(MMF_PlayerFrame, db)
+    end
+    if MMF_TargetFrame then
+        UpdateDispelHighlight(MMF_TargetFrame, db)
+    end
+end
 
 function MMF_UpdateAll(elapsed)
     lastUpdate = lastUpdate + (elapsed or 0)

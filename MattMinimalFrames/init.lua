@@ -78,12 +78,36 @@ local function IsFontString(region)
     return region and region.GetObjectType and region:GetObjectType() == "FontString"
 end
 
+local function SafeGetName(frame)
+    if not frame or type(frame.GetName) ~= "function" then
+        return nil
+    end
+
+    local ok, name = pcall(frame.GetName, frame)
+    if ok then
+        return name
+    end
+    return nil
+end
+
+local function SafeGetParent(frame)
+    if not frame or type(frame.GetParent) ~= "function" then
+        return nil
+    end
+
+    local ok, parent = pcall(frame.GetParent, frame)
+    if ok then
+        return parent
+    end
+    return nil
+end
+
 local function IsBlizzardPartyRaidUnitFrame(frame)
     if not frame then
         return false
     end
 
-    local frameName = frame.GetName and frame:GetName()
+    local frameName = SafeGetName(frame)
     if type(frameName) == "string" then
         if frameName:match("^CompactPartyFrame") or frameName:match("^CompactRaidFrame") then
             return true
@@ -92,14 +116,14 @@ local function IsBlizzardPartyRaidUnitFrame(frame)
 
     local parent = frame
     for _ = 1, 10 do
-        parent = parent.GetParent and parent:GetParent() or nil
+        parent = SafeGetParent(parent)
         if not parent then
             break
         end
         if parent == _G.CompactPartyFrame or parent == _G.CompactRaidFrameContainer then
             return true
         end
-        local parentName = parent.GetName and parent:GetName()
+        local parentName = SafeGetName(parent)
         if type(parentName) == "string" then
             if parentName:match("^CompactPartyFrame") or parentName:match("^CompactRaidFrame") then
                 return true
@@ -118,7 +142,7 @@ local function IsBlizzardNonRaidPartyMemberFrame(frame)
     if type(unitToken) == "string" and unitToken:match("^party%d+$") then
         return true
     end
-    local frameName = frame.GetName and frame:GetName()
+    local frameName = SafeGetName(frame)
     if type(frameName) == "string" and frameName:match("^PartyMemberFrame%d+$") then
         return true
     end
@@ -133,14 +157,14 @@ local function IsBlizzardCompactRaidMemberFrame(frame)
     if type(unitToken) == "string" and unitToken:match("^raid%d+$") then
         return true
     end
-    local frameName = frame.GetName and frame:GetName()
+    local frameName = SafeGetName(frame)
     if type(frameName) == "string" and frameName:match("^CompactRaidFrame%d+$") then
         return true
     end
     -- Fallback: member frames usually live under the raid container hierarchy.
     local parent = frame
     for _ = 1, 8 do
-        parent = parent and parent.GetParent and parent:GetParent() or nil
+        parent = SafeGetParent(parent)
         if not parent then
             break
         end
@@ -173,7 +197,8 @@ local function ApplyPartyRaidLabelVisibilityForFrame(frame)
         return
     end
 
-    if frame.GetName and type(frame:GetName()) == "string" and frame:GetName():match("^CompactRaidGroup%d+$") then
+    local frameName = SafeGetName(frame)
+    if type(frameName) == "string" and frameName:match("^CompactRaidGroup%d+$") then
         if frame.title then
             frame.title:SetShown(MattMinimalFramesDB.hideRaidGroupLabels ~= true)
         end
@@ -429,21 +454,35 @@ local function TruncatePartyRaidNameText(text, maxChars)
     return text
 end
 
-local function ApplyRaidNameTruncation(fontString, frame)
-    if not IsFontString(fontString) then
-        return
-    end
-    if not IsBlizzardCompactRaidMemberFrame(frame) then
-        return
+local function GetPartyRaidNameTruncateLength(frame)
+    local db = MattMinimalFramesDB
+    local truncateLen = 0
+
+    if IsBlizzardCompactRaidMemberFrame(frame) then
+        truncateLen = tonumber(db and db.raidNameTruncateLength) or 0
+    else
+        truncateLen = tonumber(db and db.partyNameTruncateLength) or 0
     end
 
-    local truncateLen = tonumber(MattMinimalFramesDB and MattMinimalFramesDB.raidNameTruncateLength) or 0
     if truncateLen < 0 then
         truncateLen = 0
     end
     if truncateLen > 24 then
         truncateLen = 24
     end
+
+    return truncateLen
+end
+
+local function ApplyRaidNameTruncation(fontString, frame)
+    if not IsFontString(fontString) then
+        return
+    end
+    if not IsBlizzardCompactRaidMemberFrame(frame) and not IsBlizzardPartyRaidUnitFrame(frame) and not IsBlizzardNonRaidPartyMemberFrame(frame) then
+        return
+    end
+
+    local truncateLen = GetPartyRaidNameTruncateLength(frame)
 
     local unitToken = frame and (frame.unit or frame.displayedUnit or frame.unitToken) or nil
     local fullName = nil
@@ -555,13 +594,13 @@ local function ApplyPartyRaidNameStyleToAllFrames()
     end
 end
 
-function MMF_ApplyRaidNameTruncationPreview()
+function MMF_ApplyPartyRaidNameTruncationPreview()
     if not MattMinimalFramesDB then
         return
     end
     local seen = {}
     local function Visit(frame)
-        if not IsBlizzardCompactRaidMemberFrame(frame) then
+        if not IsBlizzardCompactRaidMemberFrame(frame) and not IsBlizzardPartyRaidUnitFrame(frame) and not IsBlizzardNonRaidPartyMemberFrame(frame) then
             return
         end
         if IsFontString(frame.name) then
@@ -574,9 +613,30 @@ function MMF_ApplyRaidNameTruncationPreview()
             ApplyRaidNameTruncation(frame.nameText, frame)
         end
     end
+
+    if _G.CompactPartyFrame then
+        TraverseFrameTree(_G.CompactPartyFrame, Visit, seen)
+    end
     if _G.CompactRaidFrameContainer then
         TraverseFrameTree(_G.CompactRaidFrameContainer, Visit, seen)
     end
+
+    if _G.PartyFrame and _G.PartyFrame.PartyMemberFramePool and _G.PartyFrame.PartyMemberFramePool.EnumerateActive then
+        for memberFrame in _G.PartyFrame.PartyMemberFramePool:EnumerateActive() do
+            Visit(memberFrame)
+        end
+    end
+
+    for i = 1, 4 do
+        local legacyFrame = _G["PartyMemberFrame" .. i]
+        if legacyFrame then
+            Visit(legacyFrame)
+        end
+    end
+end
+
+function MMF_ApplyRaidNameTruncationPreview()
+    MMF_ApplyPartyRaidNameTruncationPreview()
 end
 
 function MMF_RefreshBlizzardPartyRaidNameFonts()
@@ -732,6 +792,9 @@ local function NormalizeLegacyPartyRaidFontSetting(db)
     if db.raidNameFontSize == nil then
         db.raidNameFontSize = tonumber(db.partyRaidNameFontSize) or 16
     end
+    if db.partyNameTruncateLength == nil then
+        db.partyNameTruncateLength = 0
+    end
 end
 
 local function NormalizeGUIScaleSetting()
@@ -820,7 +883,7 @@ function MMF_ApplyActiveProfileLive()
     if MMF_UpdateDebuffPosition then
         MMF_UpdateDebuffPosition(MattMinimalFramesDB.debuffXOffset or 3, MattMinimalFramesDB.debuffYOffset or 27)
     end
-    if MMF_UpdateAuraIconSize then MMF_UpdateAuraIconSize(MattMinimalFramesDB.auraIconSize or 18) end
+    if MMF_UpdateAuraLayout then MMF_UpdateAuraLayout() end
     if MMF_UpdateAuraTextScale then MMF_UpdateAuraTextScale(MattMinimalFramesDB.auraTextScale or 1.0) end
     if MMF_UpdateTimerTextScale then MMF_UpdateTimerTextScale(MattMinimalFramesDB.timerTextScale or 0.8) end
     if MMF_UpdateTargetAuras then MMF_UpdateTargetAuras() end
@@ -836,8 +899,14 @@ function MMF_ApplyActiveProfileLive()
     if MMF_UpdateTargetMarkerVisibility then
         MMF_UpdateTargetMarkerVisibility(MattMinimalFramesDB.showTargetMarkers == true)
     end
+    if MMF_UpdateHideRestingIconSetting then
+        MMF_UpdateHideRestingIconSetting(MattMinimalFramesDB.hideRestingIcon == true)
+    end
     if MMF_UpdateAnimatedRestingIconSetting then
         MMF_UpdateAnimatedRestingIconSetting(MattMinimalFramesDB.animatedRestingIcon ~= false)
+    end
+    if MMF_UpdateHideCombatIconSetting then
+        MMF_UpdateHideCombatIconSetting(MattMinimalFramesDB.hideCombatIcon == true)
     end
     if MMF_UpdateAnimatedCombatIconSetting then
         MMF_UpdateAnimatedCombatIconSetting(MattMinimalFramesDB.animatedCombatIcon ~= false)

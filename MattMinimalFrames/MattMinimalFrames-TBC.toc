@@ -1,7 +1,7 @@
 ## Interface: 20505
 ## Title: Matt's Minimal Frames
 ## Author: Seathasky
-## Version: 7.0.3
+## Version: 7.0.4
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
 ## SavedVariables: MattMinimalFramesDB, MattMinimalFramesProfilesDB, MattMinimalFramesGlobalDB
 ## Notes: Minimal unit frames for TBC Anniversary
@@ -13,6 +13,7 @@ Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
 Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
 Libs\LibCustomGlow-1.0\LibCustomGlow-1.0.lua
 Libs\LibSharedMedia-3.0\LibSharedMedia-3.0.lua
+Libs\LibDispel-1.0\LibDispel.lua
 
 # Core modules
 core/compat.lua

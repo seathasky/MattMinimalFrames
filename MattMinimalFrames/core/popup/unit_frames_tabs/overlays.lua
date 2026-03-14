@@ -36,6 +36,17 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
         end
     end
 
+    local function RefreshDispelHighlight()
+        if MMF_UpdateDispelHighlights then
+            MMF_UpdateDispelHighlights()
+            return
+        end
+        if MMF_RequestUnitUpdate then
+            MMF_RequestUnitUpdate("player")
+            MMF_RequestUnitUpdate("target")
+        end
+    end
+
     rightSection.frameOptionsDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     rightSection.frameOptionsDivider:SetSize(RIGHT_COL_WIDTH, 1)
     rightSection.frameOptionsDivider:SetPoint("TOPLEFT", RIGHT_COL_X, (-706 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET)
@@ -246,4 +257,12 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
         357,
         86
     )
+
+    rightSection.playerDispelHighlightCheck = CreateMinimalCheckbox(unitFramesCol, "Player Dispel Highlight", RIGHT_COL_X, (-934 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showPlayerDispelHighlight", true, function()
+        RefreshDispelHighlight()
+    end)
+
+    rightSection.targetDispelHighlightCheck = CreateMinimalCheckbox(unitFramesCol, "Target Dispel Highlight", RIGHT_COL_X, (-958 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showTargetDispelHighlight", true, function()
+        RefreshDispelHighlight()
+    end)
 end

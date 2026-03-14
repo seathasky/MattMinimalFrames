@@ -856,6 +856,17 @@ local function CreateHealthBar(frame)
     frame.healthBar:SetMinMaxValues(0, 1)
     frame.healthBar:SetValue(1)
     frame.healthBarFG = frame.healthBar:GetStatusBarTexture()
+
+    frame.dispelOverlay = CreateFrame("Frame", nil, frame.healthBar)
+    frame.dispelOverlay:SetAllPoints(frame)
+    frame.dispelOverlay:SetFrameLevel(frame.healthBar:GetFrameLevel() + 2)
+    frame.dispelHighlight = frame.dispelOverlay:CreateTexture(nil, "OVERLAY")
+    frame.dispelHighlight:SetPoint("TOPLEFT", frame, "TOPLEFT", 1, -1)
+    frame.dispelHighlight:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -1, 1)
+    frame.dispelHighlight:SetTexture("Interface\\AddOns\\MattMinimalFrames\\Textures\\GradientH")
+    frame.dispelHighlight:SetAlpha(1)
+    frame.dispelHighlight:SetBlendMode("BLEND")
+    frame.dispelHighlight:Hide()
 end
 
 --------------------------------------------------
@@ -1249,17 +1260,22 @@ local function IsCombatFrameOutlineEnabled()
     return MattMinimalFramesDB.combatFrameOutline == true
 end
 
+local function IsCombatIconHidden()
+    return MattMinimalFramesDB and MattMinimalFramesDB.hideCombatIcon == true
+end
+
 local function SetPlayerCombatVisual(frame, isInCombat)
     if not frame or not frame.combatTexture then
         return
     end
 
     local frameOutlineEnabled = IsCombatFrameOutlineEnabled()
+    local hideCombatIcon = IsCombatIconHidden()
 
-    frame.combatTexture:SetShown(isInCombat == true)
+    frame.combatTexture:SetShown(isInCombat == true and not hideCombatIcon)
     if frame.combatIconOutlineTextures then
         for _, tex in ipairs(frame.combatIconOutlineTextures) do
-            tex:SetShown(isInCombat == true)
+            tex:SetShown(isInCombat == true and not hideCombatIcon)
         end
     end
     if frame.combatFrameOutlineEdges then
@@ -1324,6 +1340,9 @@ end
 local function IsAnimatedCombatIconEnabled()
     if not MattMinimalFramesDB then
         return true
+    end
+    if IsCombatIconHidden() then
+        return false
     end
     return MattMinimalFramesDB.animatedCombatIcon ~= false
 end
@@ -1421,6 +1440,15 @@ end
 
 local function SetPlayerRestingVisual(frame, isResting)
     if not frame or not frame.restingTexture then
+        return
+    end
+
+    local hideRestingIcon = MattMinimalFramesDB and MattMinimalFramesDB.hideRestingIcon == true
+    if hideRestingIcon then
+        frame.restingTexture:Hide()
+        if frame.restingAnim and frame.restingUsesAnimation then
+            frame.restingAnim:Stop()
+        end
         return
     end
 
@@ -1523,6 +1551,22 @@ function MMF_UpdateAnimatedRestingIconSetting(enabled)
     end
 end
 
+function MMF_UpdateHideRestingIconSetting(enabled)
+    if not MattMinimalFramesDB then
+        MattMinimalFramesDB = {}
+    end
+    if enabled ~= nil then
+        MattMinimalFramesDB.hideRestingIcon = (enabled == true)
+    elseif MattMinimalFramesDB.hideRestingIcon == nil then
+        MattMinimalFramesDB.hideRestingIcon = false
+    end
+
+    if _G.MMF_PlayerFrame and _G.MMF_PlayerFrame.restingTexture then
+        ConfigurePlayerRestingTexture(_G.MMF_PlayerFrame)
+        SetPlayerRestingVisual(_G.MMF_PlayerFrame, IsResting())
+    end
+end
+
 function MMF_UpdateAnimatedCombatIconSetting(enabled)
     if not MattMinimalFramesDB then
         MattMinimalFramesDB = {}
@@ -1531,6 +1575,22 @@ function MMF_UpdateAnimatedCombatIconSetting(enabled)
         MattMinimalFramesDB.animatedCombatIcon = (enabled == true)
     elseif MattMinimalFramesDB.animatedCombatIcon == nil then
         MattMinimalFramesDB.animatedCombatIcon = true
+    end
+
+    if _G.MMF_PlayerFrame and _G.MMF_PlayerFrame.combatTexture then
+        ConfigurePlayerCombatTexture(_G.MMF_PlayerFrame)
+        SetPlayerCombatVisual(_G.MMF_PlayerFrame, IsPlayerInCombat())
+    end
+end
+
+function MMF_UpdateHideCombatIconSetting(enabled)
+    if not MattMinimalFramesDB then
+        MattMinimalFramesDB = {}
+    end
+    if enabled ~= nil then
+        MattMinimalFramesDB.hideCombatIcon = (enabled == true)
+    elseif MattMinimalFramesDB.hideCombatIcon == nil then
+        MattMinimalFramesDB.hideCombatIcon = false
     end
 
     if _G.MMF_PlayerFrame and _G.MMF_PlayerFrame.combatTexture then
