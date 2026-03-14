@@ -23,23 +23,7 @@ local CreateMinimalSlider = MMF_CreateMinimalSlider
 local CreateSubTabBar = MMF_CreateSubTabBar
 local TITLE_WALLPAPER_ALPHA = 0.03
 local SIDEBAR_WALLPAPER_ALPHA = 0.10
-
-local function SetAspectCropTexCoords(texture, holder, imageAspect)
-    if not texture or not holder then return end
-    local w = math.max(1, holder:GetWidth() or 1)
-    local h = math.max(1, holder:GetHeight() or 1)
-    local frameAspect = w / h
-    local sourceAspect = imageAspect or (16 / 9)
-    if frameAspect > sourceAspect then
-        local visibleV = sourceAspect / frameAspect
-        local padV = (1 - visibleV) * 0.5
-        texture:SetTexCoord(0, 1, padV, 1 - padV)
-    else
-        local visibleU = frameAspect / sourceAspect
-        local padU = (1 - visibleU) * 0.5
-        texture:SetTexCoord(padU, 1 - padU, 0, 1)
-    end
-end
+local SetAspectCropTexCoords = MMF_SetAspectCropTexCoords
 
 local function IsUISoundsEnabled()
     if MMF_IsPopupUISoundsEnabled then
@@ -103,147 +87,21 @@ function MMF_ShowWelcomePopup(forceShow)
         popupHeight = MAX_POPUP_HEIGHT
     end
     popup:SetSize(popupWidth, popupHeight)
-
-    local function PersistPopupSize()
-        if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
-        MattMinimalFramesDB.popupSize = {
-            width = math.floor((popup:GetWidth() or POPUP_LAYOUT.width) + 0.5),
-            height = math.floor((popup:GetHeight() or POPUP_LAYOUT.height) + 0.5),
-        }
-    end
-    local function GetParentBounds()
-        local parentLeft = UIParent and (UIParent:GetLeft() or 0) or 0
-        local parentRight = UIParent and UIParent:GetRight()
-        if not parentRight and UIParent and UIParent.GetWidth then
-            parentRight = parentLeft + (UIParent:GetWidth() or 0)
-        end
-        local parentBottom = UIParent and (UIParent:GetBottom() or 0) or 0
-        local parentTop = UIParent and UIParent:GetTop()
-        if not parentTop and UIParent and UIParent.GetHeight then
-            parentTop = parentBottom + (UIParent:GetHeight() or 0)
-        end
-        return parentLeft, parentRight or parentLeft, parentBottom, parentTop or parentBottom
-    end
-    local function GetDynamicMaxPopupHeight(self)
-        local _, _, parentBottom, parentTop = GetParentBounds()
-        local parentHeight = math.max(1, parentTop - parentBottom)
-        local scale = (self and self.GetScale and self:GetScale()) or 1
-        if scale <= 0 then
-            scale = 1
-        end
-        local screenBoundMax = math.floor((parentHeight / scale) - 8)
-        if screenBoundMax < MIN_POPUP_HEIGHT then
-            screenBoundMax = MIN_POPUP_HEIGHT
-        end
-        return math.max(MIN_POPUP_HEIGHT, math.min(MAX_POPUP_HEIGHT, screenBoundMax))
-    end
-    local function ClampPopupHeightToBounds(self)
-        if not self then return end
-        local current = self:GetHeight() or POPUP_LAYOUT.height
-        local maxAllowed = GetDynamicMaxPopupHeight(self)
-        local clamped = math.max(MIN_POPUP_HEIGHT, math.min(maxAllowed, current))
-        if math.abs(clamped - current) > 0.5 then
-            self:SetHeight(clamped)
-        end
-    end
-    local function NormalizePopupAnchorToCenter(self)
-        if not self or not UIParent then return nil, nil end
-        local left = self:GetLeft()
-        local right = self:GetRight()
-        local top = self:GetTop()
-        local bottom = self:GetBottom()
-        if not left or not right or not top or not bottom then return nil, nil end
-        local parentLeft, parentRight, parentBottom, parentTop = GetParentBounds()
-        local x = ((left + right) * 0.5) - ((parentLeft + parentRight) * 0.5)
-        local y = ((top + bottom) * 0.5) - ((parentTop + parentBottom) * 0.5)
-        self:ClearAllPoints()
-        self:SetPoint("CENTER", UIParent, "CENTER", x, y)
-        return x, y
-    end
-    local function GetPopupCenterOffsets(self)
-        if not self or not UIParent then return nil, nil end
-        local point, relTo, relPoint, x, y = self:GetPoint(1)
-        if point == "CENTER" and (relTo == UIParent or relTo == nil) and (relPoint == "CENTER" or relPoint == nil) then
-            return x or 0, y or 0
-        end
-        return NormalizePopupAnchorToCenter(self)
-    end
-    local function PersistPopupPosition()
-        local x, y = GetPopupCenterOffsets(popup)
-        if x and y then
-            if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
-            MattMinimalFramesDB.popupPosition = { x = x, y = y, anchor = "CENTER" }
-        end
-    end
-    local function ClampPopupHorizontal(self)
-        if not self or not UIParent then return end
-        local x, y = GetPopupCenterOffsets(self)
-        if not x or not y then return end
-        local parentLeft, parentRight, parentBottom, parentTop = GetParentBounds()
-        local parentWidth = math.max(1, parentRight - parentLeft)
-        local parentHeight = math.max(1, parentTop - parentBottom)
-        local frameScale = self:GetScale() or 1
-        local halfW = ((self:GetWidth() or 0) * frameScale) * 0.5
-        local halfH = ((self:GetHeight() or 0) * frameScale) * 0.5
-
-        local minX = (-parentWidth * 0.5) + halfW
-        local maxX = (parentWidth * 0.5) - halfW
-        local minY = (-parentHeight * 0.5) + halfH
-        local maxY = (parentHeight * 0.5) - halfH
-        if minX > maxX then
-            minX, maxX = 0, 0
-        end
-        if minY > maxY then
-            minY, maxY = 0, 0
-        end
-
-        local clampedX = math.max(minX, math.min(maxX, x))
-        local clampedY = math.max(minY, math.min(maxY, y))
-        if math.abs(clampedX - x) > 0.5 or math.abs(clampedY - y) > 0.5 then
-            self:ClearAllPoints()
-            self:SetPoint("CENTER", UIParent, "CENTER", clampedX, clampedY)
-        end
-    end
-    local function ApplyPopupScale(scale, preservePosition)
-        local targetScale = (MMF_ClampGUIScale and MMF_ClampGUIScale(scale)) or scale or 1.0
-        local x, y
-
-        if preservePosition and popup and popup.IsVisible and popup:IsVisible() then
-            x, y = GetPopupCenterOffsets(popup)
-        end
-
-        popup:SetScale(targetScale)
-        ClampPopupHeightToBounds(popup)
-
-        if x and y then
-            popup:ClearAllPoints()
-            popup:SetPoint("CENTER", UIParent, "CENTER", x, y)
-        end
-        ClampPopupHorizontal(popup)
-        PersistPopupPosition()
-    end
+    local windowController = MMF_CreatePopupWindowController({
+        popup = popup,
+        popupLayout = POPUP_LAYOUT,
+        minPopupWidth = MIN_POPUP_WIDTH,
+        minPopupHeight = MIN_POPUP_HEIGHT,
+        maxPopupHeight = MAX_POPUP_HEIGHT,
+    })
     
     -- Apply saved GUI scale
     local guiScale = (MMF_ClampGUIScale and MMF_ClampGUIScale(MattMinimalFramesDB.guiScale)) or 1.0
     MattMinimalFramesDB.guiScale = guiScale
-    ApplyPopupScale(guiScale, false)
+    windowController.ApplyPopupScale(guiScale, false)
     
     -- Restore saved position or use default
-    if MattMinimalFramesDB and MattMinimalFramesDB.popupPosition then
-        local pos = MattMinimalFramesDB.popupPosition
-        if pos.x and pos.y then
-            popup:SetPoint("CENTER", UIParent, "CENTER", pos.x, pos.y)
-        elseif pos.left and pos.top then
-            popup:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.left, pos.top)
-            NormalizePopupAnchorToCenter(popup)
-            PersistPopupPosition()
-        else
-            popup:SetPoint("CENTER", UIParent, "CENTER", 0, POPUP_LAYOUT.centerY)
-        end
-    else
-        popup:SetPoint("CENTER", UIParent, "CENTER", 0, POPUP_LAYOUT.centerY)
-    end
-    ClampPopupHorizontal(popup)
+    windowController.RestoreOrInitializePopupPosition(POPUP_LAYOUT.centerY)
     
     popup:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
@@ -270,893 +128,37 @@ function MMF_ShowWelcomePopup(forceShow)
     popup:SetScript("OnDragStart", popup.StartMoving)
     popup:SetScript("OnDragStop", function(self)
         self:StopMovingOrSizing()
-        ClampPopupHorizontal(self)
-        PersistPopupPosition()
+        windowController.ClampPopupHorizontal(self)
+        windowController.PersistPopupPosition()
     end)
     popup:SetFrameStrata("DIALOG")
     popup.ApplyGUIScale = function(self, scale, preservePosition)
-        ApplyPopupScale(scale, preservePosition)
+        windowController.ApplyPopupScale(scale, preservePosition)
     end
     popup.ClampToScreen = function(self)
-        ClampPopupHorizontal(self)
-        PersistPopupPosition()
+        windowController.ClampPopupHorizontal(self)
+        windowController.PersistPopupPosition()
     end
     popup:HookScript("OnShow", function(self)
-        ClampPopupHorizontal(self)
-        PersistPopupPosition()
+        windowController.ClampPopupHorizontal(self)
+        windowController.PersistPopupPosition()
     end)
 
-    -- Title bar
-    local titleBar = CreateFrame("Frame", nil, popup)
-    titleBar:SetSize(popupWidth, POPUP_LAYOUT.titleHeight)
-    titleBar:SetPoint("TOP", 0, 0)
-    
-    local titleBg = titleBar:CreateTexture(nil, "BACKGROUND")
-    titleBg:SetAllPoints()
-    titleBg:SetColorTexture(0.07, 0.09, 0.11, 1)
 
-    local titleWallpaper = titleBar:CreateTexture(nil, "ARTWORK")
-    titleWallpaper:SetPoint("TOPLEFT", 1, -1)
-    titleWallpaper:SetPoint("BOTTOMRIGHT", -1, 1)
-    titleWallpaper:SetTexture("Interface\\AddOns\\MattMinimalFrames\\Images\\mw.png")
-    titleWallpaper:SetAlpha(TITLE_WALLPAPER_ALPHA)
-
-    local function UpdateTitleWallpaperCrop()
-        local barW = math.max(1, titleBar:GetWidth() or popupWidth or 1)
-        local barH = math.max(1, titleBar:GetHeight() or (POPUP_LAYOUT.titleHeight or 28))
-        local imageAspect = 16 / 9
-        local barAspect = barW / barH
-
-        if barAspect > imageAspect then
-            local visibleV = imageAspect / barAspect
-            local padV = (1 - visibleV) * 0.5
-            titleWallpaper:SetTexCoord(0, 1, padV, 1 - padV)
-        else
-            local visibleU = barAspect / imageAspect
-            local padU = (1 - visibleU) * 0.5
-            titleWallpaper:SetTexCoord(padU, 1 - padU, 0, 1)
-        end
-    end
-    UpdateTitleWallpaperCrop()
-
-    local titleWallpaperTint = titleBar:CreateTexture(nil, "ARTWORK")
-    titleWallpaperTint:SetPoint("TOPLEFT", 1, -1)
-    titleWallpaperTint:SetPoint("BOTTOMRIGHT", -1, 1)
-    titleWallpaperTint:SetColorTexture(0.02, 0.03, 0.04, 0.22)
-
-    local titleGlow = titleBar:CreateTexture(nil, "ARTWORK")
-    titleGlow:SetPoint("BOTTOMLEFT", 0, 0)
-    titleGlow:SetPoint("BOTTOMRIGHT", 0, 0)
-    titleGlow:SetHeight(2)
-    titleGlow:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.95)
-
-    local title = titleBar:CreateFontString(nil, "OVERLAY")
-    title:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    title:SetPoint("LEFT", 16, 1)
-    title:SetText("|cffffffffMatt's Minimal Frames ")
-    
-    -- Add version suffix with smaller font
-    local versionSuffix = titleBar:CreateFontString(nil, "OVERLAY")
-    versionSuffix:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 8, "")
-    versionSuffix:SetPoint("LEFT", title, "RIGHT", 4, 2)
-    if Compat.IsTBC then
-        versionSuffix:SetText("TBC EDITION")
-        versionSuffix:SetTextColor(0.2, 0.9, 0.4)
-    else
-        versionSuffix:SetText("MIDNIGHT EDITION")
-        versionSuffix:SetTextColor(0.6, 0.4, 0.9)
-    end
-
-    local closeX = CreateFrame("Button", nil, titleBar, "BackdropTemplate")
-    closeX:SetSize(18, 18)
-    closeX:SetPoint("RIGHT", -9, 0)
-    closeX:SetBackdrop({
-        bgFile = "Interface\\Buttons\\WHITE8x8",
-        edgeFile = "Interface\\Buttons\\WHITE8x8",
-        edgeSize = 1,
-    })
-    closeX:SetBackdropColor(0.06, 0.08, 0.1, 0.96)
-    closeX:SetBackdropBorderColor(0.18, 0.22, 0.25, 1)
-    local closeText = closeX:CreateFontString(nil, "OVERLAY")
-    closeText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
-    closeText:SetPoint("CENTER")
-    closeText:SetText("×")
-    closeText:SetTextColor(0.5, 0.5, 0.5)
-    closeX:SetScript("OnEnter", function()
-        closeX:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.8)
-        closeText:SetTextColor(1, 0.3, 0.3)
-    end)
-    closeX:SetScript("OnLeave", function()
-        closeX:SetBackdropBorderColor(0.18, 0.22, 0.25, 1)
-        closeText:SetTextColor(0.5, 0.5, 0.5)
-    end)
-    closeX:SetScript("OnClick", function() popup:Hide() end)
-
-    if not MattMinimalFramesDB then
-        MattMinimalFramesDB = {}
-    end
-
-    local TITLE_CONTROL_FONT = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
-    local function EnsureTitleControlFont(fontString, size)
-        if not fontString then
-            return
-        end
-        local targetSize = tonumber(size) or 10
-        if MMF_SetFontSafe then
-            MMF_SetFontSafe(fontString, TITLE_CONTROL_FONT, targetSize, "")
-        else
-            fontString:SetFont(TITLE_CONTROL_FONT, targetSize, "")
-        end
-        fontString:SetDrawLayer("OVERLAY", 7)
-        fontString:SetAlpha(1)
-    end
-
-    local function CreateTitleCheckbox(anchor, xOffset, labelText, isChecked, onToggle)
-        local container = CreateFrame("Frame", nil, titleBar)
-        container:SetSize(120, 20)
-        container:SetPoint("RIGHT", anchor, "LEFT", xOffset, 0)
-
-        local checkbox = CreateFrame("CheckButton", nil, container)
-        checkbox:SetSize(14, 14)
-        checkbox:SetPoint("LEFT", 0, 0)
-
-        local bg = checkbox:CreateTexture(nil, "BACKGROUND")
-        bg:SetAllPoints()
-        bg:SetColorTexture(0.08, 0.08, 0.1, 1)
-
-        local border = checkbox:CreateTexture(nil, "BORDER")
-        border:SetPoint("TOPLEFT", -1, 1)
-        border:SetPoint("BOTTOMRIGHT", 1, -1)
-        border:SetColorTexture(0.25, 0.25, 0.3, 1)
-
-        local check = checkbox:CreateTexture(nil, "ARTWORK")
-        check:SetSize(8, 8)
-        check:SetPoint("CENTER")
-        check:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 1)
-        checkbox.check = check
-
-        local label = container:CreateFontString(nil, "OVERLAY")
-        EnsureTitleControlFont(label, 10)
-        label:SetPoint("LEFT", checkbox, "RIGHT", 6, 0)
-        label:SetTextColor(0.9, 0.9, 0.9)
-        label:SetText(labelText)
-        label:SetShown(true)
-        label.mmfSkipGlobalFont = true
-
-        checkbox:SetChecked(isChecked == true)
-        check:SetShown(isChecked == true)
-        checkbox:SetScript("OnClick", function(self)
-            local checked = self:GetChecked() == true
-            self.check:SetShown(checked)
-            if onToggle then
-                onToggle(checked)
-            end
-        end)
-
-        checkbox.labelText = label
-        container.labelText = label
-        container.mmfLabelRaw = labelText
-        container.MMFRefreshWidget = function()
-            if container.labelText and container.labelText.SetText then
-                container.labelText:SetText(labelText)
-            end
-        end
-
-        return container, checkbox
-    end
-
-    local function CreateTitleButton(anchor, xOffset, labelText, onClick, width)
-        local containerWidth = tonumber(width) or 88
-        if containerWidth < 72 then
-            containerWidth = 72
-        end
-        local container = CreateFrame("Frame", nil, titleBar)
-        container:SetSize(containerWidth, 20)
-        container:SetPoint("RIGHT", anchor, "LEFT", xOffset, 0)
-
-        local button = CreateFrame("Button", nil, container, "BackdropTemplate")
-        button:SetSize(containerWidth - 4, 18)
-        button:SetPoint("LEFT", 0, 0)
-        button:SetBackdrop({
-            bgFile = "Interface\\Buttons\\WHITE8x8",
-            edgeFile = "Interface\\Buttons\\WHITE8x8",
-            edgeSize = 1,
-        })
-        button:SetBackdropColor(0.08, 0.08, 0.1, 1)
-        button:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
-
-        local textHost = CreateFrame("Frame", nil, button)
-        textHost:SetAllPoints(button)
-        textHost:SetFrameStrata(button:GetFrameStrata())
-        textHost:SetFrameLevel((button:GetFrameLevel() or 1) + 8)
-        textHost:EnableMouse(false)
-
-        local label = textHost:CreateFontString(nil, "OVERLAY")
-        EnsureTitleControlFont(label, 10)
-        label:SetPoint("TOPLEFT", button, "TOPLEFT", 4, -1)
-        label:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -4, 1)
-        label:SetJustifyH("CENTER")
-        label:SetJustifyV("MIDDLE")
-        label:SetWordWrap(false)
-        label:SetTextColor(0.9, 0.9, 0.9)
-        label:SetText(labelText)
-        label:SetShown(true)
-        label.mmfSkipGlobalFont = true
-
-        button:SetScript("OnEnter", function(self)
-            self:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.8)
-            label:SetTextColor(1, 1, 1)
-        end)
-        button:SetScript("OnLeave", function(self)
-            if self.mmfActive then
-                if self.mmfActiveBorderColor then
-                    self:SetBackdropBorderColor(
-                        self.mmfActiveBorderColor[1] or 0.25,
-                        self.mmfActiveBorderColor[2] or 0.25,
-                        self.mmfActiveBorderColor[3] or 0.3,
-                        self.mmfActiveBorderColor[4] or 1
-                    )
-                else
-                    self:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
-                end
-                if self.mmfActiveTextColor then
-                    label:SetTextColor(
-                        self.mmfActiveTextColor[1] or 1,
-                        self.mmfActiveTextColor[2] or 0.93,
-                        self.mmfActiveTextColor[3] or 0.45
-                    )
-                else
-                    label:SetTextColor(1, 0.93, 0.45)
-                end
-            else
-                if self.mmfInactiveBorderColor then
-                    self:SetBackdropBorderColor(
-                        self.mmfInactiveBorderColor[1] or 0.25,
-                        self.mmfInactiveBorderColor[2] or 0.25,
-                        self.mmfInactiveBorderColor[3] or 0.3,
-                        self.mmfInactiveBorderColor[4] or 1
-                    )
-                else
-                    self:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
-                end
-                if self.mmfInactiveTextColor then
-                    label:SetTextColor(
-                        self.mmfInactiveTextColor[1] or 0.9,
-                        self.mmfInactiveTextColor[2] or 0.9,
-                        self.mmfInactiveTextColor[3] or 0.9
-                    )
-                else
-                    label:SetTextColor(0.9, 0.9, 0.9)
-                end
-            end
-        end)
-        button:SetScript("OnClick", function()
-            if onClick then
-                onClick()
-            end
-        end)
-
-        button.labelText = label
-        button.textHost = textHost
-        container.button = button
-        container.labelText = label
-        container.mmfLabelRaw = labelText
-        container.MMFRefreshWidget = function()
-            if container.labelText and container.labelText.SetText then
-                container.labelText:SetText(labelText)
-            end
-        end
-
-        return container, button
-    end
-
-    local lockFramesContainer = nil
-    local editModeContainer = nil
-    local testModeContainer = nil
-    local lockFramesButton = nil
-    local editModeButton = nil
-    local testModeCheckbox = nil
-    local testModeTextPulseFrame = nil
-    local editModePopup = nil
-    local titleStateGeneration = 0
-
-    local function SetTitleCheckboxVisual(checkbox, checked)
-        if not checkbox then return end
-        checkbox:SetChecked(checked == true)
-        if checkbox.check then
-            checkbox.check:SetShown(checked == true)
-        end
-    end
-
-    local function HSVToRGB(h, s, v)
-        h = (tonumber(h) or 0) % 1
-        s = math.max(0, math.min(1, tonumber(s) or 1))
-        v = math.max(0, math.min(1, tonumber(v) or 1))
-        local i = math.floor(h * 6)
-        local f = h * 6 - i
-        local p = v * (1 - s)
-        local q = v * (1 - f * s)
-        local t = v * (1 - (1 - f) * s)
-        i = i % 6
-        if i == 0 then return v, t, p end
-        if i == 1 then return q, v, p end
-        if i == 2 then return p, v, t end
-        if i == 3 then return p, q, v end
-        if i == 4 then return t, p, v end
-        return v, p, q
-    end
-
-    local function EnsureTestModeRainbowText()
-        if testModeTextPulseFrame or not testModeContainer then
-            return
-        end
-        local pulse = CreateFrame("Frame", nil, titleBar)
-        pulse:SetAllPoints(titleBar)
-        pulse:Hide()
-        testModeTextPulseFrame = pulse
-
-        pulse:SetScript("OnUpdate", function(self, elapsed)
-            local speed = 0.22
-            self._mmfHue = ((self._mmfHue or 0) + (elapsed or 0) * speed) % 1
-            local r, g, b = HSVToRGB(self._mmfHue, 1, 1)
-            if testModeContainer and testModeContainer.labelText then
-                testModeContainer.labelText:SetTextColor(r, g, b)
-            end
-        end)
-    end
-
-    local function SetTestModeCheckboxState(checked)
-        SetTitleCheckboxVisual(testModeCheckbox, checked)
-        EnsureTestModeRainbowText()
-        if testModeContainer and testModeContainer.labelText then
-            EnsureTitleControlFont(testModeContainer.labelText, 10)
-            testModeContainer.labelText:SetShown(true)
-        end
-        if testModeTextPulseFrame then
-            if checked then
-                testModeTextPulseFrame:Show()
-            else
-                testModeTextPulseFrame:Hide()
-            end
-        end
-        if testModeContainer and testModeContainer.labelText and not checked then
-            testModeContainer.labelText:SetTextColor(0.9, 0.9, 0.9)
-        end
-    end
-
-    local function SyncTitleLockCheckboxState()
-        local editModeEnabled = MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
-        local effectiveLocked = MattMinimalFramesDB and MattMinimalFramesDB.locked == true
-
-        local function ApplyLockButtonState(isLocked, disabled)
-            if not lockFramesButton then
-                return
-            end
-            if lockFramesButton.labelText then
-                EnsureTitleControlFont(lockFramesButton.labelText, 10)
-                lockFramesButton.labelText:SetShown(true)
-            end
-            lockFramesButton.mmfActive = isLocked == true
-            lockFramesButton.mmfActiveTextColor = { 0.45, 1.0, 0.45 }
-            lockFramesButton.mmfInactiveTextColor = { 1.0, 0.35, 0.35 }
-            lockFramesButton.mmfActiveBorderColor = { 0.25, 0.55, 0.25, 1 }
-            lockFramesButton.mmfInactiveBorderColor = { 0.55, 0.25, 0.25, 1 }
-            if isLocked then
-                if lockFramesButton.labelText then
-                    lockFramesButton.labelText:SetText("Frames Locked")
-                    lockFramesButton.labelText:SetTextColor(0.45, 1.0, 0.45)
-                end
-                lockFramesButton:SetBackdropBorderColor(0.25, 0.55, 0.25, 1)
-            else
-                if lockFramesButton.labelText then
-                    lockFramesButton.labelText:SetText("Frames Unlocked")
-                    lockFramesButton.labelText:SetTextColor(1.0, 0.35, 0.35)
-                end
-                lockFramesButton:SetBackdropBorderColor(0.55, 0.25, 0.25, 1)
-            end
-            if disabled then
-                if lockFramesButton.Disable then
-                    lockFramesButton:Disable()
-                end
-            else
-                if lockFramesButton.Enable then
-                    lockFramesButton:Enable()
-                end
-            end
-        end
-
-        if editModeEnabled then
-            if lockFramesContainer then
-                lockFramesContainer:SetAlpha(0.45)
-            end
-            ApplyLockButtonState(false, true)
-            return
-        end
-
-        if lockFramesContainer then
-            lockFramesContainer:SetAlpha(1)
-        end
-        ApplyLockButtonState(effectiveLocked, false)
-    end
-
-    local function SetEditModeButtonState(checked)
-        if not editModeButton then
-            return
-        end
-        if editModeButton.labelText then
-            EnsureTitleControlFont(editModeButton.labelText, 10)
-            editModeButton.labelText:SetShown(true)
-        end
-        editModeButton.mmfActive = checked == true
-        if checked then
-            editModeButton:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.95)
-            if editModeButton.labelText then
-                editModeButton.labelText:SetTextColor(1, 0.93, 0.45)
-            end
-        else
-            editModeButton:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
-            if editModeButton.labelText then
-                editModeButton.labelText:SetTextColor(0.9, 0.9, 0.9)
-            end
-        end
-    end
-
-    local function IsGlobalTestModeEnabled()
-        return MattMinimalFramesDB and (MattMinimalFramesDB.layoutTestMode == true or MattMinimalFramesDB.auraTestMode == true)
-    end
-
-    local function RefreshTitleBarControls()
-        if MMF_RefreshPopupWidgetTree then
-            MMF_RefreshPopupWidgetTree(titleBar)
-        end
-        if lockFramesButton and lockFramesButton.labelText then
-            EnsureTitleControlFont(lockFramesButton.labelText, 10)
-            lockFramesButton.labelText:SetShown(true)
-        end
-        if editModeButton and editModeButton.labelText and editModeButton.labelText.SetText then
-            EnsureTitleControlFont(editModeButton.labelText, 10)
-            editModeButton.labelText:SetText("Edit Mode")
-            editModeButton.labelText:SetShown(true)
-        end
-        if testModeContainer and testModeContainer.labelText and testModeContainer.labelText.SetText then
-            EnsureTitleControlFont(testModeContainer.labelText, 10)
-            testModeContainer.labelText:SetText("Test Mode")
-            testModeContainer.labelText:SetShown(true)
-        end
-
-        SetEditModeButtonState(MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true)
-        SetTestModeCheckboxState(IsGlobalTestModeEnabled())
-        SyncTitleLockCheckboxState()
-    end
-
-    local function ApplyInitialTitleBarState()
-        titleStateGeneration = titleStateGeneration + 1
-        local currentGeneration = titleStateGeneration
-        local function RefreshIfCurrent()
-            if currentGeneration ~= titleStateGeneration then
-                return
-            end
-            RefreshTitleBarControls()
-        end
-        RefreshIfCurrent()
-        if C_Timer and C_Timer.After then
-            C_Timer.After(0, function()
-                RefreshIfCurrent()
-            end)
-            C_Timer.After(0.05, function()
-                RefreshIfCurrent()
-            end)
-            C_Timer.After(0.2, function()
-                RefreshIfCurrent()
-            end)
-        end
-    end
-
-    local function SetGlobalTestMode(enabled)
-        if not MattMinimalFramesDB then
-            MattMinimalFramesDB = {}
-        end
-        local active = enabled == true
-        MattMinimalFramesDB.layoutTestMode = active
-        MattMinimalFramesDB.auraTestMode = active
-        if MMF_RefreshFrameLockState then
-            MMF_RefreshFrameLockState()
-        end
-        if MMF_UpdateCombatFrameVisibility then
-            MMF_UpdateCombatFrameVisibility()
-        end
-        if MMF_UpdateTargetAuras then
-            MMF_UpdateTargetAuras()
-        end
-        if MMF_UpdatePlayerAuras then
-            MMF_UpdatePlayerAuras()
-        end
-        if MMF_RequestAllFramesUpdate then
-            MMF_RequestAllFramesUpdate()
-        elseif MMF_GetAllFrames and MMF_UpdateUnitFrame then
-            for _, frame in ipairs(MMF_GetAllFrames()) do
-                if frame then
-                    MMF_UpdateUnitFrame(frame)
-                end
-            end
-        end
-    end
-
-    local function EnsureEditModePopup()
-        if editModePopup then
-            return editModePopup
-        end
-
-        editModePopup = CreateFrame("Frame", "MMF_EditModePopup", UIParent, "BackdropTemplate")
-        editModePopup:SetSize(380, 170)
-        editModePopup:SetPoint("TOP", UIParent, "TOP", 0, -120)
-        editModePopup:SetFrameStrata("DIALOG")
-        editModePopup:SetToplevel(true)
-        editModePopup:SetMovable(true)
-        editModePopup:EnableMouse(true)
-        editModePopup:RegisterForDrag("LeftButton")
-        editModePopup:SetScript("OnDragStart", editModePopup.StartMoving)
-        editModePopup:SetScript("OnDragStop", editModePopup.StopMovingOrSizing)
-        editModePopup:SetBackdrop({
-            bgFile = "Interface\\Buttons\\WHITE8x8",
-            edgeFile = "Interface\\Buttons\\WHITE8x8",
-            edgeSize = 1,
-        })
-        editModePopup:SetBackdropColor(0.04, 0.04, 0.05, 0.98)
-        editModePopup:SetBackdropBorderColor(0.1, 0.1, 0.12, 1)
-
-        local modeTitleBar = CreateFrame("Frame", nil, editModePopup)
-        modeTitleBar:SetPoint("TOPLEFT", 0, 0)
-        modeTitleBar:SetPoint("TOPRIGHT", 0, 0)
-        modeTitleBar:SetHeight(28)
-
-        local modeTitleBg = modeTitleBar:CreateTexture(nil, "BACKGROUND")
-        modeTitleBg:SetAllPoints()
-        modeTitleBg:SetColorTexture(0.07, 0.09, 0.11, 1)
-
-        local modeTitleGlow = modeTitleBar:CreateTexture(nil, "ARTWORK")
-        modeTitleGlow:SetPoint("BOTTOMLEFT", 0, 0)
-        modeTitleGlow:SetPoint("BOTTOMRIGHT", 0, 0)
-        modeTitleGlow:SetHeight(2)
-        modeTitleGlow:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.95)
-
-        local modeTitle = modeTitleBar:CreateFontString(nil, "OVERLAY")
-        modeTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-        modeTitle:SetPoint("LEFT", 12, 1)
-        modeTitle:SetTextColor(1, 1, 1)
-        modeTitle:SetText("Matt's Minimal Frames Edit Mode")
-
-        local modeHelp = editModePopup:CreateFontString(nil, "OVERLAY")
-        modeHelp:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
-        modeHelp:SetPoint("TOP", editModePopup, "TOP", 0, -54)
-        modeHelp:SetTextColor(0.85, 0.85, 0.85)
-        modeHelp:SetText("Drag frames normally. Click below to exit Edit Mode.")
-
-        local openGuiContainer = CreateFrame("Frame", nil, editModePopup)
-        openGuiContainer:SetSize(220, 20)
-        openGuiContainer:SetPoint("TOP", modeHelp, "BOTTOM", 0, -10)
-
-        local openGuiCheckbox = CreateFrame("CheckButton", nil, openGuiContainer)
-        openGuiCheckbox:SetSize(14, 14)
-        openGuiCheckbox:SetPoint("LEFT", 0, 0)
-
-        local openGuiBg = openGuiCheckbox:CreateTexture(nil, "BACKGROUND")
-        openGuiBg:SetAllPoints()
-        openGuiBg:SetColorTexture(0.08, 0.08, 0.1, 1)
-
-        local openGuiBorder = openGuiCheckbox:CreateTexture(nil, "BORDER")
-        openGuiBorder:SetPoint("TOPLEFT", -1, 1)
-        openGuiBorder:SetPoint("BOTTOMRIGHT", 1, -1)
-        openGuiBorder:SetColorTexture(0.25, 0.25, 0.3, 1)
-
-        local openGuiCheck = openGuiCheckbox:CreateTexture(nil, "ARTWORK")
-        openGuiCheck:SetSize(8, 8)
-        openGuiCheck:SetPoint("CENTER")
-        openGuiCheck:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 1)
-        openGuiCheckbox.check = openGuiCheck
-
-        local openGuiLabel = openGuiContainer:CreateFontString(nil, "OVERLAY")
-        openGuiLabel:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-        openGuiLabel:SetPoint("LEFT", openGuiCheckbox, "RIGHT", 6, 0)
-        openGuiLabel:SetTextColor(0.9, 0.9, 0.9)
-        openGuiLabel:SetText("Open Settings GUI")
-
-        local gridContainer = CreateFrame("Frame", nil, editModePopup)
-        gridContainer:SetSize(180, 20)
-        gridContainer:SetPoint("TOP", openGuiContainer, "BOTTOM", 0, -8)
-
-        local gridCheckbox = CreateFrame("CheckButton", nil, gridContainer)
-        gridCheckbox:SetSize(14, 14)
-        gridCheckbox:SetPoint("LEFT", 0, 0)
-
-        local gridBg = gridCheckbox:CreateTexture(nil, "BACKGROUND")
-        gridBg:SetAllPoints()
-        gridBg:SetColorTexture(0.08, 0.08, 0.1, 1)
-
-        local gridBorder = gridCheckbox:CreateTexture(nil, "BORDER")
-        gridBorder:SetPoint("TOPLEFT", -1, 1)
-        gridBorder:SetPoint("BOTTOMRIGHT", 1, -1)
-        gridBorder:SetColorTexture(0.25, 0.25, 0.3, 1)
-
-        local gridCheck = gridCheckbox:CreateTexture(nil, "ARTWORK")
-        gridCheck:SetSize(8, 8)
-        gridCheck:SetPoint("CENTER")
-        gridCheck:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 1)
-        gridCheckbox.check = gridCheck
-
-        local gridLabel = gridContainer:CreateFontString(nil, "OVERLAY")
-        gridLabel:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-        gridLabel:SetPoint("LEFT", gridCheckbox, "RIGHT", 6, 0)
-        gridLabel:SetTextColor(0.9, 0.9, 0.9)
-        gridLabel:SetText("Alignment Grid")
-
-        local function SetGridChecked(checked)
-            gridCheckbox:SetChecked(checked == true)
-            if gridCheckbox.check then
-                gridCheckbox.check:SetShown(checked == true)
-            end
-        end
-
-        local function SetOpenGuiChecked(checked)
-            openGuiCheckbox:SetChecked(checked == true)
-            if openGuiCheckbox.check then
-                openGuiCheckbox.check:SetShown(checked == true)
-            end
-        end
-
-        openGuiCheckbox:SetScript("OnClick", function(self)
-            local checked = self:GetChecked() == true
-            SetOpenGuiChecked(checked)
-            if checked then
-                popup:Show()
-            else
-                popup:Hide()
-            end
-        end)
-
-        gridCheckbox:SetScript("OnClick", function(self)
-            local checked = self:GetChecked() == true
-            SetGridChecked(checked)
-            if not MattMinimalFramesDB then
-                MattMinimalFramesDB = {}
-            end
-            MattMinimalFramesDB.showAlignmentGrid = checked
-            if MMF_ToggleAlignmentGrid then
-                MMF_ToggleAlignmentGrid(checked)
-            end
-        end)
-
-        local exitButton = CreateFrame("Button", nil, editModePopup, "BackdropTemplate")
-        exitButton:SetSize(150, 24)
-        exitButton:SetPoint("BOTTOM", editModePopup, "BOTTOM", 0, 16)
-        exitButton:SetBackdrop({
-            bgFile = "Interface\\Buttons\\WHITE8x8",
-            edgeFile = "Interface\\Buttons\\WHITE8x8",
-            edgeSize = 1,
-        })
-        exitButton:SetBackdropColor(0.06, 0.08, 0.1, 0.96)
-        exitButton:SetBackdropBorderColor(0.18, 0.22, 0.25, 1)
-
-        local exitText = exitButton:CreateFontString(nil, "OVERLAY")
-        exitText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-        exitText:SetPoint("CENTER")
-        exitText:SetTextColor(0.9, 0.9, 0.9)
-        exitText:SetText("Exit Edit Mode")
-
-        exitButton:SetScript("OnEnter", function()
-            exitButton:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.8)
-        end)
-        exitButton:SetScript("OnLeave", function()
-            exitButton:SetBackdropBorderColor(0.18, 0.22, 0.25, 1)
-        end)
-        exitButton:SetScript("OnClick", function()
-            if MMF_SetEditMode then
-                MMF_SetEditMode(false)
-            else
-                MattMinimalFramesDB.unlockFramesEditMode = false
-                if MMF_RefreshFrameLockState then
-                    MMF_RefreshFrameLockState()
-                end
-            end
-            SetEditModeButtonState(false)
-            SyncTitleLockCheckboxState()
-            editModePopup:Hide()
-            popup:Show()
-        end)
-
-        editModePopup:SetScript("OnShow", function(self)
-            local scale = (MMF_ClampGUIScale and MMF_ClampGUIScale(MattMinimalFramesDB and MattMinimalFramesDB.guiScale)) or 1.0
-            self:SetScale(scale)
-            if not MattMinimalFramesDB then
-                MattMinimalFramesDB = {}
-            end
-            if MattMinimalFramesDB.showAlignmentGrid ~= true then
-                MattMinimalFramesDB.showAlignmentGrid = true
-                if MMF_ToggleAlignmentGrid then
-                    MMF_ToggleAlignmentGrid(true)
-                end
-            end
-            SetOpenGuiChecked(false)
-            popup:Hide()
-            SetGridChecked(MattMinimalFramesDB.showAlignmentGrid == true)
-        end)
-
-        editModePopup:Hide()
-        return editModePopup
-    end
-
-    editModeContainer, editModeButton = CreateTitleButton(closeX, -276, "Edit Mode", function()
-        local currentlyEnabled = MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
-        if not currentlyEnabled then
-            if MMF_SetEditMode then
-                MMF_SetEditMode(true)
-            else
-                MattMinimalFramesDB.unlockFramesEditMode = true
-                if MMF_RefreshFrameLockState then
-                    MMF_RefreshFrameLockState()
-                end
-            end
-        end
-        SetEditModeButtonState(true)
-        SyncTitleLockCheckboxState()
-        local modePopup = EnsureEditModePopup()
-        popup:Hide()
-        modePopup:Show()
-    end, 92)
-    SetEditModeButtonState(MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true)
-
-    testModeContainer, testModeCheckbox = CreateTitleCheckbox(editModeContainer, -8, "Test Mode", IsGlobalTestModeEnabled(), function(checked)
-        SetGlobalTestMode(checked)
-        SetTestModeCheckboxState(checked)
-    end)
-    if testModeContainer then
-        testModeContainer:SetWidth(96)
-        testModeContainer:EnableMouse(true)
-        testModeContainer:HookScript("OnEnter", function(self)
-            GameTooltip:SetOwner(self, "ANCHOR_NONE")
-            GameTooltip:ClearAllPoints()
-            GameTooltip:SetPoint("LEFT", self, "RIGHT", 14, 0)
-            GameTooltip:SetText("Test Mode", 1, 1, 1)
-            GameTooltip:AddLine("Use this while adjusting elements outside Edit Mode, such as text size, aura previews, and cast bar text/scale.", 0.75, 0.75, 0.75, true)
-            GameTooltip:Show()
-        end)
-        testModeContainer:HookScript("OnLeave", function()
-            GameTooltip:Hide()
-        end)
-    end
-    SetTestModeCheckboxState(IsGlobalTestModeEnabled())
-
-    lockFramesContainer, lockFramesButton = CreateTitleButton(closeX, -136, "Frames Unlocked", function()
-        if MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true then
-            return
-        end
-        local currentlyLocked = MattMinimalFramesDB and MattMinimalFramesDB.locked == true
-        local newLocked = not currentlyLocked
-        MattMinimalFramesDB.locked = newLocked
-        if newLocked then
-            if MMF_LockFrames then
-                MMF_LockFrames()
-            end
-        else
-            if MMF_UnlockFrames then
-                MMF_UnlockFrames()
-            end
-        end
-        SyncTitleLockCheckboxState()
-    end, 128)
-    if lockFramesButton then
-        lockFramesButton:HookScript("OnEnter", function(self)
-            GameTooltip:SetOwner(self, "ANCHOR_NONE")
-            GameTooltip:ClearAllPoints()
-            GameTooltip:SetPoint("LEFT", self, "RIGHT", 14, 0)
-            GameTooltip:SetText("Frame Lock", 1, 1, 1)
-            GameTooltip:AddLine("While unlocked, hold SHIFT + mouse drag to move frames outside of Edit Mode.", 0.75, 0.75, 0.75, true)
-            GameTooltip:Show()
-        end)
-        lockFramesButton:HookScript("OnLeave", function()
-            GameTooltip:Hide()
-        end)
-    end
-
-    SyncTitleLockCheckboxState()
-    popup.MMFRefreshTitleBarControls = ApplyInitialTitleBarState
-
-    popup:HookScript("OnShow", function()
-        ApplyInitialTitleBarState()
-    end)
-
-    ApplyInitialTitleBarState()
-
-    -- GUI Scale slider on title bar
-    local guiScaleContainer = CreateFrame("Frame", nil, titleBar)
-    guiScaleContainer:SetSize(120, 24)
-    guiScaleContainer:SetPoint("RIGHT", closeX, "LEFT", -8, 0)
-    
-    local scaleLabel = guiScaleContainer:CreateFontString(nil, "OVERLAY")
-    scaleLabel:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
-    scaleLabel:SetPoint("LEFT", 0, 0)
-    scaleLabel:SetTextColor(0.8, 0.8, 0.8)
-    scaleLabel:SetText("Scale")
-    scaleLabel:SetWidth(35)
-    scaleLabel:SetJustifyH("LEFT")
-    
-    -- Persistent themed value box for GUI scale (matches slider inputs)
-    local scaleValueBg = CreateFrame("Frame", nil, guiScaleContainer, "BackdropTemplate")
-    scaleValueBg:SetSize(36, 18)
-    scaleValueBg:SetPoint("RIGHT", 0, 0)
-    scaleValueBg:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
-    scaleValueBg:SetBackdropColor(0.06, 0.06, 0.08, 1)
-    scaleValueBg:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
-
-    local scaleValue = CreateFrame("EditBox", nil, scaleValueBg)
-    scaleValue:SetAllPoints(scaleValueBg)
-    scaleValue:SetAutoFocus(false)
-    scaleValue:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
-    scaleValue:SetJustifyH("CENTER")
-    scaleValue:SetJustifyV("MIDDLE")
-    scaleValue:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
-
-    local guiScaleSlider = CreateFrame("Slider", nil, guiScaleContainer, "BackdropTemplate")
-    guiScaleSlider:SetSize(40, 8)
-    guiScaleSlider:SetPoint("LEFT", 40, 0)
-    guiScaleSlider:SetOrientation("HORIZONTAL")
-    guiScaleSlider:SetMinMaxValues(0.5, 1.5)
-    guiScaleSlider:SetValueStep(0.1)
-    guiScaleSlider:SetObeyStepOnDrag(true)
-    guiScaleSlider:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8" })
-    guiScaleSlider:SetBackdropColor(0.06, 0.06, 0.08, 1)
-    
-    local guiScaleThumb = guiScaleSlider:CreateTexture(nil, "OVERLAY")
-    guiScaleThumb:SetSize(6, 12)
-    guiScaleThumb:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 1)
-    guiScaleSlider:SetThumbTexture(guiScaleThumb)
-    
-    local currentScale = (MMF_ClampGUIScale and MMF_ClampGUIScale(MattMinimalFramesDB.guiScale)) or 1.0
-    guiScaleSlider:SetValue(currentScale)
-    scaleValue:SetText(string.format("%.1f", currentScale))
-
-    -- Visual feedback on hover / focus
-    scaleValueBg:SetScript("OnEnter", function(self)
-        self:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.6)
-    end)
-    scaleValueBg:SetScript("OnLeave", function(self)
-        self:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
-    end)
-
-    scaleValue:SetScript("OnEnterPressed", function(self)
-        local num = tonumber(self:GetText())
-        if not num then
-            self:SetText(string.format("%.1f", guiScaleSlider:GetValue()))
-            return
-        end
-        num = (MMF_ClampGUIScale and MMF_ClampGUIScale(num)) or num
-        guiScaleSlider:SetValue(num)
-        MattMinimalFramesDB.guiScale = num
-        if popup and popup.IsVisible and popup:IsVisible() then
-            ApplyPopupScale(num, true)
-        end
-    end)
-    scaleValue:SetScript("OnEscapePressed", function(self)
-        self:SetText(string.format("%.1f", guiScaleSlider:GetValue()))
-        self:ClearFocus()
-    end)
-    scaleValue:SetScript("OnEditFocusLost", function(self)
-        self:SetText(string.format("%.1f", guiScaleSlider:GetValue()))
-    end)
-
-    guiScaleSlider:SetScript("OnValueChanged", function(self, value)
-        value = (MMF_ClampGUIScale and MMF_ClampGUIScale(value)) or value
-        scaleValue:SetText(string.format("%.1f", value))
-        MattMinimalFramesDB.guiScale = value
-    end)
-    
-    guiScaleSlider:SetScript("OnMouseUp", function(self)
-        local value = (MMF_ClampGUIScale and MMF_ClampGUIScale(MattMinimalFramesDB.guiScale)) or 1.0
-        MattMinimalFramesDB.guiScale = value
-        if popup and popup:IsShown() then
-            ApplyPopupScale(value, true)
-        end
-    end)
+    local headerState = MMF_CreatePopupHeader(popup, {
+        popupWidth = popupWidth,
+        popupLayout = POPUP_LAYOUT,
+        accentColor = ACCENT_COLOR,
+        titleWallpaperAlpha = TITLE_WALLPAPER_ALPHA,
+        compat = Compat,
+        setAspectCropTexCoords = SetAspectCropTexCoords,
+        applyPopupScale = windowController.ApplyPopupScale,
+        isUISoundsEnabled = IsUISoundsEnabled,
+    }) or {}
+
+    local titleBar = headerState.titleBar
+    local UpdateTitleWallpaperCrop = headerState.UpdateTitleWallpaperCrop or function() end
+    local ApplyInitialTitleBarState = headerState.ApplyInitialTitleBarState or function() end
 
     -- Content area (between title bar and footer)
     local content = CreateFrame("Frame", nil, popup)
@@ -1502,145 +504,35 @@ function MMF_ShowWelcomePopup(forceShow)
         }
     end
 
-    local function LayoutTabButtons()
-        local tabCount = #tabDefs
-        local tabSpacing = POPUP_LAYOUT.tabSpacing
-        local buttonHeight = 42
-        local tabY = 0
-
-        for i, tabButton in ipairs(tabButtons) do
-            tabButton:SetSize(SIDEBAR_WIDTH - 16, buttonHeight)
-            tabButton:ClearAllPoints()
-            tabButton:SetPoint("TOPLEFT", navButtonHost, "TOPLEFT", 8, -tabY)
-            tabY = tabY + buttonHeight + tabSpacing
-        end
-    end
-
-    local function SetTabButtonState(tabButton, isActive)
-        tabButton.isActive = isActive
-        if isActive then
-            tabButton:SetBackdropColor(0.06, 0.10, 0.12, 0.78)
-            tabButton:SetBackdropBorderColor(0.16, 0.22, 0.24, 1)
-            tabButton.text:SetTextColor(1, 1, 1)
-            tabButton.activeLine:SetAlpha(1)
-            tabButton.glow:SetAlpha(0.16)
-            tabButton.activeRail:SetAlpha(1)
-        else
-            tabButton:SetBackdropColor(0.03, 0.04, 0.05, 0.70)
-            tabButton:SetBackdropBorderColor(0.12, 0.14, 0.16, 1)
-            tabButton.text:SetTextColor(0.68, 0.72, 0.76)
-            tabButton.activeLine:SetAlpha(0)
-            tabButton.glow:SetAlpha(0)
-            tabButton.activeRail:SetAlpha(0)
-        end
-    end
-
-    local function SetActiveTab(tabIndex)
-        local subtitleByLabel = {
-            ["Unit Frames"] = "Frame sizing, text, visibility, style, and cast bar controls.",
-            ["Auras / Power"] = "Aura behavior, power options, and related display settings.",
-            ["Current Class"] = "Class-specific resources and active spec customization.",
-            ["Profiles"] = "Manage, copy, and delete settings profiles.",
-            ["Tools"] = "Utility settings and addon-wide helper tools.",
-        }
-        for _, page in ipairs(allPages) do
-            page:Hide()
-        end
-
-        activePage = tabPages[tabIndex]
-        if activePage then
-            activePage:Show()
-            pageScrollFrame:SetScrollChild(activePage)
-            sharedScrollBar:SetValue(0)
-            pageScrollFrame:SetVerticalScroll(0)
-            UpdateSharedScrollBounds()
-        end
-
-        for i, tabButton in ipairs(tabButtons) do
-            SetTabButtonState(tabButton, i == tabIndex)
-        end
-
-        local activeDef = tabDefs[tabIndex]
-        local activeLabel = activeDef and activeDef.label or "Settings"
-        pageHeaderTitle:SetText(activeLabel)
-        pageHeaderSubtitle:SetText(subtitleByLabel[activeLabel] or "")
-
-        for _, listFrame in ipairs(closableLists) do
-            CloseListFrame(listFrame)
-        end
-
-        if tabIndex == 1 and unitFramesState and unitFramesState.ApplyInitialSection then
-            unitFramesState.ApplyInitialSection()
-        end
-
-        MattMinimalFramesDB.popupActiveTab = tabIndex
-    end
-
-    for i, def in ipairs(tabDefs) do
-        local tabButton = CreateFrame("Button", nil, tabBar, "BackdropTemplate")
-        tabButton:SetSize(1, POPUP_LAYOUT.tabHeight)
-        tabButton:SetPoint("TOPLEFT", 0, 0)
-        tabButton:SetBackdrop({
-            bgFile = "Interface\\Buttons\\WHITE8x8",
-            edgeFile = "Interface\\Buttons\\WHITE8x8",
-            edgeSize = 1,
-        })
-        tabButton:SetBackdropColor(0.04, 0.05, 0.06, 0.96)
-        tabButton:SetBackdropBorderColor(0.12, 0.14, 0.16, 1)
-
-        local tabGlow = tabButton:CreateTexture(nil, "BACKGROUND")
-        tabGlow:SetPoint("TOPLEFT", -2, -2)
-        tabGlow:SetPoint("BOTTOMRIGHT", 2, 2)
-        tabGlow:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 1)
-        tabGlow:SetAlpha(0)
-        tabButton.glow = tabGlow
-
-        local tabActiveRail = tabButton:CreateTexture(nil, "ARTWORK")
-        tabActiveRail:SetPoint("TOPLEFT", 0, 0)
-        tabActiveRail:SetPoint("BOTTOMLEFT", 0, 0)
-        tabActiveRail:SetWidth(3)
-        tabActiveRail:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 1)
-        tabActiveRail:SetAlpha(0)
-        tabButton.activeRail = tabActiveRail
-
-        local tabActiveLine = tabButton:CreateTexture(nil, "ARTWORK")
-        tabActiveLine:SetPoint("BOTTOMLEFT", 0, 0)
-        tabActiveLine:SetPoint("BOTTOMRIGHT", 0, 0)
-        tabActiveLine:SetHeight(2)
-        tabActiveLine:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 1)
-        tabActiveLine:SetAlpha(0)
-        tabButton.activeLine = tabActiveLine
-
-        local tabButtonText = tabButton:CreateFontString(nil, "OVERLAY")
-        tabButtonText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
-        tabButtonText:SetPoint("LEFT", 16, 1)
-        tabButtonText:SetJustifyH("LEFT")
-        tabButtonText:SetText(def.label)
-        tabButton.text = tabButtonText
-
-        tabButton:SetScript("OnEnter", function(self)
-            if not self.isActive then
-                self:SetBackdropBorderColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.4)
-                self.text:SetTextColor(0.9, 0.93, 0.95)
-                self.activeLine:SetAlpha(0.45)
+    local navigationController = MMF_CreatePopupNavigationController({
+        tabBar = tabBar,
+        navButtonHost = navButtonHost,
+        tabDefs = tabDefs,
+        tabPages = tabPages,
+        allPages = allPages,
+        pageHeaderTitle = pageHeaderTitle,
+        pageHeaderSubtitle = pageHeaderSubtitle,
+        pageScrollFrame = pageScrollFrame,
+        sharedScrollBar = sharedScrollBar,
+        accentColor = ACCENT_COLOR,
+        popupLayout = POPUP_LAYOUT,
+        sidebarWidth = SIDEBAR_WIDTH,
+        closableLists = closableLists,
+        closeListFrame = CloseListFrame,
+        updateSharedScrollBounds = UpdateSharedScrollBounds,
+        isUISoundsEnabledFn = IsUISoundsEnabled,
+        setActivePage = function(page)
+            activePage = page
+        end,
+        onUnitFramesTabActivated = function()
+            if unitFramesState and unitFramesState.ApplyInitialSection then
+                unitFramesState.ApplyInitialSection()
             end
-        end)
-        tabButton:SetScript("OnLeave", function(self)
-            if not self.isActive then
-                self:SetBackdropBorderColor(0.12, 0.14, 0.16, 1)
-                self.text:SetTextColor(0.68, 0.72, 0.76)
-                self.activeLine:SetAlpha(0)
-            end
-        end)
-        tabButton:SetScript("OnClick", function()
-            if PlaySoundFile and IsUISoundsEnabled() then
-                PlaySoundFile("Interface\\AddOns\\MattMinimalFrames\\Sounds\\click.mp3", "Master")
-            end
-            SetActiveTab(i)
-        end)
-
-        tabButtons[i] = tabButton
-    end
+        end,
+    })
+    local LayoutTabButtons = navigationController.LayoutTabButtons
+    local SetActiveTab = navigationController.SetActiveTab
+    tabButtons = navigationController.tabButtons
     LayoutTabButtons()
 
     ---------------------------------------------------
@@ -1749,7 +641,7 @@ function MMF_ShowWelcomePopup(forceShow)
             if math.abs(dy) < 1 then
                 return
             end
-            local maxAllowed = GetDynamicMaxPopupHeight(self)
+            local maxAllowed = windowController.GetDynamicMaxPopupHeight(self)
             local newH = math.max(MIN_POPUP_HEIGHT, math.min(maxAllowed, (self.mmfResizeStartH or POPUP_LAYOUT.height) + dy))
             self:SetSize(MIN_POPUP_WIDTH, newH)
         end)
@@ -1758,13 +650,9 @@ function MMF_ShowWelcomePopup(forceShow)
     resizeGrip:SetScript("OnMouseUp", function()
         popup.mmfResizing = false
         popup:SetScript("OnUpdate", nil)
-        ClampPopupHorizontal(popup)
-        PersistPopupPosition()
-        if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
-        MattMinimalFramesDB.popupSize = {
-            width = math.floor((popup:GetWidth() or POPUP_LAYOUT.width) + 0.5),
-            height = math.floor((popup:GetHeight() or POPUP_LAYOUT.height) + 0.5),
-        }
+        windowController.ClampPopupHorizontal(popup)
+        windowController.PersistPopupPosition()
+        windowController.PersistPopupSize()
         LayoutTabButtons()
         UpdateSharedScrollBounds()
     end)
@@ -1775,7 +663,7 @@ function MMF_ShowWelcomePopup(forceShow)
             width = MIN_POPUP_WIDTH
         end
         local currentHeight = self:GetHeight() or height or POPUP_LAYOUT.height
-        local dynamicMaxHeight = GetDynamicMaxPopupHeight(self)
+        local dynamicMaxHeight = windowController.GetDynamicMaxPopupHeight(self)
         if currentHeight < MIN_POPUP_HEIGHT then
             self:SetHeight(MIN_POPUP_HEIGHT)
             currentHeight = MIN_POPUP_HEIGHT
@@ -1784,7 +672,7 @@ function MMF_ShowWelcomePopup(forceShow)
             currentHeight = dynamicMaxHeight
         end
         height = currentHeight
-        ClampPopupHorizontal(self)
+        windowController.ClampPopupHorizontal(self)
         if titleBar then
             titleBar:SetWidth(width or self:GetWidth())
             UpdateTitleWallpaperCrop()
@@ -1794,7 +682,7 @@ function MMF_ShowWelcomePopup(forceShow)
         end
         LayoutTabButtons()
         UpdateSharedScrollBounds()
-        PersistPopupSize()
+        windowController.PersistPopupSize()
     end)
 
     popup:Show()

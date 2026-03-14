@@ -205,6 +205,10 @@ local function CanStartAuraContainerDrag(container)
     if not IsAuraDragModeEnabled() then
         return false
     end
+    local db = MattMinimalFramesDB or {}
+    if db.unlockFramesEditMode == true then
+        return true
+    end
     return type(IsShiftKeyDown) == "function" and IsShiftKeyDown() == true
 end
 
@@ -220,6 +224,14 @@ local function GetAuraOffsetKeysForContainer(container, isDebuff)
         return "debuffXOffset", "debuffYOffset", 3, 27
     end
     return "buffXOffset", "buffYOffset", -2, -6
+end
+
+local function GetAuraDirectionKeyForContainer(container, isDebuff)
+    local unitToken = (container and container.mmfAuraUnit) or "target"
+    if unitToken == "player" then
+        return isDebuff and "playerDebuffAuraDirection" or "playerBuffAuraDirection"
+    end
+    return isDebuff and "debuffAuraDirection" or "buffAuraDirection"
 end
 
 local function StartAuraContainerDrag(container)
@@ -274,6 +286,16 @@ local function StopAuraContainerDrag(container)
     container.mmfAuraDragging = nil
     container:SetScript("OnUpdate", nil)
     container.mmfAuraDragState = nil
+    container.mmfSuppressClickPopup = true
+    if C_Timer and C_Timer.After then
+        C_Timer.After(0.05, function()
+            if container then
+                container.mmfSuppressClickPopup = nil
+            end
+        end)
+    else
+        container.mmfSuppressClickPopup = nil
+    end
     if MMF_UpdateAuraLayout then
         MMF_UpdateAuraLayout()
     elseif MMF_UpdateTargetAuras then
@@ -282,6 +304,157 @@ local function StopAuraContainerDrag(container)
             MMF_UpdatePlayerAuras()
         end
     end
+end
+
+local function IsAuraEditModeActive()
+    local db = MattMinimalFramesDB or {}
+    return db.unlockFramesEditMode == true
+end
+
+local function EnsureAuraOptionsPopup()
+    if _G.MMF_AuraOptionsPopup then
+        return _G.MMF_AuraOptionsPopup
+    end
+
+    local popup = CreateFrame("Frame", "MMF_AuraOptionsPopup", UIParent, "BackdropTemplate")
+    popup:SetSize(230, 112)
+    popup:SetFrameStrata("DIALOG")
+    popup:SetToplevel(true)
+    popup:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    popup:SetBackdropColor(0.04, 0.04, 0.05, 0.72)
+    popup:SetBackdropBorderColor(0.1, 0.1, 0.12, 0.9)
+    popup:Hide()
+
+    local title = popup:CreateFontString(nil, "OVERLAY")
+    if MMF_SetFontSafe then
+        MMF_SetFontSafe(title, "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+    else
+        title:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+    end
+    title:SetPoint("TOPLEFT", 10, -8)
+    title:SetTextColor(1, 1, 1)
+    title:SetText("Aura Options")
+    popup.title = title
+
+    local close = CreateFrame("Button", nil, popup)
+    close:SetSize(16, 16)
+    close:SetPoint("TOPRIGHT", -6, -6)
+    local closeText = close:CreateFontString(nil, "OVERLAY")
+    if MMF_SetFontSafe then
+        MMF_SetFontSafe(closeText, "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+    else
+        closeText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+    end
+    closeText:SetPoint("CENTER")
+    closeText:SetTextColor(0.8, 0.8, 0.8)
+    closeText:SetText("x")
+    close:SetScript("OnClick", function() popup:Hide() end)
+
+    local function CreatePopupButton(yOffset, label)
+        local btn = CreateFrame("Button", nil, popup, "BackdropTemplate")
+        btn:SetSize(206, 24)
+        btn:SetPoint("TOP", popup, "TOP", 0, yOffset)
+        btn:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8x8",
+            edgeFile = "Interface\\Buttons\\WHITE8x8",
+            edgeSize = 1,
+        })
+        btn:SetBackdropColor(0.06, 0.08, 0.1, 0.96)
+        btn:SetBackdropBorderColor(0.18, 0.22, 0.25, 1)
+        local txt = btn:CreateFontString(nil, "OVERLAY")
+        if MMF_SetFontSafe then
+            MMF_SetFontSafe(txt, "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+        else
+            txt:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+        end
+        txt:SetPoint("CENTER")
+        txt:SetTextColor(0.9, 0.9, 0.9)
+        txt:SetText(label)
+        return btn
+    end
+
+    popup.resetPositionBtn = CreatePopupButton(-28, "Reset Aura Position")
+    popup.resetDirectionBtn = CreatePopupButton(-58, "Reset Aura Direction")
+    _G.MMF_AuraOptionsPopup = popup
+    return popup
+end
+
+local function ResetAuraContainerToDefaults(container)
+    if not container then
+        return
+    end
+    if not MattMinimalFramesDB then
+        MattMinimalFramesDB = {}
+    end
+    local isDebuff = container.mmfAuraIsDebuff == true
+    local xKey, yKey, defaultX, defaultY = GetAuraOffsetKeysForContainer(container, isDebuff)
+    local directionKey = GetAuraDirectionKeyForContainer(container, isDebuff)
+    local defaults = MattMinimalFrames_Defaults or {}
+
+    MattMinimalFramesDB[xKey] = tonumber(defaults[xKey]) or defaultX
+    MattMinimalFramesDB[yKey] = tonumber(defaults[yKey]) or defaultY
+    if defaults[directionKey] ~= nil then
+        MattMinimalFramesDB[directionKey] = defaults[directionKey]
+    end
+end
+
+local function ResetAuraContainerDirectionToDefault(container)
+    if not container then
+        return
+    end
+    if not MattMinimalFramesDB then
+        MattMinimalFramesDB = {}
+    end
+    local isDebuff = container.mmfAuraIsDebuff == true
+    local directionKey = GetAuraDirectionKeyForContainer(container, isDebuff)
+    local defaults = MattMinimalFrames_Defaults or {}
+    if defaults[directionKey] ~= nil then
+        MattMinimalFramesDB[directionKey] = defaults[directionKey]
+    end
+end
+
+local function RefreshAuraContainers()
+    if MMF_UpdateAuraLayout then
+        MMF_UpdateAuraLayout()
+    elseif MMF_UpdateTargetAuras then
+        MMF_UpdateTargetAuras()
+        if MMF_UpdatePlayerAuras then
+            MMF_UpdatePlayerAuras()
+        end
+    end
+end
+
+local function ShowAuraContainerOptionsPopup(container)
+    if not container or not IsAuraEditModeActive() then
+        return
+    end
+    if InCombatLockdown and InCombatLockdown() then
+        return
+    end
+
+    local popup = EnsureAuraOptionsPopup()
+    local unitToken = (container.mmfAuraUnit == "player") and "Player" or "Target"
+    local auraType = (container.mmfAuraIsDebuff == true) and "Debuffs" or "Buffs"
+    popup.title:SetText(unitToken .. " " .. auraType .. " Options")
+
+    popup.resetPositionBtn:SetScript("OnClick", function()
+        ResetAuraContainerToDefaults(container)
+        RefreshAuraContainers()
+        popup:Hide()
+    end)
+    popup.resetDirectionBtn:SetScript("OnClick", function()
+        ResetAuraContainerDirectionToDefault(container)
+        RefreshAuraContainers()
+        popup:Hide()
+    end)
+
+    popup:ClearAllPoints()
+    popup:SetPoint("TOP", container, "BOTTOM", 0, -8)
+    popup:Show()
 end
 
 local function IsAuraTestModeEnabled()
@@ -706,6 +879,19 @@ local function CreateAuraIcon(parent, index, isDebuff, iconSize)
         local container = self and self:GetParent()
         StopAuraContainerDrag(container)
     end)
+    aura:SetScript("OnMouseUp", function(self, button)
+        if button ~= "LeftButton" then
+            return
+        end
+        local container = self and self:GetParent()
+        if not container then
+            return
+        end
+        if container.mmfAuraDragging or container.mmfSuppressClickPopup then
+            return
+        end
+        ShowAuraContainerOptionsPopup(container)
+    end)
     
     aura:Hide()
     return aura
@@ -776,6 +962,15 @@ local function CreateAuraContainer(parent, isDebuff, unitToken)
     end)
     container:SetScript("OnDragStop", function(self)
         StopAuraContainerDrag(self)
+    end)
+    container:SetScript("OnMouseUp", function(self, button)
+        if button ~= "LeftButton" then
+            return
+        end
+        if self.mmfAuraDragging or self.mmfSuppressClickPopup then
+            return
+        end
+        ShowAuraContainerOptionsPopup(self)
     end)
 
     return container
@@ -973,7 +1168,7 @@ local function UpdateUnitAuras(unit)
 
     if IsAuraFakePreviewEnabled() then
         local forcePlayerPreview = (unit == "player")
-        if unit == "target" and MattMinimalFramesDB and MattMinimalFramesDB.auraTestMode == true then
+        if unit == "target" then
             SetAuraTestPreviewFrameState(true)
         end
         local buffContainer = frame.BuffContainer

@@ -1,4 +1,4 @@
-function MMF_CreatePopupFooter(popup, popupWidth, accentColor, footerHeight)
+function MMF_CreatePopupFooter(popup, _popupWidth, accentColor, footerHeight)
     local ACCENT_COLOR = accentColor or { 0.6, 0.4, 0.9 }
     local height = footerHeight or 40
     -- Footer
@@ -18,19 +18,7 @@ function MMF_CreatePopupFooter(popup, popupWidth, accentColor, footerHeight)
     footerWallpaper:SetAlpha(0.10)
 
     local function UpdateFooterWallpaperCrop()
-        local w = math.max(1, footer:GetWidth() or 1)
-        local h = math.max(1, footer:GetHeight() or 1)
-        local imageAspect = 16 / 9
-        local frameAspect = w / h
-        if frameAspect > imageAspect then
-            local visibleV = imageAspect / frameAspect
-            local padV = (1 - visibleV) * 0.5
-            footerWallpaper:SetTexCoord(0, 1, padV, 1 - padV)
-        else
-            local visibleU = frameAspect / imageAspect
-            local padU = (1 - visibleU) * 0.5
-            footerWallpaper:SetTexCoord(padU, 1 - padU, 0, 1)
-        end
+        MMF_SetAspectCropTexCoords(footerWallpaper, footer, 16 / 9)
     end
     UpdateFooterWallpaperCrop()
     footer:SetScript("OnSizeChanged", function()
@@ -48,7 +36,7 @@ function MMF_CreatePopupFooter(popup, popupWidth, accentColor, footerHeight)
     versionText:SetPoint("LEFT", footer, "LEFT", 12, 0)
     versionText:SetJustifyH("LEFT")
     versionText:SetTextColor(1.0, 0.86, 0.2)
-    versionText:SetText("v.6.2.2")
+    versionText:SetText((MMF_GetPopupFooterVersionText and MMF_GetPopupFooterVersionText()) or "")
 
     -- Current class display (bottom-right)
     local classInfo = CreateFrame("Frame", nil, footer)
@@ -58,29 +46,28 @@ function MMF_CreatePopupFooter(popup, popupWidth, accentColor, footerHeight)
     local classIcon = classInfo:CreateTexture(nil, "ARTWORK")
     classIcon:SetSize(24, 24)
     classIcon:SetPoint("RIGHT", 0, 0)
-    classIcon:SetTexture("Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES")
-
-    local playerName = UnitName("player")
-    local _, classToken = UnitClass("player")
-    local classColor = classToken and RAID_CLASS_COLORS and RAID_CLASS_COLORS[classToken]
-    if classToken then
-        classIcon:SetTexture("Interface\\ICONS\\ClassIcon_" .. classToken)
-        classIcon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-    else
-        classIcon:SetTexCoord(0, 1, 0, 1)
-    end
+    local classDisplay = (MMF_GetPopupFooterClassDisplay and MMF_GetPopupFooterClassDisplay(ACCENT_COLOR)) or {}
+    classIcon:SetTexture(classDisplay.iconTexture or "Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES")
+    local iconTexCoord = classDisplay.iconTexCoord or { 0, 1, 0, 1 }
+    classIcon:SetTexCoord(
+        iconTexCoord[1] or 0,
+        iconTexCoord[2] or 1,
+        iconTexCoord[3] or 0,
+        iconTexCoord[4] or 1
+    )
 
     local classNameText = classInfo:CreateFontString(nil, "OVERLAY")
     classNameText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
     classNameText:SetPoint("RIGHT", classIcon, "LEFT", -6, 0)
     classNameText:SetWidth(96)
     classNameText:SetJustifyH("RIGHT")
-    classNameText:SetText(playerName or "Player")
-    if classColor then
-        classNameText:SetTextColor(classColor.r, classColor.g, classColor.b)
-    else
-        classNameText:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])
-    end
+    classNameText:SetText(classDisplay.name or "Player")
+    local textColor = classDisplay.textColor or ACCENT_COLOR
+    classNameText:SetTextColor(
+        textColor[1] or ACCENT_COLOR[1],
+        textColor[2] or ACCENT_COLOR[2],
+        textColor[3] or ACCENT_COLOR[3]
+    )
 
     return footer
 

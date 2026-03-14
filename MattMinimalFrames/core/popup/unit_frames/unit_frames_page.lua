@@ -29,6 +29,31 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
     sectionDivider:SetHeight(1)
     sectionDivider:SetColorTexture(0.14, 0.18, 0.2, 1)
 
+    local quickGuide = CreateFrame("Frame", nil, sectionCard, "BackdropTemplate")
+    quickGuide:SetPoint("TOPRIGHT", -18, -62)
+    quickGuide:SetSize(184, 128)
+    quickGuide:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
+    quickGuide:SetBackdropColor(0.05, 0.08, 0.11, 0.82)
+    quickGuide:SetBackdropBorderColor(0.14, 0.18, 0.2, 1)
+
+    local quickGuideTitle = quickGuide:CreateFontString(nil, "OVERLAY")
+    quickGuideTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
+    quickGuideTitle:SetPoint("TOPLEFT", 12, -10)
+    quickGuideTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
+    quickGuideTitle:SetText("Quick Guide")
+
+    local quickGuideBody = quickGuide:CreateFontString(nil, "OVERLAY")
+    quickGuideBody:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
+    quickGuideBody:SetPoint("TOPLEFT", quickGuideTitle, "BOTTOMLEFT", 0, -8)
+    quickGuideBody:SetPoint("TOPRIGHT", -12, -30)
+    quickGuideBody:SetJustifyH("LEFT")
+    quickGuideBody:SetJustifyV("TOP")
+    quickGuideBody:SetTextColor(0.78, 0.90, 0.96)
+
     local sectionViewport = CreateFrame("Frame", nil, sectionCard)
     sectionViewport:SetPoint("TOPLEFT", 18, -62)
     sectionViewport:SetClipsChildren(true)
@@ -48,15 +73,15 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
     local sectionRoots = {}
 
     local sectionDefs = {
-        { label = "Layout", subtitle = "Scale and frame sizing controls.", x = 0, y = 8, width = 288, height = 122 },
-        { label = "Text", subtitle = "Font sizes, truncation, HP text format, and name behavior.", x = 0, y = 98, width = 288, height = 324, maskTop = 12 },
-        { label = "Visibility", subtitle = "Choose when name, HP text, and boss frames are shown.", x = 0, y = 410, width = 288, height = 124 },
-        { label = "Offsets", subtitle = "Adjust text positions for each supported unit.", x = 0, y = 544, width = 288, height = 174 },
-        { label = "Cast Bars", subtitle = "Cast bar settings.", x = 300, y = 112, width = 288, height = 170 },
-        { label = "OOC", subtitle = "Out-of-combat visibility and fade rules.", x = 300, y = 258, width = 288, height = 184 },
-        { label = "Appearance", subtitle = "Textures, fonts, and frame colors.", x = 588, y = 6, width = 300, height = 480 },
-        { label = "Icons", subtitle = "Icon positions, sizes, and target markers.", x = 588, y = 236, width = 300, height = 266 },
-        { label = "Overlays", subtitle = "Heal prediction and absorb overlay settings.", x = 588, y = 512, width = 300, height = 208 },
+        { label = "Layout", subtitle = "Scale and frame sizing controls.", x = 0, y = 8, width = 560, height = 188, guide = "Use this page to change frame size.\nPick a frame in the dropdown, then adjust Scale X and Scale Y." },
+        { label = "Text", subtitle = "Font sizes, truncation, HP text format, and name behavior.", x = 0, y = 98, width = 288, height = 324, maskTop = 12, guide = "Use this page to change how text looks.\nYou can adjust name text, health text, and text behavior." },
+        { label = "Visibility", subtitle = "Choose when name, HP text, and boss frames are shown.", x = 0, y = 410, width = 288, height = 124, guide = "Use this page to show or hide parts of your frames.\nGood for reducing clutter in combat." },
+        { label = "Offsets", subtitle = "Adjust text positions for each supported unit.", x = 0, y = 544, width = 288, height = 174, guide = "Use this page to move text positions.\nGreat for fine-tuning alignment after sizing and text changes." },
+        { label = "Cast Bars", subtitle = "Cast bar settings.", x = 300, y = 112, width = 288, height = 170, guide = "Use this page to customize cast bars.\nAdjust cast bar size, style, and cast text readability." },
+        { label = "OOC", subtitle = "Out-of-combat visibility and fade rules.", x = 300, y = 258, width = 288, height = 184, guide = "Use this page to control how frames look out of combat.\nYou can fade frames when they are less important." },
+        { label = "Appearance", subtitle = "Textures, fonts, and frame colors.", x = 588, y = 6, width = 300, height = 480, guide = "Use this page to style your frames.\nChange textures, fonts, and colors to match your UI." },
+        { label = "Icons", subtitle = "Icon positions, sizes, and target markers.", x = 588, y = 236, width = 300, height = 266, guide = "Use this page for class/target icon options.\nAdjust icon size and position for better visibility." },
+        { label = "Overlays", subtitle = "Heal prediction and absorb overlay settings.", x = 588, y = 512, width = 300, height = 208, guide = "Use this page for heal and absorb overlay visuals.\nSet how strong or subtle those effects should be." },
     }
 
     local activeSectionIndex = tonumber(MattMinimalFramesDB.unitFramesSubTab) or 1
@@ -98,6 +123,7 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
         end
         sectionCardTitle:SetText(section.label or "")
         sectionCardSubtitle:SetText(section.subtitle or "")
+        quickGuideBody:SetText(section.guide or "")
         sectionViewport:SetSize(section.width, section.height)
         for sectionIndex = 1, #sectionDefs do
             local root = sectionRoots[sectionIndex]
@@ -267,11 +293,13 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
                 accentColor = ACCENT_COLOR,
                 createMinimalSlider = CreateMinimalSlider,
                 dropdownLists = dropdownLists,
+                sectionWidth = 560,
+                sectionHeight = 188,
                 leftColX = LEFT_COL_X,
-                leftColWidth = LEFT_COL_WIDTH,
-                leftLabelWidth = LEFT_LABEL_WIDTH,
-                leftButtonOffset = LEFT_BUTTON_OFFSET,
-                leftButtonWidth = LEFT_BUTTON_WIDTH,
+                leftColWidth = 336,
+                leftLabelWidth = 88,
+                leftButtonOffset = 96,
+                leftButtonWidth = 240,
             },
         },
         [2] = {

@@ -101,5 +101,6 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
     })
     dropdownLists.scaleUnitList = scaleUnitDropdown.list
     UpdateVisibleScaleSliders()
+
 end
 

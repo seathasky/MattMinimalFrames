@@ -279,6 +279,12 @@ function MMF_SetEditMode(enabled)
     ApplyEditModeAlignmentGrid(isEnabled)
     MMF_UpdatePetActionBarEditMode()
     MMF_RefreshFrameLockState()
+    if MMF_UpdateTargetAuras then
+        MMF_UpdateTargetAuras()
+    end
+    if MMF_UpdatePlayerAuras then
+        MMF_UpdatePlayerAuras()
+    end
 end
 
 function MMF_LockFrames()
