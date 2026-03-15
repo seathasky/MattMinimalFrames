@@ -180,6 +180,45 @@ local function EnsureDispelColorCurve(frame)
     return frame.mmfDispelColorCurve
 end
 
+local function GetColorRGB(colorObj, defaultR, defaultG, defaultB)
+    if colorObj then
+        if colorObj.GetRGB then
+            local r, g, b = colorObj:GetRGB()
+            return r or defaultR, g or defaultG, b or defaultB
+        end
+        return colorObj.r or defaultR, colorObj.g or defaultG, colorObj.b or defaultB
+    end
+    return defaultR, defaultG, defaultB
+end
+
+local function GetLegacyDispelTypeColor(dispelType)
+    if dispelType == "Magic" then
+        return GetColorRGB(DEBUFF_TYPE_MAGIC_COLOR, 0.2, 0.6, 1.0)
+    elseif dispelType == "Curse" then
+        return GetColorRGB(DEBUFF_TYPE_CURSE_COLOR, 0.6, 0.0, 1.0)
+    elseif dispelType == "Disease" then
+        return GetColorRGB(DEBUFF_TYPE_DISEASE_COLOR, 0.6, 0.4, 0.0)
+    elseif dispelType == "Poison" then
+        return GetColorRGB(DEBUFF_TYPE_POISON_COLOR, 0.0, 0.6, 0.0)
+    elseif dispelType == "Bleed" then
+        return GetColorRGB(DEBUFF_TYPE_BLEED_COLOR, 0.6, 0.0, 0.1)
+    end
+    return nil, nil, nil
+end
+
+local function FindLegacyDispellableDebuffType(unit, dispelList)
+    for i = 1, 40 do
+        local name, _, _, debuffType = UnitDebuff(unit, i)
+        if not name then
+            break
+        end
+        if debuffType and dispelList[debuffType] then
+            return debuffType
+        end
+    end
+    return nil
+end
+
 local function GetLibDispel()
     if not LibStub then return nil end
     local ok, lib = pcall(LibStub, "LibDispel-1.0", true)
@@ -220,22 +259,34 @@ local function UpdateDispelHighlight(frame, db)
         return
     end
 
-    -- Use C_UnitAuras.GetAuraDispelTypeColor with a color curve, same as UUF.
-    -- This avoids touching tainted aura fields like dispelName directly.
-    local bestAura = C_UnitAuras.GetAuraDataByIndex(unit, 1, "HARMFUL|RAID")
-    local bestAuraInstanceID = bestAura and bestAura.auraInstanceID or nil
+    if Compat and Compat.IsRetail and C_UnitAuras and C_UnitAuras.GetAuraDataByIndex and C_UnitAuras.GetAuraDispelTypeColor and C_CurveUtil and Enum and Enum.LuaCurveType then
+        -- Retail path: use C_UnitAuras.GetAuraDispelTypeColor with a color curve.
+        local bestAura = C_UnitAuras.GetAuraDataByIndex(unit, 1, "HARMFUL|RAID")
+        local bestAuraInstanceID = bestAura and bestAura.auraInstanceID or nil
 
-    if bestAuraInstanceID then
-        local curve = EnsureDispelColorCurve(frame)
-        local color = C_UnitAuras.GetAuraDispelTypeColor(unit, bestAuraInstanceID, curve)
-        if color then
-            local r, g, b = color:GetRGB()
-            frame.dispelHighlight:SetVertexColor(r, g, b, 1)
-            frame.dispelHighlight:Show()
+        if bestAuraInstanceID then
+            local curve = EnsureDispelColorCurve(frame)
+            local color = C_UnitAuras.GetAuraDispelTypeColor(unit, bestAuraInstanceID, curve)
+            if color then
+                local r, g, b = color:GetRGB()
+                frame.dispelHighlight:SetVertexColor(r, g, b, 1)
+                frame.dispelHighlight:Show()
+            else
+                frame.dispelHighlight:Hide()
+            end
         else
             frame.dispelHighlight:Hide()
         end
     else
+        local debuffType = FindLegacyDispellableDebuffType(unit, dispelList)
+        if debuffType then
+            local r, g, b = GetLegacyDispelTypeColor(debuffType)
+            if r and g and b then
+                frame.dispelHighlight:SetVertexColor(r, g, b, 1)
+                frame.dispelHighlight:Show()
+                return
+            end
+        end
         frame.dispelHighlight:Hide()
     end
 end
