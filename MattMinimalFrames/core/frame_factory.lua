@@ -314,43 +314,354 @@ end
 -- FRAME POSITIONING
 --------------------------------------------------
 
-local function SaveFramePosition(frame, frameName)
-    local left = frame:GetLeft()
-    local top = frame:GetTop()
-    if left and top then
-        if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
+local function IsBossUnit(unit)
+    return unit == "boss1" or unit == "boss2" or unit == "boss3" or unit == "boss4" or unit == "boss5" or unit == "boss"
+end
 
-        local bossIndex = nil
-        if type(frameName) == "string" then
-            local idx = frameName:match("^MMF_Boss([1-5])Frame$")
-            if idx then
-                bossIndex = tonumber(idx)
-            end
+local function GetPositionPrefixForUnit(unit)
+    if unit == "targettarget" then
+        return "tot"
+    end
+    if IsBossUnit(unit) then
+        return "boss"
+    end
+    return unit
+end
+
+local function RoundCoordinate(value)
+    local n = tonumber(value)
+    if not n then
+        return nil
+    end
+    if n >= 0 then
+        return math.floor(n + 0.5)
+    end
+    return math.ceil(n - 0.5)
+end
+
+local function GetRelativeCenter(frame)
+    if not frame or not UIParent then
+        return nil, nil
+    end
+    local centerX, centerY = frame:GetCenter()
+    local parentCenterX, parentCenterY = UIParent:GetCenter()
+    if not centerX or not centerY or not parentCenterX or not parentCenterY then
+        return nil, nil
+    end
+    return centerX - parentCenterX, centerY - parentCenterY
+end
+
+local function GetCenterKeysForUnit(unit)
+    local prefix = GetPositionPrefixForUnit(unit)
+    if type(prefix) ~= "string" or prefix == "" then
+        return nil, nil
+    end
+    return prefix .. "FrameCenterX", prefix .. "FrameCenterY"
+end
+
+local function GetDefaultCenterForUnit(unit)
+    local normalizedUnit = IsBossUnit(unit) and "boss" or unit
+    local lookupUnit = (normalizedUnit == "boss") and "boss1" or normalizedUnit
+    local def = MMF_GetFrameDefinition and MMF_GetFrameDefinition(lookupUnit)
+    if not def then
+        return 0, 0
+    end
+    return tonumber(def.x) or 0, tonumber(def.y) or 0
+end
+
+local function SetStoredFrameCenter(unit, centerX, centerY)
+    local xKey, yKey = GetCenterKeysForUnit(unit)
+    if not xKey or not yKey then
+        return
+    end
+    if not MattMinimalFramesDB then
+        MattMinimalFramesDB = {}
+    end
+    local roundedX = RoundCoordinate(centerX)
+    local roundedY = RoundCoordinate(centerY)
+    if roundedX ~= nil then
+        MattMinimalFramesDB[xKey] = roundedX
+    end
+    if roundedY ~= nil then
+        MattMinimalFramesDB[yKey] = roundedY
+    end
+end
+
+local function ClearStoredFrameCenter(unit)
+    local xKey, yKey = GetCenterKeysForUnit(unit)
+    if not xKey or not yKey or not MattMinimalFramesDB then
+        return
+    end
+    MattMinimalFramesDB[xKey] = nil
+    MattMinimalFramesDB[yKey] = nil
+end
+
+local function ClearLegacyFramePositionForUnit(unit)
+    if not MattMinimalFramesDB then
+        return
+    end
+    local prefix = GetPositionPrefixForUnit(unit)
+    if prefix == "boss" then
+        for i = 1, 5 do
+            MattMinimalFramesDB["MMF_Boss" .. i .. "Frame"] = nil
         end
+        return
+    end
+    if MMF_GetFrameDefinition then
+        local def = MMF_GetFrameDefinition(unit)
+        if def and def.name then
+            MattMinimalFramesDB[def.name] = nil
+        end
+    end
+end
 
-        if bossIndex then
-            local spacing = 36
-            local boss1Top = top + ((bossIndex - 1) * spacing)
-            for i = 1, 5 do
-                local name = "MMF_Boss" .. i .. "Frame"
-                local frameTop = boss1Top - ((i - 1) * spacing)
-                MattMinimalFramesDB[name] = { left = left, top = frameTop }
+MMF_ClearLegacyFramePosition = ClearLegacyFramePositionForUnit
 
-                local bossFrame = _G[name]
-                if bossFrame then
-                    bossFrame:ClearAllPoints()
-                    bossFrame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left, frameTop)
-                end
+local function UpdateSingleFramePositionControl(control, value)
+    if not control or not control.slider then
+        return
+    end
+    if control.valueText and control.valueText.HasFocus and control.valueText:HasFocus() then
+        return
+    end
+    local slider = control.slider
+    local current = slider:GetValue()
+    local target = tonumber(value) or 0
+    if current == nil or math.abs(current - target) > 0.0001 then
+        slider:SetValue(target)
+    elseif control.MMFRefreshWidget then
+        control.MMFRefreshWidget()
+    end
+    if control.RefreshResetVisibility then
+        control.RefreshResetVisibility()
+    end
+end
+
+local function UpdateFramePositionControlsForUnit(unit)
+    local registry = _G.MMF_FramePositionSliderRegistry
+    if type(registry) ~= "table" then
+        return
+    end
+
+    local normalizedUnit = IsBossUnit(unit) and "boss" or unit
+    local controls = registry[normalizedUnit]
+    if type(controls) ~= "table" then
+        return
+    end
+
+    local xKey, yKey = GetCenterKeysForUnit(normalizedUnit)
+    if not xKey or not yKey then
+        return
+    end
+
+    local defaultX, defaultY = GetDefaultCenterForUnit(normalizedUnit)
+    local valueX = tonumber(MattMinimalFramesDB and MattMinimalFramesDB[xKey]) or defaultX
+    local valueY = tonumber(MattMinimalFramesDB and MattMinimalFramesDB[yKey]) or defaultY
+
+    UpdateSingleFramePositionControl(controls.x, valueX)
+    UpdateSingleFramePositionControl(controls.y, valueY)
+end
+
+MMF_SyncFramePositionControlsForUnit = UpdateFramePositionControlsForUnit
+
+local function ApplyFramePosition(frame, frameName, unit, defaultPoint, defaultRelPoint, defaultX, defaultY)
+    if not frame then
+        return
+    end
+
+    local db = MattMinimalFramesDB
+    local xKey, yKey = GetCenterKeysForUnit(unit)
+    local hasCenterPosition = db and xKey and yKey and (db[xKey] ~= nil or db[yKey] ~= nil)
+
+    frame:ClearAllPoints()
+
+    if hasCenterPosition then
+        local centerX = tonumber(db[xKey])
+        local centerY = tonumber(db[yKey])
+        if IsBossUnit(unit) then
+            local boss1Def = MMF_GetFrameDefinition and MMF_GetFrameDefinition("boss1")
+            local unitDef = MMF_GetFrameDefinition and MMF_GetFrameDefinition(unit)
+            local boss1DefaultX = (boss1Def and boss1Def.x) or 0
+            local boss1DefaultY = (boss1Def and boss1Def.y) or 0
+            local unitDefaultY = (unitDef and unitDef.y) or defaultY or boss1DefaultY
+            if centerX == nil then
+                centerX = boss1DefaultX
             end
+            if centerY == nil then
+                centerY = boss1DefaultY
+            end
+            frame:SetPoint("CENTER", UIParent, "CENTER", centerX, centerY + (unitDefaultY - boss1DefaultY))
             return
         end
 
+        if centerX == nil then
+            centerX = defaultX or 0
+        end
+        if centerY == nil then
+            centerY = defaultY or 0
+        end
+        frame:SetPoint("CENTER", UIParent, "CENTER", centerX, centerY)
+        return
+    end
+
+    local pos = db and frameName and db[frameName] or nil
+    if pos and pos.left ~= nil and pos.top ~= nil then
+        frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.left, pos.top)
+
+        local centerX, centerY = GetRelativeCenter(frame)
+        if centerX ~= nil and centerY ~= nil then
+            if IsBossUnit(unit) then
+                local boss1Def = MMF_GetFrameDefinition and MMF_GetFrameDefinition("boss1")
+                local unitDef = MMF_GetFrameDefinition and MMF_GetFrameDefinition(unit)
+                local boss1DefaultY = (boss1Def and boss1Def.y) or 0
+                local unitDefaultY = (unitDef and unitDef.y) or boss1DefaultY
+                SetStoredFrameCenter("boss", centerX, centerY + (boss1DefaultY - unitDefaultY))
+                ClearLegacyFramePositionForUnit("boss")
+                UpdateFramePositionControlsForUnit("boss")
+            else
+                SetStoredFrameCenter(unit, centerX, centerY)
+                ClearLegacyFramePositionForUnit(unit)
+                UpdateFramePositionControlsForUnit(unit)
+            end
+        end
+        return
+    end
+
+    frame:SetPoint(defaultPoint or "CENTER", UIParent, defaultRelPoint or "CENTER", defaultX or 0, defaultY or 0)
+end
+
+local function ApplyFramePositionByUnit(unit)
+    if unit == "boss" then
+        for i = 1, 5 do
+            ApplyFramePositionByUnit("boss" .. i)
+        end
+        return
+    end
+
+    local def = MMF_GetFrameDefinition and MMF_GetFrameDefinition(unit)
+    if not def or not def.name then
+        return
+    end
+    local frame = _G[def.name]
+    if not frame then
+        return
+    end
+    ApplyFramePosition(frame, def.name, def.unit, def.point or "CENTER", def.relPoint or "CENTER", def.x or 0, def.y or 0)
+end
+
+MMF_ApplyFramePositionByUnit = ApplyFramePositionByUnit
+
+function MMF_ApplyAllFramePositions()
+    if not MMF_Config or not MMF_Config.FRAME_DEFINITIONS then
+        return
+    end
+    for _, def in ipairs(MMF_Config.FRAME_DEFINITIONS) do
+        local frame = _G[def.name]
+        if frame then
+            ApplyFramePosition(frame, def.name, def.unit, def.point or "CENTER", def.relPoint or "CENTER", def.x or 0, def.y or 0)
+        end
+    end
+end
+
+function MMF_ApplyFrameCenterPositionForUnit(unit)
+    if type(unit) ~= "string" or unit == "" then
+        return
+    end
+    local normalizedUnit = IsBossUnit(unit) and "boss" or unit
+    ClearLegacyFramePositionForUnit(normalizedUnit)
+    ApplyFramePositionByUnit(normalizedUnit)
+    UpdateFramePositionControlsForUnit(normalizedUnit)
+end
+
+function MMF_ResetFrameCenterPositionForUnit(unit)
+    if type(unit) ~= "string" or unit == "" then
+        return
+    end
+    local normalizedUnit = IsBossUnit(unit) and "boss" or unit
+    local defaultX, defaultY = GetDefaultCenterForUnit(normalizedUnit)
+    SetStoredFrameCenter(normalizedUnit, defaultX, defaultY)
+    ClearLegacyFramePositionForUnit(normalizedUnit)
+    ApplyFramePositionByUnit(normalizedUnit)
+    UpdateFramePositionControlsForUnit(normalizedUnit)
+end
+
+local function SaveFramePosition(frame, frameName)
+    if not frame then
+        return
+    end
+    if not MattMinimalFramesDB then
+        MattMinimalFramesDB = {}
+    end
+
+    local unit = frame.unit
+    local centerX, centerY = GetRelativeCenter(frame)
+    if centerX ~= nil and centerY ~= nil and type(unit) == "string" and unit ~= "" then
+        if IsBossUnit(unit) then
+            local boss1Def = MMF_GetFrameDefinition and MMF_GetFrameDefinition("boss1")
+            local unitDef = MMF_GetFrameDefinition and MMF_GetFrameDefinition(unit)
+            local boss1DefaultY = (boss1Def and boss1Def.y) or 0
+            local unitDefaultY = (unitDef and unitDef.y) or boss1DefaultY
+            SetStoredFrameCenter("boss", centerX, centerY + (boss1DefaultY - unitDefaultY))
+            ClearLegacyFramePositionForUnit("boss")
+            for i = 1, 5 do
+                ApplyFramePositionByUnit("boss" .. i)
+            end
+            UpdateFramePositionControlsForUnit("boss")
+            return
+        end
+
+        SetStoredFrameCenter(unit, centerX, centerY)
+        ClearLegacyFramePositionForUnit(unit)
+        UpdateFramePositionControlsForUnit(unit)
+        return
+    end
+
+    local left = frame:GetLeft()
+    local top = frame:GetTop()
+    if left and top and frameName then
         MattMinimalFramesDB[frameName] = { left = left, top = top }
     end
 end
 
+function MMF_InitializeFrameCenterPositionsFromFrames()
+    if not MMF_Config or not MMF_Config.FRAME_DEFINITIONS then
+        return
+    end
+    if not MattMinimalFramesDB then
+        MattMinimalFramesDB = {}
+    end
+
+    local seen = {}
+    for _, def in ipairs(MMF_Config.FRAME_DEFINITIONS) do
+        local frame = def and def.name and _G[def.name]
+        if frame then
+            local normalizedUnit = IsBossUnit(def.unit) and "boss" or def.unit
+            if normalizedUnit ~= "boss" or def.unit == "boss1" then
+                local centerX, centerY = GetRelativeCenter(frame)
+                if centerX ~= nil and centerY ~= nil then
+                    SetStoredFrameCenter(normalizedUnit, centerX, centerY)
+                    if not seen[normalizedUnit] then
+                        ClearLegacyFramePositionForUnit(normalizedUnit)
+                        seen[normalizedUnit] = true
+                    end
+                end
+            end
+        end
+    end
+
+    UpdateFramePositionControlsForUnit("player")
+    UpdateFramePositionControlsForUnit("target")
+    UpdateFramePositionControlsForUnit("targettarget")
+    UpdateFramePositionControlsForUnit("pet")
+    UpdateFramePositionControlsForUnit("focus")
+    UpdateFramePositionControlsForUnit("boss")
+end
+
 local function SaveCastBarPosition(frame, unit)
     if not frame or not frame.castBarFrame or not unit then
+        return
+    end
+    if unit ~= "player" and unit ~= "target" and unit ~= "focus" then
         return
     end
     local x, y = frame.castBarFrame:GetCenter()
@@ -364,7 +675,13 @@ local function SaveCastBarPosition(frame, unit)
     if not MattMinimalFramesDB.castBarPositions then
         MattMinimalFramesDB.castBarPositions = {}
     end
-    MattMinimalFramesDB.castBarPositions[unit] = { x = x - px, y = y - py }
+    MattMinimalFramesDB.castBarPositions[unit] = {
+        x = RoundCoordinate(x - px) or 0,
+        y = RoundCoordinate(y - py) or 0,
+    }
+    if MMF_SyncCastBarOffsetControlsForUnit then
+        MMF_SyncCastBarOffsetControlsForUnit(unit)
+    end
 end
 
 local function ApplyCastBarPosition(frame, unit)
@@ -397,8 +714,10 @@ local function ApplyCastBarPosition(frame, unit)
     frame.castBarFrame:ClearAllPoints()
 
     local dbPos = MattMinimalFramesDB and MattMinimalFramesDB.castBarPositions and MattMinimalFramesDB.castBarPositions[unit]
-    if dbPos and dbPos.x and dbPos.y then
-        frame.castBarFrame:SetPoint("CENTER", frame, "CENTER", dbPos.x, dbPos.y)
+    local dbX = dbPos and tonumber(dbPos.x) or nil
+    local dbY = dbPos and tonumber(dbPos.y) or nil
+    if dbX ~= nil and dbY ~= nil then
+        frame.castBarFrame:SetPoint("CENTER", frame, "CENTER", dbX, dbY)
     else
         if unit == "focus" then
             frame.castBarFrame:SetPoint("TOP", frame, "BOTTOM", 0, -1)
@@ -414,23 +733,141 @@ local function ApplyCastBarPosition(frame, unit)
     if frame.castBarText then
         frame.castBarText:SetWidth(math.max(8, width - timeWidth - 8))
     end
+    if MMF_SyncCastBarOffsetControlsForUnit then
+        MMF_SyncCastBarOffsetControlsForUnit(unit)
+    end
 end
 
 MMF_ApplyCastBarPosition = ApplyCastBarPosition
 
-local function RestoreFramePosition(frame, frameName, defaultPoint, defaultRelPoint, defaultX, defaultY)
-    if MattMinimalFramesDB and MattMinimalFramesDB[frameName] then
-        local pos = MattMinimalFramesDB[frameName]
-        frame:ClearAllPoints()
-        if pos.left ~= nil and pos.top ~= nil then
-            frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.left, pos.top)
-        else
-            frame:SetPoint(defaultPoint, UIParent, defaultRelPoint, defaultX, defaultY)
-        end
-    else
-        frame:ClearAllPoints()
-        frame:SetPoint(defaultPoint, UIParent, defaultRelPoint, defaultX, defaultY)
+local function IsSupportedCastBarUnit(unit)
+    return unit == "player" or unit == "target" or unit == "focus"
+end
+
+local function GetCastBarDefaultOffsetForUnit(unit)
+    if not IsSupportedCastBarUnit(unit) then
+        return 0, 0
     end
+
+    local ownerFrame = MMF_GetFrameForUnit and MMF_GetFrameForUnit(unit)
+    local frameHeight = (ownerFrame and (ownerFrame.originalHeight or ownerFrame:GetHeight())) or 28
+    local castBarHeight = (ownerFrame and ownerFrame.castBarFrame and ownerFrame.castBarFrame:GetHeight()) or 8
+    frameHeight = tonumber(frameHeight) or 28
+    castBarHeight = tonumber(castBarHeight) or 8
+
+    local y
+    if unit == "focus" then
+        y = (-frameHeight * 0.5) - 1 - (castBarHeight * 0.5)
+    else
+        y = (-frameHeight * 0.5) + 1 + (castBarHeight * 0.5)
+    end
+    return 0, RoundCoordinate(y) or 0
+end
+
+local function GetStoredCastBarOffsetForUnit(unit)
+    if not IsSupportedCastBarUnit(unit) then
+        return nil, nil
+    end
+    local dbPos = MattMinimalFramesDB and MattMinimalFramesDB.castBarPositions and MattMinimalFramesDB.castBarPositions[unit]
+    local x = dbPos and tonumber(dbPos.x) or nil
+    local y = dbPos and tonumber(dbPos.y) or nil
+    if x == nil or y == nil then
+        return nil, nil
+    end
+    return RoundCoordinate(x) or 0, RoundCoordinate(y) or 0
+end
+
+local function GetCastBarOffsetForUnit(unit)
+    local x, y = GetStoredCastBarOffsetForUnit(unit)
+    if x ~= nil and y ~= nil then
+        return x, y
+    end
+    return GetCastBarDefaultOffsetForUnit(unit)
+end
+
+local function UpdateCastBarOffsetControlsForUnit(unit)
+    if not IsSupportedCastBarUnit(unit) then
+        return
+    end
+    local registry = _G.MMF_CastBarOffsetSliderRegistry
+    if type(registry) ~= "table" then
+        return
+    end
+
+    local selectedUnit = unit
+    if type(registry.getSelectedUnit) == "function" then
+        local ok, selected = pcall(registry.getSelectedUnit)
+        if ok and type(selected) == "string" and selected ~= "" then
+            selectedUnit = selected
+        end
+    end
+    if selectedUnit ~= unit then
+        return
+    end
+
+    local x, y = GetCastBarOffsetForUnit(unit)
+    UpdateSingleFramePositionControl(registry.x, x)
+    UpdateSingleFramePositionControl(registry.y, y)
+end
+
+local function SetCastBarOffsetForUnit(unit, offsetX, offsetY)
+    if not IsSupportedCastBarUnit(unit) then
+        return
+    end
+    local x = RoundCoordinate(offsetX)
+    local y = RoundCoordinate(offsetY)
+    if x == nil or y == nil then
+        return
+    end
+    if not MattMinimalFramesDB then
+        MattMinimalFramesDB = {}
+    end
+    if not MattMinimalFramesDB.castBarPositions then
+        MattMinimalFramesDB.castBarPositions = {}
+    end
+    MattMinimalFramesDB.castBarPositions[unit] = { x = x, y = y }
+
+    local frame = MMF_GetFrameForUnit and MMF_GetFrameForUnit(unit)
+    if frame and frame.castBarFrame then
+        ApplyCastBarPosition(frame, unit)
+    end
+    UpdateCastBarOffsetControlsForUnit(unit)
+end
+
+local function ResetCastBarOffsetForUnit(unit)
+    if not IsSupportedCastBarUnit(unit) then
+        return
+    end
+    if MattMinimalFramesDB and MattMinimalFramesDB.castBarPositions then
+        MattMinimalFramesDB.castBarPositions[unit] = nil
+    end
+
+    local frame = MMF_GetFrameForUnit and MMF_GetFrameForUnit(unit)
+    if frame and frame.castBarFrame then
+        ApplyCastBarPosition(frame, unit)
+    end
+    UpdateCastBarOffsetControlsForUnit(unit)
+end
+
+local function IsCastBarOffsetDefaultForUnit(unit)
+    if not IsSupportedCastBarUnit(unit) then
+        return true
+    end
+    local valueX, valueY = GetCastBarOffsetForUnit(unit)
+    local defaultX, defaultY = GetCastBarDefaultOffsetForUnit(unit)
+    return math.abs((tonumber(valueX) or 0) - (tonumber(defaultX) or 0)) < 0.0001
+        and math.abs((tonumber(valueY) or 0) - (tonumber(defaultY) or 0)) < 0.0001
+end
+
+MMF_GetCastBarDefaultOffsetForUnit = GetCastBarDefaultOffsetForUnit
+MMF_GetCastBarOffsetForUnit = GetCastBarOffsetForUnit
+MMF_SetCastBarOffsetForUnit = SetCastBarOffsetForUnit
+MMF_ResetCastBarOffsetForUnit = ResetCastBarOffsetForUnit
+MMF_IsCastBarOffsetDefaultForUnit = IsCastBarOffsetDefaultForUnit
+MMF_SyncCastBarOffsetControlsForUnit = UpdateCastBarOffsetControlsForUnit
+
+local function RestoreFramePosition(frame, frameName, defaultPoint, defaultRelPoint, defaultX, defaultY)
+    ApplyFramePosition(frame, frameName, frame and frame.unit, defaultPoint, defaultRelPoint, defaultX, defaultY)
 end
 
 --------------------------------------------------
@@ -470,26 +907,11 @@ local function ResetFrameToDefaultPosition(frame, frameName)
 
     local bossIndex = tostring(frameName):match("^MMF_Boss([1-5])Frame$")
     if bossIndex then
-        for i = 1, 5 do
-            local bossUnit = "boss" .. i
-            local bossFrameName = "MMF_Boss" .. i .. "Frame"
-            local bossFrame = _G[bossFrameName]
-            local def = MMF_GetFrameDefinition and MMF_GetFrameDefinition(bossUnit)
-            MattMinimalFramesDB[bossFrameName] = nil
-            if bossFrame and def then
-                bossFrame:ClearAllPoints()
-                bossFrame:SetPoint(def.point or "CENTER", UIParent, def.relPoint or "CENTER", def.x or 0, def.y or 0)
-            end
-        end
+        MMF_ResetFrameCenterPositionForUnit("boss")
         return
     end
 
-    local def = MMF_GetFrameDefinition and MMF_GetFrameDefinition(frame.unit)
-    MattMinimalFramesDB[frameName] = nil
-    if def then
-        frame:ClearAllPoints()
-        frame:SetPoint(def.point or "CENTER", UIParent, def.relPoint or "CENTER", def.x or 0, def.y or 0)
-    end
+    MMF_ResetFrameCenterPositionForUnit(frame.unit)
 end
 
 local function EnsureFrameResetPopup()
@@ -591,7 +1013,9 @@ local function ShowFrameResetPopup(frame, frameName)
             MattMinimalFramesDB[prefix .. "FrameScaleX"] = tonumber(defaults[prefix .. "FrameScaleX"]) or 1.0
             MattMinimalFramesDB[prefix .. "FrameScaleY"] = tonumber(defaults[prefix .. "FrameScaleY"]) or 1.0
         end
-        if MattMinimalFramesDB.castBarPositions then
+        if MMF_ResetCastBarOffsetForUnit then
+            MMF_ResetCastBarOffsetForUnit(unitToReset)
+        elseif MattMinimalFramesDB.castBarPositions then
             MattMinimalFramesDB.castBarPositions[unitToReset] = nil
         end
     end

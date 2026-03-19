@@ -862,17 +862,16 @@ function MMF_ApplyActiveProfileLive()
     end
 
     local function ApplyFramePositions()
+        if MMF_ApplyAllFramePositions then
+            MMF_ApplyAllFramePositions()
+            return
+        end
         if not MMF_Config or not MMF_Config.FRAME_DEFINITIONS then return end
         for _, def in ipairs(MMF_Config.FRAME_DEFINITIONS) do
             local frame = _G[def.name]
             if frame then
                 frame:ClearAllPoints()
-                local pos = MattMinimalFramesDB[def.name]
-                if pos and pos.left and pos.top then
-                    frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.left, pos.top)
-                else
-                    frame:SetPoint("CENTER", UIParent, "CENTER", def.x, def.y)
-                end
+                frame:SetPoint("CENTER", UIParent, "CENTER", def.x, def.y)
             end
         end
     end
@@ -902,6 +901,9 @@ function MMF_ApplyActiveProfileLive()
     end
 
     ApplyFramePositions()
+    if MMF_InitializeFrameCenterPositionsFromFrames then
+        MMF_InitializeFrameCenterPositionsFromFrames()
+    end
     if MMF_ApplyAllFrameScales then MMF_ApplyAllFrameScales() end
     ApplyPowerBarPositions()
     if MMF_ApplyPowerTextPositions then MMF_ApplyPowerTextPositions() end
@@ -1056,6 +1058,9 @@ local function Initialize()
         MMF_UpdateBlizzardPartyRaidNameFonts()
     end
     MMF_CreateAllMinimalFrames()
+    if MMF_InitializeFrameCenterPositionsFromFrames then
+        MMF_InitializeFrameCenterPositionsFromFrames()
+    end
     if MMF_UpdateCombatFrameVisibility then
         MMF_UpdateCombatFrameVisibility()
     end

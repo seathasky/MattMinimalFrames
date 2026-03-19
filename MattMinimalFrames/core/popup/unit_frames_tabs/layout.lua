@@ -157,5 +157,186 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
         end
     )
 
+    local positionDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
+    positionDivider:SetSize(LEFT_COL_WIDTH, 1)
+    positionDivider:SetPoint("TOPLEFT", LEFT_COL_X, -160)
+    positionDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
+
+    local framePositionTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    framePositionTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
+    framePositionTitle:SetPoint("TOPLEFT", LEFT_COL_X, -176)
+    framePositionTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
+    framePositionTitle:SetText("FRAME POSITION (CENTER)")
+
+    local positionUnitOptions = {
+        { value = "player", label = "Player" },
+        { value = "target", label = "Target" },
+        { value = "targettarget", label = "Target of Target" },
+        { value = "pet", label = "Pet" },
+        { value = "focus", label = "Focus" },
+        { value = "boss", label = "Boss Group" },
+    }
+
+    MattMinimalFramesDB.framePositionUnit = MattMinimalFramesDB.framePositionUnit or "player"
+    local function EnsurePositionUnitSelection()
+        local valid = false
+        for _, opt in ipairs(positionUnitOptions) do
+            if opt.value == MattMinimalFramesDB.framePositionUnit then
+                valid = true
+                break
+            end
+        end
+        if not valid then
+            MattMinimalFramesDB.framePositionUnit = "player"
+        end
+    end
+    EnsurePositionUnitSelection()
+
+    local function GetFrameCenterDefault(unit, axis)
+        local lookupUnit = (unit == "boss") and "boss1" or unit
+        local def = MMF_GetFrameDefinition and MMF_GetFrameDefinition(lookupUnit)
+        if not def then
+            return 0
+        end
+        if axis == "x" then
+            return tonumber(def.x) or 0
+        end
+        return tonumber(def.y) or 0
+    end
+
+    local positionXSliders = {}
+    local positionYSliders = {}
+    _G.MMF_FramePositionSliderRegistry = _G.MMF_FramePositionSliderRegistry or {}
+
+    local function UpdateVisiblePositionSliders()
+        local current = MattMinimalFramesDB.framePositionUnit
+        for _, opt in ipairs(positionUnitOptions) do
+            local show = (opt.value == current)
+            positionXSliders[opt.value]:SetShown(show)
+            positionYSliders[opt.value]:SetShown(show)
+        end
+    end
+
+    for _, opt in ipairs(positionUnitOptions) do
+        local prefix = GetPopupUnitPrefix(opt.value)
+        local xKey = prefix .. "FrameCenterX"
+        local yKey = prefix .. "FrameCenterY"
+        local defaultX = GetFrameCenterDefault(opt.value, "x")
+        local defaultY = GetFrameCenterDefault(opt.value, "y")
+
+        positionXSliders[opt.value] = CreateMinimalSlider(
+            unitFramesCol,
+            "Center X",
+            LEFT_COL_X,
+            -228,
+            LEFT_COL_WIDTH,
+            xKey,
+            -1200,
+            1200,
+            1,
+            defaultX,
+            function()
+                if MMF_ApplyFrameCenterPositionForUnit then
+                    MMF_ApplyFrameCenterPositionForUnit(opt.value)
+                end
+            end,
+            true,
+            {
+                onReset = function()
+                    MattMinimalFramesDB[xKey] = defaultX
+                    if MMF_ApplyFrameCenterPositionForUnit then
+                        MMF_ApplyFrameCenterPositionForUnit(opt.value)
+                    end
+                end,
+                isDefault = function()
+                    local current = tonumber(MattMinimalFramesDB[xKey])
+                    if current == nil then
+                        return true
+                    end
+                    return math.abs(current - defaultX) < 0.0001
+                end,
+            }
+        )
+
+        positionYSliders[opt.value] = CreateMinimalSlider(
+            unitFramesCol,
+            "Center Y",
+            LEFT_COL_X,
+            -252,
+            LEFT_COL_WIDTH,
+            yKey,
+            -1200,
+            1200,
+            1,
+            defaultY,
+            function()
+                if MMF_ApplyFrameCenterPositionForUnit then
+                    MMF_ApplyFrameCenterPositionForUnit(opt.value)
+                end
+            end,
+            true,
+            {
+                onReset = function()
+                    MattMinimalFramesDB[yKey] = defaultY
+                    if MMF_ApplyFrameCenterPositionForUnit then
+                        MMF_ApplyFrameCenterPositionForUnit(opt.value)
+                    end
+                end,
+                isDefault = function()
+                    local current = tonumber(MattMinimalFramesDB[yKey])
+                    if current == nil then
+                        return true
+                    end
+                    return math.abs(current - defaultY) < 0.0001
+                end,
+            }
+        )
+
+        _G.MMF_FramePositionSliderRegistry[opt.value] = {
+            x = positionXSliders[opt.value],
+            y = positionYSliders[opt.value],
+        }
+
+        positionXSliders[opt.value]:Hide()
+        positionYSliders[opt.value]:Hide()
+    end
+
+    local positionUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
+        accentColor = ACCENT_COLOR,
+        settingKey = "framePositionUnit",
+        x = LEFT_COL_X,
+        y = -204,
+        width = LEFT_COL_WIDTH,
+        labelWidth = LEFT_LABEL_WIDTH,
+        buttonOffset = LEFT_BUTTON_OFFSET,
+        buttonWidth = LEFT_BUTTON_WIDTH,
+        visibleRows = #positionUnitOptions,
+        label = "Position Unit",
+        options = positionUnitOptions,
+        getValue = function()
+            return MattMinimalFramesDB.framePositionUnit
+        end,
+        onSelect = function(value)
+            MattMinimalFramesDB.framePositionUnit = value
+            UpdateVisiblePositionSliders()
+        end,
+    })
+    dropdownLists.framePositionUnitList = positionUnitDropdown.list
+    UpdateVisiblePositionSliders()
+
+    local positionHelp = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    positionHelp:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+    positionHelp:SetPoint("TOPLEFT", LEFT_COL_X, -278)
+    positionHelp:SetTextColor(0.68, 0.74, 0.8)
+    positionHelp:SetText("Dragging frames in Edit Mode updates these values live.")
+
+    if MMF_SyncFramePositionControlsForUnit then
+        MMF_SyncFramePositionControlsForUnit("player")
+        MMF_SyncFramePositionControlsForUnit("target")
+        MMF_SyncFramePositionControlsForUnit("targettarget")
+        MMF_SyncFramePositionControlsForUnit("pet")
+        MMF_SyncFramePositionControlsForUnit("focus")
+        MMF_SyncFramePositionControlsForUnit("boss")
+    end
 end
 

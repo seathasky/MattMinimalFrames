@@ -338,6 +338,7 @@ function MMF_ShowWelcomePopup(forceShow)
     ---------------------------------------------------
     unitFramesState = MMF_CreateUnitFramesSection(unitFramesCol, popup, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider, GetCurrentPlayerIconModeValue, GetCurrentTargetIconModeValue, CreateSubTabBar, UpdateSharedScrollBounds)
     castBarColorList = unitFramesState.castBarColorList
+    castBarOffsetUnitList = unitFramesState.castBarOffsetUnitList
     unitTextureList = unitFramesState.unitTextureList
     unitFontList = unitFramesState.unitFontList
     playerBarColorList = unitFramesState.playerBarColorList
@@ -355,6 +356,7 @@ function MMF_ShowWelcomePopup(forceShow)
         UpdatePlayerIconModeButtonText = unitFramesState.UpdatePlayerIconModeButtonText
     end
     RegisterClosableList(castBarColorList)
+    RegisterClosableList(castBarOffsetUnitList)
     RegisterClosableList(unitTextureList)
     RegisterClosableList(unitFontList)
     RegisterClosableList(playerBarColorList)

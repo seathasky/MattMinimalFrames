@@ -237,6 +237,8 @@ local mmfDefaults = {
     toolsNoteLocked = false,
     -- Minimap button (LibDBIcon format)
     minimap = { hide = false },
+    -- Layout panel selectors
+    framePositionUnit = "player",
     -- Frame scale settings
     playerFrameScaleX = 1.0,
     playerFrameScaleY = 1.0,
