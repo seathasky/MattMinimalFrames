@@ -535,6 +535,12 @@ end
 MMF_ApplyFramePositionByUnit = ApplyFramePositionByUnit
 
 function MMF_ApplyAllFramePositions()
+    if InCombatLockdown and InCombatLockdown() then
+        if MMF_RunAfterCombat then
+            MMF_RunAfterCombat("mmf_apply_all_frame_positions", MMF_ApplyAllFramePositions)
+        end
+        return
+    end
     if not MMF_Config or not MMF_Config.FRAME_DEFINITIONS then
         return
     end
@@ -551,6 +557,14 @@ function MMF_ApplyFrameCenterPositionForUnit(unit)
         return
     end
     local normalizedUnit = IsBossUnit(unit) and "boss" or unit
+    if InCombatLockdown and InCombatLockdown() then
+        if MMF_RunAfterCombat then
+            MMF_RunAfterCombat("mmf_apply_frame_center_" .. normalizedUnit, function()
+                MMF_ApplyFrameCenterPositionForUnit(normalizedUnit)
+            end)
+        end
+        return
+    end
     ClearLegacyFramePositionForUnit(normalizedUnit)
     ApplyFramePositionByUnit(normalizedUnit)
     UpdateFramePositionControlsForUnit(normalizedUnit)
@@ -561,6 +575,14 @@ function MMF_ResetFrameCenterPositionForUnit(unit)
         return
     end
     local normalizedUnit = IsBossUnit(unit) and "boss" or unit
+    if InCombatLockdown and InCombatLockdown() then
+        if MMF_RunAfterCombat then
+            MMF_RunAfterCombat("mmf_apply_frame_center_" .. normalizedUnit, function()
+                MMF_ResetFrameCenterPositionForUnit(normalizedUnit)
+            end)
+        end
+        return
+    end
     local defaultX, defaultY = GetDefaultCenterForUnit(normalizedUnit)
     SetStoredFrameCenter(normalizedUnit, defaultX, defaultY)
     ClearLegacyFramePositionForUnit(normalizedUnit)
@@ -810,6 +832,19 @@ local function SetCastBarOffsetForUnit(unit, offsetX, offsetY)
     end
     MattMinimalFramesDB.castBarPositions[unit] = { x = x, y = y }
 
+    if InCombatLockdown and InCombatLockdown() then
+        if MMF_RunAfterCombat then
+            MMF_RunAfterCombat("mmf_apply_castbar_offset_" .. unit, function()
+                local queuedFrame = MMF_GetFrameForUnit and MMF_GetFrameForUnit(unit)
+                if queuedFrame and queuedFrame.castBarFrame then
+                    ApplyCastBarPosition(queuedFrame, unit)
+                end
+                UpdateCastBarOffsetControlsForUnit(unit)
+            end)
+        end
+        return
+    end
+
     local frame = MMF_GetFrameForUnit and MMF_GetFrameForUnit(unit)
     if frame and frame.castBarFrame then
         ApplyCastBarPosition(frame, unit)
@@ -823,6 +858,19 @@ local function ResetCastBarOffsetForUnit(unit)
     end
     if MattMinimalFramesDB and MattMinimalFramesDB.castBarPositions then
         MattMinimalFramesDB.castBarPositions[unit] = nil
+    end
+
+    if InCombatLockdown and InCombatLockdown() then
+        if MMF_RunAfterCombat then
+            MMF_RunAfterCombat("mmf_apply_castbar_offset_" .. unit, function()
+                local queuedFrame = MMF_GetFrameForUnit and MMF_GetFrameForUnit(unit)
+                if queuedFrame and queuedFrame.castBarFrame then
+                    ApplyCastBarPosition(queuedFrame, unit)
+                end
+                UpdateCastBarOffsetControlsForUnit(unit)
+            end)
+        end
+        return
     end
 
     local frame = MMF_GetFrameForUnit and MMF_GetFrameForUnit(unit)
@@ -1050,8 +1098,12 @@ local function IsTestModeShiftDragEnabled()
     return MattMinimalFramesDB and (MattMinimalFramesDB.layoutTestMode == true or MattMinimalFramesDB.auraTestMode == true)
 end
 
+local function IsInCombatLockdown()
+    return InCombatLockdown and InCombatLockdown()
+end
+
 local function CanStartFrameDrag(frame)
-    if InCombatLockdown() then
+    if IsInCombatLockdown() then
         return false
     end
     if IsEditModeDragEnabled() then
@@ -1081,6 +1133,10 @@ local function CreateDragHandlers(frame, frameName)
 
     frame:SetScript("OnDragStop", function(self)
         if self:IsMovable() then
+            if IsInCombatLockdown() then
+                self.mmfDragInProgress = nil
+                return
+            end
             self:StopMovingOrSizing()
             SaveFramePosition(self, frameName)
             self.mmfSuppressClickPopup = true
@@ -1369,6 +1425,9 @@ local function SetupPowerBar(frame, unit)
     end)
 
     frame.powerBarFrame:SetScript("OnDragStop", function(self)
+        if IsInCombatLockdown() then
+            return
+        end
         self:StopMovingOrSizing()
         local x, y = self:GetCenter()
         local px, py = frame:GetCenter()
@@ -1723,6 +1782,9 @@ local function CreateResourceText(frame, unit)
         end)
 
         frame.hpTextDragFrame:SetScript("OnDragStop", function(self)
+            if IsInCombatLockdown() then
+                return
+            end
             self:StopMovingOrSizing()
             local left = self:GetLeft()
             local right = self:GetRight()
@@ -1784,6 +1846,9 @@ local function CreateResourceText(frame, unit)
         end)
 
         frame.powerTextDragFrame:SetScript("OnDragStop", function(self)
+            if IsInCombatLockdown() then
+                return
+            end
             self:StopMovingOrSizing()
             local x, y = self:GetCenter()
             local px, py = frame:GetCenter()
@@ -2455,6 +2520,9 @@ local function CreateCastBar(frame, unit)
     end)
 
     frame.castBarFrame:SetScript("OnDragStop", function(self)
+        if IsInCombatLockdown() then
+            return
+        end
         self:StopMovingOrSizing()
         SaveCastBarPosition(frame, unit)
     end)
