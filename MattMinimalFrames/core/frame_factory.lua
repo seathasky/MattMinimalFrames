@@ -387,15 +387,6 @@ local function SetStoredFrameCenter(unit, centerX, centerY)
     end
 end
 
-local function ClearStoredFrameCenter(unit)
-    local xKey, yKey = GetCenterKeysForUnit(unit)
-    if not xKey or not yKey or not MattMinimalFramesDB then
-        return
-    end
-    MattMinimalFramesDB[xKey] = nil
-    MattMinimalFramesDB[yKey] = nil
-end
-
 local function ClearLegacyFramePositionForUnit(unit)
     if not MattMinimalFramesDB then
         return
@@ -626,40 +617,6 @@ local function SaveFramePosition(frame, frameName)
     if left and top and frameName then
         MattMinimalFramesDB[frameName] = { left = left, top = top }
     end
-end
-
-function MMF_InitializeFrameCenterPositionsFromFrames()
-    if not MMF_Config or not MMF_Config.FRAME_DEFINITIONS then
-        return
-    end
-    if not MattMinimalFramesDB then
-        MattMinimalFramesDB = {}
-    end
-
-    local seen = {}
-    for _, def in ipairs(MMF_Config.FRAME_DEFINITIONS) do
-        local frame = def and def.name and _G[def.name]
-        if frame then
-            local normalizedUnit = IsBossUnit(def.unit) and "boss" or def.unit
-            if normalizedUnit ~= "boss" or def.unit == "boss1" then
-                local centerX, centerY = GetRelativeCenter(frame)
-                if centerX ~= nil and centerY ~= nil then
-                    SetStoredFrameCenter(normalizedUnit, centerX, centerY)
-                    if not seen[normalizedUnit] then
-                        ClearLegacyFramePositionForUnit(normalizedUnit)
-                        seen[normalizedUnit] = true
-                    end
-                end
-            end
-        end
-    end
-
-    UpdateFramePositionControlsForUnit("player")
-    UpdateFramePositionControlsForUnit("target")
-    UpdateFramePositionControlsForUnit("targettarget")
-    UpdateFramePositionControlsForUnit("pet")
-    UpdateFramePositionControlsForUnit("focus")
-    UpdateFramePositionControlsForUnit("boss")
 end
 
 local function SaveCastBarPosition(frame, unit)

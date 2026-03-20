@@ -876,6 +876,18 @@ function MMF_ApplyActiveProfileLive()
         end
     end
 
+    local function SyncFramePositionControls()
+        if not MMF_SyncFramePositionControlsForUnit then
+            return
+        end
+        MMF_SyncFramePositionControlsForUnit("player")
+        MMF_SyncFramePositionControlsForUnit("target")
+        MMF_SyncFramePositionControlsForUnit("targettarget")
+        MMF_SyncFramePositionControlsForUnit("pet")
+        MMF_SyncFramePositionControlsForUnit("focus")
+        MMF_SyncFramePositionControlsForUnit("boss")
+    end
+
     local function ApplyPowerBarPositions()
         if not MMF_Config then return end
         local vOff = MMF_Config.POWER_BAR_VERTICAL_OFFSET or -24
@@ -901,10 +913,8 @@ function MMF_ApplyActiveProfileLive()
     end
 
     ApplyFramePositions()
+    SyncFramePositionControls()
     if MMF_ApplyAllFrameScales then MMF_ApplyAllFrameScales() end
-    if MMF_InitializeFrameCenterPositionsFromFrames then
-        MMF_InitializeFrameCenterPositionsFromFrames()
-    end
     ApplyPowerBarPositions()
     if MMF_ApplyPowerTextPositions then MMF_ApplyPowerTextPositions() end
     if MMF_ApplyHPTextPositions then MMF_ApplyHPTextPositions() end
