@@ -507,23 +507,6 @@ local function ApplyFramePosition(frame, frameName, unit, defaultPoint, defaultR
     local pos = db and frameName and db[frameName] or nil
     if pos and pos.left ~= nil and pos.top ~= nil then
         frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.left, pos.top)
-
-        local centerX, centerY = GetRelativeCenter(frame)
-        if centerX ~= nil and centerY ~= nil then
-            if IsBossUnit(unit) then
-                local boss1Def = MMF_GetFrameDefinition and MMF_GetFrameDefinition("boss1")
-                local unitDef = MMF_GetFrameDefinition and MMF_GetFrameDefinition(unit)
-                local boss1DefaultY = (boss1Def and boss1Def.y) or 0
-                local unitDefaultY = (unitDef and unitDef.y) or boss1DefaultY
-                SetStoredFrameCenter("boss", centerX, centerY + (boss1DefaultY - unitDefaultY))
-                ClearLegacyFramePositionForUnit("boss")
-                UpdateFramePositionControlsForUnit("boss")
-            else
-                SetStoredFrameCenter(unit, centerX, centerY)
-                ClearLegacyFramePositionForUnit(unit)
-                UpdateFramePositionControlsForUnit(unit)
-            end
-        end
         return
     end
 

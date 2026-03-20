@@ -901,10 +901,10 @@ function MMF_ApplyActiveProfileLive()
     end
 
     ApplyFramePositions()
+    if MMF_ApplyAllFrameScales then MMF_ApplyAllFrameScales() end
     if MMF_InitializeFrameCenterPositionsFromFrames then
         MMF_InitializeFrameCenterPositionsFromFrames()
     end
-    if MMF_ApplyAllFrameScales then MMF_ApplyAllFrameScales() end
     ApplyPowerBarPositions()
     if MMF_ApplyPowerTextPositions then MMF_ApplyPowerTextPositions() end
     if MMF_ApplyHPTextPositions then MMF_ApplyHPTextPositions() end
@@ -1058,9 +1058,6 @@ local function Initialize()
         MMF_UpdateBlizzardPartyRaidNameFonts()
     end
     MMF_CreateAllMinimalFrames()
-    if MMF_InitializeFrameCenterPositionsFromFrames then
-        MMF_InitializeFrameCenterPositionsFromFrames()
-    end
     if MMF_UpdateCombatFrameVisibility then
         MMF_UpdateCombatFrameVisibility()
     end
