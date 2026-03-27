@@ -2,6 +2,8 @@ local Compat = _G.MMF_Compat
 local cfg = MMF_Config
 local AURA_ICON_SPACING = cfg.AURA_ICON_SPACING
 local MAX_AURA_ICONS = cfg.MAX_AURA_ICONS
+local AURA_ICON_CONTENT_INSET = 1
+local AURA_DEBUFF_BORDER_OUTSET = 1
 local GetUnitAuras = Compat.GetUnitAuras
 local SetAuraCooldown = Compat.SetAuraCooldown
 local GetAuraCount = Compat.GetAuraCount
@@ -976,10 +978,11 @@ local function CreateAuraIcon(parent, index, isDebuff, iconSize)
     aura:RegisterForDrag("LeftButton")
 
     aura.icon = aura:CreateTexture(nil, "ARTWORK")
-    aura.icon:SetAllPoints(aura)
+    aura.icon:SetPoint("TOPLEFT", aura, "TOPLEFT", AURA_ICON_CONTENT_INSET, -AURA_ICON_CONTENT_INSET)
+    aura.icon:SetPoint("BOTTOMRIGHT", aura, "BOTTOMRIGHT", -AURA_ICON_CONTENT_INSET, AURA_ICON_CONTENT_INSET)
     aura.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
     aura.cooldown = CreateFrame("Cooldown", nil, aura, "CooldownFrameTemplate")
-    aura.cooldown:SetAllPoints(aura)
+    aura.cooldown:SetAllPoints(aura.icon)
     aura.cooldown:SetDrawEdge(false)
     aura.cooldown:SetHideCountdownNumbers(false)
     aura.cooldown:EnableMouse(false)
@@ -992,7 +995,8 @@ local function CreateAuraIcon(parent, index, isDebuff, iconSize)
     if isDebuff then
         aura.border = aura:CreateTexture(nil, "OVERLAY")
         aura.border:SetTexture("Interface\\Buttons\\UI-Debuff-Border")
-        aura.border:SetAllPoints(aura)
+        aura.border:SetPoint("TOPLEFT", aura, "TOPLEFT", -AURA_DEBUFF_BORDER_OUTSET, AURA_DEBUFF_BORDER_OUTSET)
+        aura.border:SetPoint("BOTTOMRIGHT", aura, "BOTTOMRIGHT", AURA_DEBUFF_BORDER_OUTSET, -AURA_DEBUFF_BORDER_OUTSET)
     end
     aura:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
@@ -1660,4 +1664,3 @@ auraEventFrame:SetScript("OnEvent", function(self, event, unit)
         end
     end
 end)
-
