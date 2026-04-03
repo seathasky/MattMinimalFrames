@@ -1242,6 +1242,7 @@ local function TryStopFrameMoving(frame)
         return false
     end
     if InCombatLockdown and InCombatLockdown() then
+        print("|cff00ff00Matt's Minimal Frames|r: Frame movement blocked during combat.")
         return false
     end
     frame:StopMovingOrSizing()
