@@ -637,6 +637,17 @@ local function ClampUnitInterval(value, fallback)
     return n
 end
 
+local function ClampBorderSize(value, fallback)
+    local n = tonumber(value)
+    if not n then
+        n = tonumber(fallback) or 1
+    end
+    n = math.floor(n + 0.5)
+    if n < 0 then n = 0 end
+    if n > 3 then n = 3 end
+    return n
+end
+
 local function GetCustomBarColor(baseKey, fallbackR, fallbackG, fallbackB)
     if not MattMinimalFramesDB then
         return ClampColorChannel(fallbackR, 1), ClampColorChannel(fallbackG, 1), ClampColorChannel(fallbackB, 1)
@@ -756,7 +767,16 @@ function MMF_GetUnitColorAlpha(unit)
         or unit == "target"
         or unit == "targettarget"
         or unit == "focus"
-        or unit == "pet" then
+        or unit == "pet"
+        or unit == "boss1"
+        or unit == "boss2"
+        or unit == "boss3"
+        or unit == "boss4"
+        or unit == "boss5"
+        or unit == "boss" then
+        if MMF_GetFrameColorAlpha then
+            return MMF_GetFrameColorAlpha(unit)
+        end
         return ClampUnitInterval(MattMinimalFramesDB and MattMinimalFramesDB.frameColorAlpha, 1)
     end
     return 1
@@ -812,6 +832,45 @@ end
 
 function MMF_GetTextFormatUnitPrefix(unit)
     return GetUnitPrefix(unit or "player")
+end
+
+function MMF_GetFrameStyleUnitPrefix(unit)
+    return GetUnitPrefix(unit or "player")
+end
+
+local function GetPerUnitStyleValue(unit, suffix, legacyKey, defaultValue)
+    local db = MattMinimalFramesDB or {}
+    local prefix = MMF_GetFrameStyleUnitPrefix(unit or "player")
+    local perUnitValue = db[prefix .. suffix]
+    if perUnitValue ~= nil then
+        return perUnitValue
+    end
+
+    local legacyValue = db[legacyKey]
+    if legacyValue ~= nil then
+        return legacyValue
+    end
+
+    return defaultValue
+end
+
+function MMF_GetFrameColorAlpha(unit)
+    return ClampUnitInterval(GetPerUnitStyleValue(unit, "FrameColorAlpha", "frameColorAlpha", 1), 1)
+end
+
+function MMF_GetHealthBarBGStyle(unit)
+    return ClampUnitInterval(GetPerUnitStyleValue(unit, "HealthBarBGColorR", "healthBarBGColorR", 0), 0),
+        ClampUnitInterval(GetPerUnitStyleValue(unit, "HealthBarBGColorG", "healthBarBGColorG", 0), 0),
+        ClampUnitInterval(GetPerUnitStyleValue(unit, "HealthBarBGColorB", "healthBarBGColorB", 0), 0),
+        ClampUnitInterval(GetPerUnitStyleValue(unit, "HealthBarBGAlpha", "healthBarBGAlpha", 0.65), 0.65)
+end
+
+function MMF_GetHealthBarBorderStyle(unit)
+    return ClampUnitInterval(GetPerUnitStyleValue(unit, "HealthBarBorderColorR", "healthBarBorderColorR", 0), 0),
+        ClampUnitInterval(GetPerUnitStyleValue(unit, "HealthBarBorderColorG", "healthBarBorderColorG", 0), 0),
+        ClampUnitInterval(GetPerUnitStyleValue(unit, "HealthBarBorderColorB", "healthBarBorderColorB", 0), 0),
+        ClampUnitInterval(GetPerUnitStyleValue(unit, "HealthBarBorderAlpha", "healthBarBorderAlpha", 1), 1),
+        ClampBorderSize(GetPerUnitStyleValue(unit, "HealthBarBorderSize", "healthBarBorderSize", 1), 1)
 end
 
 local function GetPerUnitTextFormatToggle(unit, suffix, legacyKey, defaultValue)
@@ -922,6 +981,87 @@ function MMF_GetHPTextYOffset(unit)
     return MattMinimalFramesDB.hpTextYOffset or 0
 end
 
+local TEXT_ANCHOR_PRESETS = {
+    TOPLEFT = { point = "TOPLEFT", relPoint = "TOPLEFT", x = 2, y = -2, justify = "LEFT" },
+    TOP = { point = "TOP", relPoint = "TOP", x = 0, y = -2, justify = "CENTER" },
+    TOPRIGHT = { point = "TOPRIGHT", relPoint = "TOPRIGHT", x = -2, y = -2, justify = "RIGHT" },
+    LEFT = { point = "LEFT", relPoint = "LEFT", x = 2, y = 0, justify = "LEFT" },
+    CENTER = { point = "CENTER", relPoint = "CENTER", x = 0, y = 0, justify = "CENTER" },
+    RIGHT = { point = "RIGHT", relPoint = "RIGHT", x = -2, y = 0, justify = "RIGHT" },
+    BOTTOMLEFT = { point = "BOTTOMLEFT", relPoint = "BOTTOMLEFT", x = 2, y = 2, justify = "LEFT" },
+    BOTTOM = { point = "BOTTOM", relPoint = "BOTTOM", x = 0, y = 2, justify = "CENTER" },
+    BOTTOMRIGHT = { point = "BOTTOMRIGHT", relPoint = "BOTTOMRIGHT", x = -2, y = 2, justify = "RIGHT" },
+}
+
+function MMF_GetTextAnchorPreset(point)
+    local key = type(point) == "string" and string.upper(point) or "TOP"
+    local preset = TEXT_ANCHOR_PRESETS[key]
+    if not preset then
+        key = "TOP"
+        preset = TEXT_ANCHOR_PRESETS.TOP
+    end
+    return preset, key
+end
+
+function MMF_IsNameTextAnchorEnabled(unit)
+    if not MattMinimalFramesDB then return false end
+    local prefix = GetUnitPrefix(unit or "player")
+    local key = prefix .. "NameTextAnchorEnabled"
+    return MattMinimalFramesDB[key] == true
+end
+
+function MMF_GetNameTextAnchorPoint(unit)
+    local defaultPoint = "TOP"
+    if not MattMinimalFramesDB then
+        return defaultPoint
+    end
+    local prefix = GetUnitPrefix(unit or "player")
+    local key = prefix .. "NameTextAnchorPoint"
+    local _, resolved = MMF_GetTextAnchorPreset(MattMinimalFramesDB[key] or defaultPoint)
+    return resolved
+end
+
+function MMF_IsHPTextAnchorEnabled(unit)
+    if not MattMinimalFramesDB then return false end
+    local prefix = GetUnitPrefix(unit or "player")
+    local key = prefix .. "HPTextAnchorEnabled"
+    return MattMinimalFramesDB[key] == true
+end
+
+function MMF_GetHPTextAnchorPoint(unit)
+    local defaultPoint = "BOTTOM"
+    if not MattMinimalFramesDB then
+        return defaultPoint
+    end
+    local prefix = GetUnitPrefix(unit or "player")
+    local key = prefix .. "HPTextAnchorPoint"
+    local _, resolved = MMF_GetTextAnchorPreset(MattMinimalFramesDB[key] or defaultPoint)
+    return resolved
+end
+
+function MMF_IsPowerTextAnchorEnabled(unit)
+    return MMF_GetPowerTextAnchorPoint(unit) ~= "OFF"
+end
+
+function MMF_GetPowerTextAnchorPoint(unit)
+    local defaultPoint = "OFF"
+    if not MattMinimalFramesDB then
+        return defaultPoint
+    end
+    local prefix = GetUnitPrefix(unit or "player")
+    local key = prefix .. "PowerTextAnchorPoint"
+    local value = MattMinimalFramesDB[key]
+    if type(value) ~= "string" then
+        return defaultPoint
+    end
+    value = string.upper(value)
+    if value == "OFF" then
+        return "OFF"
+    end
+    local _, resolved = MMF_GetTextAnchorPreset(value)
+    return resolved or defaultPoint
+end
+
 function MMF_IsNameTextHidden(unit)
     if not MattMinimalFramesDB then return false end
     local prefix = GetUnitPrefix(unit or "player")
@@ -959,8 +1099,18 @@ local function ApplyFrameTextOffsets(frame)
         }
         local pos = positions[unit] or positions.focus
         frame.nameText:ClearAllPoints()
-        frame.nameText:SetPoint(pos.point, frame, pos.relPoint, pos.x + nameX, pos.y + nameY)
-        frame.nameText:SetJustifyH(pos.justify)
+        if MMF_IsNameTextAnchorEnabled and MMF_IsNameTextAnchorEnabled(unit) then
+            local preset = nil
+            if MMF_GetTextAnchorPreset and MMF_GetNameTextAnchorPoint then
+                preset = MMF_GetTextAnchorPreset(MMF_GetNameTextAnchorPoint(unit))
+            end
+            preset = preset or { point = "TOP", relPoint = "TOP", x = 0, y = -2, justify = "CENTER" }
+            frame.nameText:SetPoint(preset.point, frame, preset.relPoint, preset.x, preset.y)
+            frame.nameText:SetJustifyH(preset.justify or "CENTER")
+        else
+            frame.nameText:SetPoint(pos.point, frame, pos.relPoint, pos.x + nameX, pos.y + nameY)
+            frame.nameText:SetJustifyH(pos.justify)
+        end
     end
 
     if frame.hpText then
@@ -1127,12 +1277,13 @@ function MMF_UpdateFrameScale(unit)
     frame:SetSize(newWidth, newHeight)
     frame.originalWidth = newWidth
     frame.originalHeight = newHeight
-    local borderSize = tonumber(MattMinimalFramesDB and MattMinimalFramesDB.healthBarBorderSize) or 1
-    borderSize = math.floor(borderSize + 0.5)
-    if borderSize < 0 then borderSize = 0 end
-    if borderSize > 3 then borderSize = 3 end
+    local borderAlpha, borderSize = 1, 1
+    if MMF_GetHealthBarBorderStyle then
+        local _, _, _, resolvedAlpha, resolvedSize = MMF_GetHealthBarBorderStyle(frame.unit)
+        borderAlpha = ClampUnitInterval(resolvedAlpha, 1)
+        borderSize = ClampBorderSize(resolvedSize, 1)
+    end
     local healthInset = math.max(1, borderSize)
-    local borderAlpha = tonumber(MattMinimalFramesDB and MattMinimalFramesDB.healthBarBorderAlpha) or 1
     if frame.healthBar then
         frame.healthBar:SetPoint("TOPLEFT", frame, "TOPLEFT", healthInset, -healthInset)
         frame.healthBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -healthInset, healthInset)

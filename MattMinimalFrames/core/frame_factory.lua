@@ -1188,7 +1188,11 @@ local function ClampUnitInterval(value, fallback)
     return n
 end
 
-local function GetHealthBarBGColorFromDB()
+local function GetHealthBarBGColorFromDB(unit)
+    if MMF_GetHealthBarBGStyle then
+        return MMF_GetHealthBarBGStyle(unit)
+    end
+
     local db = MattMinimalFramesDB or {}
     return ClampUnitInterval(db.healthBarBGColorR, 0),
         ClampUnitInterval(db.healthBarBGColorG, 0),
@@ -1207,7 +1211,11 @@ local function ClampBorderSize(value, fallback)
     return n
 end
 
-local function GetHealthBarBorderStyleFromDB()
+local function GetHealthBarBorderStyleFromDB(unit)
+    if MMF_GetHealthBarBorderStyle then
+        return MMF_GetHealthBarBorderStyle(unit)
+    end
+
     local db = MattMinimalFramesDB or {}
     return ClampUnitInterval(db.healthBarBorderColorR, 0),
         ClampUnitInterval(db.healthBarBorderColorG, 0),
@@ -1258,11 +1266,11 @@ end
 
 local function CreateHealthBar(frame)
     frame.healthBarBG = frame:CreateTexture(nil, "BACKGROUND")
-    local borderR, borderG, borderB, borderA, borderSize = GetHealthBarBorderStyleFromDB()
+    local borderR, borderG, borderB, borderA, borderSize = GetHealthBarBorderStyleFromDB(frame and frame.unit)
     local contentInset = math.max(1, borderSize)
     frame.healthBarBG:SetPoint("TOPLEFT", frame, "TOPLEFT", contentInset, -contentInset)
     frame.healthBarBG:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -contentInset, contentInset)
-    local bgR, bgG, bgB, bgA = GetHealthBarBGColorFromDB()
+    local bgR, bgG, bgB, bgA = GetHealthBarBGColorFromDB(frame and frame.unit)
     frame.healthBarBG:SetColorTexture(bgR, bgG, bgB, bgA)
 
     frame.healthBarBorder = CreateFrame("Frame", nil, frame)
@@ -1442,6 +1450,21 @@ end
 local function ApplyPowerTextPosition(frame, unit)
     if not frame or not frame.powerText then return end
 
+    local powerAnchorPoint = (MMF_GetPowerTextAnchorPoint and MMF_GetPowerTextAnchorPoint(unit)) or "OFF"
+    if powerAnchorPoint ~= "OFF" and MMF_GetTextAnchorPreset then
+        local preset = MMF_GetTextAnchorPreset(powerAnchorPoint)
+        preset = preset or { point = "BOTTOM", relPoint = "BOTTOM", x = 0, y = 2, justify = "CENTER" }
+        if frame.powerTextDragFrame then
+            frame.powerTextDragFrame:Hide()
+        end
+        frame.powerText:ClearAllPoints()
+        frame.powerText:SetPoint(preset.point, frame, preset.relPoint, preset.x, preset.y)
+        if frame.powerText.SetJustifyH then
+            frame.powerText:SetJustifyH(preset.justify or "CENTER")
+        end
+        return
+    end
+
     if frame.powerTextDragFrame and (unit == "player" or unit == "target") then
         frame.powerTextDragFrame:ClearAllPoints()
         local pos = MattMinimalFramesDB and MattMinimalFramesDB.powerTextPositions and MattMinimalFramesDB.powerTextPositions[unit]
@@ -1454,12 +1477,20 @@ local function ApplyPowerTextPosition(frame, unit)
 
         frame.powerText:ClearAllPoints()
         frame.powerText:SetPoint("CENTER", frame.powerTextDragFrame, "CENTER", 0, 0)
+        if frame.powerText.SetJustifyH then
+            frame.powerText:SetJustifyH("CENTER")
+        end
         return
     end
 
     local point, relFrame, relPoint, x, y = GetDefaultPowerTextAnchor(frame, unit)
     frame.powerText:SetPoint(point, relFrame, relPoint, x, y)
+    if frame.powerText.SetJustifyH then
+        frame.powerText:SetJustifyH("CENTER")
+    end
 end
+
+MMF_ApplyPowerTextPosition = ApplyPowerTextPosition
 
 local function GetDefaultHPTextAnchor(frame, unit)
     local hpX = MMF_GetHPTextXOffset and MMF_GetHPTextXOffset(unit) or 0
@@ -1541,6 +1572,26 @@ end
 
 local function ApplyHPTextPosition(frame, unit)
     if not frame or not frame.hpText then return end
+
+    local useCustomAnchor = (MMF_IsHPTextAnchorEnabled and MMF_IsHPTextAnchorEnabled(unit)) or false
+    if useCustomAnchor then
+        local preset = nil
+        if MMF_GetTextAnchorPreset and MMF_GetHPTextAnchorPoint then
+            preset = MMF_GetTextAnchorPreset(MMF_GetHPTextAnchorPoint(unit))
+        end
+        preset = preset or { point = "BOTTOM", relPoint = "BOTTOM", x = 0, y = 2, justify = "CENTER" }
+
+        if frame.hpTextDragFrame then
+            frame.hpTextDragFrame:Hide()
+        end
+
+        frame.hpText:ClearAllPoints()
+        frame.hpText:SetPoint(preset.point, frame, preset.relPoint, preset.x, preset.y)
+        if frame.hpText.SetJustifyH then
+            frame.hpText:SetJustifyH(preset.justify or "CENTER")
+        end
+        return
+    end
 
     if frame.hpTextDragFrame and (unit == "player" or unit == "target") then
         frame.hpTextDragFrame:ClearAllPoints()

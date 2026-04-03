@@ -1338,14 +1338,25 @@ local function UpdateUnitFrame(frame)
         local displayName = GetDisplayUnitName(unit, unitName)
         local displayNameWithLeaderIcon = BuildNameTextWithLeaderIcon(unit, displayName, db)
         local nameTextWidth = SafeGetNameTextMaxWidth(frame)
+        local useAnchorNamePosition = (MMF_IsNameTextAnchorEnabled and MMF_IsNameTextAnchorEnabled(unit)) or false
         if unit == "targettarget" then
             frame.nameText:SetText(displayNameWithLeaderIcon or "")
-            frame.nameText:SetWidth(nameTextWidth)
+            if useAnchorNamePosition then
+                frame.nameText:SetWidth(0)
+            else
+                frame.nameText:SetWidth(nameTextWidth)
+            end
         else
             frame.nameText:SetText(displayNameWithLeaderIcon)
-            frame.nameText:SetWidth(nameTextWidth)
+            if useAnchorNamePosition then
+                frame.nameText:SetWidth(0)
+            else
+                frame.nameText:SetWidth(nameTextWidth)
+            end
         end
-        ApplyAutoResizeNameText(frame, unit, displayNameWithLeaderIcon)
+        if not useAnchorNamePosition then
+            ApplyAutoResizeNameText(frame, unit, displayNameWithLeaderIcon)
+        end
     end
 
     local nameR, nameG, nameB = GetNameTextColor(unit, db)
@@ -1524,6 +1535,7 @@ local function UpdateUnitFrame(frame)
                 local colorPowerText = false
                 local textPowerType = powerType
                 local textPowerToken = powerToken
+                local anchorPowerEnabled = (MMF_IsPowerTextAnchorEnabled and MMF_IsPowerTextAnchorEnabled(unit)) or false
                 if unit == "player" then
                     showPowerText = IsCheckedFlag(db.showPlayerPowerText)
                     colorPowerText = IsCheckedFlag(db.colorPlayerPowerTextByResource)
@@ -1534,6 +1546,11 @@ local function UpdateUnitFrame(frame)
                 else
                     showPowerText = IsCheckedFlag(db.showTargetPowerText)
                     colorPowerText = IsCheckedFlag(db.colorTargetPowerTextByResource)
+                end
+
+                if anchorPowerEnabled then
+                    -- Anchor mode overrides normal power text visibility/position.
+                    showPowerText = true
                 end
 
                 if showPowerText then
@@ -1563,7 +1580,12 @@ local function UpdateUnitFrame(frame)
                         frame.powerText:SetTextColor(1, 1, 1, 1)
                     end
                     frame.powerText:Show()
-                    if frame.powerTextDragFrame then frame.powerTextDragFrame:Show() end
+                    if frame.powerTextDragFrame then
+                        frame.powerTextDragFrame:SetShown(not anchorPowerEnabled)
+                    end
+                    if MMF_ApplyPowerTextPosition then
+                        MMF_ApplyPowerTextPosition(frame, unit)
+                    end
                 else
                     frame.powerText:Hide()
                     if frame.powerTextDragFrame then frame.powerTextDragFrame:Hide() end

@@ -236,7 +236,8 @@ function MMF_BuildUnitFramesMediaSection(ctx)
     -- 1) Unit frame colors
     -- 2) Frame alpha + health BG controls
     -- 3) Health border controls
-    local frameColorAlphaY = frameColorPetY - 34
+    local styleUnitY = frameColorPetY - 34
+    local frameColorAlphaY = styleUnitY - 26
     local frameColorDividerUnderPetY = frameColorAlphaY - 28
     local frameColorsStartY = frameColorDividerUnderPetY - 22
     local frameColorsRowSpacing = 36
@@ -246,25 +247,160 @@ function MMF_BuildUnitFramesMediaSection(ctx)
     local borderSectionRowSpacing = 24
     local borderWidthY = healthBorderY - borderSectionRowSpacing
     local borderAlphaY = borderWidthY - borderSectionRowSpacing
+    local RequestFrameColorRefresh
 
-    rightSection.frameColorDividerBottom = unitFramesCol:CreateTexture(nil, "ARTWORK")
-    rightSection.frameColorDividerBottom:SetSize(RIGHT_COL_WIDTH, 1)
-    rightSection.frameColorDividerBottom:SetPoint("TOPLEFT", RIGHT_COL_X, frameColorDividerUnderPetY)
-    rightSection.frameColorDividerBottom:SetColorTexture(0.42, 0.42, 0.46, 1)
+    if rightSection.frameColorDividerBottom then
+        rightSection.frameColorDividerBottom:Hide()
+        rightSection.frameColorDividerBottom = nil
+    end
 
-    CreateMinimalSlider(unitFramesCol, "Frame Alpha", RIGHT_COL_X, frameColorAlphaY, RIGHT_COL_WIDTH, "frameColorAlpha", 0.0, 1.0, 0.05, 1.0, function(value)
-        if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
-        MattMinimalFramesDB.frameColorAlpha = value
-        if MMF_RequestAllFramesUpdate then
-            MMF_RequestAllFramesUpdate()
-        elseif MMF_GetAllFrames and MMF_UpdateUnitFrame then
-            for _, frame in ipairs(MMF_GetAllFrames()) do
-                if frame then
-                    MMF_UpdateUnitFrame(frame)
-                end
+    local styleUnitOptions = {
+        { value = "player", label = "Player" },
+        { value = "target", label = "Target" },
+        { value = "targettarget", label = "Target of Target" },
+        { value = "pet", label = "Pet" },
+        { value = "focus", label = "Focus" },
+        { value = "boss", label = "Boss" },
+    }
+
+    local function IsValidStyleUnit(unit)
+        for _, option in ipairs(styleUnitOptions) do
+            if option.value == unit then
+                return true
             end
         end
-    end, false)
+        return false
+    end
+
+    if not MattMinimalFramesDB then
+        MattMinimalFramesDB = {}
+    end
+    if not IsValidStyleUnit(MattMinimalFramesDB.frameStyleUnit) then
+        MattMinimalFramesDB.frameStyleUnit = "player"
+    end
+
+    local function GetSelectedStyleUnit()
+        local unit = MattMinimalFramesDB and MattMinimalFramesDB.frameStyleUnit
+        if IsValidStyleUnit(unit) then
+            return unit
+        end
+        return "player"
+    end
+
+    local function GetStyleUnitPrefix(unit)
+        if MMF_GetFrameStyleUnitPrefix then
+            return MMF_GetFrameStyleUnitPrefix(unit)
+        end
+        if unit == "targettarget" then
+            return "tot"
+        end
+        if unit == "boss" then
+            return "boss"
+        end
+        return unit or "player"
+    end
+
+    local function GetStyleKey(unit, suffix)
+        return GetStyleUnitPrefix(unit) .. suffix
+    end
+
+    local function SetStyleOverride(suffix, value)
+        if not MattMinimalFramesDB then
+            MattMinimalFramesDB = {}
+        end
+        local key = GetStyleKey(GetSelectedStyleUnit(), suffix)
+        MattMinimalFramesDB[key] = value
+    end
+
+    local function ClearStyleOverride(suffix)
+        if not MattMinimalFramesDB then
+            return
+        end
+        local key = GetStyleKey(GetSelectedStyleUnit(), suffix)
+        MattMinimalFramesDB[key] = nil
+    end
+
+    local function HasStyleOverride(suffix)
+        if not MattMinimalFramesDB then
+            return false
+        end
+        local key = GetStyleKey(GetSelectedStyleUnit(), suffix)
+        return MattMinimalFramesDB[key] ~= nil
+    end
+
+    local function GetStyleValue(suffix, legacyKey, fallback, clampFn)
+        local value
+        if MattMinimalFramesDB then
+            value = MattMinimalFramesDB[GetStyleKey(GetSelectedStyleUnit(), suffix)]
+            if value == nil then
+                value = MattMinimalFramesDB[legacyKey]
+            end
+        end
+        if value == nil then
+            value = fallback
+        end
+        if clampFn then
+            return clampFn(value, fallback)
+        end
+        return value
+    end
+
+    local styleUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
+        accentColor = ACCENT_COLOR,
+        settingKey = "frameStyleUnit",
+        x = RIGHT_COL_X,
+        y = styleUnitY,
+        width = RIGHT_COL_WIDTH,
+        labelWidth = RIGHT_STYLE_LABEL_WIDTH,
+        buttonOffset = RIGHT_STYLE_BUTTON_OFFSET,
+        buttonWidth = RIGHT_STYLE_BUTTON_WIDTH,
+        visibleRows = #styleUnitOptions,
+        label = "Style Unit",
+        options = styleUnitOptions,
+        getValue = function()
+            return GetSelectedStyleUnit()
+        end,
+        onSelect = function(value)
+            MattMinimalFramesDB.frameStyleUnit = value
+            if rightSection.RefreshStyleControls then
+                rightSection.RefreshStyleControls()
+            end
+        end,
+    })
+    rightSection.styleUnitDropdown = styleUnitDropdown
+    dropdownLists.frameStyleUnitList = styleUnitDropdown.list
+
+    local frameAlphaSlider = CreateMinimalSlider(
+        unitFramesCol,
+        "Frame Alpha",
+        RIGHT_COL_X,
+        frameColorAlphaY,
+        RIGHT_COL_WIDTH,
+        "__tempFrameStyleAlpha",
+        0.0,
+        1.0,
+        0.05,
+        1.0,
+        function(value)
+            SetStyleOverride("FrameColorAlpha", value)
+            MattMinimalFramesDB.__tempFrameStyleAlpha = nil
+            RequestFrameColorRefresh(GetSelectedStyleUnit())
+        end,
+        false,
+        {
+            onReset = function()
+                ClearStyleOverride("FrameColorAlpha")
+                RequestFrameColorRefresh(GetSelectedStyleUnit())
+                if rightSection.RefreshStyleControls then
+                    rightSection.RefreshStyleControls()
+                end
+            end,
+            isDefault = function()
+                return not HasStyleOverride("FrameColorAlpha")
+            end,
+        }
+    )
+    rightSection.frameAlphaSlider = frameAlphaSlider
 
     rightSection.healthBarBGColorPicker = MMF_CreateMinimalColorPicker(unitFramesCol, {
         accentColor = ACCENT_COLOR,
@@ -278,44 +414,72 @@ function MMF_BuildUnitFramesMediaSection(ctx)
         label = "Health Bar BG",
         resetLabel = "Reset",
         getColor = function()
-            return ClampColorChannel(MattMinimalFramesDB and MattMinimalFramesDB.healthBarBGColorR, 0),
-                ClampColorChannel(MattMinimalFramesDB and MattMinimalFramesDB.healthBarBGColorG, 0),
-                ClampColorChannel(MattMinimalFramesDB and MattMinimalFramesDB.healthBarBGColorB, 0)
+            if MMF_GetHealthBarBGStyle then
+                local r, g, b = MMF_GetHealthBarBGStyle(GetSelectedStyleUnit())
+                return ClampColorChannel(r, 0), ClampColorChannel(g, 0), ClampColorChannel(b, 0)
+            end
+            return ClampColorChannel(GetStyleValue("HealthBarBGColorR", "healthBarBGColorR", 0, ClampColorChannel), 0),
+                ClampColorChannel(GetStyleValue("HealthBarBGColorG", "healthBarBGColorG", 0, ClampColorChannel), 0),
+                ClampColorChannel(GetStyleValue("HealthBarBGColorB", "healthBarBGColorB", 0, ClampColorChannel), 0)
         end,
         onColorChanged = function(r, g, b)
-            if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
-            MattMinimalFramesDB.healthBarBGColorR = ClampColorChannel(r, 0)
-            MattMinimalFramesDB.healthBarBGColorG = ClampColorChannel(g, 0)
-            MattMinimalFramesDB.healthBarBGColorB = ClampColorChannel(b, 0)
+            SetStyleOverride("HealthBarBGColorR", ClampColorChannel(r, 0))
+            SetStyleOverride("HealthBarBGColorG", ClampColorChannel(g, 0))
+            SetStyleOverride("HealthBarBGColorB", ClampColorChannel(b, 0))
             if MMF_ApplyHealthBarBackgroundColor then
                 MMF_ApplyHealthBarBackgroundColor()
             end
         end,
         onReset = function()
-            if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
-            MattMinimalFramesDB.healthBarBGColorR = 0
-            MattMinimalFramesDB.healthBarBGColorG = 0
-            MattMinimalFramesDB.healthBarBGColorB = 0
+            ClearStyleOverride("HealthBarBGColorR")
+            ClearStyleOverride("HealthBarBGColorG")
+            ClearStyleOverride("HealthBarBGColorB")
             if MMF_ApplyHealthBarBackgroundColor then
                 MMF_ApplyHealthBarBackgroundColor()
             end
         end,
         isDefault = function()
-            local db = MattMinimalFramesDB or {}
-            local d = MattMinimalFrames_Defaults or {}
-            return (db.healthBarBGColorR == d.healthBarBGColorR)
-                and (db.healthBarBGColorG == d.healthBarBGColorG)
-                and (db.healthBarBGColorB == d.healthBarBGColorB)
+            return (not HasStyleOverride("HealthBarBGColorR"))
+                and (not HasStyleOverride("HealthBarBGColorG"))
+                and (not HasStyleOverride("HealthBarBGColorB"))
         end,
     })
 
-    CreateMinimalSlider(unitFramesCol, "Health BG Alpha", RIGHT_COL_X, healthBGAlphaY, RIGHT_COL_WIDTH, "healthBarBGAlpha", 0.0, 1.0, 0.05, 0.65, function(value)
-        if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
-        MattMinimalFramesDB.healthBarBGAlpha = value
-        if MMF_ApplyHealthBarBackgroundColor then
-            MMF_ApplyHealthBarBackgroundColor()
-        end
-    end, false)
+    local healthBGAlphaSlider = CreateMinimalSlider(
+        unitFramesCol,
+        "Health BG Alpha",
+        RIGHT_COL_X,
+        healthBGAlphaY,
+        RIGHT_COL_WIDTH,
+        "__tempFrameStyleHealthBGAlpha",
+        0.0,
+        1.0,
+        0.05,
+        0.65,
+        function(value)
+            SetStyleOverride("HealthBarBGAlpha", value)
+            MattMinimalFramesDB.__tempFrameStyleHealthBGAlpha = nil
+            if MMF_ApplyHealthBarBackgroundColor then
+                MMF_ApplyHealthBarBackgroundColor()
+            end
+        end,
+        false,
+        {
+            onReset = function()
+                ClearStyleOverride("HealthBarBGAlpha")
+                if MMF_ApplyHealthBarBackgroundColor then
+                    MMF_ApplyHealthBarBackgroundColor()
+                end
+                if rightSection.RefreshStyleControls then
+                    rightSection.RefreshStyleControls()
+                end
+            end,
+            isDefault = function()
+                return not HasStyleOverride("HealthBarBGAlpha")
+            end,
+        }
+    )
+    rightSection.healthBGAlphaSlider = healthBGAlphaSlider
 
     rightSection.healthBGDividerBottom = unitFramesCol:CreateTexture(nil, "ARTWORK")
     rightSection.healthBGDividerBottom:SetSize(RIGHT_COL_WIDTH, 1)
@@ -334,52 +498,172 @@ function MMF_BuildUnitFramesMediaSection(ctx)
         label = "Frame Border",
         resetLabel = "Reset",
         getColor = function()
-            return ClampColorChannel(MattMinimalFramesDB and MattMinimalFramesDB.healthBarBorderColorR, 0),
-                ClampColorChannel(MattMinimalFramesDB and MattMinimalFramesDB.healthBarBorderColorG, 0),
-                ClampColorChannel(MattMinimalFramesDB and MattMinimalFramesDB.healthBarBorderColorB, 0)
+            if MMF_GetHealthBarBorderStyle then
+                local r, g, b = MMF_GetHealthBarBorderStyle(GetSelectedStyleUnit())
+                return ClampColorChannel(r, 0), ClampColorChannel(g, 0), ClampColorChannel(b, 0)
+            end
+            return ClampColorChannel(GetStyleValue("HealthBarBorderColorR", "healthBarBorderColorR", 0, ClampColorChannel), 0),
+                ClampColorChannel(GetStyleValue("HealthBarBorderColorG", "healthBarBorderColorG", 0, ClampColorChannel), 0),
+                ClampColorChannel(GetStyleValue("HealthBarBorderColorB", "healthBarBorderColorB", 0, ClampColorChannel), 0)
         end,
         onColorChanged = function(r, g, b)
-            if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
-            MattMinimalFramesDB.healthBarBorderColorR = ClampColorChannel(r, 0)
-            MattMinimalFramesDB.healthBarBorderColorG = ClampColorChannel(g, 0)
-            MattMinimalFramesDB.healthBarBorderColorB = ClampColorChannel(b, 0)
+            SetStyleOverride("HealthBarBorderColorR", ClampColorChannel(r, 0))
+            SetStyleOverride("HealthBarBorderColorG", ClampColorChannel(g, 0))
+            SetStyleOverride("HealthBarBorderColorB", ClampColorChannel(b, 0))
             if MMF_ApplyHealthBarBorderStyle then
                 MMF_ApplyHealthBarBorderStyle()
             end
         end,
         onReset = function()
-            if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
-            MattMinimalFramesDB.healthBarBorderColorR = 0
-            MattMinimalFramesDB.healthBarBorderColorG = 0
-            MattMinimalFramesDB.healthBarBorderColorB = 0
+            ClearStyleOverride("HealthBarBorderColorR")
+            ClearStyleOverride("HealthBarBorderColorG")
+            ClearStyleOverride("HealthBarBorderColorB")
             if MMF_ApplyHealthBarBorderStyle then
                 MMF_ApplyHealthBarBorderStyle()
             end
         end,
         isDefault = function()
-            local db = MattMinimalFramesDB or {}
-            local d = MattMinimalFrames_Defaults or {}
-            return (db.healthBarBorderColorR == d.healthBarBorderColorR)
-                and (db.healthBarBorderColorG == d.healthBarBorderColorG)
-                and (db.healthBarBorderColorB == d.healthBarBorderColorB)
+            return (not HasStyleOverride("HealthBarBorderColorR"))
+                and (not HasStyleOverride("HealthBarBorderColorG"))
+                and (not HasStyleOverride("HealthBarBorderColorB"))
         end,
     })
 
-    CreateMinimalSlider(unitFramesCol, "Border Width", RIGHT_COL_X, borderWidthY, RIGHT_COL_WIDTH, "healthBarBorderSize", 0, 3, 1, 1, function(value)
-        if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
-        MattMinimalFramesDB.healthBarBorderSize = math.floor((tonumber(value) or 1) + 0.5)
-        if MMF_ApplyHealthBarBorderStyle then
-            MMF_ApplyHealthBarBorderStyle()
-        end
-    end, true)
+    local borderWidthSlider = CreateMinimalSlider(
+        unitFramesCol,
+        "Border Width",
+        RIGHT_COL_X,
+        borderWidthY,
+        RIGHT_COL_WIDTH,
+        "__tempFrameStyleBorderSize",
+        0,
+        3,
+        1,
+        1,
+        function(value)
+            SetStyleOverride("HealthBarBorderSize", math.floor((tonumber(value) or 1) + 0.5))
+            MattMinimalFramesDB.__tempFrameStyleBorderSize = nil
+            if MMF_ApplyHealthBarBorderStyle then
+                MMF_ApplyHealthBarBorderStyle()
+            end
+        end,
+        true,
+        {
+            onReset = function()
+                ClearStyleOverride("HealthBarBorderSize")
+                if MMF_ApplyHealthBarBorderStyle then
+                    MMF_ApplyHealthBarBorderStyle()
+                end
+                if rightSection.RefreshStyleControls then
+                    rightSection.RefreshStyleControls()
+                end
+            end,
+            isDefault = function()
+                return not HasStyleOverride("HealthBarBorderSize")
+            end,
+        }
+    )
+    rightSection.borderWidthSlider = borderWidthSlider
 
-    CreateMinimalSlider(unitFramesCol, "Border Alpha", RIGHT_COL_X, borderAlphaY, RIGHT_COL_WIDTH, "healthBarBorderAlpha", 0.0, 1.0, 0.05, 1.0, function(value)
-        if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
-        MattMinimalFramesDB.healthBarBorderAlpha = value
-        if MMF_ApplyHealthBarBorderStyle then
-            MMF_ApplyHealthBarBorderStyle()
+    local borderAlphaSlider = CreateMinimalSlider(
+        unitFramesCol,
+        "Border Alpha",
+        RIGHT_COL_X,
+        borderAlphaY,
+        RIGHT_COL_WIDTH,
+        "__tempFrameStyleBorderAlpha",
+        0.0,
+        1.0,
+        0.05,
+        1.0,
+        function(value)
+            SetStyleOverride("HealthBarBorderAlpha", value)
+            MattMinimalFramesDB.__tempFrameStyleBorderAlpha = nil
+            if MMF_ApplyHealthBarBorderStyle then
+                MMF_ApplyHealthBarBorderStyle()
+            end
+        end,
+        false,
+        {
+            onReset = function()
+                ClearStyleOverride("HealthBarBorderAlpha")
+                if MMF_ApplyHealthBarBorderStyle then
+                    MMF_ApplyHealthBarBorderStyle()
+                end
+                if rightSection.RefreshStyleControls then
+                    rightSection.RefreshStyleControls()
+                end
+            end,
+            isDefault = function()
+                return not HasStyleOverride("HealthBarBorderAlpha")
+            end,
+        }
+    )
+    rightSection.borderAlphaSlider = borderAlphaSlider
+
+    rightSection.RefreshStyleControls = function()
+        local selectedUnit = GetSelectedStyleUnit()
+        if rightSection.styleUnitDropdown and rightSection.styleUnitDropdown.SetSelectedValue then
+            rightSection.styleUnitDropdown.SetSelectedValue(selectedUnit)
         end
-    end, false)
+
+        if rightSection.frameAlphaSlider and rightSection.frameAlphaSlider.MMFSetValueSilently then
+            local alphaValue = (MMF_GetFrameColorAlpha and MMF_GetFrameColorAlpha(selectedUnit))
+                or GetStyleValue("FrameColorAlpha", "frameColorAlpha", 1.0, ClampColorChannel)
+            rightSection.frameAlphaSlider.MMFSetValueSilently(alphaValue)
+            if rightSection.frameAlphaSlider.RefreshResetVisibility then
+                rightSection.frameAlphaSlider.RefreshResetVisibility()
+            end
+        end
+
+        if rightSection.healthBarBGColorPicker and rightSection.healthBarBGColorPicker.RefreshColor then
+            rightSection.healthBarBGColorPicker.RefreshColor()
+            if rightSection.healthBarBGColorPicker.RefreshResetVisibility then
+                rightSection.healthBarBGColorPicker.RefreshResetVisibility()
+            end
+        end
+
+        if rightSection.healthBGAlphaSlider and rightSection.healthBGAlphaSlider.MMFSetValueSilently then
+            local _, _, _, bgAlpha = (MMF_GetHealthBarBGStyle and MMF_GetHealthBarBGStyle(selectedUnit))
+            if bgAlpha == nil then
+                bgAlpha = GetStyleValue("HealthBarBGAlpha", "healthBarBGAlpha", 0.65, ClampColorChannel)
+            end
+            rightSection.healthBGAlphaSlider.MMFSetValueSilently(bgAlpha)
+            if rightSection.healthBGAlphaSlider.RefreshResetVisibility then
+                rightSection.healthBGAlphaSlider.RefreshResetVisibility()
+            end
+        end
+
+        if rightSection.healthBarBorderColorPicker and rightSection.healthBarBorderColorPicker.RefreshColor then
+            rightSection.healthBarBorderColorPicker.RefreshColor()
+            if rightSection.healthBarBorderColorPicker.RefreshResetVisibility then
+                rightSection.healthBarBorderColorPicker.RefreshResetVisibility()
+            end
+        end
+
+        if rightSection.borderWidthSlider and rightSection.borderWidthSlider.MMFSetValueSilently then
+            local _, _, _, _, borderSize = (MMF_GetHealthBarBorderStyle and MMF_GetHealthBarBorderStyle(selectedUnit))
+            if borderSize == nil then
+                borderSize = math.floor(GetStyleValue("HealthBarBorderSize", "healthBarBorderSize", 1) + 0.5)
+            end
+            rightSection.borderWidthSlider.MMFSetValueSilently(borderSize)
+            if rightSection.borderWidthSlider.RefreshResetVisibility then
+                rightSection.borderWidthSlider.RefreshResetVisibility()
+            end
+        end
+
+        if rightSection.borderAlphaSlider and rightSection.borderAlphaSlider.MMFSetValueSilently then
+            local _, _, _, borderAlpha = (MMF_GetHealthBarBorderStyle and MMF_GetHealthBarBorderStyle(selectedUnit))
+            if borderAlpha == nil then
+                borderAlpha = GetStyleValue("HealthBarBorderAlpha", "healthBarBorderAlpha", 1.0, ClampColorChannel)
+            end
+            rightSection.borderAlphaSlider.MMFSetValueSilently(borderAlpha)
+            if rightSection.borderAlphaSlider.RefreshResetVisibility then
+                rightSection.borderAlphaSlider.RefreshResetVisibility()
+            end
+        end
+    end
+    rightSection.RefreshStyleControls()
 
     local playerBarColorOptions = (MMF_Config and MMF_Config.PLAYER_BAR_COLORS) or {
         { value = "class", label = "Class (Default)" },
@@ -409,7 +693,7 @@ function MMF_BuildUnitFramesMediaSection(ctx)
         return nil
     end
 
-    local function RequestFrameColorRefresh(unit)
+    RequestFrameColorRefresh = function(unit)
         if MMF_RequestAllFramesUpdate then
             MMF_RequestAllFramesUpdate()
             return
@@ -447,6 +731,13 @@ function MMF_BuildUnitFramesMediaSection(ctx)
             MMF_UpdateUnitFrame(MMF_FocusFrame)
         elseif unit == "pet" and MMF_PetFrame then
             MMF_UpdateUnitFrame(MMF_PetFrame)
+        elseif unit == "boss" then
+            for i = 1, 5 do
+                local bossFrame = _G["MMF_Boss" .. i .. "Frame"]
+                if bossFrame then
+                    MMF_UpdateUnitFrame(bossFrame)
+                end
+            end
         end
     end
 

@@ -1,11 +1,16 @@
 function MMF_BuildAurasPowerPowerSection(ctx)
     local root = ctx.parent
+    local popup = ctx.popup
     local CreateMinimalCheckbox = ctx.createMinimalCheckbox
     local CreateMinimalSlider = ctx.createMinimalSlider
+    local CreateMinimalDropdown = MMF_CreateMinimalDropdown
     local RESOURCE_COL_X = ctx.resourceColX
     local isPlayerDruid = ctx.isPlayerDruid
     local RefreshPowerFrames = ctx.refreshPowerFrames or function() end
     local accent = (MMF_GetPopupAccentColor and MMF_GetPopupAccentColor()) or { 0.6, 0.4, 0.9 }
+    if not MattMinimalFramesDB then
+        MattMinimalFramesDB = {}
+    end
 
     local generalTitle = root:CreateFontString(nil, "OVERLAY")
     generalTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
@@ -30,6 +35,57 @@ function MMF_BuildAurasPowerPowerSection(ctx)
     local playerPowerHeightSlider = nil
     local targetPowerWidthSlider = nil
     local targetPowerHeightSlider = nil
+
+    local powerAnchorOptions = {
+        { value = "OFF", label = "Off" },
+        { value = "TOPLEFT", label = "Top Left" },
+        { value = "TOP", label = "Top" },
+        { value = "TOPRIGHT", label = "Top Right" },
+        { value = "LEFT", label = "Left" },
+        { value = "CENTER", label = "Center" },
+        { value = "RIGHT", label = "Right" },
+        { value = "BOTTOMLEFT", label = "Bottom Left" },
+        { value = "BOTTOM", label = "Bottom" },
+        { value = "BOTTOMRIGHT", label = "Bottom Right" },
+    }
+
+    local function GetPowerAnchorPoint(unit)
+        local key = unit .. "PowerTextAnchorPoint"
+        local value = MattMinimalFramesDB[key]
+        if type(value) ~= "string" then
+            return "OFF"
+        end
+        value = string.upper(value)
+        if value == "OFF" then
+            return "OFF"
+        end
+        local resolved = nil
+        if MMF_GetTextAnchorPreset then
+            local _, keyResolved = MMF_GetTextAnchorPreset(value)
+            resolved = keyResolved
+        end
+        if resolved then
+            return resolved
+        end
+        return "OFF"
+    end
+
+    local function SetPowerAnchorPoint(unit, value)
+        local normalized = type(value) == "string" and string.upper(value) or "OFF"
+        if normalized ~= "OFF" then
+            local resolved = nil
+            if MMF_GetTextAnchorPreset then
+                local _, keyResolved = MMF_GetTextAnchorPreset(normalized)
+                resolved = keyResolved
+            end
+            normalized = resolved or "OFF"
+        end
+        MattMinimalFramesDB[unit .. "PowerTextAnchorPoint"] = normalized
+        if MMF_ApplyPowerTextPositions then
+            MMF_ApplyPowerTextPositions()
+        end
+        RefreshPowerFrames()
+    end
 
     local function ResetPowerTextPosition(unit)
         if unit ~= "player" and unit ~= "target" then
@@ -160,39 +216,65 @@ function MMF_BuildAurasPowerPowerSection(ctx)
         RefreshPowerFrames()
     end)
 
-    local playerResetY = -168
-    local playerTextScaleY = -196
-    local playerWidthY = -220
-    local playerHeightY = -244
-    local targetDividerY = -272
-    local targetTitleY = -284
-    local targetPowerBarY = -304
-    local targetPowerTextY = -328
-    local targetColorTextY = -352
-    local targetPercentTextY = -376
-    local targetResetY = -400
-    local targetTextScaleY = -428
-    local targetWidthY = -452
-    local targetHeightY = -476
+    local playerPowerAnchorY = -168
+    local playerResetY = -196
+    local playerTextScaleY = -224
+    local playerWidthY = -248
+    local playerHeightY = -272
+    local targetDividerY = -300
+    local targetTitleY = -312
+    local targetPowerBarY = -332
+    local targetPowerTextY = -356
+    local targetColorTextY = -380
+    local targetPercentTextY = -404
+    local targetPowerAnchorY = -428
+    local targetResetY = -456
+    local targetTextScaleY = -484
+    local targetWidthY = -508
+    local targetHeightY = -532
 
     if isPlayerDruid then
         playerDruidManaPowerTextCheck = CreateMinimalCheckbox(root, "Mana Resource Only", RESOURCE_COL_X, -168, "showDruidManaPowerText", false, function()
             RefreshPowerFrames()
         end)
-        playerResetY = -192
-        playerTextScaleY = -220
-        playerWidthY = -244
-        playerHeightY = -268
-        targetDividerY = -296
-        targetTitleY = -308
-        targetPowerBarY = -328
-        targetPowerTextY = -352
-        targetColorTextY = -376
-        targetPercentTextY = -400
-        targetResetY = -424
-        targetTextScaleY = -452
-        targetWidthY = -476
-        targetHeightY = -500
+        playerPowerAnchorY = -192
+        playerResetY = -220
+        playerTextScaleY = -248
+        playerWidthY = -272
+        playerHeightY = -296
+        targetDividerY = -324
+        targetTitleY = -336
+        targetPowerBarY = -356
+        targetPowerTextY = -380
+        targetColorTextY = -404
+        targetPercentTextY = -428
+        targetPowerAnchorY = -452
+        targetResetY = -480
+        targetTextScaleY = -508
+        targetWidthY = -532
+        targetHeightY = -556
+    end
+
+    if CreateMinimalDropdown then
+        CreateMinimalDropdown(root, popup, {
+            accentColor = accent,
+            settingKey = "__tempPlayerPowerAnchorPoint",
+            x = RESOURCE_COL_X,
+            y = playerPowerAnchorY,
+            width = 200,
+            labelWidth = 92,
+            buttonOffset = 96,
+            buttonWidth = 104,
+            visibleRows = #powerAnchorOptions,
+            label = "Power Anchor",
+            options = powerAnchorOptions,
+            getValue = function()
+                return GetPowerAnchorPoint("player")
+            end,
+            onSelect = function(value)
+                SetPowerAnchorPoint("player", value)
+            end,
+        })
     end
 
     CreatePowerTextResetButton(RESOURCE_COL_X, playerResetY, function()
@@ -246,6 +328,28 @@ function MMF_BuildAurasPowerPowerSection(ctx)
     targetPercentPowerTextCheck = CreateMinimalCheckbox(root, "Power Text: Percent", RESOURCE_COL_X, targetPercentTextY, "showTargetPowerPercentText", false, function()
         RefreshPowerFrames()
     end)
+
+    if CreateMinimalDropdown then
+        CreateMinimalDropdown(root, popup, {
+            accentColor = accent,
+            settingKey = "__tempTargetPowerAnchorPoint",
+            x = RESOURCE_COL_X,
+            y = targetPowerAnchorY,
+            width = 200,
+            labelWidth = 92,
+            buttonOffset = 96,
+            buttonWidth = 104,
+            visibleRows = #powerAnchorOptions,
+            label = "Power Anchor",
+            options = powerAnchorOptions,
+            getValue = function()
+                return GetPowerAnchorPoint("target")
+            end,
+            onSelect = function(value)
+                SetPowerAnchorPoint("target", value)
+            end,
+        })
+    end
 
     UpdatePowerTextDependencies()
 

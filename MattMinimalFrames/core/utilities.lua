@@ -214,7 +214,6 @@ function MMF_SetStatusBarTexture(textureName)
 end
 
 function MMF_ApplyHealthBarBackgroundColor()
-    local db = MattMinimalFramesDB or {}
     local function Clamp01(value, fallback)
         local n = tonumber(value)
         if not n then
@@ -224,11 +223,6 @@ function MMF_ApplyHealthBarBackgroundColor()
         if n > 1 then n = 1 end
         return n
     end
-
-    local r = Clamp01(db.healthBarBGColorR, 0)
-    local g = Clamp01(db.healthBarBGColorG, 0)
-    local b = Clamp01(db.healthBarBGColorB, 0)
-    local a = Clamp01(db.healthBarBGAlpha, 0.65)
 
     local function ClampBorderSize(value, fallback)
         local n = tonumber(value)
@@ -240,9 +234,6 @@ function MMF_ApplyHealthBarBackgroundColor()
         if n > 3 then n = 3 end
         return n
     end
-
-    local borderSize = ClampBorderSize(db.healthBarBorderSize, 1)
-    local inset = math.max(1, borderSize)
 
     local frames = {}
     local seen = {}
@@ -268,6 +259,28 @@ function MMF_ApplyHealthBarBackgroundColor()
     AddFrame(_G.MMF_PetFrame)
 
     for _, frame in ipairs(frames) do
+        local unit = frame and frame.unit
+        local r, g, b, a
+        if MMF_GetHealthBarBGStyle then
+            r, g, b, a = MMF_GetHealthBarBGStyle(unit)
+        else
+            local db = MattMinimalFramesDB or {}
+            r = Clamp01(db.healthBarBGColorR, 0)
+            g = Clamp01(db.healthBarBGColorG, 0)
+            b = Clamp01(db.healthBarBGColorB, 0)
+            a = Clamp01(db.healthBarBGAlpha, 0.65)
+        end
+
+        local borderSize
+        if MMF_GetHealthBarBorderStyle then
+            local _, _, _, _, styleBorderSize = MMF_GetHealthBarBorderStyle(unit)
+            borderSize = styleBorderSize
+        else
+            local db = MattMinimalFramesDB or {}
+            borderSize = ClampBorderSize(db.healthBarBorderSize, 1)
+        end
+        local inset = math.max(1, borderSize)
+
         if frame and frame.healthBarBG and frame.healthBarBG.SetColorTexture then
             if frame.healthBarBG.ClearAllPoints then
                 frame.healthBarBG:ClearAllPoints()
@@ -289,8 +302,6 @@ function MMF_ApplyHealthBarBackgroundColor()
 end
 
 function MMF_ApplyHealthBarBorderStyle()
-    local db = MattMinimalFramesDB or {}
-
     local function Clamp01(value, fallback)
         local n = tonumber(value)
         if not n then
@@ -311,13 +322,6 @@ function MMF_ApplyHealthBarBorderStyle()
         if n > 3 then n = 3 end
         return n
     end
-
-    local r = Clamp01(db.healthBarBorderColorR, 0)
-    local g = Clamp01(db.healthBarBorderColorG, 0)
-    local b = Clamp01(db.healthBarBorderColorB, 0)
-    local a = Clamp01(db.healthBarBorderAlpha, 1)
-    local size = ClampBorderSize(db.healthBarBorderSize, 1)
-    local inset = math.max(1, size)
 
     local function EnsureHealthBarBorderEdges(frame)
         if not frame then
@@ -375,6 +379,20 @@ function MMF_ApplyHealthBarBorderStyle()
 
     local frames = MMF_GetAllFrames and MMF_GetAllFrames() or {}
     for _, frame in ipairs(frames) do
+        local unit = frame and frame.unit
+        local r, g, b, a, size
+        if MMF_GetHealthBarBorderStyle then
+            r, g, b, a, size = MMF_GetHealthBarBorderStyle(unit)
+        else
+            local db = MattMinimalFramesDB or {}
+            r = Clamp01(db.healthBarBorderColorR, 0)
+            g = Clamp01(db.healthBarBorderColorG, 0)
+            b = Clamp01(db.healthBarBorderColorB, 0)
+            a = Clamp01(db.healthBarBorderAlpha, 1)
+            size = ClampBorderSize(db.healthBarBorderSize, 1)
+        end
+        local inset = math.max(1, size)
+
         if frame and frame.healthBar and frame.healthBar.ClearAllPoints then
             frame.healthBar:ClearAllPoints()
             frame.healthBar:SetPoint("TOPLEFT", frame, "TOPLEFT", inset, -inset)

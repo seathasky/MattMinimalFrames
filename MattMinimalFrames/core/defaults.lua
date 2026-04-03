@@ -281,6 +281,7 @@ local mmfDefaults = {
     minimap = { hide = false },
     -- Layout panel selectors
     framePositionUnit = "player",
+    frameStyleUnit = "player",
     -- Frame scale settings
     playerFrameScaleX = 1.0,
     playerFrameScaleY = 1.0,

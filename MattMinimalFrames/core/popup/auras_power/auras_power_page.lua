@@ -215,6 +215,7 @@ function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalC
         [1] = {
             builder = MMF_BuildAurasPowerPowerSection,
             config = {
+                popup = popup,
                 createMinimalCheckbox = CreateMinimalCheckbox,
                 createMinimalSlider = CreateMinimalSlider,
                 resourceColX = RESOURCE_COL_X,
