@@ -344,9 +344,9 @@ function MMF_BuildUnitFramesOffsetsSection(ctx)
             nameAnchorDropdown.SetSelectedValue(GetNameAnchorPoint(current))
         end
         if nameAnchorDropdown and nameAnchorDropdown.container then
-            nameAnchorDropdown.container:SetAlpha(1)
+            nameAnchorDropdown.container:SetAlpha(anchorEnabled and 1 or 0.45)
             if nameAnchorDropdown.button then
-                nameAnchorDropdown.button:EnableMouse(true)
+                nameAnchorDropdown.button:EnableMouse(anchorEnabled)
             end
         end
 
@@ -545,9 +545,9 @@ function MMF_BuildUnitFramesOffsetsSection(ctx)
             hpAnchorDropdown.SetSelectedValue(GetHPAnchorPoint(current))
         end
         if hpAnchorDropdown and hpAnchorDropdown.container then
-            hpAnchorDropdown.container:SetAlpha(1)
+            hpAnchorDropdown.container:SetAlpha(anchorEnabled and 1 or 0.45)
             if hpAnchorDropdown.button then
-                hpAnchorDropdown.button:EnableMouse(true)
+                hpAnchorDropdown.button:EnableMouse(anchorEnabled)
             end
         end
 

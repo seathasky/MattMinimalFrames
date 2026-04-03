@@ -351,6 +351,40 @@ local function GetRelativeCenter(frame)
     return centerX - parentCenterX, centerY - parentCenterY
 end
 
+local function GetRelativeCenterFromTopLeft(frame, left, top)
+    local leftCoord = tonumber(left)
+    local topCoord = tonumber(top)
+    if leftCoord == nil or topCoord == nil or not UIParent then
+        return nil, nil
+    end
+
+    local parentCenterX, parentCenterY = UIParent:GetCenter()
+    if not parentCenterX or not parentCenterY then
+        return nil, nil
+    end
+
+    local width = frame and frame.GetWidth and frame:GetWidth()
+    local height = frame and frame.GetHeight and frame:GetHeight()
+    width = tonumber(width)
+    height = tonumber(height)
+    if width == nil or height == nil then
+        return nil, nil
+    end
+
+    local frameScale = (frame and frame.GetEffectiveScale and frame:GetEffectiveScale()) or 1
+    local parentScale = (UIParent.GetEffectiveScale and UIParent:GetEffectiveScale()) or 1
+    frameScale = tonumber(frameScale) or 1
+    parentScale = tonumber(parentScale) or 1
+    if parentScale == 0 then
+        parentScale = 1
+    end
+    local scaleRatio = frameScale / parentScale
+
+    local centerX = leftCoord + (width * scaleRatio * 0.5) - parentCenterX
+    local centerY = topCoord - (height * scaleRatio * 0.5) - parentCenterY
+    return centerX, centerY
+end
+
 local function GetCenterKeysForUnit(unit)
     local prefix = GetPositionPrefixForUnit(unit)
     if type(prefix) ~= "string" or prefix == "" then
@@ -417,6 +451,76 @@ end
 
 MMF_ClearLegacyFramePosition = ClearLegacyFramePositionForUnit
 
+local function GetLegacyFramePositionForUnit(unit)
+    if not MattMinimalFramesDB then
+        return nil
+    end
+
+    local normalizedUnit = IsBossUnit(unit) and "boss" or unit
+    local prefix = GetPositionPrefixForUnit(normalizedUnit)
+    if prefix == "boss" then
+        for i = 1, 5 do
+            local pos = MattMinimalFramesDB["MMF_Boss" .. i .. "Frame"]
+            if type(pos) == "table" and pos.left ~= nil and pos.top ~= nil then
+                return pos
+            end
+        end
+        return nil
+    end
+
+    if MMF_GetFrameDefinition then
+        local def = MMF_GetFrameDefinition(normalizedUnit)
+        if def and def.name then
+            local pos = MattMinimalFramesDB[def.name]
+            if type(pos) == "table" and pos.left ~= nil and pos.top ~= nil then
+                return pos
+            end
+        end
+    end
+
+    return nil
+end
+
+local function HasLegacyFramePositionForUnit(unit)
+    return GetLegacyFramePositionForUnit(unit) ~= nil
+end
+
+local function GetPositionAnchorFrameForUnit(unit)
+    local normalizedUnit = IsBossUnit(unit) and "boss" or unit
+    local anchorUnit = (normalizedUnit == "boss") and "boss1" or normalizedUnit
+    local frame = MMF_GetFrameForUnit and MMF_GetFrameForUnit(anchorUnit) or nil
+    if not frame and MMF_GetFrameDefinition then
+        local def = MMF_GetFrameDefinition(anchorUnit)
+        if def and def.name then
+            frame = _G[def.name]
+        end
+    end
+    return frame
+end
+
+local function GetLiveCenterForUnit(unit)
+    local normalizedUnit = IsBossUnit(unit) and "boss" or unit
+    local frame = GetPositionAnchorFrameForUnit(unit)
+    local centerX, centerY = GetRelativeCenter(frame)
+    if centerX ~= nil and centerY ~= nil then
+        return centerX, centerY
+    end
+
+    if normalizedUnit == "boss" then
+        return nil, nil
+    end
+
+    local legacyPos = GetLegacyFramePositionForUnit(unit)
+    if frame and legacyPos then
+        centerX, centerY = GetRelativeCenterFromTopLeft(frame, legacyPos.left, legacyPos.top)
+        if centerX ~= nil and centerY ~= nil then
+            return centerX, centerY
+        end
+    end
+
+    return nil, nil
+end
+
 local function UpdateSingleFramePositionControl(control, value)
     if not control or not control.slider then
         return
@@ -459,8 +563,23 @@ local function UpdateFramePositionControlsForUnit(unit)
     end
 
     local defaultX, defaultY = GetDefaultCenterForUnit(normalizedUnit)
-    local valueX = tonumber(MattMinimalFramesDB and MattMinimalFramesDB[xKey]) or defaultX
-    local valueY = tonumber(MattMinimalFramesDB and MattMinimalFramesDB[yKey]) or defaultY
+    local valueX = tonumber(MattMinimalFramesDB and MattMinimalFramesDB[xKey])
+    local valueY = tonumber(MattMinimalFramesDB and MattMinimalFramesDB[yKey])
+
+    if HasLegacyFramePositionForUnit(normalizedUnit) then
+        local liveX, liveY = GetLiveCenterForUnit(normalizedUnit)
+        if liveX ~= nil and liveY ~= nil then
+            valueX = liveX
+            valueY = liveY
+        end
+    end
+
+    if valueX == nil then
+        valueX = defaultX
+    end
+    if valueY == nil then
+        valueY = defaultY
+    end
 
     UpdateSingleFramePositionControl(controls.x, valueX)
     UpdateSingleFramePositionControl(controls.y, valueY)
@@ -555,11 +674,49 @@ function MMF_ApplyAllFramePositions()
     end
 end
 
-function MMF_ApplyFrameCenterPositionForUnit(unit)
+function MMF_ApplyFrameCenterPositionForUnit(unit, changedAxis)
     if type(unit) ~= "string" or unit == "" then
         return
     end
     local normalizedUnit = IsBossUnit(unit) and "boss" or unit
+
+    if HasLegacyFramePositionForUnit(normalizedUnit) then
+        local liveX, liveY = GetLiveCenterForUnit(normalizedUnit)
+        if liveX ~= nil and liveY ~= nil then
+            local xKey, yKey = GetCenterKeysForUnit(normalizedUnit)
+            local storedX = tonumber(MattMinimalFramesDB and xKey and MattMinimalFramesDB[xKey])
+            local storedY = tonumber(MattMinimalFramesDB and yKey and MattMinimalFramesDB[yKey])
+
+            local nextX = liveX
+            local nextY = liveY
+            if changedAxis == "x" then
+                if storedX ~= nil then
+                    nextX = storedX
+                end
+            elseif changedAxis == "y" then
+                if storedY ~= nil then
+                    nextY = storedY
+                end
+            else
+                if storedX ~= nil then
+                    nextX = storedX
+                end
+                if storedY ~= nil then
+                    nextY = storedY
+                end
+            end
+
+            local didMove = math.abs((tonumber(nextX) or 0) - (tonumber(liveX) or 0)) > 0.0001
+                or math.abs((tonumber(nextY) or 0) - (tonumber(liveY) or 0)) > 0.0001
+            if not didMove then
+                UpdateFramePositionControlsForUnit(normalizedUnit)
+                return
+            end
+
+            SetStoredFrameCenter(normalizedUnit, nextX, nextY)
+        end
+    end
+
     ClearLegacyFramePositionForUnit(normalizedUnit)
     ApplyFramePositionByUnit(normalizedUnit)
     UpdateFramePositionControlsForUnit(normalizedUnit)

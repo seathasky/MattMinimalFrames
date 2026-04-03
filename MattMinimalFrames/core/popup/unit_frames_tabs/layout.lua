@@ -232,7 +232,7 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
             defaultX,
             function()
                 if MMF_ApplyFrameCenterPositionForUnit then
-                    MMF_ApplyFrameCenterPositionForUnit(opt.value)
+                    MMF_ApplyFrameCenterPositionForUnit(opt.value, "x")
                 end
             end,
             true,
@@ -240,7 +240,7 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
                 onReset = function()
                     MattMinimalFramesDB[xKey] = defaultX
                     if MMF_ApplyFrameCenterPositionForUnit then
-                        MMF_ApplyFrameCenterPositionForUnit(opt.value)
+                        MMF_ApplyFrameCenterPositionForUnit(opt.value, "x")
                     end
                 end,
                 isDefault = function()
@@ -266,7 +266,7 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
             defaultY,
             function()
                 if MMF_ApplyFrameCenterPositionForUnit then
-                    MMF_ApplyFrameCenterPositionForUnit(opt.value)
+                    MMF_ApplyFrameCenterPositionForUnit(opt.value, "y")
                 end
             end,
             true,
@@ -274,7 +274,7 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
                 onReset = function()
                     MattMinimalFramesDB[yKey] = defaultY
                     if MMF_ApplyFrameCenterPositionForUnit then
-                        MMF_ApplyFrameCenterPositionForUnit(opt.value)
+                        MMF_ApplyFrameCenterPositionForUnit(opt.value, "y")
                     end
                 end,
                 isDefault = function()
