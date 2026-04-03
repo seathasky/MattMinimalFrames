@@ -1639,6 +1639,9 @@ local function ApplyPowerTextPosition(frame, unit)
     end
 
     if frame.powerTextDragFrame and (unit == "player" or unit == "target") then
+        if frame.powerTextDragFrame.mmfDragInProgress then
+            return
+        end
         frame.powerTextDragFrame:ClearAllPoints()
         local pos = MattMinimalFramesDB and MattMinimalFramesDB.powerTextPositions and MattMinimalFramesDB.powerTextPositions[unit]
         if pos and pos.x and pos.y then
@@ -2014,12 +2017,14 @@ local function CreateResourceText(frame, unit)
 
         frame.powerTextDragFrame:SetScript("OnDragStart", function(self)
             if CanStartFrameDrag(self) then
+                self.mmfDragInProgress = true
                 self:StartMoving()
             end
         end)
 
         frame.powerTextDragFrame:SetScript("OnDragStop", function(self)
             if not TryStopFrameMoving(self) then
+                self.mmfDragInProgress = nil
                 return
             end
             local x, y = self:GetCenter()
@@ -2029,6 +2034,7 @@ local function CreateResourceText(frame, unit)
                 MattMinimalFramesDB.powerTextPositions = {}
             end
             MattMinimalFramesDB.powerTextPositions[unit] = { x = x - px, y = y - py }
+            self.mmfDragInProgress = nil
         end)
 
         frame.powerTextDragFrame:SetScript("OnEnter", function()
