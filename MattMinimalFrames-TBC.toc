@@ -1,0 +1,102 @@
+## Interface: 20505
+## Title: Matt's Minimal Frames
+## Author: Seathasky
+## Version: 7.3.6
+## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
+## SavedVariables: MattMinimalFramesDB, MattMinimalFramesProfilesDB, MattMinimalFramesGlobalDB
+## Notes: Minimal unit frames for TBC Anniversary
+
+# Libraries
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
+Libs\LibCustomGlow-1.0\LibCustomGlow-1.0.lua
+Libs\LibSharedMedia-3.0\LibSharedMedia-3.0.lua
+Libs\LibDispel-1.0\LibDispel.lua
+
+# Core modules
+core/compat.lua
+core/defaults.lua
+core/profiles.lua
+core/utilities.lua
+core/config.lua
+core/frame_factory.lua
+core/unit_updates.lua
+core/combat_queue.lua
+core/update_dispatcher.lua
+core/auras.lua
+core/frame_visibility.lua
+core/events.lua
+core/frames.lua
+
+# Popup: shared internals + shared widget controls
+core/popup/shared/constants.lua
+core/popup/shared/helpers.lua
+core/popup/widgets/checkbox.lua
+core/popup/widgets/slider.lua
+core/popup/widgets/color_picker.lua
+core/popup/widgets/dropdown.lua
+core/popup/widgets/sub_tab_bar.lua
+core/popup/widgets/refresh.lua
+
+# Popup: dialogs
+core/popup/shared/dialogs.lua
+
+# Popup: Unit Frames tab sections
+core/popup/unit_frames_tabs/layout.lua
+core/popup/unit_frames_tabs/text.lua
+core/popup/unit_frames_tabs/visibility.lua
+core/popup/unit_frames_tabs/offsets.lua
+core/popup/unit_frames_tabs/cast_bars.lua
+core/popup/unit_frames_tabs/ooc.lua
+core/popup/unit_frames_tabs/media.lua
+core/popup/unit_frames_tabs/icons.lua
+core/popup/unit_frames_tabs/overlays.lua
+
+# Popup: page builders
+core/popup/unit_frames/unit_frames_page.lua
+core/popup/party_raid/party_raid_page.lua
+core/popup/tools/reset.lua
+core/popup/tools/tools_page.lua
+core/popup/profiles/profiles_page.lua
+
+# Popup: Auras / Power tab sections
+core/popup/auras_power_tabs/power.lua
+core/popup/auras_power_tabs/player_auras.lua
+core/popup/auras_power_tabs/target_auras.lua
+core/popup/auras_power_tabs/filters.lua
+
+# Popup: remaining pages + shell
+core/popup/auras_power/auras_power_page.lua
+core/popup/current_class/current_class_page.lua
+core/popup/header/gui_scale_control.lua
+core/popup/header/edit_mode_popup.lua
+core/popup/header/tooltips.lua
+core/popup/header/title_branding.lua
+core/popup/header/title_bar_shell.lua
+core/popup/header/title_controls.lua
+core/popup/header/mode_controls.lua
+core/popup/header/constants.lua
+core/popup/header/layout.lua
+core/popup/header/actions.lua
+core/popup/header/popup_header.lua
+core/popup/footer/version.lua
+core/popup/footer/class_display.lua
+core/popup/footer/footer.lua
+core/popup/window.lua
+core/popup/content_shell.lua
+core/popup/page_frame.lua
+core/popup/scroll_controller.lua
+core/popup/inactive_fade.lua
+core/popup/navigation.lua
+core/popup/popup.lua
+
+# Other feature modules
+core/minimap.lua
+
+# Entrypoint + runtime feature modules
+init.lua
+core/range_check.lua
+core/class_resources.lua
+core/clique_support.lua
