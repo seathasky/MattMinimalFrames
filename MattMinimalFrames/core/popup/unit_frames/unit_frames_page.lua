@@ -74,7 +74,7 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
 
     local sectionDefs = {
         { label = "Layout", subtitle = "Scale and precise frame placement controls.", x = 0, y = 8, width = 560, height = 322, guide = "Use this page to change size and position.\nPick a frame in the dropdown, then adjust Scale X / Scale Y or Center X / Center Y." },
-        { label = "Text", subtitle = "Font sizes, truncation, HP text format, and name behavior.", x = 0, y = 98, width = 288, height = 392, maskTop = 12, guide = "Use this page to change how text looks.\nYou can adjust name text, health text, and text behavior." },
+        { label = "Text", subtitle = "Font sizes, truncation, HP text format, and name behavior.", x = 0, y = 98, width = 288, height = 430, maskTop = 12, guide = "Use this page to change how text looks.\nYou can adjust name text, health text, and text behavior." },
         { label = "Visibility", subtitle = "Choose when text and specific unit frames are shown.", x = 0, y = 410, width = 288, height = 300, guide = "Use this page to show or hide text and extra frames.\nGreat for player/target-only layouts." },
         { label = "Offsets", subtitle = "Adjust text positions for each supported unit.", x = 0, y = 544, width = 288, height = 262, guide = "Use this page to move text positions.\nGreat for fine-tuning alignment after sizing and text changes." },
         { label = "Cast Bars", subtitle = "Cast bar settings and offsets.", x = 300, y = 112, width = 288, height = 300, guide = "Use this page to enable cast bars.\nAdjust cast bar colors and frame-relative offsets." },

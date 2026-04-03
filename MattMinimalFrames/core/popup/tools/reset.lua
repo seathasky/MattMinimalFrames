@@ -60,6 +60,16 @@ function MMF_ResetPopupScaleAndTextToDefaults()
         MattMinimalFramesDB.showNameLevel = d.showNameLevel ~= false
         MattMinimalFramesDB.colorPlayerNameTextByClass = d.colorPlayerNameTextByClass == true
         MattMinimalFramesDB.colorNPCNameTextByReaction = d.colorNPCNameTextByReaction == true
+        MattMinimalFramesDB.textFormatUnit = d.textFormatUnit or "player"
+        local textPrefixes = { "player", "target", "tot", "pet", "focus", "boss" }
+        for _, prefix in ipairs(textPrefixes) do
+            MattMinimalFramesDB[prefix .. "HPTextUseShortValue"] = (d[prefix .. "HPTextUseShortValue"] ~= false)
+            MattMinimalFramesDB[prefix .. "ShowHPValueText"] = (d[prefix .. "ShowHPValueText"] ~= false)
+            MattMinimalFramesDB[prefix .. "ShowHPPercentText"] = (d[prefix .. "ShowHPPercentText"] == true)
+            MattMinimalFramesDB[prefix .. "ShowNameLevel"] = (d[prefix .. "ShowNameLevel"] == true)
+            MattMinimalFramesDB[prefix .. "ColorPlayerNameTextByClass"] = (d[prefix .. "ColorPlayerNameTextByClass"] == true)
+            MattMinimalFramesDB[prefix .. "ColorNPCNameTextByReaction"] = (d[prefix .. "ColorNPCNameTextByReaction"] == true)
+        end
         -- Power bar size
         MattMinimalFramesDB.showPlayerPowerBar = d.showPlayerPowerBar
         MattMinimalFramesDB.showTargetPowerBar = d.showTargetPowerBar

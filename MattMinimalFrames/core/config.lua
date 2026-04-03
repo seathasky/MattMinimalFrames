@@ -810,6 +810,54 @@ local function GetUnitPrefix(unit)
     return unit
 end
 
+function MMF_GetTextFormatUnitPrefix(unit)
+    return GetUnitPrefix(unit or "player")
+end
+
+local function GetPerUnitTextFormatToggle(unit, suffix, legacyKey, defaultValue)
+    if not MattMinimalFramesDB then
+        return defaultValue == true
+    end
+
+    local prefix = GetUnitPrefix(unit or "player")
+    local key = prefix .. suffix
+    local value = MattMinimalFramesDB[key]
+    if value ~= nil then
+        return value == true or value == 1
+    end
+
+    local legacy = MattMinimalFramesDB[legacyKey]
+    if legacy ~= nil then
+        return legacy == true or legacy == 1
+    end
+
+    return defaultValue == true
+end
+
+function MMF_GetShowHPValueText(unit)
+    return GetPerUnitTextFormatToggle(unit, "ShowHPValueText", "showHPValueText", true)
+end
+
+function MMF_GetShowHPPercentText(unit)
+    return GetPerUnitTextFormatToggle(unit, "ShowHPPercentText", "showHPPercentText", false)
+end
+
+function MMF_GetHPTextUseShortValue(unit)
+    return GetPerUnitTextFormatToggle(unit, "HPTextUseShortValue", "hpTextUseShortValue", true)
+end
+
+function MMF_GetColorPlayerNameTextByClass(unit)
+    return GetPerUnitTextFormatToggle(unit, "ColorPlayerNameTextByClass", "colorPlayerNameTextByClass", false)
+end
+
+function MMF_GetColorNPCNameTextByReaction(unit)
+    return GetPerUnitTextFormatToggle(unit, "ColorNPCNameTextByReaction", "colorNPCNameTextByReaction", false)
+end
+
+function MMF_GetShowNameLevel(unit)
+    return GetPerUnitTextFormatToggle(unit, "ShowNameLevel", "showNameLevel", false)
+end
+
 function MMF_GetNameTextSize(unit)
     if not MattMinimalFramesDB then return 12 end
     if unit then

@@ -677,7 +677,11 @@ local function ShouldShowLeaderIconForUnit(unit, db)
 end
 
 local function GetLevelSuffixForUnit(unit, db)
-    if db and db.showNameLevel == false then
+    local showNameLevel = (MMF_GetShowNameLevel and MMF_GetShowNameLevel(unit))
+    if showNameLevel == nil then
+        showNameLevel = not (db and db.showNameLevel == false)
+    end
+    if not showNameLevel then
         return ""
     end
     if unit ~= "player" and unit ~= "target" then
@@ -724,8 +728,22 @@ local function GetReactionColorForNameText(unit)
 end
 
 local function GetNameTextColor(unit, db)
-    local usePlayerClassColor = IsCheckedFlag(db and db.colorPlayerNameTextByClass)
-    local useNPCReactionColor = IsCheckedFlag(db and db.colorNPCNameTextByReaction)
+    local usePlayerClassColor = nil
+    if MMF_GetColorPlayerNameTextByClass then
+        usePlayerClassColor = MMF_GetColorPlayerNameTextByClass(unit)
+    end
+    if usePlayerClassColor == nil then
+        usePlayerClassColor = IsCheckedFlag(db and db.colorPlayerNameTextByClass)
+    end
+
+    local useNPCReactionColor = nil
+    if MMF_GetColorNPCNameTextByReaction then
+        useNPCReactionColor = MMF_GetColorNPCNameTextByReaction(unit)
+    end
+    if useNPCReactionColor == nil then
+        useNPCReactionColor = IsCheckedFlag(db and db.colorNPCNameTextByReaction)
+    end
+
     if not usePlayerClassColor and not useNPCReactionColor then
         return 1, 1, 1
     end
@@ -1375,18 +1393,36 @@ local function UpdateUnitFrame(frame)
             frame.hpText:Hide()
             if frame.hpTextDragFrame then frame.hpTextDragFrame:Hide() end
         elseif (previewMode or auraTestPreviewTarget) and not UnitExists(unit) then
-            local showHPValueText = (db.showHPValueText ~= false)
-            local showHPPercentText = (db.showHPPercentText == true)
-            local useShortHPValue = (db.hpTextUseShortValue ~= false)
+            local showHPValueText = MMF_GetShowHPValueText and MMF_GetShowHPValueText(unit)
+            if showHPValueText == nil then
+                showHPValueText = (db.showHPValueText ~= false)
+            end
+            local showHPPercentText = MMF_GetShowHPPercentText and MMF_GetShowHPPercentText(unit)
+            if showHPPercentText == nil then
+                showHPPercentText = (db.showHPPercentText == true)
+            end
+            local useShortHPValue = MMF_GetHPTextUseShortValue and MMF_GetHPTextUseShortValue(unit)
+            if useShortHPValue == nil then
+                useShortHPValue = (db.hpTextUseShortValue ~= false)
+            end
             frame.hpText:SetText(FormatPercentAndValue(999000, showHPPercentText, showHPValueText, useShortHPValue, "100%"))
             frame.hpText:Show()
             if frame.hpTextDragFrame then frame.hpTextDragFrame:Show() end
             healthPercentNormalized = 1
         else
             local hpPercentText = GetHealthPercentText(unit, hp, maxHP)
-            local showHPPercentText = (db.showHPPercentText == true)
-            local showHPValueText = (db.showHPValueText ~= false)
-            local useShortHPValue = (db.hpTextUseShortValue ~= false)
+            local showHPPercentText = MMF_GetShowHPPercentText and MMF_GetShowHPPercentText(unit)
+            if showHPPercentText == nil then
+                showHPPercentText = (db.showHPPercentText == true)
+            end
+            local showHPValueText = MMF_GetShowHPValueText and MMF_GetShowHPValueText(unit)
+            if showHPValueText == nil then
+                showHPValueText = (db.showHPValueText ~= false)
+            end
+            local useShortHPValue = MMF_GetHPTextUseShortValue and MMF_GetHPTextUseShortValue(unit)
+            if useShortHPValue == nil then
+                useShortHPValue = (db.hpTextUseShortValue ~= false)
+            end
             frame.hpText:SetText(FormatPercentAndValue(hp, showHPPercentText, showHPValueText, useShortHPValue, hpPercentText))
             frame.hpText:Show()
             if frame.hpTextDragFrame then frame.hpTextDragFrame:Show() end

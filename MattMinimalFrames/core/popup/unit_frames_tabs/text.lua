@@ -30,6 +30,20 @@ function MMF_BuildUnitFramesTextSection(ctx)
     textFormatSubtext:SetTextColor(0.65, 0.65, 0.7)
     textFormatSubtext:SetText("HP and name text format options")
 
+    local function RequestNameTextRefresh()
+        if MMF_RequestAllFramesUpdate then
+            MMF_RequestAllFramesUpdate()
+            return
+        end
+        if MMF_GetAllFrames and MMF_UpdateUnitFrame then
+            for _, frame in ipairs(MMF_GetAllFrames()) do
+                if frame then
+                    MMF_UpdateUnitFrame(frame)
+                end
+            end
+        end
+    end
+
     if MattMinimalFramesDB.showHPValueText == nil then
         MattMinimalFramesDB.showHPValueText = true
     end
@@ -48,11 +62,84 @@ function MMF_BuildUnitFramesTextSection(ctx)
     if MattMinimalFramesDB.showNameLevel == nil then
         MattMinimalFramesDB.showNameLevel = false
     end
+    MattMinimalFramesDB.textFormatUnit = MattMinimalFramesDB.textFormatUnit or "player"
+
+    local textFormatUnitOptions = {
+        { value = "player", label = "Player" },
+        { value = "target", label = "Target" },
+        { value = "targettarget", label = "Target of Target" },
+        { value = "pet", label = "Pet" },
+        { value = "focus", label = "Focus" },
+        { value = "boss", label = "Boss" },
+    }
+
+    local function IsValidTextFormatUnit(value)
+        for _, option in ipairs(textFormatUnitOptions) do
+            if option.value == value then
+                return true
+            end
+        end
+        return false
+    end
+
+    if not IsValidTextFormatUnit(MattMinimalFramesDB.textFormatUnit) then
+        MattMinimalFramesDB.textFormatUnit = "player"
+    end
+
+    local function GetTextFormatPrefix(unit)
+        if MMF_GetTextFormatUnitPrefix then
+            return MMF_GetTextFormatUnitPrefix(unit)
+        end
+        if unit == "targettarget" then return "tot" end
+        if unit == "boss" then return "boss" end
+        return unit or "player"
+    end
+
+    local function GetTextFormatKey(unit, suffix)
+        return GetTextFormatPrefix(unit) .. suffix
+    end
+
+    local function GetTextFormatToggle(unit, suffix, legacyKey, defaultValue)
+        local db = MattMinimalFramesDB or {}
+        local perUnitValue = db[GetTextFormatKey(unit, suffix)]
+        if perUnitValue ~= nil then
+            return perUnitValue == true
+        end
+        local legacyValue = db[legacyKey]
+        if legacyValue ~= nil then
+            return legacyValue == true
+        end
+        return defaultValue == true
+    end
+
+    local function ApplyTextFormatForUnit(unit)
+        if unit == "boss" and MMF_UpdateUnitFrame and MMF_GetFrameForUnit then
+            for i = 1, 5 do
+                local frame = MMF_GetFrameForUnit("boss" .. i)
+                if frame then
+                    MMF_UpdateUnitFrame(frame)
+                end
+            end
+            return
+        end
+        if MMF_UpdateUnitFrame and MMF_GetFrameForUnit then
+            local frame = MMF_GetFrameForUnit(unit)
+            if frame then
+                MMF_UpdateUnitFrame(frame)
+                return
+            end
+        end
+        RequestNameTextRefresh()
+    end
 
     local hpValueCheckbox
     local hpShortValueCheckbox
+    local hpPercentCheckbox
+    local nameClassCheckbox
+    local nameReactionCheckbox
+    local nameLevelCheckbox
 
-    local function SetCheckboxEnabled(checkboxContainer, enabled)
+    local function SetFormatCheckboxEnabled(checkboxContainer, enabled)
         if not checkboxContainer then return end
         checkboxContainer:SetAlpha(enabled and 1 or 0.45)
         if checkboxContainer.checkbox then
@@ -67,22 +154,277 @@ function MMF_BuildUnitFramesTextSection(ctx)
         end
     end
 
-    local function RefreshHPTextFormatCheckboxStates()
-        local showValue = (MattMinimalFramesDB.showHPValueText ~= false)
-        SetCheckboxEnabled(hpShortValueCheckbox, showValue)
+    local function SetCheckboxVisualState(container, checked)
+        if not container or not container.checkbox then return end
+        container.checkbox:SetChecked(checked == true)
+        if container.checkbox.check then
+            container.checkbox.check:SetShown(container.checkbox:GetChecked())
+        end
+        if container.RefreshResetVisibility then
+            container:RefreshResetVisibility()
+        end
     end
 
-    hpValueCheckbox = CreateMinimalCheckbox(unitFramesCol, "HP Text: Value", LEFT_COL_X, -338, "showHPValueText", true, function()
+    local function RefreshTextFormatCheckboxesFromDB()
+        local unit = MattMinimalFramesDB.textFormatUnit or "player"
+        SetCheckboxVisualState(hpValueCheckbox, GetTextFormatToggle(unit, "ShowHPValueText", "showHPValueText", true))
+        SetCheckboxVisualState(hpShortValueCheckbox, GetTextFormatToggle(unit, "HPTextUseShortValue", "hpTextUseShortValue", true))
+        SetCheckboxVisualState(hpPercentCheckbox, GetTextFormatToggle(unit, "ShowHPPercentText", "showHPPercentText", false))
+        SetCheckboxVisualState(nameClassCheckbox, GetTextFormatToggle(unit, "ColorPlayerNameTextByClass", "colorPlayerNameTextByClass", false))
+        SetCheckboxVisualState(nameReactionCheckbox, GetTextFormatToggle(unit, "ColorNPCNameTextByReaction", "colorNPCNameTextByReaction", false))
+        SetCheckboxVisualState(nameLevelCheckbox, GetTextFormatToggle(unit, "ShowNameLevel", "showNameLevel", false))
+    end
+
+    local function RefreshHPTextFormatCheckboxStates()
+        local unit = MattMinimalFramesDB.textFormatUnit or "player"
+        local showValue = GetTextFormatToggle(unit, "ShowHPValueText", "showHPValueText", true)
+        SetFormatCheckboxEnabled(hpShortValueCheckbox, showValue)
+    end
+
+    local function BuildTextFormatUnitOptions()
+        local out = {}
+        for _, option in ipairs(textFormatUnitOptions) do
+            out[#out + 1] = { value = option.value, label = option.label }
+        end
+        return out
+    end
+
+    local textFormatUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
+        accentColor = ACCENT_COLOR,
+        settingKey = "textFormatUnit",
+        x = LEFT_COL_X,
+        y = -330,
+        width = LEFT_COL_WIDTH,
+        labelWidth = LEFT_LABEL_WIDTH,
+        buttonOffset = LEFT_BUTTON_OFFSET,
+        buttonWidth = LEFT_BUTTON_WIDTH,
+        visibleRows = #textFormatUnitOptions,
+        label = "Format Unit",
+        options = BuildTextFormatUnitOptions(),
+        getValue = function()
+            return MattMinimalFramesDB.textFormatUnit
+        end,
+        onSelect = function(value)
+            MattMinimalFramesDB.textFormatUnit = value
+            RefreshTextFormatCheckboxesFromDB()
+            RefreshHPTextFormatCheckboxStates()
+        end,
+    })
+    dropdownLists.textFormatUnitList = textFormatUnitDropdown.list
+
+    hpValueCheckbox = CreateMinimalCheckbox(unitFramesCol, "HP Text: Value", LEFT_COL_X, -366, "__tempShowHPValueText", true, function(checked)
+        local unit = MattMinimalFramesDB.textFormatUnit or "player"
+        MattMinimalFramesDB[GetTextFormatKey(unit, "ShowHPValueText")] = checked and true or false
+        MattMinimalFramesDB.__tempShowHPValueText = nil
         RefreshHPTextFormatCheckboxStates()
         RefreshPredictionVisuals()
-    end)
-    hpShortValueCheckbox = CreateMinimalCheckbox(unitFramesCol, "HP Text: Short Value (K/M)", LEFT_COL_X, -362, "hpTextUseShortValue", true, function()
-        RefreshPredictionVisuals()
-    end)
-    CreateMinimalCheckbox(unitFramesCol, "HP Text: %", LEFT_COL_X, -386, "showHPPercentText", true, function()
-        RefreshPredictionVisuals()
-    end)
+        ApplyTextFormatForUnit(unit)
+    end, {
+        isDefault = function()
+            local db = MattMinimalFramesDB or {}
+            local defaults = MattMinimalFrames_Defaults or {}
+            local unit = db.textFormatUnit or "player"
+            local key = GetTextFormatKey(unit, "ShowHPValueText")
+            local defaultValue = defaults[key]
+            if defaultValue == nil then
+                defaultValue = defaults.showHPValueText
+            end
+            return GetTextFormatToggle(unit, "ShowHPValueText", "showHPValueText", defaultValue ~= false) == (defaultValue == true)
+        end,
+        onReset = function()
+            local db = MattMinimalFramesDB or {}
+            local defaults = MattMinimalFrames_Defaults or {}
+            local unit = db.textFormatUnit or "player"
+            local key = GetTextFormatKey(unit, "ShowHPValueText")
+            local defaultValue = defaults[key]
+            if defaultValue == nil then
+                defaultValue = defaults.showHPValueText
+            end
+            db[key] = defaultValue == true
+            db.__tempShowHPValueText = nil
+            RefreshTextFormatCheckboxesFromDB()
+            RefreshHPTextFormatCheckboxStates()
+            RefreshPredictionVisuals()
+            ApplyTextFormatForUnit(unit)
+        end,
+    })
 
+    hpShortValueCheckbox = CreateMinimalCheckbox(unitFramesCol, "HP Text: Short Value (K/M)", LEFT_COL_X, -390, "__tempHPTextUseShortValue", true, function(checked)
+        local unit = MattMinimalFramesDB.textFormatUnit or "player"
+        MattMinimalFramesDB[GetTextFormatKey(unit, "HPTextUseShortValue")] = checked and true or false
+        MattMinimalFramesDB.__tempHPTextUseShortValue = nil
+        RefreshPredictionVisuals()
+        ApplyTextFormatForUnit(unit)
+    end, {
+        isDefault = function()
+            local db = MattMinimalFramesDB or {}
+            local defaults = MattMinimalFrames_Defaults or {}
+            local unit = db.textFormatUnit or "player"
+            local key = GetTextFormatKey(unit, "HPTextUseShortValue")
+            local defaultValue = defaults[key]
+            if defaultValue == nil then
+                defaultValue = defaults.hpTextUseShortValue
+            end
+            return GetTextFormatToggle(unit, "HPTextUseShortValue", "hpTextUseShortValue", defaultValue ~= false) == (defaultValue == true)
+        end,
+        onReset = function()
+            local db = MattMinimalFramesDB or {}
+            local defaults = MattMinimalFrames_Defaults or {}
+            local unit = db.textFormatUnit or "player"
+            local key = GetTextFormatKey(unit, "HPTextUseShortValue")
+            local defaultValue = defaults[key]
+            if defaultValue == nil then
+                defaultValue = defaults.hpTextUseShortValue
+            end
+            db[key] = defaultValue == true
+            db.__tempHPTextUseShortValue = nil
+            RefreshTextFormatCheckboxesFromDB()
+            RefreshPredictionVisuals()
+            ApplyTextFormatForUnit(unit)
+        end,
+    })
+
+    hpPercentCheckbox = CreateMinimalCheckbox(unitFramesCol, "HP Text: %", LEFT_COL_X, -414, "__tempShowHPPercentText", false, function(checked)
+        local unit = MattMinimalFramesDB.textFormatUnit or "player"
+        MattMinimalFramesDB[GetTextFormatKey(unit, "ShowHPPercentText")] = checked and true or false
+        MattMinimalFramesDB.__tempShowHPPercentText = nil
+        RefreshPredictionVisuals()
+        ApplyTextFormatForUnit(unit)
+    end, {
+        isDefault = function()
+            local db = MattMinimalFramesDB or {}
+            local defaults = MattMinimalFrames_Defaults or {}
+            local unit = db.textFormatUnit or "player"
+            local key = GetTextFormatKey(unit, "ShowHPPercentText")
+            local defaultValue = defaults[key]
+            if defaultValue == nil then
+                defaultValue = defaults.showHPPercentText
+            end
+            return GetTextFormatToggle(unit, "ShowHPPercentText", "showHPPercentText", defaultValue == true) == (defaultValue == true)
+        end,
+        onReset = function()
+            local db = MattMinimalFramesDB or {}
+            local defaults = MattMinimalFrames_Defaults or {}
+            local unit = db.textFormatUnit or "player"
+            local key = GetTextFormatKey(unit, "ShowHPPercentText")
+            local defaultValue = defaults[key]
+            if defaultValue == nil then
+                defaultValue = defaults.showHPPercentText
+            end
+            db[key] = defaultValue == true
+            db.__tempShowHPPercentText = nil
+            RefreshTextFormatCheckboxesFromDB()
+            RefreshPredictionVisuals()
+            ApplyTextFormatForUnit(unit)
+        end,
+    })
+
+    nameClassCheckbox = CreateMinimalCheckbox(unitFramesCol, "Name Text: Player Class", LEFT_COL_X, -438, "__tempColorPlayerNameTextByClass", false, function(checked)
+        local unit = MattMinimalFramesDB.textFormatUnit or "player"
+        MattMinimalFramesDB[GetTextFormatKey(unit, "ColorPlayerNameTextByClass")] = checked and true or false
+        MattMinimalFramesDB.__tempColorPlayerNameTextByClass = nil
+        ApplyTextFormatForUnit(unit)
+    end, {
+        isDefault = function()
+            local db = MattMinimalFramesDB or {}
+            local defaults = MattMinimalFrames_Defaults or {}
+            local unit = db.textFormatUnit or "player"
+            local key = GetTextFormatKey(unit, "ColorPlayerNameTextByClass")
+            local defaultValue = defaults[key]
+            if defaultValue == nil then
+                defaultValue = defaults.colorPlayerNameTextByClass
+            end
+            return GetTextFormatToggle(unit, "ColorPlayerNameTextByClass", "colorPlayerNameTextByClass", defaultValue == true) == (defaultValue == true)
+        end,
+        onReset = function()
+            local db = MattMinimalFramesDB or {}
+            local defaults = MattMinimalFrames_Defaults or {}
+            local unit = db.textFormatUnit or "player"
+            local key = GetTextFormatKey(unit, "ColorPlayerNameTextByClass")
+            local defaultValue = defaults[key]
+            if defaultValue == nil then
+                defaultValue = defaults.colorPlayerNameTextByClass
+            end
+            db[key] = defaultValue == true
+            db.__tempColorPlayerNameTextByClass = nil
+            RefreshTextFormatCheckboxesFromDB()
+            ApplyTextFormatForUnit(unit)
+        end,
+    })
+
+    nameReactionCheckbox = CreateMinimalCheckbox(unitFramesCol, "Name Text: NPC Reaction", LEFT_COL_X, -462, "__tempColorNPCNameTextByReaction", false, function(checked)
+        local unit = MattMinimalFramesDB.textFormatUnit or "player"
+        MattMinimalFramesDB[GetTextFormatKey(unit, "ColorNPCNameTextByReaction")] = checked and true or false
+        MattMinimalFramesDB.__tempColorNPCNameTextByReaction = nil
+        ApplyTextFormatForUnit(unit)
+    end, {
+        isDefault = function()
+            local db = MattMinimalFramesDB or {}
+            local defaults = MattMinimalFrames_Defaults or {}
+            local unit = db.textFormatUnit or "player"
+            local key = GetTextFormatKey(unit, "ColorNPCNameTextByReaction")
+            local defaultValue = defaults[key]
+            if defaultValue == nil then
+                defaultValue = defaults.colorNPCNameTextByReaction
+            end
+            return GetTextFormatToggle(unit, "ColorNPCNameTextByReaction", "colorNPCNameTextByReaction", defaultValue == true) == (defaultValue == true)
+        end,
+        onReset = function()
+            local db = MattMinimalFramesDB or {}
+            local defaults = MattMinimalFrames_Defaults or {}
+            local unit = db.textFormatUnit or "player"
+            local key = GetTextFormatKey(unit, "ColorNPCNameTextByReaction")
+            local defaultValue = defaults[key]
+            if defaultValue == nil then
+                defaultValue = defaults.colorNPCNameTextByReaction
+            end
+            db[key] = defaultValue == true
+            db.__tempColorNPCNameTextByReaction = nil
+            RefreshTextFormatCheckboxesFromDB()
+            ApplyTextFormatForUnit(unit)
+        end,
+    })
+
+    nameLevelCheckbox = CreateMinimalCheckbox(unitFramesCol, "Name Text: Level (P/T)", LEFT_COL_X, -486, "__tempShowNameLevel", false, function(checked)
+        local unit = MattMinimalFramesDB.textFormatUnit or "player"
+        MattMinimalFramesDB[GetTextFormatKey(unit, "ShowNameLevel")] = checked and true or false
+        MattMinimalFramesDB.__tempShowNameLevel = nil
+        ApplyTextFormatForUnit(unit)
+    end, {
+        isDefault = function()
+            local db = MattMinimalFramesDB or {}
+            local defaults = MattMinimalFrames_Defaults or {}
+            local unit = db.textFormatUnit or "player"
+            local key = GetTextFormatKey(unit, "ShowNameLevel")
+            local defaultValue = defaults[key]
+            if defaultValue == nil then
+                defaultValue = defaults.showNameLevel
+            end
+            return GetTextFormatToggle(unit, "ShowNameLevel", "showNameLevel", defaultValue == true) == (defaultValue == true)
+        end,
+        onReset = function()
+            local db = MattMinimalFramesDB or {}
+            local defaults = MattMinimalFrames_Defaults or {}
+            local unit = db.textFormatUnit or "player"
+            local key = GetTextFormatKey(unit, "ShowNameLevel")
+            local defaultValue = defaults[key]
+            if defaultValue == nil then
+                defaultValue = defaults.showNameLevel
+            end
+            db[key] = defaultValue == true
+            db.__tempShowNameLevel = nil
+            RefreshTextFormatCheckboxesFromDB()
+            ApplyTextFormatForUnit(unit)
+        end,
+    })
+
+    MattMinimalFramesDB.__tempShowHPValueText = nil
+    MattMinimalFramesDB.__tempHPTextUseShortValue = nil
+    MattMinimalFramesDB.__tempShowHPPercentText = nil
+    MattMinimalFramesDB.__tempColorPlayerNameTextByClass = nil
+    MattMinimalFramesDB.__tempColorNPCNameTextByReaction = nil
+    MattMinimalFramesDB.__tempShowNameLevel = nil
+    RefreshTextFormatCheckboxesFromDB()
     RefreshHPTextFormatCheckboxStates()
 
     local frameTextTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
@@ -90,30 +432,6 @@ function MMF_BuildUnitFramesTextSection(ctx)
     frameTextTitle:SetPoint("TOPLEFT", LEFT_COL_X, -104)
     frameTextTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
     frameTextTitle:SetText("FRAME TEXT")
-
-    local function RequestNameTextRefresh()
-        if MMF_RequestAllFramesUpdate then
-            MMF_RequestAllFramesUpdate()
-            return
-        end
-        if MMF_GetAllFrames and MMF_UpdateUnitFrame then
-            for _, frame in ipairs(MMF_GetAllFrames()) do
-                if frame then
-                    MMF_UpdateUnitFrame(frame)
-                end
-            end
-        end
-    end
-
-    CreateMinimalCheckbox(unitFramesCol, "Name Text: Player Class", LEFT_COL_X, -410, "colorPlayerNameTextByClass", false, function()
-        RequestNameTextRefresh()
-    end)
-    CreateMinimalCheckbox(unitFramesCol, "Name Text: NPC Reaction", LEFT_COL_X, -434, "colorNPCNameTextByReaction", false, function()
-        RequestNameTextRefresh()
-    end)
-    CreateMinimalCheckbox(unitFramesCol, "Name Text: Level (Player/Target)", LEFT_COL_X, -458, "showNameLevel", false, function()
-        RequestNameTextRefresh()
-    end)
 
     local function GetTextSizePrefix(unit)
         if unit == nil then return "player" end

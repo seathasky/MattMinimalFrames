@@ -54,6 +54,16 @@ local VALID_TEXT_SIZE_UNITS = {
     boss = true,
     playerCastBar = true,
     targetCastBar = true,
+    focusCastBar = true,
+}
+
+local VALID_TEXT_FORMAT_UNITS = {
+    player = true,
+    target = true,
+    targettarget = true,
+    pet = true,
+    focus = true,
+    boss = true,
 }
 
 local function SanitizeProfileTextSettings(profile)
@@ -103,6 +113,53 @@ local function SanitizeProfileTextSettings(profile)
 
     if type(profile.textSizeUnit) ~= "string" or not VALID_TEXT_SIZE_UNITS[profile.textSizeUnit] then
         profile.textSizeUnit = "player"
+    end
+    if type(profile.textFormatUnit) ~= "string" or not VALID_TEXT_FORMAT_UNITS[profile.textFormatUnit] then
+        profile.textFormatUnit = "player"
+    end
+
+    local perUnitTextFormatKeys = {
+        "playerHPTextUseShortValue",
+        "targetHPTextUseShortValue",
+        "totHPTextUseShortValue",
+        "petHPTextUseShortValue",
+        "focusHPTextUseShortValue",
+        "bossHPTextUseShortValue",
+        "playerShowHPValueText",
+        "targetShowHPValueText",
+        "totShowHPValueText",
+        "petShowHPValueText",
+        "focusShowHPValueText",
+        "bossShowHPValueText",
+        "playerShowHPPercentText",
+        "targetShowHPPercentText",
+        "totShowHPPercentText",
+        "petShowHPPercentText",
+        "focusShowHPPercentText",
+        "bossShowHPPercentText",
+        "playerShowNameLevel",
+        "targetShowNameLevel",
+        "totShowNameLevel",
+        "petShowNameLevel",
+        "focusShowNameLevel",
+        "bossShowNameLevel",
+        "playerColorPlayerNameTextByClass",
+        "targetColorPlayerNameTextByClass",
+        "totColorPlayerNameTextByClass",
+        "petColorPlayerNameTextByClass",
+        "focusColorPlayerNameTextByClass",
+        "bossColorPlayerNameTextByClass",
+        "playerColorNPCNameTextByReaction",
+        "targetColorNPCNameTextByReaction",
+        "totColorNPCNameTextByReaction",
+        "petColorNPCNameTextByReaction",
+        "focusColorNPCNameTextByReaction",
+        "bossColorNPCNameTextByReaction",
+    }
+    for _, key in ipairs(perUnitTextFormatKeys) do
+        if profile[key] ~= nil then
+            profile[key] = NormalizeToggle(profile[key])
+        end
     end
 
     local hideTextKeys = {
