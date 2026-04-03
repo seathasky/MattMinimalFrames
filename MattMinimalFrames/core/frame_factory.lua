@@ -1237,6 +1237,17 @@ local function GetDragHintText()
     return "Shift+Drag to move"
 end
 
+local function TryStopFrameMoving(frame)
+    if not frame or not frame.IsMovable or not frame:IsMovable() then
+        return false
+    end
+    if InCombatLockdown and InCombatLockdown() then
+        return false
+    end
+    frame:StopMovingOrSizing()
+    return true
+end
+
 local function CreateDragHandlers(frame, frameName)
     frame:SetScript("OnDragStart", function(self)
         if CanStartFrameDrag(self) then
@@ -1246,21 +1257,23 @@ local function CreateDragHandlers(frame, frameName)
     end)
 
     frame:SetScript("OnDragStop", function(self)
-        if self:IsMovable() then
-            self:StopMovingOrSizing()
-            SaveFramePosition(self, frameName)
-            self.mmfSuppressClickPopup = true
-            if C_Timer and C_Timer.After then
-                C_Timer.After(0.05, function()
-                    if self then
-                        self.mmfSuppressClickPopup = nil
-                        self.mmfDragInProgress = nil
-                    end
-                end)
-            else
-                self.mmfSuppressClickPopup = nil
-                self.mmfDragInProgress = nil
-            end
+        if not TryStopFrameMoving(self) then
+            self.mmfDragInProgress = nil
+            return
+        end
+
+        SaveFramePosition(self, frameName)
+        self.mmfSuppressClickPopup = true
+        if C_Timer and C_Timer.After then
+            C_Timer.After(0.05, function()
+                if self then
+                    self.mmfSuppressClickPopup = nil
+                    self.mmfDragInProgress = nil
+                end
+            end)
+        else
+            self.mmfSuppressClickPopup = nil
+            self.mmfDragInProgress = nil
         end
     end)
 
@@ -1543,7 +1556,9 @@ local function SetupPowerBar(frame, unit)
     end)
 
     frame.powerBarFrame:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
+        if not TryStopFrameMoving(self) then
+            return
+        end
         local x, y = self:GetCenter()
         local px, py = frame:GetCenter()
         if not MattMinimalFramesDB.powerBarPositions then
@@ -1940,7 +1955,9 @@ local function CreateResourceText(frame, unit)
         end)
 
         frame.hpTextDragFrame:SetScript("OnDragStop", function(self)
-            self:StopMovingOrSizing()
+            if not TryStopFrameMoving(self) then
+                return
+            end
             local left = self:GetLeft()
             local right = self:GetRight()
             local bottom = self:GetBottom()
@@ -2001,7 +2018,9 @@ local function CreateResourceText(frame, unit)
         end)
 
         frame.powerTextDragFrame:SetScript("OnDragStop", function(self)
-            self:StopMovingOrSizing()
+            if not TryStopFrameMoving(self) then
+                return
+            end
             local x, y = self:GetCenter()
             local px, py = frame:GetCenter()
             if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
@@ -2672,7 +2691,9 @@ local function CreateCastBar(frame, unit)
     end)
 
     frame.castBarFrame:SetScript("OnDragStop", function(self)
-        self:StopMovingOrSizing()
+        if not TryStopFrameMoving(self) then
+            return
+        end
         SaveCastBarPosition(frame, unit)
     end)
 
