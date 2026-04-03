@@ -112,6 +112,10 @@ local function EnsurePetActionBarEditBackdrop(frame)
     end)
 
     backdrop:SetScript("OnDragStop", function(self)
+        if InCombatLockdown and InCombatLockdown() then
+            self.mmfDragInProgress = nil
+            return
+        end
         frame:StopMovingOrSizing()
         SavePetActionBarPosition(frame)
         self.mmfDragInProgress = nil
@@ -144,6 +148,9 @@ local function EnsurePetActionBarMover()
     end)
 
     frame:HookScript("OnDragStop", function(self)
+        if InCombatLockdown and InCombatLockdown() then
+            return
+        end
         self:StopMovingOrSizing()
         SavePetActionBarPosition(self)
     end)

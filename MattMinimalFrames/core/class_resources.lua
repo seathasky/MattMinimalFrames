@@ -467,6 +467,9 @@ local function CreateBaseResourceBar(frameName, prefix, moveLabel, color, numRun
         end
     end)
     frame:SetScript("OnDragStop", function(self)
+        if InCombatLockdown and InCombatLockdown() then
+            return
+        end
         self:StopMovingOrSizing()
         SaveCenterOffsets(self, self.mmfLayoutKey)
     end)
