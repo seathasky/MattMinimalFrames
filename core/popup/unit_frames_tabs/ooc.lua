@@ -27,6 +27,12 @@ function MMF_BuildUnitFramesOOCSection(ctx)
     if MattMinimalFramesDB.combatVisibilityFadeTime == nil then
         MattMinimalFramesDB.combatVisibilityFadeTime = 0.4
     end
+    if MattMinimalFramesDB.hideCurrentClassBarOOCNoTarget == nil then
+        MattMinimalFramesDB.hideCurrentClassBarOOCNoTarget = false
+    end
+    if MattMinimalFramesDB.outOfCombatClassBarOpacity == nil then
+        MattMinimalFramesDB.outOfCombatClassBarOpacity = 1.0
+    end
     if MMF_GetOutOfCombatTargetOpacity then
         MattMinimalFramesDB.outOfCombatTargetOpacity = MMF_GetOutOfCombatTargetOpacity()
     end
@@ -61,6 +67,8 @@ function MMF_BuildUnitFramesOOCSection(ctx)
     local targetOpacitySlider
     local fadeTimeSlider
     local showPlayerOnTargetCheck
+    local hideCurrentClassBarOOCCheck
+    local classBarOpacitySlider
 
     local function SetSliderEnabled(container, enabled)
         if not container then return end
@@ -116,21 +124,34 @@ function MMF_BuildUnitFramesOOCSection(ctx)
         end
     end)
 
-    playerOpacitySlider = CreateMinimalSlider(unitFramesCol, "Player OOC Opacity", MIDDLE_COL_X, -394 + RIGHT_COL_Y_OFFSET, MIDDLE_COL_WIDTH, "outOfCombatPlayerOpacity", 0.0, 1.0, 0.05, 0.0, function(value)
+    hideCurrentClassBarOOCCheck = CreateMinimalCheckbox(unitFramesCol, "Hide Current Class Bar OOC (No Target)", MIDDLE_COL_X, -394 + RIGHT_COL_Y_OFFSET, "hideCurrentClassBarOOCNoTarget", false, function()
+        if MMF_RefreshClassResourceVisibility then
+            MMF_RefreshClassResourceVisibility()
+        end
+    end)
+
+    classBarOpacitySlider = CreateMinimalSlider(unitFramesCol, "Class Bar OOC Opacity", MIDDLE_COL_X, -418 + RIGHT_COL_Y_OFFSET, MIDDLE_COL_WIDTH, "outOfCombatClassBarOpacity", 0.0, 1.0, 0.05, 1.0, function(value)
+        MattMinimalFramesDB.outOfCombatClassBarOpacity = value
+        if MMF_RefreshClassResourceVisibility then
+            MMF_RefreshClassResourceVisibility()
+        end
+    end, false)
+
+    playerOpacitySlider = CreateMinimalSlider(unitFramesCol, "Player OOC Opacity", MIDDLE_COL_X, -442 + RIGHT_COL_Y_OFFSET, MIDDLE_COL_WIDTH, "outOfCombatPlayerOpacity", 0.0, 1.0, 0.05, 0.0, function(value)
         MattMinimalFramesDB.outOfCombatPlayerOpacity = value
         if MMF_UpdateCombatFrameVisibility then
             MMF_UpdateCombatFrameVisibility()
         end
     end, false)
 
-    targetOpacitySlider = CreateMinimalSlider(unitFramesCol, "Target/TOT OOC Opacity", MIDDLE_COL_X, -418 + RIGHT_COL_Y_OFFSET, MIDDLE_COL_WIDTH, "outOfCombatTargetOpacity", 0.0, 1.0, 0.05, 0.35, function(value)
+    targetOpacitySlider = CreateMinimalSlider(unitFramesCol, "Target/TOT OOC Opacity", MIDDLE_COL_X, -466 + RIGHT_COL_Y_OFFSET, MIDDLE_COL_WIDTH, "outOfCombatTargetOpacity", 0.0, 1.0, 0.05, 0.35, function(value)
         MattMinimalFramesDB.outOfCombatTargetOpacity = value
         if MMF_UpdateCombatFrameVisibility then
             MMF_UpdateCombatFrameVisibility()
         end
     end, false)
 
-    fadeTimeSlider = CreateMinimalSlider(unitFramesCol, "OOC Fade Time", MIDDLE_COL_X, -442 + RIGHT_COL_Y_OFFSET, MIDDLE_COL_WIDTH, "combatVisibilityFadeTime", 0.0, 2.0, 0.05, 0.4, function(value)
+    fadeTimeSlider = CreateMinimalSlider(unitFramesCol, "OOC Fade Time", MIDDLE_COL_X, -490 + RIGHT_COL_Y_OFFSET, MIDDLE_COL_WIDTH, "combatVisibilityFadeTime", 0.0, 2.0, 0.05, 0.4, function(value)
         MattMinimalFramesDB.combatVisibilityFadeTime = value
         if MMF_UpdateCombatFrameVisibility then
             MMF_UpdateCombatFrameVisibility()

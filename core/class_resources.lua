@@ -148,6 +148,7 @@ local MMF_SoulShardBar
 local MMF_ChiBar
 local MMF_ArcaneChargeBar
 local MMF_EssenceBar
+local classResourceVisibilityEventFrame
 
 local SafeEq
 local SafeNe
@@ -874,30 +875,87 @@ local function ShouldShowResourceBar(prefix)
         return false
     end
 
+    local shouldShow = false
     if prefix == "runeBar" then
-        return playerClass == "DEATHKNIGHT" and MattMinimalFramesDB.showRuneBar == true
+        shouldShow = playerClass == "DEATHKNIGHT" and MattMinimalFramesDB.showRuneBar == true
     elseif prefix == "holyPowerBar" then
-        return playerClass == "PALADIN" and MattMinimalFramesDB.showHolyPowerBar == true
+        shouldShow = playerClass == "PALADIN" and MattMinimalFramesDB.showHolyPowerBar == true
     elseif prefix == "comboPointBar" then
         if not ((playerClass == "ROGUE" or playerClass == "DRUID") and MattMinimalFramesDB.showComboPointBar == true) then
             return false
         end
         if playerClass == "DRUID" then
             local _, powerToken = UnitPowerType("player")
-            return powerToken == "ENERGY"
+            shouldShow = powerToken == "ENERGY"
+        else
+            shouldShow = true
         end
-        return true
     elseif prefix == "soulShardBar" then
-        return playerClass == "WARLOCK" and MattMinimalFramesDB.showSoulShardBar == true
+        shouldShow = playerClass == "WARLOCK" and MattMinimalFramesDB.showSoulShardBar == true
     elseif prefix == "chiBar" then
-        return playerClass == "MONK" and MattMinimalFramesDB.showChiBar == true
+        shouldShow = playerClass == "MONK" and MattMinimalFramesDB.showChiBar == true
     elseif prefix == "arcaneChargeBar" then
-        return playerClass == "MAGE" and MattMinimalFramesDB.showArcaneChargeBar == true and IsArcaneSpec()
+        shouldShow = playerClass == "MAGE" and MattMinimalFramesDB.showArcaneChargeBar == true and IsArcaneSpec()
     elseif prefix == "essenceBar" then
-        return playerClass == "EVOKER" and MattMinimalFramesDB.showEssenceBar == true
+        shouldShow = playerClass == "EVOKER" and MattMinimalFramesDB.showEssenceBar == true
     end
 
-    return false
+    if not shouldShow then
+        return false
+    end
+
+    if MattMinimalFramesDB.hideCurrentClassBarOOCNoTarget == true then
+        local inCombat = (type(InCombatLockdown) == "function") and InCombatLockdown() or false
+        local hasTarget = (type(UnitExists) == "function") and UnitExists("target") or false
+        if (not inCombat) and (not hasTarget) then
+            return false
+        end
+    end
+
+    return true
+end
+
+local function GetClassBarOutOfCombatOpacity()
+    if not MattMinimalFramesDB then
+        return 1
+    end
+    local alpha = tonumber(MattMinimalFramesDB.outOfCombatClassBarOpacity)
+    if not alpha then
+        alpha = 1
+    end
+    if alpha < 0 then
+        alpha = 0
+    elseif alpha > 1 then
+        alpha = 1
+    end
+    MattMinimalFramesDB.outOfCombatClassBarOpacity = math.floor((alpha * 100) + 0.5) / 100
+    return MattMinimalFramesDB.outOfCombatClassBarOpacity
+end
+
+local function GetClassBarEffectiveAlpha()
+    local inCombat = (type(InCombatLockdown) == "function") and InCombatLockdown() or false
+    if inCombat then
+        return 1
+    end
+    return GetClassBarOutOfCombatOpacity()
+end
+
+local function EnsureClassResourceVisibilityEvents()
+    if classResourceVisibilityEventFrame then
+        return
+    end
+
+    classResourceVisibilityEventFrame = CreateFrame("Frame")
+    classResourceVisibilityEventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    classResourceVisibilityEventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
+    classResourceVisibilityEventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
+    classResourceVisibilityEventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
+    classResourceVisibilityEventFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+    classResourceVisibilityEventFrame:SetScript("OnEvent", function()
+        if MMF_RefreshClassResourceVisibility then
+            MMF_RefreshClassResourceVisibility()
+        end
+    end)
 end
 
 function MMF_RefreshClassResourceVisibility()
@@ -913,7 +971,11 @@ function MMF_RefreshClassResourceVisibility()
 
     for prefix, frame in pairs(frameByPrefix) do
         if frame then
-            frame:SetShown(ShouldShowResourceBar(prefix))
+            local shouldShow = ShouldShowResourceBar(prefix)
+            frame:SetShown(shouldShow)
+            if shouldShow then
+                frame:SetAlpha(GetClassBarEffectiveAlpha())
+            end
         end
     end
 
@@ -963,6 +1025,8 @@ end
 --------------------------------------------------
 
 function MMF_InitializeClassResources()
+    EnsureClassResourceVisibilityEvents()
+
     if playerClass == "DEATHKNIGHT" then
         if MattMinimalFramesDB and MattMinimalFramesDB.showRuneBar then
             local frame = CreateRuneBar()
