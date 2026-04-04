@@ -933,7 +933,16 @@ local function GetClassBarOutOfCombatOpacity()
 end
 
 local function GetClassBarEffectiveAlpha()
-    local inCombat = (type(InCombatLockdown) == "function") and InCombatLockdown() or false
+    if not (MattMinimalFramesDB and MattMinimalFramesDB.hideCurrentClassBarOOCNoTarget == true) then
+        return 1
+    end
+
+    local inCombat = false
+    if type(InCombatLockdown) == "function" and InCombatLockdown() then
+        inCombat = true
+    elseif type(UnitAffectingCombat) == "function" and UnitAffectingCombat("player") then
+        inCombat = true
+    end
     if inCombat then
         return 1
     end
@@ -951,9 +960,27 @@ local function EnsureClassResourceVisibilityEvents()
     classResourceVisibilityEventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
     classResourceVisibilityEventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
     classResourceVisibilityEventFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
-    classResourceVisibilityEventFrame:SetScript("OnEvent", function()
+    classResourceVisibilityEventFrame:SetScript("OnEvent", function(_, event)
         if MMF_RefreshClassResourceVisibility then
             MMF_RefreshClassResourceVisibility()
+            if event == "PLAYER_ENTERING_WORLD"
+                and C_Timer
+                and type(C_Timer.After) == "function" then
+                C_Timer.After(0.25, function()
+                    if MMF_RefreshClassResourceVisibility then
+                        MMF_RefreshClassResourceVisibility()
+                    end
+                end)
+            end
+            if (event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED")
+                and C_Timer
+                and type(C_Timer.After) == "function" then
+                C_Timer.After(0, function()
+                    if MMF_RefreshClassResourceVisibility then
+                        MMF_RefreshClassResourceVisibility()
+                    end
+                end)
+            end
         end
     end)
 end
@@ -1141,5 +1168,9 @@ function MMF_InitializeClassResources()
             frame:SetScript("OnEvent", UpdateEssenceBar)
             UpdateEssenceBar(frame)
         end
+    end
+
+    if MMF_RefreshClassResourceVisibility then
+        MMF_RefreshClassResourceVisibility()
     end
 end

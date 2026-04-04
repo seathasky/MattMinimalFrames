@@ -94,6 +94,7 @@ function MMF_BuildUnitFramesOOCSection(ctx)
 
     local function RefreshCombatVisibilityControlStates()
         local combatVisibilityEnabled = IsCheckedFlag(MattMinimalFramesDB.enableCombatFrameVisibility)
+        local classBarOOCEnabled = IsCheckedFlag(MattMinimalFramesDB.hideCurrentClassBarOOCNoTarget)
         if playerOpacitySlider then
             SetSliderEnabled(playerOpacitySlider, combatVisibilityEnabled)
         end
@@ -105,6 +106,9 @@ function MMF_BuildUnitFramesOOCSection(ctx)
         end
         if showPlayerOnTargetCheck then
             SetCheckboxEnabled(showPlayerOnTargetCheck, combatVisibilityEnabled)
+        end
+        if classBarOpacitySlider then
+            SetSliderEnabled(classBarOpacitySlider, classBarOOCEnabled)
         end
         if combatVisibilityWarning then
             combatVisibilityWarning:SetShown(combatVisibilityEnabled)
@@ -125,6 +129,7 @@ function MMF_BuildUnitFramesOOCSection(ctx)
     end)
 
     hideCurrentClassBarOOCCheck = CreateMinimalCheckbox(unitFramesCol, "Hide Current Class Bar OOC (No Target)", MIDDLE_COL_X, -394 + RIGHT_COL_Y_OFFSET, "hideCurrentClassBarOOCNoTarget", false, function()
+        RefreshCombatVisibilityControlStates()
         if MMF_RefreshClassResourceVisibility then
             MMF_RefreshClassResourceVisibility()
         end
