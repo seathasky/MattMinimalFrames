@@ -45,6 +45,7 @@ local mmfDefaults = {
     raidNameTruncateLength = 8,
     hidePartyFrameLabel = true,
     hideRaidGroupLabels = true,
+    showSoloPartyFrame = false,
     hidePartyRaidRemainingHealth = true,
     showDruidManaPowerText = false,
     showPlayerPowerPercentText = false,

@@ -1,7 +1,7 @@
 ## Interface: 120001
 ## Title: Matt's Minimal Frames
 ## Author: Seathasky
-## Version: 7.4.0-beta.2
+## Version: 7.4.0-beta.3
 ## X-Curse-Project-ID: 1362998
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
 ## SavedVariables: MattMinimalFramesDB, MattMinimalFramesProfilesDB, MattMinimalFramesGlobalDB
@@ -21,6 +21,11 @@ core/runtime/defaults.lua
 core/runtime/profiles.lua
 core/runtime/utilities.lua
 core/runtime/config.lua
+core/runtime/blizzard_frames.lua
+core/runtime/startup_migrations.lua
+core/runtime/active_profile_live.lua
+core/runtime/startup_refresh.lua
+core/runtime/commands.lua
 core/frame_factory/positioning_utils.lua
 core/frame_factory/positioning.lua
 core/frame_factory/positioning_api.lua
@@ -48,6 +53,7 @@ core/modules/combat_queue.lua
 core/frames/update_dispatcher.lua
 core/modules/auras.lua
 core/frames/frame_visibility.lua
+core/frames/blizzard_party_raid.lua
 core/modules/events.lua
 core/frames/frames.lua
 

@@ -475,6 +475,15 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
         end
     end)
 
+    CreateMinimalCheckbox(page, "Show Solo Party Frame", 12, -428, "showSoloPartyFrame", false, function()
+        if MMF_UpdateBlizzardSoloPartyFrameVisibility then
+            MMF_UpdateBlizzardSoloPartyFrameVisibility()
+        end
+        if StaticPopup_Show then
+            StaticPopup_Show("MMF_RELOADUI")
+        end
+    end)
+
     local modeWatcher = CreateFrame("Frame", nil, page)
     modeWatcher:RegisterEvent("GROUP_ROSTER_UPDATE")
     modeWatcher:RegisterEvent("PLAYER_ENTERING_WORLD")
