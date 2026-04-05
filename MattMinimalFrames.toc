@@ -1,7 +1,7 @@
 ## Interface: 120001
 ## Title: Matt's Minimal Frames
 ## Author: Seathasky
-## Version: 7.4.0-beta.1
+## Version: 7.4.0-beta.2
 ## X-Curse-Project-ID: 1362998
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
 ## SavedVariables: MattMinimalFramesDB, MattMinimalFramesProfilesDB, MattMinimalFramesGlobalDB
@@ -16,19 +16,40 @@ Libs\LibSharedMedia-3.0\LibSharedMedia-3.0.lua
 Libs\LibDispel-1.0\LibDispel.lua
 
 # Core modules
-core/compat.lua
-core/defaults.lua
-core/profiles.lua
-core/utilities.lua
-core/config.lua
-core/frame_factory.lua
-core/unit_updates.lua
-core/combat_queue.lua
-core/update_dispatcher.lua
-core/auras.lua
-core/frame_visibility.lua
-core/events.lua
-core/frames.lua
+core/runtime/compat.lua
+core/runtime/defaults.lua
+core/runtime/profiles.lua
+core/runtime/utilities.lua
+core/runtime/config.lua
+core/frame_factory/positioning_utils.lua
+core/frame_factory/positioning.lua
+core/frame_factory/positioning_api.lua
+core/frame_factory/castbar_offsets.lua
+core/frame_factory/castbar_offsets_api.lua
+core/frame_factory/icons.lua
+core/frame_factory/target_markers.lua
+core/frame_factory/icons_api.lua
+core/frame_factory/drag_helpers.lua
+core/frame_factory/drag_setup.lua
+core/frame_factory/public_api.lua
+core/frame_factory/update_api.lua
+core/frame_factory/frame_reset_popup.lua
+core/frame_factory/text_positions.lua
+core/frame_factory/power_bar.lua
+core/frame_factory/text.lua
+core/frame_factory/health_power.lua
+core/frame_factory/indicators.lua
+core/frame_factory/castbar.lua
+core/frame_factory/pvp_indicator.lua
+core/frame_factory/bootstrap.lua
+core/frame_factory/frame_factory_main.lua
+core/frames/unit_updates.lua
+core/modules/combat_queue.lua
+core/frames/update_dispatcher.lua
+core/modules/auras.lua
+core/frames/frame_visibility.lua
+core/modules/events.lua
+core/frames/frames.lua
 
 # Popup: shared internals + shared widget controls
 core/popup/shared/constants.lua
@@ -93,10 +114,10 @@ core/popup/navigation.lua
 core/popup/popup.lua
 
 # Other feature modules
-core/minimap.lua
-core/clique_support.lua
+core/modules/minimap.lua
+core/frames/clique_support.lua
 
 # Entrypoint + runtime feature modules
 init.lua
-core/range_check.lua
-core/class_resources.lua
+core/frames/range_check.lua
+core/frames/class_resources.lua
