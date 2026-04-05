@@ -486,10 +486,7 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
 
     local lastNonRaidDetected = nil
     local pollElapsed = 0
-    modeWatcher:SetScript("OnUpdate", function(_, elapsed)
-        if not page or not page:IsShown() then
-            return
-        end
+    local function PollNameControlMode(_, elapsed)
         pollElapsed = pollElapsed + (elapsed or 0)
         if pollElapsed < 0.2 then
             return
@@ -501,15 +498,17 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
             lastNonRaidDetected = nonRaidDetected
             UpdateNameControlsEnabledState()
         end
-    end)
+    end
 
     page:HookScript("OnShow", function()
         SyncHideRemainingHealthWithCenter(true)
         lastNonRaidDetected = IsNonRaidPartyFramesDetected()
         pollElapsed = 0
         UpdateNameControlsEnabledState()
+        modeWatcher:SetScript("OnUpdate", PollNameControlMode)
     end)
     page:HookScript("OnHide", function()
+        modeWatcher:SetScript("OnUpdate", nil)
         if useFontHintTooltip then
             useFontHintTooltip:Hide()
         end
