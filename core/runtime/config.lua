@@ -648,6 +648,24 @@ local function ClampBorderSize(value, fallback)
     return n
 end
 
+local function IsNonSecretValue(value)
+    if issecretvalue and issecretvalue(value) then
+        return false
+    end
+    return true
+end
+
+local function SafeUnitIsUnit(unitA, unitB)
+    if type(UnitIsUnit) ~= "function" then
+        return false
+    end
+    local ok, result = pcall(UnitIsUnit, unitA, unitB)
+    if not ok or not IsNonSecretValue(result) then
+        return false
+    end
+    return result == true
+end
+
 local function GetCustomBarColor(baseKey, fallbackR, fallbackG, fallbackB)
     if not MattMinimalFramesDB then
         return ClampColorChannel(fallbackR, 1), ClampColorChannel(fallbackG, 1), ClampColorChannel(fallbackB, 1)
@@ -725,7 +743,7 @@ function MMF_GetUnitColor(unit)
     end
     if UnitIsPlayer(unit) then
         local isPlayerUnit = (unit == "player")
-            or (type(UnitIsUnit) == "function" and UnitIsUnit(unit, "player"))
+            or SafeUnitIsUnit(unit, "player")
         if isPlayerUnit and MattMinimalFramesDB then
             local mode = tostring(MattMinimalFramesDB.playerBarColorMode or "class"):lower()
             if mode == "custom" then
