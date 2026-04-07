@@ -67,6 +67,17 @@ local function NotSecretValue(value)
     return true
 end
 
+local function SafeUnitIsUnit(unitA, unitB)
+    if type(UnitIsUnit) ~= "function" then
+        return false
+    end
+    local ok, result = pcall(UnitIsUnit, unitA, unitB)
+    if not ok or not NotSecretValue(result) then
+        return false
+    end
+    return result == true
+end
+
 local function SafeIsGreater(a, b)
     local ok, result = pcall(function()
         return a > b
@@ -330,7 +341,7 @@ local function UpdateDispelHighlight(frame, db)
         return
     end
 
-    if not UnitIsUnit(unit, "player") and not UnitIsFriend("player", unit) then
+    if not SafeUnitIsUnit(unit, "player") and not UnitIsFriend("player", unit) then
         frame.dispelHighlight:Hide()
         return
     end
