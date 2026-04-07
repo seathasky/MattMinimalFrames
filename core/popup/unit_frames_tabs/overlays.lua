@@ -216,7 +216,11 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
         OnPredictionChanged()
     end)
 
-    rightSection.solidAbsorbCheck = CreateMinimalCheckbox(unitFramesCol, "Solid Absorb Color", RIGHT_COL_X, (-862 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "useSolidAbsorbBar", false, function()
+    rightSection.healAbsorbBarCheck = CreateMinimalCheckbox(unitFramesCol, "Heal Absorb Bar", RIGHT_COL_X, (-862 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showHealAbsorbBar", true, function()
+        OnPredictionChanged()
+    end)
+
+    rightSection.solidAbsorbCheck = CreateMinimalCheckbox(unitFramesCol, "Solid Absorb Color", RIGHT_COL_X, (-886 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "useSolidAbsorbBar", false, function()
         OnPredictionChanged()
     end)
 
@@ -224,7 +228,7 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
         rightSection.absorbBarColorPicker = CreateMinimalColorPicker(unitFramesCol, {
             accentColor = ACCENT_COLOR,
             x = RIGHT_COL_X,
-            y = (-886 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET,
+            y = (-910 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET,
             width = RIGHT_COL_WIDTH,
             height = 16,
             labelWidth = 96,
@@ -272,11 +276,20 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
         86
     )
 
-    rightSection.playerDispelHighlightCheck = CreateMinimalCheckbox(unitFramesCol, "Player Dispel Highlight", RIGHT_COL_X, (-934 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showPlayerDispelHighlight", true, function()
+    CreateHintIcon(
+        rightSection.healAbsorbBarCheck,
+        132,
+        "Heal Absorb Bar",
+        "Interface\\AddOns\\MattMinimalFrames\\Images\\healabsorb.png",
+        412,
+        67
+    )
+
+    rightSection.playerDispelHighlightCheck = CreateMinimalCheckbox(unitFramesCol, "Player Dispel Highlight", RIGHT_COL_X, (-958 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showPlayerDispelHighlight", true, function()
         RefreshDispelHighlight()
     end)
 
-    rightSection.targetDispelHighlightCheck = CreateMinimalCheckbox(unitFramesCol, "Target Dispel Highlight", RIGHT_COL_X, (-958 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showTargetDispelHighlight", true, function()
+    rightSection.targetDispelHighlightCheck = CreateMinimalCheckbox(unitFramesCol, "Target Dispel Highlight", RIGHT_COL_X, (-982 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showTargetDispelHighlight", true, function()
         RefreshDispelHighlight()
     end)
 end

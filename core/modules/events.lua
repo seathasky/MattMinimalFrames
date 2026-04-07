@@ -434,6 +434,7 @@ coreEventFrame:RegisterEvent("UNIT_PET")
 coreEventFrame:RegisterEvent("UNIT_TARGET")
 coreEventFrame:RegisterEvent("UNIT_HEAL_PREDICTION")
 coreEventFrame:RegisterEvent("UNIT_ABSORB_AMOUNT_CHANGED")
+SafeRegisterEvent(coreEventFrame, "UNIT_HEAL_ABSORB_AMOUNT_CHANGED")
 coreEventFrame:RegisterEvent("UNIT_FACTION")
 coreEventFrame:RegisterEvent("PLAYER_FLAGS_CHANGED")
 coreEventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
@@ -525,7 +526,7 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
         RequestUnitUpdate("player")
         RequestUnitUpdate("target")
 
-    elseif event == "UNIT_NAME_UPDATE" or event == "UNIT_HEALTH" or event == "UNIT_POWER_UPDATE" or event == "UNIT_DISPLAYPOWER" or event == "UNIT_HEAL_PREDICTION" or event == "UNIT_ABSORB_AMOUNT_CHANGED" then
+    elseif event == "UNIT_NAME_UPDATE" or event == "UNIT_HEALTH" or event == "UNIT_POWER_UPDATE" or event == "UNIT_DISPLAYPOWER" or event == "UNIT_HEAL_PREDICTION" or event == "UNIT_ABSORB_AMOUNT_CHANGED" or event == "UNIT_HEAL_ABSORB_AMOUNT_CHANGED" then
         RequestUnitUpdate(unit)
 
     elseif event == "UNIT_FACTION" then

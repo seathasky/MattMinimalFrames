@@ -316,6 +316,7 @@ local mmfDefaults = {
     showPlayerDispelHighlight = true,
     showTargetDispelHighlight = true,
     showAbsorbBar = true,
+    showHealAbsorbBar = true,
     useSolidAbsorbBar = false,
     absorbBarColorR = 0.62,
     absorbBarColorG = 0.84,

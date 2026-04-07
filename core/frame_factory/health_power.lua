@@ -85,6 +85,13 @@ local function ApplyHealthFillDirection(frame)
         end
     end
 
+    if frame.healAbsorbBar and frame.healAbsorbBar.SetOrientation then
+        frame.healAbsorbBar:SetOrientation(orientation)
+        if frame.healAbsorbBar.SetReverseFill then
+            frame.healAbsorbBar:SetReverseFill(true)
+        end
+    end
+
     if frame.absorbBar and frame.absorbBar.SetOrientation then
         frame.absorbBar:SetOrientation(orientation)
         if frame.absorbBar.SetReverseFill then
@@ -215,6 +222,23 @@ local function CreateHealPredictionBar(frame)
     frame.otherHealPrediction:GetStatusBarTexture():SetVertexColor(0, 0.631, 0.557, 0.7)
     frame.otherHealPrediction:SetFrameLevel(frame.healthBar:GetFrameLevel() + 1)
     frame.otherHealPrediction:Hide()
+
+    -- Heal absorb bar.
+    frame.healAbsorbBar = CreateFrame("StatusBar", nil, frame.healPredictionClip)
+    frame.healAbsorbBar:SetStatusBarTexture(GetStatusBarTexturePath())
+    frame.healAbsorbBar:SetStatusBarColor(0.85, 0.15, 0.15, 0.65)
+    do
+        local healAbsorbTex = frame.healAbsorbBar:GetStatusBarTexture()
+        if healAbsorbTex then
+            healAbsorbTex:SetVertexColor(0.85, 0.15, 0.15, 0.65)
+            healAbsorbTex:SetHorizTile(false)
+            healAbsorbTex:SetVertTile(false)
+            healAbsorbTex:SetTexCoord(0, 1, 0, 1)
+        end
+    end
+    frame.healAbsorbBar:SetFrameLevel(frame.healthBar:GetFrameLevel() + 3)
+    frame.healAbsorbBar:Hide()
+
     ApplyHealthFillDirection(frame)
 
     if Compat.IsRetail and CreateUnitHealPredictionCalculator then
@@ -238,4 +262,3 @@ _G.MMF_FrameFactoryHealthPower = {
     CreateHealPredictionBar = CreateHealPredictionBar,
     ApplyHealthFillDirections = ApplyHealthFillDirections,
 }
-

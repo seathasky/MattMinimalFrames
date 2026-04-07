@@ -23,6 +23,7 @@ local UnitClassBase = UnitClassBase
 local UnitGetIncomingHeals = UnitGetIncomingHeals
 local UnitGetDetailedHealPrediction = UnitGetDetailedHealPrediction
 local UnitGetTotalAbsorbs = UnitGetTotalAbsorbs
+local UnitGetTotalHealAbsorbs = UnitGetTotalHealAbsorbs
 local PowerBarColor = PowerBarColor
 
 local IS_PLAYER_SHAMAN = (UnitClassBase("player") == "SHAMAN")
@@ -1026,50 +1027,58 @@ local function EnsureTextOverlayAbovePredictions(frame, overlayTopLevel)
 end
 
 local function UpdateHealPrediction(frame)
-    if not frame or not frame.myHealPrediction then return end
+    if not frame or (not frame.myHealPrediction and not frame.healAbsorbBar) then return end
 
+    -- Heal prediction colors/layers.
     ApplyHealPredictionBarColor(frame)
     EnsureTextOverlayAbovePredictions(frame, nil)
 
+    local function HideAllPredictionBars()
+        if frame.myHealPrediction then
+            frame.myHealPrediction:Hide()
+        end
+        if frame.otherHealPrediction then
+            frame.otherHealPrediction:Hide()
+        end
+        if frame.healAbsorbBar then
+            frame.healAbsorbBar:Hide()
+        end
+    end
+
     local unit = frame.unit
     if not unit or not UnitExists(unit) then
-        frame.myHealPrediction:Hide()
-        frame.otherHealPrediction:Hide()
+        HideAllPredictionBars()
         return
     end
 
-    if MattMinimalFramesDB and MattMinimalFramesDB.showHealPrediction == false then
-        frame.myHealPrediction:Hide()
-        frame.otherHealPrediction:Hide()
+    local db = MattMinimalFramesDB or {}
+    local showHealPrediction = db.showHealPrediction ~= false
+    local showHealAbsorbBar = db.showHealAbsorbBar ~= false
+    if not showHealPrediction and not showHealAbsorbBar then
+        HideAllPredictionBars()
         return
     end
 
     local maxHealth = UnitHealthMax(unit)
+    maxHealth = SafeToNumber(maxHealth, 1) or 1
+    if maxHealth <= 0 then
+        maxHealth = 1
+    end
     local healthTexture = frame.healthBar:GetStatusBarTexture()
     local barWidth = frame.healthBar:GetWidth()
     local barHeight = frame.healthBar:GetHeight()
-    local verticalHealthFill = MattMinimalFramesDB and MattMinimalFramesDB.healthFillTopToBottom == true
-    local showOverhealPrediction = MattMinimalFramesDB and MattMinimalFramesDB.showOverhealPrediction == true
-    local containOverhealWithinFrame = MattMinimalFramesDB and MattMinimalFramesDB.containOverhealWithinFrame == true
+    local verticalHealthFill = db.healthFillTopToBottom == true
+    local showOverhealPrediction = db.showOverhealPrediction == true
+    local containOverhealWithinFrame = db.containOverhealWithinFrame == true
 
     local overlayTopLevel = nil
-    if frame.healPredictionClip and frame.myHealPrediction and frame.otherHealPrediction then
-        if containOverhealWithinFrame then
-            local topLevel = (frame.GetFrameLevel and frame:GetFrameLevel() or 0) + 20
-            if frame.GetFrameStrata and frame.healPredictionClip.SetFrameStrata then
-                frame.healPredictionClip:SetFrameStrata(frame:GetFrameStrata())
-            end
-            frame.healPredictionClip:SetFrameLevel(topLevel)
-            frame.myHealPrediction:SetFrameLevel(topLevel + 1)
-            frame.otherHealPrediction:SetFrameLevel(topLevel + 2)
-            overlayTopLevel = topLevel + 2
-        else
-            local baseLevel = (frame.healthBar and frame.healthBar.GetFrameLevel and frame.healthBar:GetFrameLevel() or frame:GetFrameLevel() or 0) + 1
-            frame.healPredictionClip:SetFrameLevel(baseLevel)
-            frame.myHealPrediction:SetFrameLevel(baseLevel)
-            frame.otherHealPrediction:SetFrameLevel(baseLevel)
-            overlayTopLevel = baseLevel
-        end
+    if frame.healPredictionClip and frame.myHealPrediction and frame.otherHealPrediction and frame.healAbsorbBar then
+        local baseLevel = (frame.healthBar and frame.healthBar.GetFrameLevel and frame.healthBar:GetFrameLevel() or frame:GetFrameLevel() or 0) + 1
+        frame.healPredictionClip:SetFrameLevel(baseLevel)
+        frame.myHealPrediction:SetFrameLevel(baseLevel + 1)
+        frame.otherHealPrediction:SetFrameLevel(baseLevel + 2)
+        frame.healAbsorbBar:SetFrameLevel(baseLevel + 4)
+        overlayTopLevel = baseLevel + 3
     end
     EnsureTextOverlayAbovePredictions(frame, overlayTopLevel)
 
@@ -1102,41 +1111,47 @@ local function UpdateHealPrediction(frame)
         end
     end
 
-    frame.myHealPrediction:ClearAllPoints()
-    if frame.myHealPrediction.SetReverseFill then
-        frame.myHealPrediction:SetReverseFill(false)
-    end
-    if verticalHealthFill then
-        frame.myHealPrediction:SetPoint("BOTTOMLEFT", healthTexture, "TOPLEFT", 0, 0)
-        frame.myHealPrediction:SetPoint("BOTTOMRIGHT", healthTexture, "TOPRIGHT", 0, 0)
-        frame.myHealPrediction:SetHeight(barHeight + overflowPixels)
-    else
-        frame.myHealPrediction:SetPoint("TOPLEFT", healthTexture, "TOPRIGHT", 0, 0)
-        frame.myHealPrediction:SetPoint("BOTTOMLEFT", healthTexture, "BOTTOMRIGHT", 0, 0)
-        frame.myHealPrediction:SetWidth(barWidth + overflowPixels)
-    end
-    frame.myHealPrediction:SetMinMaxValues(0, maxHealth)
+    if showHealPrediction and frame.myHealPrediction and frame.otherHealPrediction then
+        frame.myHealPrediction:ClearAllPoints()
+        if frame.myHealPrediction.SetReverseFill then
+            frame.myHealPrediction:SetReverseFill(false)
+        end
+        if verticalHealthFill then
+            frame.myHealPrediction:SetPoint("BOTTOMLEFT", healthTexture, "TOPLEFT", 0, 0)
+            frame.myHealPrediction:SetPoint("BOTTOMRIGHT", healthTexture, "TOPRIGHT", 0, 0)
+            frame.myHealPrediction:SetHeight(barHeight + overflowPixels)
+        else
+            frame.myHealPrediction:SetPoint("TOPLEFT", healthTexture, "TOPRIGHT", 0, 0)
+            frame.myHealPrediction:SetPoint("BOTTOMLEFT", healthTexture, "BOTTOMRIGHT", 0, 0)
+            frame.myHealPrediction:SetWidth(barWidth + overflowPixels)
+        end
+        frame.myHealPrediction:SetMinMaxValues(0, maxHealth)
 
-    local myHealTexture = frame.myHealPrediction:GetStatusBarTexture()
-    frame.otherHealPrediction:ClearAllPoints()
-    if frame.otherHealPrediction.SetReverseFill then
-        frame.otherHealPrediction:SetReverseFill(false)
-    end
-    if verticalHealthFill then
-        frame.otherHealPrediction:SetPoint("BOTTOMLEFT", myHealTexture, "TOPLEFT", 0, 0)
-        frame.otherHealPrediction:SetPoint("BOTTOMRIGHT", myHealTexture, "TOPRIGHT", 0, 0)
-        frame.otherHealPrediction:SetHeight(barHeight + overflowPixels)
+        local myHealTexture = frame.myHealPrediction:GetStatusBarTexture()
+        frame.otherHealPrediction:ClearAllPoints()
+        if frame.otherHealPrediction.SetReverseFill then
+            frame.otherHealPrediction:SetReverseFill(false)
+        end
+        if verticalHealthFill then
+            frame.otherHealPrediction:SetPoint("BOTTOMLEFT", myHealTexture, "TOPLEFT", 0, 0)
+            frame.otherHealPrediction:SetPoint("BOTTOMRIGHT", myHealTexture, "TOPRIGHT", 0, 0)
+            frame.otherHealPrediction:SetHeight(barHeight + overflowPixels)
+        else
+            frame.otherHealPrediction:SetPoint("TOPLEFT", myHealTexture, "TOPRIGHT", 0, 0)
+            frame.otherHealPrediction:SetPoint("BOTTOMLEFT", myHealTexture, "BOTTOMRIGHT", 0, 0)
+            frame.otherHealPrediction:SetWidth(barWidth + overflowPixels)
+        end
+        frame.otherHealPrediction:SetMinMaxValues(0, maxHealth)
     else
-        frame.otherHealPrediction:SetPoint("TOPLEFT", myHealTexture, "TOPRIGHT", 0, 0)
-        frame.otherHealPrediction:SetPoint("BOTTOMLEFT", myHealTexture, "BOTTOMRIGHT", 0, 0)
-        frame.otherHealPrediction:SetWidth(barWidth + overflowPixels)
+        if frame.myHealPrediction then frame.myHealPrediction:Hide() end
+        if frame.otherHealPrediction then frame.otherHealPrediction:Hide() end
     end
-    frame.otherHealPrediction:SetMinMaxValues(0, maxHealth)
 
     local myHeal = 0
     local otherHeal = 0
     local totalIncomingHeal = 0
     local allIncomingHeal = 0
+    local calculatorHealAbsorb = nil
 
     if Compat.IsRetail and frame.healPredictionCalculator and UnitGetDetailedHealPrediction then
         pcall(function()
@@ -1145,6 +1160,12 @@ local function UpdateHealPrediction(frame)
             totalIncomingHeal = incomingTotalHeal or 0
             myHeal = playerHeal or 0
             otherHeal = incomingOtherHeal or 0
+            if frame.healPredictionCalculator.GetTotalHealAbsorbs then
+                calculatorHealAbsorb = frame.healPredictionCalculator:GetTotalHealAbsorbs() or 0
+            elseif frame.healPredictionCalculator.GetHealAbsorbs then
+                local healAbsorbAmount = frame.healPredictionCalculator:GetHealAbsorbs()
+                calculatorHealAbsorb = healAbsorbAmount or 0
+            end
         end)
     elseif UnitGetIncomingHeals then
         myHeal = UnitGetIncomingHeals(unit, "player") or 0
@@ -1180,11 +1201,113 @@ local function UpdateHealPrediction(frame)
         end
     end
 
-    frame.myHealPrediction:SetValue(myHeal)
-    frame.otherHealPrediction:SetValue(otherHeal)
+    -- Heal prediction bars.
+    if showHealPrediction and frame.myHealPrediction and frame.otherHealPrediction then
+        frame.myHealPrediction:SetValue(myHeal)
+        frame.otherHealPrediction:SetValue(otherHeal)
+        frame.myHealPrediction:Show()
+        frame.otherHealPrediction:Show()
+    end
 
-    frame.myHealPrediction:Show()
-    frame.otherHealPrediction:Show()
+    if not frame.healAbsorbBar then
+        return
+    end
+
+    -- Heal absorb bar (player only).
+    local showForPlayerUnit = (unit == "player") or SafeUnitIsUnit(unit, "player")
+    if not showForPlayerUnit then
+        frame.healAbsorbBar:Hide()
+        return
+    end
+    if not showHealAbsorbBar or not UnitGetTotalHealAbsorbs then
+        frame.healAbsorbBar:Hide()
+        return
+    end
+
+    local currentHealth = SafeToNumber(UnitHealth(unit), 0) or 0
+    frame.healAbsorbBar:ClearAllPoints()
+    if verticalHealthFill then
+        frame.healAbsorbBar:SetHeight(barHeight)
+    else
+        frame.healAbsorbBar:SetWidth(barWidth)
+    end
+    frame.healAbsorbBar:SetMinMaxValues(0, maxHealth)
+
+    -- Heal absorb source.
+    local rawHealAbsorb = nil
+    if calculatorHealAbsorb ~= nil then
+        rawHealAbsorb = calculatorHealAbsorb
+    elseif UnitGetTotalHealAbsorbs then
+        pcall(function()
+            rawHealAbsorb = UnitGetTotalHealAbsorbs(unit)
+        end)
+    end
+
+    -- Heal absorb shown amount.
+    local rawIncomingHeals = 0
+    if UnitGetIncomingHeals then
+        pcall(function()
+            rawIncomingHeals = UnitGetIncomingHeals(unit) or 0
+        end)
+    end
+
+    local healAbsorbValue = SafeAccessibleNumber(rawHealAbsorb, nil)
+    local incomingHealsValue = SafeAccessibleNumber(rawIncomingHeals, 0) or 0
+    local shownHealAbsorb = nil
+    local hasOverHealAbsorb = false
+
+    if type(healAbsorbValue) == "number" then
+        shownHealAbsorb = SafeSubtract(healAbsorbValue, incomingHealsValue, 0) or 0
+        if SafeIsLessOrEqual(shownHealAbsorb, 0) then
+            frame.healAbsorbBar:Hide()
+            return
+        end
+        hasOverHealAbsorb = SafeIsLess(currentHealth, shownHealAbsorb)
+        frame.healAbsorbBar:SetValue(shownHealAbsorb)
+    else
+        local setOk = false
+        pcall(function()
+            frame.healAbsorbBar:SetValue(rawHealAbsorb or 0)
+            setOk = true
+        end)
+        if not setOk then
+            frame.healAbsorbBar:Hide()
+            return
+        end
+    end
+
+    -- Heal absorb anchoring.
+    if verticalHealthFill then
+        if hasOverHealAbsorb then
+            if frame.healAbsorbBar.SetReverseFill then
+                frame.healAbsorbBar:SetReverseFill(false)
+            end
+            frame.healAbsorbBar:SetPoint("BOTTOMLEFT", healthTexture, "TOPLEFT", 0, 0)
+            frame.healAbsorbBar:SetPoint("BOTTOMRIGHT", healthTexture, "TOPRIGHT", 0, 0)
+        else
+            if frame.healAbsorbBar.SetReverseFill then
+                frame.healAbsorbBar:SetReverseFill(true)
+            end
+            frame.healAbsorbBar:SetPoint("TOPLEFT", healthTexture, "TOPLEFT", 0, 0)
+            frame.healAbsorbBar:SetPoint("TOPRIGHT", healthTexture, "TOPRIGHT", 0, 0)
+        end
+    else
+        if hasOverHealAbsorb then
+            if frame.healAbsorbBar.SetReverseFill then
+                frame.healAbsorbBar:SetReverseFill(false)
+            end
+            frame.healAbsorbBar:SetPoint("TOPLEFT", healthTexture, "TOPRIGHT", 0, 0)
+            frame.healAbsorbBar:SetPoint("BOTTOMLEFT", healthTexture, "BOTTOMRIGHT", 0, 0)
+        else
+            if frame.healAbsorbBar.SetReverseFill then
+                frame.healAbsorbBar:SetReverseFill(true)
+            end
+            frame.healAbsorbBar:SetPoint("TOPRIGHT", healthTexture, "TOPRIGHT", 0, 0)
+            frame.healAbsorbBar:SetPoint("BOTTOMRIGHT", healthTexture, "BOTTOMRIGHT", 0, 0)
+        end
+    end
+
+    frame.healAbsorbBar:Show()
 end
 
 --------------------------------------------------
@@ -1194,6 +1317,7 @@ end
 local function UpdateAbsorbBar(frame)
     if not frame or not frame.absorbBar then return end
 
+    -- Damage absorb bar.
     ApplyAbsorbBarColor(frame)
 
     local unit = frame.unit

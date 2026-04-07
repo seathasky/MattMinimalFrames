@@ -15,12 +15,6 @@ local function PlayHolyPowerSound(soundFile)
     pcall(function()
         PlaySoundFile("Interface\\AddOns\\MattMinimalFrames\\Sounds\\" .. file, "Master")
     end)
-    pcall(function()
-        PlaySoundFile("Interface\\AddOns\\MattMinimalFrames\\Sounds\\" .. file, "Dialog")
-    end)
-    pcall(function()
-        PlaySoundFile("Interface\\AddOns\\MattMinimalFrames\\Sounds\\click.mp3", "Master")
-    end)
 end
 
 local function GetStatusBarTexturePath()
