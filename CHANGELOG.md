@@ -1,15 +1,11 @@
-# Changelog
+# Matt's Minimal Frames
 
-## 7.4.0
+## [v7.4.1](https://github.com/seathasky/MattMinimalFrames/tree/v7.4.1) (2026-04-07)
+[Full Changelog](https://github.com/seathasky/MattMinimalFrames/compare/v7.4.0...v7.4.1) 
 
-New feature:
-- Added a Party/Raid **Show Solo Party Frame** option with a reload prompt when changed.
-
-Technical improvements:
-- Full frame-system refactor is now complete, with frame creation, runtime behavior, and startup logic fully modularized.
-- Improved popup UI consistency and shared control behavior across settings pages.
-- Updated Party/Raid settings layout for clearer organization and easier navigation.
-- Footer version text is now read directly from addon metadata for accurate display.
-- Completed a major internal architecture pass to improve maintainability and long-term stability.
-- Preserved existing functionality and API compatibility while reducing file complexity.
-- Removed outdated legacy code and finalized module/load-order structure updates.
+- 7.4.1 - Heal absorb to player  
+    Added a new Heal Absorb bar option so you can see healing absorbs directly on your frame, similar to Blizzard party frames.  
+    Other bug fixes.  
+- Merge pull request #6 from BernCarney/fix/protected-secret-boolean  
+    added taint-safe wrapper for boolean tests  
+- added taint-safe wrapper for boolean tests  
