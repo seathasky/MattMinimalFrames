@@ -484,6 +484,12 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
         end
     end)
 
+    CreateMinimalCheckbox(page, "Hide Self In Party", 12, -452, "hidePlayerInPartyFrame", false, function()
+        if MMF_UpdateBlizzardPartySelfVisibility then
+            MMF_UpdateBlizzardPartySelfVisibility()
+        end
+    end)
+
     local modeWatcher = CreateFrame("Frame", nil, page)
     modeWatcher:RegisterEvent("GROUP_ROSTER_UPDATE")
     modeWatcher:RegisterEvent("PLAYER_ENTERING_WORLD")

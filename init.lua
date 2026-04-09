@@ -70,6 +70,9 @@ local function Initialize()
     if MMF_UpdateBlizzardSoloPartyFrameVisibility then
         MMF_UpdateBlizzardSoloPartyFrameVisibility()
     end
+    if MMF_UpdateBlizzardPartySelfVisibility then
+        MMF_UpdateBlizzardPartySelfVisibility()
+    end
     MMF_CreateAllMinimalFrames()
     if MMF_UpdateCombatFrameVisibility then
         MMF_UpdateCombatFrameVisibility()
@@ -155,6 +158,9 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
         end
         if MMF_UpdateBlizzardSoloPartyFrameVisibility then
             MMF_UpdateBlizzardSoloPartyFrameVisibility()
+        end
+        if MMF_UpdateBlizzardPartySelfVisibility then
+            MMF_UpdateBlizzardPartySelfVisibility()
         end
         ScheduleStartupStyleReapply()
         if reopenMainGUIAfterEditModeReset and MMF_ShowWelcomePopup then

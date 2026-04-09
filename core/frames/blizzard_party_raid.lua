@@ -19,6 +19,8 @@ local compactPartyRaidLabelHookState = {
     raidContainerLayout = false,
 }
 local soloPartyVisibilityHookInstalled = false
+local partySelfVisibilityHookInstalled = false
+local pendingPartySelfVisibilityRefresh = false
 
 local function ApplySoloPartyFrameOverrideFromDB()
     if not _G.CompactPartyFrame then
@@ -34,6 +36,124 @@ local function ApplySoloPartyFrameOverrideFromDB()
     if isSolo then
         _G.CompactPartyFrame:SetShown(true)
     end
+end
+
+local function IsInNonRaidGroup()
+    local inGroup = (type(_G.IsInGroup) == "function" and _G.IsInGroup()) or false
+    local inRaid = (type(_G.IsInRaid) == "function" and _G.IsInRaid()) or false
+    return inGroup and (not inRaid)
+end
+
+local function IsHideSelfInPartyEnabled()
+    return MattMinimalFramesDB and MattMinimalFramesDB.hidePlayerInPartyFrame == true
+end
+
+local function ShouldHideSelfInPartyNow()
+    if not IsHideSelfInPartyEnabled() then
+        return false
+    end
+    if not IsInNonRaidGroup() then
+        return false
+    end
+    if _G.EditModeManagerFrame and type(_G.EditModeManagerFrame.UseRaidStylePartyFrames) == "function" then
+        local ok, isRaidStyle = pcall(_G.EditModeManagerFrame.UseRaidStylePartyFrames, _G.EditModeManagerFrame)
+        if ok then
+            return isRaidStyle == true
+        end
+    end
+    return true
+end
+
+local function IsPlayerLikeUnitToken(unitToken)
+    if type(unitToken) ~= "string" or unitToken == "" then
+        return false
+    end
+    if unitToken == "player" or unitToken == "vehicle" then
+        return true
+    end
+    if type(_G.UnitIsUnit) == "function" then
+        local ok, isPlayer = pcall(_G.UnitIsUnit, unitToken, "player")
+        if ok and isPlayer then
+            return true
+        end
+    end
+    return false
+end
+
+local function IsCompactPartyMemberFrame(frame)
+    if not frame then
+        return false
+    end
+    local parent = frame
+    for _ = 1, 8 do
+        if not parent or type(parent.GetParent) ~= "function" then
+            parent = nil
+        else
+            local ok, nextParent = pcall(parent.GetParent, parent)
+            parent = ok and nextParent or nil
+        end
+        if not parent then
+            break
+        end
+        if parent == _G.CompactPartyFrame then
+            return true
+        end
+    end
+    return false
+end
+
+local function ApplyHideSelfToCompactPartyFrame()
+    local compactPartyFrame = _G.CompactPartyFrame
+    if not compactPartyFrame or type(compactPartyFrame.memberUnitFrames) ~= "table" then
+        return
+    end
+
+    if type(_G.InCombatLockdown) == "function" and _G.InCombatLockdown() then
+        pendingPartySelfVisibilityRefresh = true
+        return
+    end
+
+    pendingPartySelfVisibilityRefresh = false
+    local shouldHideSelf = ShouldHideSelfInPartyNow()
+    local changedAnyFrame = false
+
+    for _, memberUnitFrame in ipairs(compactPartyFrame.memberUnitFrames) do
+        local unitToken = memberUnitFrame and (memberUnitFrame.unit or memberUnitFrame.displayedUnit or memberUnitFrame.unitToken) or nil
+        if memberUnitFrame and IsPlayerLikeUnitToken(unitToken) then
+            if shouldHideSelf then
+                if memberUnitFrame:IsShown() then
+                    changedAnyFrame = true
+                end
+                memberUnitFrame:Hide()
+            else
+                changedAnyFrame = true
+                memberUnitFrame:Show()
+            end
+        end
+    end
+
+    if changedAnyFrame and type(compactPartyFrame.UpdateLayout) == "function" then
+        pcall(compactPartyFrame.UpdateLayout, compactPartyFrame)
+    end
+end
+
+local function EnsurePartySelfVisibilityHook()
+    if partySelfVisibilityHookInstalled or type(hooksecurefunc) ~= "function" then
+        return
+    end
+    if type(_G.CompactUnitFrame_SetUnit) == "function" then
+        hooksecurefunc("CompactUnitFrame_SetUnit", function(frame)
+            if IsCompactPartyMemberFrame(frame) then
+                ApplyHideSelfToCompactPartyFrame()
+            end
+        end)
+    end
+    if type(_G.CompactPartyFrame_Generate) == "function" then
+        hooksecurefunc("CompactPartyFrame_Generate", function()
+            ApplyHideSelfToCompactPartyFrame()
+        end)
+    end
+    partySelfVisibilityHookInstalled = true
 end
 
 local function IsRetailClient()
@@ -972,6 +1092,19 @@ function MMF_UpdateBlizzardSoloPartyFrameVisibility()
     ApplySoloPartyFrameOverrideFromDB()
 end
 
+function MMF_UpdateBlizzardPartySelfVisibility()
+    EnsurePartySelfVisibilityHook()
+
+    if type(_G.CompactPartyFrame_Generate) == "function" then
+        pcall(_G.CompactPartyFrame_Generate)
+    end
+    if _G.CompactPartyFrame and type(_G.CompactPartyFrame.TryUpdate) == "function" then
+        pcall(_G.CompactPartyFrame.TryUpdate, _G.CompactPartyFrame)
+    end
+
+    ApplyHideSelfToCompactPartyFrame()
+end
+
 local function EnsurePartyRaidNameHook()
     if type(hooksecurefunc) ~= "function" then
         return
@@ -1083,11 +1216,17 @@ end
 local partyRaidRefreshEventFrame = CreateFrame("Frame")
 partyRaidRefreshEventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 partyRaidRefreshEventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
+partyRaidRefreshEventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 if IsRetailClient() then
     partyRaidRefreshEventFrame:RegisterEvent("EDIT_MODE_LAYOUTS_UPDATED")
 end
 partyRaidRefreshEventFrame:SetScript("OnEvent", function()
     if MMF_UpdateBlizzardPartyRaidNameFonts then
         MMF_UpdateBlizzardPartyRaidNameFonts()
+    end
+    if MMF_UpdateBlizzardPartySelfVisibility then
+        MMF_UpdateBlizzardPartySelfVisibility()
+    elseif pendingPartySelfVisibilityRefresh then
+        ApplyHideSelfToCompactPartyFrame()
     end
 end)

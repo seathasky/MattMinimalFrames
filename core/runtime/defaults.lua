@@ -46,6 +46,7 @@ local mmfDefaults = {
     hidePartyFrameLabel = true,
     hideRaidGroupLabels = true,
     showSoloPartyFrame = false,
+    hidePlayerInPartyFrame = false,
     hidePartyRaidRemainingHealth = true,
     showDruidManaPowerText = false,
     showPlayerPowerPercentText = false,
