@@ -1,5 +1,8 @@
 local trackedPartyRaidNameStyles = setmetatable({}, { __mode = "k" })
 local trackedPartyRaidHealthTextStyles = setmetatable({}, { __mode = "k" })
+local cachedPartyRaidNameFontState = setmetatable({}, { __mode = "k" })
+local cachedPartyRaidNameCenterState = setmetatable({}, { __mode = "k" })
+local cachedPartyRaidNameModeState = setmetatable({}, { __mode = "k" })
 local compactPartyRaidNameHookState = {
     compactUnitFrameUpdateName = false,
     compactUnitFrameUpdateHealth = false,
@@ -21,6 +24,7 @@ local compactPartyRaidLabelHookState = {
 local soloPartyVisibilityHookInstalled = false
 local partySelfVisibilityHookInstalled = false
 local pendingPartySelfVisibilityRefresh = false
+local pendingPartyRaidRosterRefresh = false
 
 local function ApplySoloPartyFrameOverrideFromDB()
     if not _G.CompactPartyFrame then
@@ -557,6 +561,7 @@ local function RestorePartyRaidNameFont(fontString, original)
     else
         pcall(fontString.SetFont, fontString, STANDARD_TEXT_FONT, size, flags)
     end
+    cachedPartyRaidNameFontState[fontString] = nil
 end
 
 local function RestorePartyRaidNameLayout(fontString, original)
@@ -589,6 +594,7 @@ local function RestorePartyRaidNameLayout(fontString, original)
     if original and fontString.SetJustifyV then
         fontString:SetJustifyV(original.justifyV or "MIDDLE")
     end
+    cachedPartyRaidNameCenterState[fontString] = nil
 end
 
 local function ApplyPartyRaidNameFont(fontString, frame)
@@ -625,11 +631,21 @@ local function ApplyPartyRaidNameFont(fontString, frame)
         flags = EnsureOutlineFlag(flags)
     end
 
+    local cached = cachedPartyRaidNameFontState[fontString]
+    if cached and cached.path == fontPath and cached.size == size and cached.flags == flags then
+        return
+    end
+
     if MMF_SetFontSafe then
         MMF_SetFontSafe(fontString, fontPath, size, flags)
     else
         pcall(fontString.SetFont, fontString, fontPath, size, flags)
     end
+    cachedPartyRaidNameFontState[fontString] = {
+        path = fontPath,
+        size = size,
+        flags = flags,
+    }
 end
 
 local function ApplyPartyRaidNameCenter(fontString, frame)
@@ -638,6 +654,12 @@ local function ApplyPartyRaidNameCenter(fontString, frame)
     end
     CapturePartyRaidNameStyle(fontString)
 
+    local anchor = frame
+    local cachedCenter = cachedPartyRaidNameCenterState[fontString]
+    if cachedCenter and cachedCenter.anchor == anchor then
+        return
+    end
+
     if fontString.SetJustifyH then
         fontString:SetJustifyH("CENTER")
     end
@@ -645,12 +667,11 @@ local function ApplyPartyRaidNameCenter(fontString, frame)
         fontString:SetJustifyV("MIDDLE")
     end
 
-    -- Anchor to the unit frame itself to avoid tainting Blizzard health bar state.
-    local anchor = frame
     if anchor and fontString.ClearAllPoints and fontString.SetPoint then
         fontString:ClearAllPoints()
         fontString:SetPoint("CENTER", anchor, "CENTER", 0, 0)
     end
+    cachedPartyRaidNameCenterState[fontString] = { anchor = anchor }
 end
 
 local function TruncatePartyRaidNameText(text, maxChars)
@@ -722,6 +743,7 @@ local function RestoreTrackedPartyRaidNameStyles()
             RestorePartyRaidNameFont(fontString, original)
             RestorePartyRaidNameLayout(fontString, original)
         end
+        cachedPartyRaidNameModeState[fontString] = nil
         trackedPartyRaidNameStyles[fontString] = nil
     end
 end
@@ -805,9 +827,10 @@ local function ApplyPartyRaidHealthTextStyleForFrame(frame)
         return
     end
 
-    -- Disabled: do not apply runtime HP text size/style overrides here.
-    -- Keep Blizzard text sizing untouched.
     local shouldStyle = false
+    if not shouldStyle and next(trackedPartyRaidHealthTextStyles) == nil then
+        return
+    end
 
     local candidates = {
         frame.healthText,
@@ -892,20 +915,23 @@ local function ApplyPartyRaidNameStyleForFontString(fontString, frame)
     CapturePartyRaidNameStyle(fontString)
     local original = trackedPartyRaidNameStyles[fontString]
 
-    if MattMinimalFramesDB and MattMinimalFramesDB.useSharedPartyRaidNameFont == true then
+    local useSharedFont = MattMinimalFramesDB and MattMinimalFramesDB.useSharedPartyRaidNameFont == true
+    local modeState = cachedPartyRaidNameModeState[fontString]
+
+    if useSharedFont then
         ApplyPartyRaidNameFont(fontString, frame)
-    elseif original then
+        cachedPartyRaidNameModeState[fontString] = "styled"
+    elseif original and modeState ~= "original" then
         RestorePartyRaidNameFont(fontString, original)
+        cachedPartyRaidNameModeState[fontString] = "original"
     end
-    if MattMinimalFramesDB
-        and MattMinimalFramesDB.useSharedPartyRaidNameFont == true
-        and MattMinimalFramesDB.centerPartyRaidNames == true
-    then
+
+    if useSharedFont and MattMinimalFramesDB and MattMinimalFramesDB.centerPartyRaidNames == true then
         ApplyPartyRaidNameCenter(fontString, frame)
-    elseif original then
+    elseif original and cachedPartyRaidNameCenterState[fontString] then
         RestorePartyRaidNameLayout(fontString, original)
     end
-    if MattMinimalFramesDB and MattMinimalFramesDB.useSharedPartyRaidNameFont == true then
+    if useSharedFont then
         ApplyRaidNameTruncation(fontString, frame)
     end
 end
@@ -1202,14 +1228,56 @@ function MMF_UpdateBlizzardPartyRaidNameFonts()
 
     if IsPartyRaidNameStylingEnabled() then
         ApplyPartyRaidNameStyleToAllFrames()
-        MMF_RefreshBlizzardPartyRaidNameFonts()
     else
         RestoreTrackedPartyRaidNameStyles()
         RestoreTrackedPartyRaidHealthTextStyles()
-        MMF_RefreshBlizzardPartyRaidNameFonts()
     end
     if MMF_UpdateBlizzardPartyRaidLabels then
         MMF_UpdateBlizzardPartyRaidLabels()
+    end
+end
+
+local function ShouldRunPartySelfVisibilityRefresh()
+    if pendingPartySelfVisibilityRefresh then
+        return true
+    end
+    return MattMinimalFramesDB and MattMinimalFramesDB.hidePlayerInPartyFrame == true
+end
+
+local function RunPartyRaidRefresh()
+    pendingPartyRaidRosterRefresh = false
+    if MMF_UpdateBlizzardPartyRaidNameFonts then
+        MMF_UpdateBlizzardPartyRaidNameFonts()
+    end
+    if MMF_UpdateBlizzardPartySelfVisibility and ShouldRunPartySelfVisibilityRefresh() then
+        MMF_UpdateBlizzardPartySelfVisibility()
+    elseif pendingPartySelfVisibilityRefresh then
+        ApplyHideSelfToCompactPartyFrame()
+    end
+end
+
+local function RunPartyRaidRosterRefresh()
+    pendingPartyRaidRosterRefresh = false
+    if MMF_UpdateBlizzardPartyRaidLabels then
+        MMF_UpdateBlizzardPartyRaidLabels()
+    end
+    if MMF_UpdateBlizzardPartySelfVisibility and ShouldRunPartySelfVisibilityRefresh() then
+        MMF_UpdateBlizzardPartySelfVisibility()
+    elseif pendingPartySelfVisibilityRefresh then
+        ApplyHideSelfToCompactPartyFrame()
+    end
+end
+
+local function QueuePartyRaidRosterRefresh()
+    if pendingPartyRaidRosterRefresh then
+        return
+    end
+    pendingPartyRaidRosterRefresh = true
+
+    if type(_G.C_Timer) == "table" and type(_G.C_Timer.After) == "function" then
+        _G.C_Timer.After(0.05, RunPartyRaidRosterRefresh)
+    else
+        RunPartyRaidRosterRefresh()
     end
 end
 
@@ -1220,13 +1288,10 @@ partyRaidRefreshEventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 if IsRetailClient() then
     partyRaidRefreshEventFrame:RegisterEvent("EDIT_MODE_LAYOUTS_UPDATED")
 end
-partyRaidRefreshEventFrame:SetScript("OnEvent", function()
-    if MMF_UpdateBlizzardPartyRaidNameFonts then
-        MMF_UpdateBlizzardPartyRaidNameFonts()
+partyRaidRefreshEventFrame:SetScript("OnEvent", function(_, event)
+    if event == "GROUP_ROSTER_UPDATE" then
+        QueuePartyRaidRosterRefresh()
+        return
     end
-    if MMF_UpdateBlizzardPartySelfVisibility then
-        MMF_UpdateBlizzardPartySelfVisibility()
-    elseif pendingPartySelfVisibilityRefresh then
-        ApplyHideSelfToCompactPartyFrame()
-    end
+    RunPartyRaidRefresh()
 end)
