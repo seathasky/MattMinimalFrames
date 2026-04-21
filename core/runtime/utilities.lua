@@ -192,6 +192,7 @@ function MMF_ApplyStatusBarTexture()
         _G.MMF_ChiBar,
         _G.MMF_ArcaneChargeBar,
         _G.MMF_EssenceBar,
+        _G.MMF_MaelstromBar,
     }
 
     for _, bar in ipairs(classBars) do
@@ -533,6 +534,7 @@ function MMF_ApplyGlobalFont()
         _G.MMF_ChiBar,
         _G.MMF_ArcaneChargeBar,
         _G.MMF_EssenceBar,
+        _G.MMF_MaelstromBar,
     }
     for _, bar in ipairs(classBars) do
         if bar then

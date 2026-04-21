@@ -1258,6 +1258,11 @@ end
 
 local function RunPartyRaidRosterRefresh()
     pendingPartyRaidRosterRefresh = false
+    if MMF_RefreshBlizzardPartyRaidNameFonts then
+        MMF_RefreshBlizzardPartyRaidNameFonts()
+    elseif MMF_UpdateBlizzardPartyRaidNameFonts then
+        MMF_UpdateBlizzardPartyRaidNameFonts()
+    end
     if MMF_UpdateBlizzardPartyRaidLabels then
         MMF_UpdateBlizzardPartyRaidLabels()
     end

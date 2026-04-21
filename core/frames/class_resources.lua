@@ -48,6 +48,7 @@ if not hasResourceSupport then
     function MMF_UpdateChiBarScale() end
     function MMF_UpdateArcaneChargeBarScale() end
     function MMF_UpdateEssenceBarScale() end
+    function MMF_UpdateMaelstromBarScale() end
     return
 end
 
@@ -63,6 +64,7 @@ local BAR_LAYOUT_DEFAULTS = {
     chiBar = { width = 30, height = 10, spacing = 4, x = 0, y = 48, maxRunes = 6, legacyPosKey = "MMF_ChiBarPosition" },
     arcaneChargeBar = { width = 30, height = 10, spacing = 4, x = 0, y = 48, maxRunes = 4, legacyPosKey = "MMF_ArcaneChargeBarPosition" },
     essenceBar = { width = 30, height = 10, spacing = 4, x = 0, y = 48, maxRunes = 5, legacyPosKey = "MMF_EssenceBarPosition" },
+    maelstromBar = { width = 12, height = 10, spacing = 2, x = 0, y = 48, maxRunes = 10, legacyPosKey = "MMF_MaelstromBarPosition" },
 }
 
 local CLASS_BAR_CONFIG = {
@@ -133,6 +135,15 @@ local CLASS_BAR_CONFIG = {
         showLabel = "Show Essence Bar",
         resourceLabel = "Essence",
     },
+    SHAMAN = {
+        prefix = "maelstromBar",
+        showKey = "showMaelstromBar",
+        classLabel = "Shaman",
+        classColor = {0.0, 0.44, 0.87},
+        showLabel = "Show Maelstrom Bar",
+        resourceLabel = "Maelstrom",
+        note = "Only active while Elemental specialization is selected.",
+    },
 }
 
 local MMF_RuneBar
@@ -142,6 +153,7 @@ local MMF_SoulShardBar
 local MMF_ChiBar
 local MMF_ArcaneChargeBar
 local MMF_EssenceBar
+local MMF_MaelstromBar
 local classResourceVisibilityEventFrame
 
 local SafeEq
@@ -156,6 +168,13 @@ local function IsArcaneSpec()
     return SafeEq(spec, arcaneSpec)
 end
 
+local function IsElementalSpec()
+    if playerClass ~= "SHAMAN" then return false end
+    local spec = Compat.GetSpecialization()
+    local elementalSpec = (_G.SPEC_SHAMAN_ELEMENTAL ~= nil) and _G.SPEC_SHAMAN_ELEMENTAL or 1
+    return SafeEq(spec, elementalSpec)
+end
+
 function MMF_GetCurrentClassBarConfig()
     return CLASS_BAR_CONFIG[playerClass]
 end
@@ -168,6 +187,7 @@ local function GetFrameByPrefix(prefix)
     if prefix == "chiBar" then return MMF_ChiBar end
     if prefix == "arcaneChargeBar" then return MMF_ArcaneChargeBar end
     if prefix == "essenceBar" then return MMF_EssenceBar end
+    if prefix == "maelstromBar" then return MMF_MaelstromBar end
     return nil
 end
 
@@ -565,6 +585,20 @@ local function CreateEssenceBar()
     return MMF_EssenceBar
 end
 
+local function CreateMaelstromBar()
+    if MMF_MaelstromBar then return MMF_MaelstromBar end
+    MMF_MaelstromBar = CreateBaseResourceBar(
+        "MMF_MaelstromBar",
+        "maelstromBar",
+        "Maelstrom",
+        GetClassBarColor({0.0, 0.44, 0.87}),
+        BAR_LAYOUT_DEFAULTS.maelstromBar.maxRunes,
+        0
+    )
+    _G.MMF_MaelstromBar = MMF_MaelstromBar
+    return MMF_MaelstromBar
+end
+
 --------------------------------------------------
 -- LAYOUT UPDATE API
 --------------------------------------------------
@@ -864,6 +898,42 @@ local function UpdateEssenceBar()
     end
 end
 
+local function UpdateMaelstromBar()
+    if not MMF_MaelstromBar or not MMF_MaelstromBar:IsShown() then return end
+    if not IsElementalSpec() then return end
+
+    local powerType = _G.ADDITIONAL_POWER_BAR_INDEX
+    if powerType == nil then
+        powerType = Enum and Enum.PowerType and Enum.PowerType.Maelstrom
+    end
+    if not powerType then
+        powerType = 11
+    end
+    local current = 0
+    pcall(function()
+        current = UnitPower("player", powerType) or 0
+    end)
+
+    local maxRunes = MMF_MaelstromBar.mmfMaxRunes or BAR_LAYOUT_DEFAULTS.maelstromBar.maxRunes
+    if maxRunes < 1 then
+        maxRunes = 1
+    end
+
+    -- Taint-safe update: never do Lua math/comparisons with `current`.
+    -- Each segment maps to a fixed [start, finish] range and consumes the raw value directly.
+    for i = 1, maxRunes do
+        local rune = MMF_MaelstromBar.runes[i]
+        if rune then
+            local segmentStart = (i - 1) * 10
+            local segmentFinish = i * 10
+            rune:SetMinMaxValues(segmentStart, segmentFinish)
+            rune:SetValue(current)
+            rune:SetAlpha(1)
+            rune:Show()
+        end
+    end
+end
+
 local function ShouldShowResourceBar(prefix)
     if not MattMinimalFramesDB then
         return false
@@ -892,6 +962,8 @@ local function ShouldShowResourceBar(prefix)
         shouldShow = playerClass == "MAGE" and MattMinimalFramesDB.showArcaneChargeBar == true and IsArcaneSpec()
     elseif prefix == "essenceBar" then
         shouldShow = playerClass == "EVOKER" and MattMinimalFramesDB.showEssenceBar == true
+    elseif prefix == "maelstromBar" then
+        shouldShow = playerClass == "SHAMAN" and MattMinimalFramesDB.showMaelstromBar ~= false and IsElementalSpec()
     end
 
     if not shouldShow then
@@ -988,6 +1060,7 @@ function MMF_RefreshClassResourceVisibility()
         chiBar = MMF_ChiBar,
         arcaneChargeBar = MMF_ArcaneChargeBar,
         essenceBar = MMF_EssenceBar,
+        maelstromBar = MMF_MaelstromBar,
     }
 
     for prefix, frame in pairs(frameByPrefix) do
@@ -1007,6 +1080,7 @@ function MMF_RefreshClassResourceVisibility()
     if MMF_ChiBar and MMF_ChiBar:IsShown() then UpdateChiBar() end
     if MMF_ArcaneChargeBar and MMF_ArcaneChargeBar:IsShown() then UpdateArcaneChargeBar() end
     if MMF_EssenceBar and MMF_EssenceBar:IsShown() then UpdateEssenceBar() end
+    if MMF_MaelstromBar and MMF_MaelstromBar:IsShown() then UpdateMaelstromBar() end
 end
 
 --------------------------------------------------
@@ -1039,6 +1113,10 @@ end
 
 function MMF_UpdateEssenceBarScale(scale)
     if MMF_EssenceBar then MMF_EssenceBar:SetScale(scale) end
+end
+
+function MMF_UpdateMaelstromBarScale(scale)
+    if MMF_MaelstromBar then MMF_MaelstromBar:SetScale(scale) end
 end
 
 --------------------------------------------------
@@ -1161,6 +1239,44 @@ function MMF_InitializeClassResources()
             frame:RegisterEvent("PLAYER_TALENT_UPDATE")
             frame:SetScript("OnEvent", UpdateEssenceBar)
             UpdateEssenceBar(frame)
+        end
+    elseif playerClass == "SHAMAN" then
+        if MattMinimalFramesDB and MattMinimalFramesDB.showMaelstromBar == nil then
+            MattMinimalFramesDB.showMaelstromBar = true
+        end
+        -- Migrate early Maelstrom defaults (too wide) to tighter sizing.
+        if MattMinimalFramesDB then
+            if MattMinimalFramesDB.maelstromBarWidth == nil or MattMinimalFramesDB.maelstromBarWidth == 30 then
+                MattMinimalFramesDB.maelstromBarWidth = BAR_LAYOUT_DEFAULTS.maelstromBar.width
+            end
+            if MattMinimalFramesDB.maelstromBarSpacing == nil or MattMinimalFramesDB.maelstromBarSpacing == 4 then
+                MattMinimalFramesDB.maelstromBarSpacing = BAR_LAYOUT_DEFAULTS.maelstromBar.spacing
+            end
+        end
+        if MattMinimalFramesDB and MattMinimalFramesDB.showMaelstromBar ~= false then
+            local frame = CreateMaelstromBar()
+            ApplyLegacyScale(frame, "maelstromBar")
+            if IsElementalSpec() then
+                frame:Show()
+            else
+                frame:Hide()
+            end
+            frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
+            frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
+            frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+            frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+            frame:RegisterEvent("PLAYER_TALENT_UPDATE")
+            frame:SetScript("OnEvent", function(_, event, unit)
+                if event == "PLAYER_SPECIALIZATION_CHANGED" or event == "PLAYER_ENTERING_WORLD" then
+                    if MMF_RefreshClassResourceVisibility then
+                        MMF_RefreshClassResourceVisibility()
+                    end
+                end
+                if (not unit) or unit == "player" then
+                    UpdateMaelstromBar()
+                end
+            end)
+            UpdateMaelstromBar(frame)
         end
     end
 

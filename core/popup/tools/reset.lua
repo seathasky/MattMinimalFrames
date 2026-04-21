@@ -141,6 +141,7 @@ function MMF_ResetPopupScaleAndTextToDefaults()
         MattMinimalFramesDB.chiBarScale = d.chiBarScale
         MattMinimalFramesDB.arcaneChargeBarScale = d.arcaneChargeBarScale
         MattMinimalFramesDB.essenceBarScale = d.essenceBarScale
+        MattMinimalFramesDB.maelstromBarScale = d.maelstromBarScale
         MattMinimalFramesDB.runeBarWidth = d.runeBarWidth
         MattMinimalFramesDB.runeBarHeight = d.runeBarHeight
         MattMinimalFramesDB.runeBarSpacing = d.runeBarSpacing
@@ -176,6 +177,11 @@ function MMF_ResetPopupScaleAndTextToDefaults()
         MattMinimalFramesDB.essenceBarSpacing = d.essenceBarSpacing
         MattMinimalFramesDB.essenceBarX = d.essenceBarX
         MattMinimalFramesDB.essenceBarY = d.essenceBarY
+        MattMinimalFramesDB.maelstromBarWidth = d.maelstromBarWidth
+        MattMinimalFramesDB.maelstromBarHeight = d.maelstromBarHeight
+        MattMinimalFramesDB.maelstromBarSpacing = d.maelstromBarSpacing
+        MattMinimalFramesDB.maelstromBarX = d.maelstromBarX
+        MattMinimalFramesDB.maelstromBarY = d.maelstromBarY
         -- Frame scales
         MattMinimalFramesDB.playerFrameScaleX = d.playerFrameScaleX
         MattMinimalFramesDB.playerFrameScaleY = d.playerFrameScaleY
