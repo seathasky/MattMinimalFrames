@@ -655,20 +655,6 @@ local function ApplyPartyRaidNameCenter(fontString, frame)
     CapturePartyRaidNameStyle(fontString)
 
     local anchor = frame
-    local cachedCenter = cachedPartyRaidNameCenterState[fontString]
-    if cachedCenter and cachedCenter.anchor == anchor then
-        local p1, relTo, p2, x, y = fontString:GetPoint(1)
-        local isAlreadyCentered = (p1 == "CENTER")
-            and (p2 == "CENTER")
-            and (relTo == anchor)
-            and ((x or 0) == 0)
-            and ((y or 0) == 0)
-            and ((not fontString.GetJustifyH) or fontString:GetJustifyH() == "CENTER")
-            and ((not fontString.GetJustifyV) or fontString:GetJustifyV() == "MIDDLE")
-        if isAlreadyCentered then
-            return
-        end
-    end
 
     if fontString.SetJustifyH then
         fontString:SetJustifyH("CENTER")
