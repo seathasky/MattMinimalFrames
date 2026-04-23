@@ -498,13 +498,15 @@ local function CapturePartyRaidNameStyle(fontString)
     local points = {}
     for i = 1, pointCount do
         local point, relativeTo, relativePoint, xOfs, yOfs = fontString:GetPoint(i)
-        points[#points + 1] = {
-            point = point,
-            relativeTo = relativeTo,
-            relativePoint = relativePoint,
-            xOfs = xOfs,
-            yOfs = yOfs,
-        }
+        if type(point) == "string" and point ~= "" then
+            points[#points + 1] = {
+                point = point,
+                relativeTo = relativeTo,
+                relativePoint = (type(relativePoint) == "string" and relativePoint ~= "" and relativePoint) or point,
+                xOfs = tonumber(xOfs) or 0,
+                yOfs = tonumber(yOfs) or 0,
+            }
+        end
     end
 
     trackedPartyRaidNameStyles[fontString] = {
@@ -572,20 +574,28 @@ local function RestorePartyRaidNameLayout(fontString, original)
     local restored = false
     if original and type(original.points) == "table" then
         for _, pointData in ipairs(original.points) do
-            if pointData and pointData.point then
-                fontString:SetPoint(
-                    pointData.point,
+            local point = pointData and pointData.point
+            if type(point) == "string" and point ~= "" then
+                local ok = pcall(
+                    fontString.SetPoint,
+                    fontString,
+                    point,
                     pointData.relativeTo,
-                    pointData.relativePoint,
-                    pointData.xOfs,
-                    pointData.yOfs
+                    (type(pointData.relativePoint) == "string" and pointData.relativePoint ~= "" and pointData.relativePoint) or point,
+                    tonumber(pointData.xOfs) or 0,
+                    tonumber(pointData.yOfs) or 0
                 )
-                restored = true
+                if ok then
+                    restored = true
+                end
             end
         end
     end
     if not restored then
         fontString:SetPoint("LEFT")
+    end
+    if fontString.SetWidth then
+        fontString:SetWidth(0)
     end
 
     if original and fontString.SetJustifyH then
@@ -666,6 +676,12 @@ local function ApplyPartyRaidNameCenter(fontString, frame)
     if anchor and fontString.ClearAllPoints and fontString.SetPoint then
         fontString:ClearAllPoints()
         fontString:SetPoint("CENTER", anchor, "CENTER", 0, 0)
+        if fontString.SetWidth and type(anchor.GetWidth) == "function" then
+            local anchorWidth = tonumber(anchor:GetWidth()) or 0
+            if anchorWidth > 0 then
+                fontString:SetWidth(math.max(8, anchorWidth - 8))
+            end
+        end
     end
     cachedPartyRaidNameCenterState[fontString] = { anchor = anchor }
 end
@@ -711,6 +727,27 @@ local function GetPartyRaidNameTruncateLength(frame)
     return truncateLen
 end
 
+local function GetPartyRaidDisplayName(unit)
+    local fullName = GetUnitName(unit, true) or UnitName(unit)
+    if type(fullName) ~= "string" or fullName == "" then
+        return nil
+    end
+
+    if type(_G.Ambiguate) == "function" then
+        local ok, shortName = pcall(_G.Ambiguate, fullName, "short")
+        if ok and type(shortName) == "string" and shortName ~= "" then
+            return shortName
+        end
+    end
+
+    local dashPos = string.find(fullName, "-", 1, true)
+    if dashPos and dashPos > 1 then
+        return string.sub(fullName, 1, dashPos - 1)
+    end
+
+    return fullName
+end
+
 local function ApplyRaidNameTruncation(fontString, frame)
     if not IsFontString(fontString) then
         return
@@ -721,14 +758,18 @@ local function ApplyRaidNameTruncation(fontString, frame)
 
     local truncateLen = GetPartyRaidNameTruncateLength(frame)
 
-    local fullName = fontString.GetText and fontString:GetText() or nil
-    if type(fullName) ~= "string" or fullName == "" then
+    local unit = frame and (frame.unit or frame.displayedUnit)
+    if type(unit) ~= "string" or unit == "" then
+        return
+    end
+
+    local fullName = GetPartyRaidDisplayName(unit)
+    if not fullName then
         return
     end
 
     local nextText = TruncatePartyRaidNameText(fullName, truncateLen)
-    local currentText = fontString.GetText and fontString:GetText() or nil
-    if nextText and nextText ~= currentText then
+    if nextText then
         pcall(fontString.SetText, fontString, nextText)
     end
 end
