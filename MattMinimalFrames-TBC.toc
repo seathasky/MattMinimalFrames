@@ -1,7 +1,7 @@
 ## Interface: 20505
 ## Title: Matt's Minimal Frames
 ## Author: Seathasky
-## Version: 7.4.9
+## Version: 7.4.9-hotfix
 ## X-Curse-Project-ID: 1362998
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
 ## SavedVariables: MattMinimalFramesDB, MattMinimalFramesProfilesDB, MattMinimalFramesGlobalDB
@@ -93,6 +93,7 @@ core/popup/profiles/profiles_page.lua
 core/popup/auras_power_tabs/power.lua
 core/popup/auras_power_tabs/player_auras.lua
 core/popup/auras_power_tabs/target_auras.lua
+core/popup/auras_power_tabs/focus_auras.lua
 core/popup/auras_power_tabs/filters.lua
 
 # Popup: remaining pages + shell
