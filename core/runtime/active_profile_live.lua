@@ -82,6 +82,8 @@ function MMF_ApplyActiveProfileLive()
     if MMF_UpdateAuraTextScale then MMF_UpdateAuraTextScale(MattMinimalFramesDB.auraTextScale or 1.0) end
     if MMF_UpdateTimerTextScale then MMF_UpdateTimerTextScale(MattMinimalFramesDB.timerTextScale or 0.8) end
     if MMF_UpdateTargetAuras then MMF_UpdateTargetAuras() end
+    if MMF_UpdatePlayerAuras then MMF_UpdatePlayerAuras() end
+    if MMF_UpdateFocusAuras then MMF_UpdateFocusAuras() end
 
     if MMF_ApplyStatusBarTexture then MMF_ApplyStatusBarTexture() end
 

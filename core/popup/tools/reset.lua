@@ -4,6 +4,24 @@ function MMF_ResetPopupScaleAndTextToDefaults()
         MattMinimalFramesDB.auraTextScale = d.auraTextScale
         MattMinimalFramesDB.timerTextScale = d.timerTextScale
         MattMinimalFramesDB.auraIconSize = d.auraIconSize
+        -- Focus aura defaults (so Tools reset also resets Focus Auras settings)
+        MattMinimalFramesDB.showFocusBuffs = d.showFocusBuffs
+        MattMinimalFramesDB.showFocusDebuffs = d.showFocusDebuffs
+        MattMinimalFramesDB.focusUseBlizzardAuraAnchoring = d.focusUseBlizzardAuraAnchoring
+        MattMinimalFramesDB.focusAuraOffsetType = d.focusAuraOffsetType
+        MattMinimalFramesDB.focusAuraAppearanceType = d.focusAuraAppearanceType
+        MattMinimalFramesDB.focusBuffXOffset = d.focusBuffXOffset
+        MattMinimalFramesDB.focusBuffYOffset = d.focusBuffYOffset
+        MattMinimalFramesDB.focusDebuffXOffset = d.focusDebuffXOffset
+        MattMinimalFramesDB.focusDebuffYOffset = d.focusDebuffYOffset
+        MattMinimalFramesDB.focusBuffAuraDirection = d.focusBuffAuraDirection
+        MattMinimalFramesDB.focusDebuffAuraDirection = d.focusDebuffAuraDirection
+        MattMinimalFramesDB.focusBuffAuraIconSize = d.focusBuffAuraIconSize
+        MattMinimalFramesDB.focusBuffAuraIconsPerRow = d.focusBuffAuraIconsPerRow
+        MattMinimalFramesDB.focusBuffAuraRows = d.focusBuffAuraRows
+        MattMinimalFramesDB.focusDebuffAuraIconSize = d.focusDebuffAuraIconSize
+        MattMinimalFramesDB.focusDebuffAuraIconsPerRow = d.focusDebuffAuraIconsPerRow
+        MattMinimalFramesDB.focusDebuffAuraRows = d.focusDebuffAuraRows
         MattMinimalFramesDB.nameTextSize = d.nameTextSize
         MattMinimalFramesDB.textSizeUnit = d.textSizeUnit
         MattMinimalFramesDB.playerNameTextSize = d.nameTextSize

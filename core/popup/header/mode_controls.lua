@@ -221,6 +221,9 @@ function MMF_CreatePopupHeaderModeController(config)
         if MMF_UpdatePlayerAuras then
             MMF_UpdatePlayerAuras()
         end
+        if MMF_UpdateFocusAuras then
+            MMF_UpdateFocusAuras()
+        end
         if MMF_RequestAllFramesUpdate then
             MMF_RequestAllFramesUpdate()
         elseif MMF_GetAllFrames and MMF_UpdateUnitFrame then

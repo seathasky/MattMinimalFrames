@@ -65,6 +65,7 @@ local function MMF_SetupAurasPowerHeader(leftCol, accentColor, requestScrollRefr
         { label = "Power", subtitle = "Player and target power bars and text.", x = 304, y = 12, width = 228, height = 460, guide = "Use this page to control power bars and power text.\nYou can choose what is shown and how large it appears." },
         { label = "Player Auras", subtitle = "Player aura position and appearance.", x = 0, y = 12, width = 352, height = 500, guide = "Use this page to control your own buffs and debuffs.\nMove them, resize them, and set how they grow." },
         { label = "Target Auras", subtitle = "Target aura position and appearance.", x = 0, y = 12, width = 352, height = 500, guide = "Use this page to control target buffs and debuffs.\nAdjust layout so important effects are easy to read." },
+        { label = "Focus Auras", subtitle = "Focus aura position and appearance.", x = 0, y = 12, width = 352, height = 500, guide = "Use this page to control focus buffs and debuffs.\nMove them, resize them, and set how they grow." },
         { label = "Filters", subtitle = "Filter which target debuffs are displayed.", x = 0, y = 12, width = 300, height = 180, guide = "Use this page to hide less important debuffs.\nKeep only the debuffs you actually care about." },
     }
 
@@ -249,6 +250,18 @@ function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalC
             },
         },
         [4] = {
+            builder = MMF_BuildAurasPowerFocusAurasSection,
+            config = {
+                popup = popup,
+                accentColor = ACCENT_COLOR,
+                createMinimalCheckbox = CreateMinimalCheckbox,
+                createMinimalSlider = CreateMinimalSlider,
+                auraColX = AURA_COL_X,
+                auraColWidth = AURA_COL_WIDTH,
+                dropdownLists = dropdownLists,
+            },
+        },
+        [5] = {
             builder = MMF_BuildAurasPowerFiltersSection,
             config = {
                 createMinimalCheckbox = CreateMinimalCheckbox,
@@ -295,5 +308,9 @@ function MMF_CreateAurasPowerSection(leftCol, popup, accentColor, createMinimalC
         playerBuffAuraDirectionList = dropdownLists.playerBuffAuraDirectionList,
         playerDebuffAuraDirectionList = dropdownLists.playerDebuffAuraDirectionList,
         playerAuraAppearanceTypeList = dropdownLists.playerAuraAppearanceTypeList,
+        focusAuraTypeList = dropdownLists.focusAuraTypeList,
+        focusBuffAuraDirectionList = dropdownLists.focusBuffAuraDirectionList,
+        focusDebuffAuraDirectionList = dropdownLists.focusDebuffAuraDirectionList,
+        focusAuraAppearanceTypeList = dropdownLists.focusAuraAppearanceTypeList,
     }
 end

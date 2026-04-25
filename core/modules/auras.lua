@@ -29,6 +29,10 @@ local function ShouldUseBlizzardAuraAnchoring(unitToken)
         if db.playerUseBlizzardAuraAnchoring ~= nil then
             return db.playerUseBlizzardAuraAnchoring == true
         end
+    elseif unitToken == "focus" then
+        if db.focusUseBlizzardAuraAnchoring ~= nil then
+            return db.focusUseBlizzardAuraAnchoring == true
+        end
     else
         if db.targetUseBlizzardAuraAnchoring ~= nil then
             return db.targetUseBlizzardAuraAnchoring == true
@@ -75,6 +79,8 @@ end
 local function GetAuraUnitPrefix(unitToken)
     if unitToken == "player" then
         return "player"
+    elseif unitToken == "focus" then
+        return "focus"
     end
     return "target"
 end
@@ -82,9 +88,14 @@ end
 local function GetAuraIconSizeForType(isDebuff, unitToken)
     local db = MattMinimalFramesDB or {}
     local prefix = GetAuraUnitPrefix(unitToken)
-    local key = (prefix == "player")
-        and (isDebuff and "playerDebuffAuraIconSize" or "playerBuffAuraIconSize")
-        or (isDebuff and "debuffAuraIconSize" or "buffAuraIconSize")
+    local key
+    if prefix == "player" then
+        key = isDebuff and "playerDebuffAuraIconSize" or "playerBuffAuraIconSize"
+    elseif prefix == "focus" then
+        key = isDebuff and "focusDebuffAuraIconSize" or "focusBuffAuraIconSize"
+    else
+        key = isDebuff and "debuffAuraIconSize" or "buffAuraIconSize"
+    end
     local size = math.floor(tonumber(db[key]) or tonumber(db.auraIconSize) or MMF_GetAuraIconSize() or 18)
     if size < 12 then size = 12 end
     if size > 40 then size = 40 end
@@ -94,9 +105,14 @@ end
 local function GetAuraIconsPerRow(isDebuff, unitToken)
     local db = MattMinimalFramesDB or {}
     local prefix = GetAuraUnitPrefix(unitToken)
-    local key = (prefix == "player")
-        and (isDebuff and "playerDebuffAuraIconsPerRow" or "playerBuffAuraIconsPerRow")
-        or (isDebuff and "debuffAuraIconsPerRow" or "buffAuraIconsPerRow")
+    local key
+    if prefix == "player" then
+        key = isDebuff and "playerDebuffAuraIconsPerRow" or "playerBuffAuraIconsPerRow"
+    elseif prefix == "focus" then
+        key = isDebuff and "focusDebuffAuraIconsPerRow" or "focusBuffAuraIconsPerRow"
+    else
+        key = isDebuff and "debuffAuraIconsPerRow" or "buffAuraIconsPerRow"
+    end
     local perRow = math.floor(tonumber(db[key]) or tonumber(db.auraIconsPerRow) or cfg.AURA_ROW_ICONS or 4)
     if perRow < 1 then perRow = 1 end
     if perRow > MAX_AURA_ICONS then perRow = MAX_AURA_ICONS end
@@ -106,9 +122,14 @@ end
 local function GetAuraRows(isDebuff, unitToken)
     local db = MattMinimalFramesDB or {}
     local prefix = GetAuraUnitPrefix(unitToken)
-    local key = (prefix == "player")
-        and (isDebuff and "playerDebuffAuraRows" or "playerBuffAuraRows")
-        or (isDebuff and "debuffAuraRows" or "buffAuraRows")
+    local key
+    if prefix == "player" then
+        key = isDebuff and "playerDebuffAuraRows" or "playerBuffAuraRows"
+    elseif prefix == "focus" then
+        key = isDebuff and "focusDebuffAuraRows" or "focusBuffAuraRows"
+    else
+        key = isDebuff and "debuffAuraRows" or "buffAuraRows"
+    end
     local rows = math.floor(tonumber(db[key]) or tonumber(db.auraRows) or 3)
     if rows < 1 then rows = 1 end
     if rows > MAX_AURA_ICONS then rows = MAX_AURA_ICONS end
@@ -160,6 +181,15 @@ local function GetAuraDirectionValue(isDebuff, unitToken)
             return value
         end
         return NormalizeAuraDirection(db.playerBuffAuraDirection, "right_down")
+    elseif unitToken == "focus" then
+        if isDebuff then
+            local value = NormalizeAuraDirection(db.focusDebuffAuraDirection, "right_up")
+            if forceDebuffsDown then
+                value = NormalizeDebuffGrowthDown(value)
+            end
+            return value
+        end
+        return NormalizeAuraDirection(db.focusBuffAuraDirection, "left_down")
     end
     if isDebuff then
         local value = NormalizeAuraDirection(db.debuffAuraDirection, "right_up")
@@ -208,6 +238,8 @@ local function ApplyAuraContainerPosition(container, isDebuff, x, y)
         local unitToken = container and container.mmfAuraUnit
         if unitToken == "player" then
             ownerFrame = MMF_PlayerFrame
+        elseif unitToken == "focus" then
+            ownerFrame = MMF_FocusFrame
         else
             ownerFrame = MMF_TargetFrame
         end
@@ -220,6 +252,9 @@ local function ApplyAuraContainerPosition(container, isDebuff, x, y)
     local defaultX, defaultY
     if unitToken == "player" then
         defaultX = isDebuff and -2 or 2
+        defaultY = isDebuff and 27 or -6
+    elseif unitToken == "focus" then
+        defaultX = isDebuff and 3 or -2
         defaultY = isDebuff and 27 or -6
     else
         defaultX = isDebuff and 3 or -2
@@ -252,7 +287,9 @@ local function ApplyAuraContainerPosition(container, isDebuff, x, y)
 
     if isDebuff and ShouldUseBlizzardAuraAnchoring(unitToken) then
         local db = MattMinimalFramesDB or {}
-        local showBuffsKey = (unitToken == "player") and "showPlayerBuffs" or "showBuffs"
+        local showBuffsKey = (unitToken == "player") and "showPlayerBuffs"
+            or (unitToken == "focus") and "showFocusBuffs"
+            or "showBuffs"
         local buffsEnabled = (db[showBuffsKey] ~= false)
         local buffContainer = ownerFrame and ownerFrame.BuffContainer
         if buffsEnabled and buffContainer and buffContainer.IsShown and buffContainer:IsShown() and HasVisibleAuras(buffContainer) then
@@ -300,6 +337,11 @@ local function GetAuraOffsetKeysForContainer(container, isDebuff)
             return "playerDebuffXOffset", "playerDebuffYOffset", -2, 27
         end
         return "playerBuffXOffset", "playerBuffYOffset", 2, -6
+    elseif unitToken == "focus" then
+        if isDebuff then
+            return "focusDebuffXOffset", "focusDebuffYOffset", 3, 27
+        end
+        return "focusBuffXOffset", "focusBuffYOffset", -2, -6
     end
     if isDebuff then
         return "debuffXOffset", "debuffYOffset", 3, 27
@@ -311,6 +353,8 @@ local function GetAuraDirectionKeyForContainer(container, isDebuff)
     local unitToken = (container and container.mmfAuraUnit) or "target"
     if unitToken == "player" then
         return isDebuff and "playerDebuffAuraDirection" or "playerBuffAuraDirection"
+    elseif unitToken == "focus" then
+        return isDebuff and "focusDebuffAuraDirection" or "focusBuffAuraDirection"
     end
     return isDebuff and "debuffAuraDirection" or "buffAuraDirection"
 end
@@ -441,6 +485,9 @@ local function StopAuraContainerDrag(container)
         if MMF_UpdatePlayerAuras then
             MMF_UpdatePlayerAuras()
         end
+        if MMF_UpdateFocusAuras then
+            MMF_UpdateFocusAuras()
+        end
     end
 end
 
@@ -563,6 +610,9 @@ local function RefreshAuraContainers()
         if MMF_UpdatePlayerAuras then
             MMF_UpdatePlayerAuras()
         end
+        if MMF_UpdateFocusAuras then
+            MMF_UpdateFocusAuras()
+        end
     end
 end
 
@@ -575,7 +625,12 @@ local function ShowAuraContainerOptionsPopup(container)
     end
 
     local popup = EnsureAuraOptionsPopup()
-    local unitToken = (container.mmfAuraUnit == "player") and "Player" or "Target"
+    local unitToken = "Target"
+    if container.mmfAuraUnit == "player" then
+        unitToken = "Player"
+    elseif container.mmfAuraUnit == "focus" then
+        unitToken = "Focus"
+    end
     local auraType = (container.mmfAuraIsDebuff == true) and "Debuffs" or "Buffs"
     popup.title:SetText(unitToken .. " " .. auraType .. " Options")
 
@@ -737,6 +792,11 @@ local function GetAuraOffsetsForUnit(unit, isDebuff)
             return db.playerDebuffXOffset, db.playerDebuffYOffset
         end
         return db.playerBuffXOffset, db.playerBuffYOffset
+    elseif unit == "focus" then
+        if isDebuff then
+            return db.focusDebuffXOffset, db.focusDebuffYOffset
+        end
+        return db.focusBuffXOffset, db.focusBuffYOffset
     end
     if isDebuff then
         return MMF_GetDebuffXOffset(), MMF_GetDebuffYOffset()
@@ -842,7 +902,7 @@ end
 --------------------------------------------------
 
 function MMF_UpdateAuraTextScale(scale)
-    if not MMF_TargetFrame and not MMF_PlayerFrame then return end
+    if not MMF_TargetFrame and not MMF_PlayerFrame and not MMF_FocusFrame then return end
     
     local fontSize = math.max(6, math.floor(10 * scale))
     
@@ -864,10 +924,14 @@ function MMF_UpdateAuraTextScale(scale)
         updateContainer(MMF_PlayerFrame.BuffContainer)
         updateContainer(MMF_PlayerFrame.DebuffContainer)
     end
+    if MMF_FocusFrame then
+        updateContainer(MMF_FocusFrame.BuffContainer)
+        updateContainer(MMF_FocusFrame.DebuffContainer)
+    end
 end
 
 function MMF_UpdateTimerTextScale(scale)
-    if not MMF_TargetFrame and not MMF_PlayerFrame then return end
+    if not MMF_TargetFrame and not MMF_PlayerFrame and not MMF_FocusFrame then return end
     
     local fontSize = math.max(8, math.floor(12 * scale))
     
@@ -889,26 +953,36 @@ function MMF_UpdateTimerTextScale(scale)
         updateContainer(MMF_PlayerFrame.BuffContainer)
         updateContainer(MMF_PlayerFrame.DebuffContainer)
     end
+    if MMF_FocusFrame then
+        updateContainer(MMF_FocusFrame.BuffContainer)
+        updateContainer(MMF_FocusFrame.DebuffContainer)
+    end
 end
 
 function MMF_UpdateAuraIconSize(size)
-    if not MMF_TargetFrame then return end
+    if not MMF_TargetFrame and not MMF_PlayerFrame and not MMF_FocusFrame then return end
 
     size = math.floor(size)
     if not MattMinimalFramesDB then
         MattMinimalFramesDB = {}
     end
     MattMinimalFramesDB.auraIconSize = size
-    LayoutAuraContainer(MMF_TargetFrame.BuffContainer, false, size, GetActiveAuraCount(MMF_TargetFrame.BuffContainer))
-    LayoutAuraContainer(MMF_TargetFrame.DebuffContainer, true, size, GetActiveAuraCount(MMF_TargetFrame.DebuffContainer))
+    if MMF_TargetFrame then
+        LayoutAuraContainer(MMF_TargetFrame.BuffContainer, false, size, GetActiveAuraCount(MMF_TargetFrame.BuffContainer))
+        LayoutAuraContainer(MMF_TargetFrame.DebuffContainer, true, size, GetActiveAuraCount(MMF_TargetFrame.DebuffContainer))
+    end
     if MMF_PlayerFrame then
         LayoutAuraContainer(MMF_PlayerFrame.BuffContainer, false, size, GetActiveAuraCount(MMF_PlayerFrame.BuffContainer))
         LayoutAuraContainer(MMF_PlayerFrame.DebuffContainer, true, size, GetActiveAuraCount(MMF_PlayerFrame.DebuffContainer))
     end
+    if MMF_FocusFrame then
+        LayoutAuraContainer(MMF_FocusFrame.BuffContainer, false, size, GetActiveAuraCount(MMF_FocusFrame.BuffContainer))
+        LayoutAuraContainer(MMF_FocusFrame.DebuffContainer, true, size, GetActiveAuraCount(MMF_FocusFrame.DebuffContainer))
+    end
 end
 
 function MMF_UpdateAuraLayout()
-    if not MMF_TargetFrame and not MMF_PlayerFrame then
+    if not MMF_TargetFrame and not MMF_PlayerFrame and not MMF_FocusFrame then
         return
     end
     if MMF_TargetFrame.BuffContainer then
@@ -923,6 +997,12 @@ function MMF_UpdateAuraLayout()
     if MMF_PlayerFrame and MMF_PlayerFrame.DebuffContainer then
         ApplyAuraContainerPosition(MMF_PlayerFrame.DebuffContainer, true, MattMinimalFramesDB and MattMinimalFramesDB.playerDebuffXOffset, MattMinimalFramesDB and MattMinimalFramesDB.playerDebuffYOffset)
     end
+    if MMF_FocusFrame and MMF_FocusFrame.BuffContainer then
+        ApplyAuraContainerPosition(MMF_FocusFrame.BuffContainer, false, MattMinimalFramesDB and MattMinimalFramesDB.focusBuffXOffset, MattMinimalFramesDB and MattMinimalFramesDB.focusBuffYOffset)
+    end
+    if MMF_FocusFrame and MMF_FocusFrame.DebuffContainer then
+        ApplyAuraContainerPosition(MMF_FocusFrame.DebuffContainer, true, MattMinimalFramesDB and MattMinimalFramesDB.focusDebuffXOffset, MattMinimalFramesDB and MattMinimalFramesDB.focusDebuffYOffset)
+    end
     if MMF_TargetFrame then
         LayoutAuraContainer(MMF_TargetFrame.BuffContainer, false, nil, GetActiveAuraCount(MMF_TargetFrame.BuffContainer))
         LayoutAuraContainer(MMF_TargetFrame.DebuffContainer, true, nil, GetActiveAuraCount(MMF_TargetFrame.DebuffContainer))
@@ -931,8 +1011,13 @@ function MMF_UpdateAuraLayout()
         LayoutAuraContainer(MMF_PlayerFrame.BuffContainer, false, nil, GetActiveAuraCount(MMF_PlayerFrame.BuffContainer))
         LayoutAuraContainer(MMF_PlayerFrame.DebuffContainer, true, nil, GetActiveAuraCount(MMF_PlayerFrame.DebuffContainer))
     end
+    if MMF_FocusFrame then
+        LayoutAuraContainer(MMF_FocusFrame.BuffContainer, false, nil, GetActiveAuraCount(MMF_FocusFrame.BuffContainer))
+        LayoutAuraContainer(MMF_FocusFrame.DebuffContainer, true, nil, GetActiveAuraCount(MMF_FocusFrame.DebuffContainer))
+    end
     if MMF_UpdateTargetAuras then MMF_UpdateTargetAuras() end
     if MMF_UpdatePlayerAuras then MMF_UpdatePlayerAuras() end
+    if MMF_UpdateFocusAuras then MMF_UpdateFocusAuras() end
 end
 
 function MMF_UpdateBuffPosition(x, y)
@@ -962,6 +1047,22 @@ end
 function MMF_UpdatePlayerDebuffPosition(x, y)
     if not MMF_PlayerFrame or not MMF_PlayerFrame.DebuffContainer then return end
     ApplyAuraContainerPosition(MMF_PlayerFrame.DebuffContainer, true, x, y)
+    if MMF_UpdateAuraLayout then
+        MMF_UpdateAuraLayout()
+    end
+end
+
+function MMF_UpdateFocusBuffPosition(x, y)
+    if not MMF_FocusFrame or not MMF_FocusFrame.BuffContainer then return end
+    ApplyAuraContainerPosition(MMF_FocusFrame.BuffContainer, false, x, y)
+    if MMF_UpdateAuraLayout then
+        MMF_UpdateAuraLayout()
+    end
+end
+
+function MMF_UpdateFocusDebuffPosition(x, y)
+    if not MMF_FocusFrame or not MMF_FocusFrame.DebuffContainer then return end
+    ApplyAuraContainerPosition(MMF_FocusFrame.DebuffContainer, true, x, y)
     if MMF_UpdateAuraLayout then
         MMF_UpdateAuraLayout()
     end
@@ -1074,12 +1175,16 @@ local function CreateAuraContainer(parent, isDebuff, unitToken)
     if isDebuff then
         if unitToken == "player" then
             ApplyAuraContainerPosition(container, true, MattMinimalFramesDB and MattMinimalFramesDB.playerDebuffXOffset, MattMinimalFramesDB and MattMinimalFramesDB.playerDebuffYOffset)
+        elseif unitToken == "focus" then
+            ApplyAuraContainerPosition(container, true, MattMinimalFramesDB and MattMinimalFramesDB.focusDebuffXOffset, MattMinimalFramesDB and MattMinimalFramesDB.focusDebuffYOffset)
         else
             ApplyAuraContainerPosition(container, true, MMF_GetDebuffXOffset(), MMF_GetDebuffYOffset())
         end
     else
         if unitToken == "player" then
             ApplyAuraContainerPosition(container, false, MattMinimalFramesDB and MattMinimalFramesDB.playerBuffXOffset, MattMinimalFramesDB and MattMinimalFramesDB.playerBuffYOffset)
+        elseif unitToken == "focus" then
+            ApplyAuraContainerPosition(container, false, MattMinimalFramesDB and MattMinimalFramesDB.focusBuffXOffset, MattMinimalFramesDB and MattMinimalFramesDB.focusBuffYOffset)
         else
             ApplyAuraContainerPosition(container, false, MMF_GetBuffXOffset(), MMF_GetBuffYOffset())
         end
@@ -1099,7 +1204,12 @@ local function CreateAuraContainer(parent, isDebuff, unitToken)
     else
         label:SetPoint("TOPLEFT", container, "BOTTOMLEFT", 0, -3)
     end
-    local unitPrefix = (unitToken == "player") and "PLAYER " or "TARGET "
+    local unitPrefix = "TARGET "
+    if unitToken == "player" then
+        unitPrefix = "PLAYER "
+    elseif unitToken == "focus" then
+        unitPrefix = "FOCUS "
+    end
     label:SetText(unitPrefix .. (isDebuff and "DEBUFFS" or "BUFFS"))
     label:SetTextColor(0.95, 0.96, 0.98)
     label:SetShadowColor(0, 0, 0, 1)
@@ -1150,6 +1260,14 @@ function MMF_SetupTargetAuras()
         end
         if not MMF_PlayerFrame.DebuffContainer then
             MMF_PlayerFrame.DebuffContainer = CreateAuraContainer(MMF_PlayerFrame, true, "player")
+        end
+    end
+    if MMF_FocusFrame then
+        if not MMF_FocusFrame.BuffContainer then
+            MMF_FocusFrame.BuffContainer = CreateAuraContainer(MMF_FocusFrame, false, "focus")
+        end
+        if not MMF_FocusFrame.DebuffContainer then
+            MMF_FocusFrame.DebuffContainer = CreateAuraContainer(MMF_FocusFrame, true, "focus")
         end
     end
 end
@@ -1361,13 +1479,24 @@ local function UpdateUnitAuras(unit)
     if ShouldSuspendForBlizzardEditMode() then
         return
     end
-    local frame = (unit == "player") and MMF_PlayerFrame or MMF_TargetFrame
+    local frame
+    if unit == "player" then
+        frame = MMF_PlayerFrame
+    elseif unit == "focus" then
+        frame = MMF_FocusFrame
+    else
+        frame = MMF_TargetFrame
+    end
     if not frame or not frame.BuffContainer or not frame.DebuffContainer then return end
 
     local db = MattMinimalFramesDB or {}
     local showLabels = IsAuraLabelPreviewEnabled()
-    local showBuffsKey = (unit == "player") and "showPlayerBuffs" or "showBuffs"
-    local showDebuffsKey = (unit == "player") and "showPlayerDebuffs" or "showDebuffs"
+    local showBuffsKey = (unit == "player") and "showPlayerBuffs"
+        or (unit == "focus") and "showFocusBuffs"
+        or "showBuffs"
+    local showDebuffsKey = (unit == "player") and "showPlayerDebuffs"
+        or (unit == "focus") and "showFocusDebuffs"
+        or "showDebuffs"
 
     if IsAuraFakePreviewEnabled() then
         local forcePlayerPreview = (unit == "player")
@@ -1500,6 +1629,13 @@ function MMF_UpdatePlayerAuras()
     UpdateUnitAuras("player")
 end
 
+function MMF_UpdateFocusAuras()
+    if ShouldSuspendForBlizzardEditMode() then
+        return
+    end
+    UpdateUnitAuras("focus")
+end
+
 --------------------------------------------------
 -- AURA EVENTS
 --------------------------------------------------
@@ -1557,6 +1693,11 @@ local function QueueAuraResync(unit)
             if MMF_UpdateDispelHighlights then
                 MMF_UpdateDispelHighlights()
             end
+        elseif unit == "focus" then
+            MMF_UpdateFocusAuras()
+            if MMF_UpdateDispelHighlights then
+                MMF_UpdateDispelHighlights()
+            end
         end
     end)
 end
@@ -1568,6 +1709,7 @@ auraEventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 auraEventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 auraEventFrame:RegisterEvent("UNIT_AURA")
 auraEventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
+auraEventFrame:RegisterEvent("PLAYER_FOCUS_CHANGED")
 auraEventFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 auraEventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 auraEventFrame:RegisterEvent("SPELLS_CHANGED")
@@ -1588,11 +1730,16 @@ auraEventFrame:SetScript("OnUpdate", function(self, elapsed)
     if not ((type(InCombatLockdown) == "function") and InCombatLockdown()) then
         return
     end
-    if type(UnitExists) ~= "function" or not UnitExists("target") then
+    if type(UnitExists) ~= "function" then
         return
     end
 
-    MMF_UpdateTargetAuras()
+    if UnitExists("target") then
+        MMF_UpdateTargetAuras()
+    end
+    if UnitExists("focus") then
+        MMF_UpdateFocusAuras()
+    end
     if MMF_UpdateDispelHighlights then
         MMF_UpdateDispelHighlights()
     end
@@ -1606,6 +1753,7 @@ auraEventFrame:SetScript("OnEvent", function(self, event, unit)
         MMF_UpdateBlizzardPlayerAuraVisibility()
         MMF_UpdateTargetAuras()
         MMF_UpdatePlayerAuras()
+        MMF_UpdateFocusAuras()
         if MMF_UpdateDispelHighlights then
             MMF_UpdateDispelHighlights()
         end
@@ -1618,9 +1766,14 @@ auraEventFrame:SetScript("OnEvent", function(self, event, unit)
             ClearAuraContainer(MMF_PlayerFrame.BuffContainer)
             ClearAuraContainer(MMF_PlayerFrame.DebuffContainer)
         end
+        if MMF_FocusFrame then
+            ClearAuraContainer(MMF_FocusFrame.BuffContainer)
+            ClearAuraContainer(MMF_FocusFrame.DebuffContainer)
+        end
     elseif event == "PLAYER_REGEN_DISABLED" or event == "PLAYER_REGEN_ENABLED" then
         MMF_UpdateTargetAuras()
         MMF_UpdatePlayerAuras()
+        MMF_UpdateFocusAuras()
         if MMF_UpdateDispelHighlights then
             MMF_UpdateDispelHighlights()
         end
@@ -1637,6 +1790,12 @@ auraEventFrame:SetScript("OnEvent", function(self, event, unit)
             MMF_UpdateDispelHighlights()
         end
         QueueAuraResync("player")
+    elseif event == "UNIT_AURA" and unit == "focus" then
+        MMF_UpdateFocusAuras()
+        if MMF_UpdateDispelHighlights then
+            MMF_UpdateDispelHighlights()
+        end
+        QueueAuraResync("focus")
     elseif event == "PLAYER_TARGET_CHANGED" then
         if MMF_TargetFrame then
             ClearAuraContainer(MMF_TargetFrame.BuffContainer)
@@ -1644,17 +1803,31 @@ auraEventFrame:SetScript("OnEvent", function(self, event, unit)
         end
         MMF_UpdateTargetAuras()
         MMF_UpdatePlayerAuras()
+        MMF_UpdateFocusAuras()
         QueueTargetRefreshBurst()
         QueueAuraResync("target")
         QueueAuraResync("player")
+        QueueAuraResync("focus")
+        if MMF_UpdateDispelHighlights then
+            MMF_UpdateDispelHighlights()
+        end
+    elseif event == "PLAYER_FOCUS_CHANGED" then
+        if MMF_FocusFrame then
+            ClearAuraContainer(MMF_FocusFrame.BuffContainer)
+            ClearAuraContainer(MMF_FocusFrame.DebuffContainer)
+        end
+        MMF_UpdateFocusAuras()
+        QueueAuraResync("focus")
         if MMF_UpdateDispelHighlights then
             MMF_UpdateDispelHighlights()
         end
     elseif event == "ZONE_CHANGED_NEW_AREA" or event == "GROUP_ROSTER_UPDATE" then
         MMF_UpdateTargetAuras()
         MMF_UpdatePlayerAuras()
+        MMF_UpdateFocusAuras()
         QueueAuraResync("target")
         QueueAuraResync("player")
+        QueueAuraResync("focus")
         if MMF_UpdateDispelHighlights then
             MMF_UpdateDispelHighlights()
         end

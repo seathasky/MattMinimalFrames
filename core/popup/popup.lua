@@ -213,6 +213,10 @@ function MMF_ShowWelcomePopup(forceShow)
     local playerBuffAuraDirectionList
     local playerDebuffAuraDirectionList
     local playerAuraAppearanceTypeList
+    local focusAuraTypeList
+    local focusBuffAuraDirectionList
+    local focusDebuffAuraDirectionList
+    local focusAuraAppearanceTypeList
     local profileSelectList
     local deleteProfileSelectList
     local closableLists = {}
@@ -381,6 +385,10 @@ function MMF_ShowWelcomePopup(forceShow)
         playerBuffAuraDirectionList = aurasState.playerBuffAuraDirectionList
         playerDebuffAuraDirectionList = aurasState.playerDebuffAuraDirectionList
         playerAuraAppearanceTypeList = aurasState.playerAuraAppearanceTypeList
+        focusAuraTypeList = aurasState.focusAuraTypeList
+        focusBuffAuraDirectionList = aurasState.focusBuffAuraDirectionList
+        focusDebuffAuraDirectionList = aurasState.focusDebuffAuraDirectionList
+        focusAuraAppearanceTypeList = aurasState.focusAuraAppearanceTypeList
     end
     RegisterClosableList(auraTypeList)
     RegisterClosableList(buffAuraDirectionList)
@@ -390,6 +398,10 @@ function MMF_ShowWelcomePopup(forceShow)
     RegisterClosableList(playerBuffAuraDirectionList)
     RegisterClosableList(playerDebuffAuraDirectionList)
     RegisterClosableList(playerAuraAppearanceTypeList)
+    RegisterClosableList(focusAuraTypeList)
+    RegisterClosableList(focusBuffAuraDirectionList)
+    RegisterClosableList(focusDebuffAuraDirectionList)
+    RegisterClosableList(focusAuraAppearanceTypeList)
 
     MMF_CreatePartyRaidPage(partyRaidCol, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider)
 

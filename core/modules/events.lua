@@ -296,6 +296,9 @@ function MMF_SetEditMode(enabled)
     if MMF_UpdatePlayerAuras then
         MMF_UpdatePlayerAuras()
     end
+    if MMF_UpdateFocusAuras then
+        MMF_UpdateFocusAuras()
+    end
 end
 
 function MMF_LockFrames()
