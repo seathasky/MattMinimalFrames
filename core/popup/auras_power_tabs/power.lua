@@ -26,9 +26,7 @@ function MMF_BuildAurasPowerPowerSection(ctx)
 
     local playerColorPowerTextCheck = nil
     local targetColorPowerTextCheck = nil
-    local playerPercentPowerTextCheck = nil
     local playerDruidManaPowerTextCheck = nil
-    local targetPercentPowerTextCheck = nil
     local playerPowerBarCheck = nil
     local targetPowerBarCheck = nil
     local playerPowerWidthSlider = nil
@@ -151,6 +149,12 @@ function MMF_BuildAurasPowerPowerSection(ctx)
     if MattMinimalFramesDB.showTargetPowerPercentText == nil then
         MattMinimalFramesDB.showTargetPowerPercentText = (MattMinimalFramesDB.showPowerPercentText == true)
     end
+    if MattMinimalFramesDB.playerPowerTextMode == nil then
+        MattMinimalFramesDB.playerPowerTextMode = MattMinimalFramesDB.showPlayerPowerPercentText and "both" or "value"
+    end
+    if MattMinimalFramesDB.targetPowerTextMode == nil then
+        MattMinimalFramesDB.targetPowerTextMode = MattMinimalFramesDB.showTargetPowerPercentText and "both" or "value"
+    end
 
     local function SetDependentCheckboxState(container, enabled)
         if not container then return end
@@ -182,10 +186,8 @@ function MMF_BuildAurasPowerPowerSection(ctx)
         local playerTextEnabled = (MattMinimalFramesDB.showPlayerPowerText == true or MattMinimalFramesDB.showPlayerPowerText == 1)
         local targetTextEnabled = (MattMinimalFramesDB.showTargetPowerText == true or MattMinimalFramesDB.showTargetPowerText == 1)
         SetDependentCheckboxState(playerColorPowerTextCheck, playerTextEnabled)
-        SetDependentCheckboxState(playerPercentPowerTextCheck, playerTextEnabled)
         SetDependentCheckboxState(playerDruidManaPowerTextCheck, playerTextEnabled and isPlayerDruid)
         SetDependentCheckboxState(targetColorPowerTextCheck, targetTextEnabled)
-        SetDependentCheckboxState(targetPercentPowerTextCheck, targetTextEnabled)
     end
     MMF_RefreshPowerTextOptionStates = UpdatePowerTextDependencies
 
@@ -212,9 +214,34 @@ function MMF_BuildAurasPowerPowerSection(ctx)
         RefreshPowerFrames()
     end)
 
-    playerPercentPowerTextCheck = CreateMinimalCheckbox(root, "Power Text: Percent", RESOURCE_COL_X, -144, "showPlayerPowerPercentText", false, function()
-        RefreshPowerFrames()
-    end)
+    local powerTextModeOptions = {
+        { value = "value", label = "Value" },
+        { value = "percent", label = "Percent" },
+        { value = "both", label = "Value + Percent" },
+        { value = "both_white_percent", label = "Value + % (White %)" },
+    }
+    if CreateMinimalDropdown then
+        CreateMinimalDropdown(root, popup, {
+            accentColor = accent,
+            settingKey = "__tempPlayerPowerTextMode",
+            x = RESOURCE_COL_X,
+            y = -144,
+            width = 200,
+            labelWidth = 92,
+            buttonOffset = 96,
+            buttonWidth = 104,
+            visibleRows = #powerTextModeOptions,
+            label = "Text Format",
+            options = powerTextModeOptions,
+            getValue = function()
+                return MattMinimalFramesDB.playerPowerTextMode or "value"
+            end,
+            onSelect = function(value)
+                MattMinimalFramesDB.playerPowerTextMode = value
+                RefreshPowerFrames()
+            end,
+        })
+    end
 
     local playerPowerAnchorY = -168
     local playerResetY = -196
@@ -325,9 +352,28 @@ function MMF_BuildAurasPowerPowerSection(ctx)
     targetColorPowerTextCheck = CreateMinimalCheckbox(root, "Color Text by Resource", RESOURCE_COL_X, targetColorTextY, "colorTargetPowerTextByResource", false, function()
         RefreshPowerFrames()
     end)
-    targetPercentPowerTextCheck = CreateMinimalCheckbox(root, "Power Text: Percent", RESOURCE_COL_X, targetPercentTextY, "showTargetPowerPercentText", false, function()
-        RefreshPowerFrames()
-    end)
+    if CreateMinimalDropdown then
+        CreateMinimalDropdown(root, popup, {
+            accentColor = accent,
+            settingKey = "__tempTargetPowerTextMode",
+            x = RESOURCE_COL_X,
+            y = targetPercentTextY,
+            width = 200,
+            labelWidth = 92,
+            buttonOffset = 96,
+            buttonWidth = 104,
+            visibleRows = #powerTextModeOptions,
+            label = "Text Format",
+            options = powerTextModeOptions,
+            getValue = function()
+                return MattMinimalFramesDB.targetPowerTextMode or "value"
+            end,
+            onSelect = function(value)
+                MattMinimalFramesDB.targetPowerTextMode = value
+                RefreshPowerFrames()
+            end,
+        })
+    end
 
     if CreateMinimalDropdown then
         CreateMinimalDropdown(root, popup, {

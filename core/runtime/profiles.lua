@@ -103,6 +103,12 @@ local function SanitizeProfileTextSettings(profile)
     profile.powerTextScale = NormalizePositiveNumber(profile.powerTextScale, 1.0)
     profile.playerPowerTextScale = NormalizePositiveNumber(profile.playerPowerTextScale, profile.powerTextScale)
     profile.targetPowerTextScale = NormalizePositiveNumber(profile.targetPowerTextScale, profile.powerTextScale)
+    if profile.playerPowerTextMode ~= "value" and profile.playerPowerTextMode ~= "percent" and profile.playerPowerTextMode ~= "both" and profile.playerPowerTextMode ~= "both_white_percent" then
+        profile.playerPowerTextMode = "value"
+    end
+    if profile.targetPowerTextMode ~= "value" and profile.targetPowerTextMode ~= "percent" and profile.targetPowerTextMode ~= "both" and profile.targetPowerTextMode ~= "both_white_percent" then
+        profile.targetPowerTextMode = "value"
+    end
 
     local normalizedFont = NormalizeMediaName(profile.globalFont)
     if normalizedFont then

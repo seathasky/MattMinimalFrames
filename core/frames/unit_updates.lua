@@ -602,6 +602,35 @@ local function IsPowerPercentEnabledForUnit(db, unit)
     return db.showPowerPercentText == true
 end
 
+local function GetPowerTextModeForUnit(db, unit)
+    if unit == "player" then
+        if db.playerPowerTextMode == "value" or db.playerPowerTextMode == "percent" or db.playerPowerTextMode == "both" or db.playerPowerTextMode == "both_white_percent" then
+            return db.playerPowerTextMode
+        end
+    elseif unit == "target" then
+        if db.targetPowerTextMode == "value" or db.targetPowerTextMode == "percent" or db.targetPowerTextMode == "both" or db.targetPowerTextMode == "both_white_percent" then
+            return db.targetPowerTextMode
+        end
+    end
+
+    -- Backward compatibility with the older percent checkbox behavior.
+    if IsPowerPercentEnabledForUnit(db, unit) then
+        return "both"
+    end
+    return "value"
+end
+
+local function ClampRgbByte(n)
+    local value = math.floor(((tonumber(n) or 0) * 255) + 0.5)
+    if value < 0 then value = 0 end
+    if value > 255 then value = 255 end
+    return value
+end
+
+local function ColorizeTextRGB(text, r, g, b)
+    return string.format("|cff%02x%02x%02x%s|r", ClampRgbByte(r), ClampRgbByte(g), ClampRgbByte(b), tostring(text or ""))
+end
+
 local function FormatPercentAndValue(current, showPercent, showValue, useShortValue, percentText)
     local displayPercent = percentText or "0%"
     local absolute = SafeFormatValue(current, useShortValue)
@@ -1595,6 +1624,9 @@ local function UpdateUnitFrame(frame)
             r, g, b = gr, gg, gb
         end
     end
+    if Compat and Compat.IsTBC and unit == "target" and not UnitPlayerControlled(unit) and UnitIsTapDenied and UnitIsTapDenied(unit) then
+        r, g, b = 0.5, 0.5, 0.5
+    end
     local colorAlpha = (MMF_GetUnitColorAlpha and MMF_GetUnitColorAlpha(unit)) or 1
     if frame.healthBar then
         frame.healthBar:SetStatusBarColor(r, g, b, colorAlpha)
@@ -1696,11 +1728,19 @@ local function UpdateUnitFrame(frame)
                         textPower = UnitPower(unit, textPowerType)
                     end
 
-                    local display = SafeFormatValue(textPower, false)
-                    if IsPowerPercentEnabledForUnit(db, unit) then
-                        display = GetPowerPercentText(unit, textPower, textMaxPower, textPowerType)
-                    end
+                    local powerTextMode = GetPowerTextModeForUnit(db, unit)
+                    local powerPercentText = GetPowerPercentText(unit, textPower, textMaxPower, textPowerType)
+                    local showPowerPercent = (powerTextMode == "percent" or powerTextMode == "both" or powerTextMode == "both_white_percent")
+                    local showPowerValue = (powerTextMode == "value" or powerTextMode == "both" or powerTextMode == "both_white_percent")
+                    local display = FormatPercentAndValue(textPower, showPowerPercent, showPowerValue, false, powerPercentText)
                     local tpr, tpg, tpb = ResolvePowerColor(textPowerType, textPowerToken)
+                    if powerTextMode == "both_white_percent" then
+                        local valueText = SafeFormatValue(textPower, false)
+                        if colorPowerText then
+                            valueText = ColorizeTextRGB(valueText, tpr, tpg, tpb)
+                        end
+                        display = string.format("%s | %s", valueText, ColorizeTextRGB(powerPercentText, 1, 1, 1))
+                    end
                     local textScale = db.powerTextScale or 1.0
                     if unit == "player" then
                         textScale = db.playerPowerTextScale or textScale
@@ -1709,7 +1749,7 @@ local function UpdateUnitFrame(frame)
                     end
                     ApplyPowerTextFontSize(frame, textScale)
                     frame.powerText:SetText(display)
-                    if colorPowerText then
+                    if colorPowerText and powerTextMode ~= "both_white_percent" then
                         frame.powerText:SetTextColor(tpr, tpg, tpb, 1)
                     else
                         frame.powerText:SetTextColor(1, 1, 1, 1)
