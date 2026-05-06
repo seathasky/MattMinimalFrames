@@ -177,6 +177,10 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
             sectionChangeHandler = handler
         end,
         ApplyInitialSection = function()
+            local requestedSection = tonumber(MattMinimalFramesDB and MattMinimalFramesDB.unitFramesSubTab) or activeSectionIndex
+            if requestedSection >= 1 and requestedSection <= #sectionDefs then
+                activeSectionIndex = requestedSection
+            end
             applyGeneration = applyGeneration + 1
             local currentGeneration = applyGeneration
             if unitFramesSubTabs and unitFramesSubTabs.SetActive then

@@ -4,20 +4,32 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
     local CreateMinimalSlider = createMinimalSlider or MMF_CreateMinimalSlider
 
     local title = page:CreateFontString(nil, "OVERLAY")
-    title:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
+    title:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 13, "")
     title:SetPoint("TOPLEFT", 12, -12)
     title:SetTextColor(MMF_GetPopupSectionTitleColor())
     title:SetText("BLIZZARD PARTY / RAID FRAME APPEARANCE")
 
+    local subtextLead = page:CreateFontString(nil, "OVERLAY")
+    subtextLead:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "OUTLINE")
+    subtextLead:SetPoint("TOPLEFT", 12, -32)
+    subtextLead:SetWidth(420)
+    subtextLead:SetJustifyH("LEFT")
+    subtextLead:SetWordWrap(true)
+    subtextLead:SetTextColor(0.86, 0.90, 0.96)
+    subtextLead:SetText("Enhances Blizzard party/raid frame fonts ONLY!")
+
     local subtext = page:CreateFontString(nil, "OVERLAY")
-    subtext:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    subtext:SetPoint("TOPLEFT", 12, -32)
-    subtext:SetTextColor(0.62, 0.67, 0.71)
-    subtext:SetText("These are not standalone party / raid frames.")
+    subtext:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
+    subtext:SetPoint("TOPLEFT", subtextLead, "BOTTOMLEFT", 0, -10)
+    subtext:SetWidth(420)
+    subtext:SetJustifyH("LEFT")
+    subtext:SetWordWrap(true)
+    subtext:SetTextColor(0.78, 0.82, 0.88)
+    subtext:SetText("|cffff9a9aFor full standalone party/raid frames,|r\n|cffff9a9ause something like |r|cffc9a0ffDander's Frames|r|cffff9a9a instead.|r")
 
     local divider = page:CreateTexture(nil, "ARTWORK")
     divider:SetSize(240, 1)
-    divider:SetPoint("TOPLEFT", 12, -52)
+    divider:SetPoint("TOPLEFT", subtext, "BOTTOMLEFT", 0, -8)
     divider:SetColorTexture(0.12, 0.12, 0.15, 1)
 
     local quickGuide = CreateFrame("Frame", nil, page, "BackdropTemplate")
@@ -35,7 +47,7 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
     quickGuideTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
     quickGuideTitle:SetPoint("TOPLEFT", 12, -10)
     quickGuideTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
-    quickGuideTitle:SetText("Quick Guide")
+    quickGuideTitle:SetText("Blizzard Party/Raid Name Styling")
 
     local quickGuideBody = quickGuide:CreateFontString(nil, "OVERLAY")
     quickGuideBody:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
@@ -47,10 +59,12 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
     quickGuideBody:SetJustifyV("TOP")
     quickGuideBody:SetTextColor(0.78, 0.90, 0.96)
     quickGuideBody:SetText(
-        "Use this page to style Blizzard Party\n" ..
-        "and Raid frame names.\n" ..
+        "This is a skin/font enhancement for\n" ..
+        "Blizzard Party and Raid frames.\n\n" ..
+        "Customize Blizzard Party and Raid\n" ..
+        "name text styling.\n" ..
         "Adjust font size, outline, centering,\n" ..
-        "and label visibility."
+        "truncation, and label visibility."
     )
 
     local function SetCheckboxEnabled(container, enabled)
@@ -203,7 +217,7 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
         end
     end
 
-    local useAppearanceFontCheck = CreateMinimalCheckbox(page, "Use Appearance Font for Names", 12, -72, "useSharedPartyRaidNameFont", false, function()
+    local useAppearanceFontCheck = CreateMinimalCheckbox(page, "Use Appearance Font for Names", 12, -84, "useSharedPartyRaidNameFont", false, function()
         UpdateNameControlsEnabledState()
         if MMF_UpdateBlizzardPartyRaidNameFonts then
             MMF_UpdateBlizzardPartyRaidNameFonts()
@@ -215,6 +229,10 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
             StaticPopup_Show("MMF_RELOADUI")
         end
     end)
+    if useAppearanceFontCheck then
+        useAppearanceFontCheck:ClearAllPoints()
+        useAppearanceFontCheck:SetPoint("TOPLEFT", divider, "BOTTOMLEFT", 0, -10)
+    end
 
     useFontHintTooltip = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
     useFontHintTooltip:SetSize(220, 120)
@@ -301,6 +319,10 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
         end
         UpdateNameControlsEnabledState()
     end)
+    if centerNameCheck and useAppearanceFontCheck then
+        centerNameCheck:ClearAllPoints()
+        centerNameCheck:SetPoint("TOPLEFT", useAppearanceFontCheck, "BOTTOMLEFT", 0, -10)
+    end
 
     centerNameNote = page:CreateFontString(nil, "OVERLAY")
     centerNameNote:SetFontObject(GameFontHighlightSmall)
@@ -454,28 +476,28 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
 
     local labelDivider = page:CreateTexture(nil, "ARTWORK")
     labelDivider:SetSize(240, 1)
-    labelDivider:SetPoint("TOPLEFT", 12, -348)
+    labelDivider:SetPoint("TOPLEFT", 12, -338)
     labelDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
 
     local labelsTitle = page:CreateFontString(nil, "OVERLAY")
     labelsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    labelsTitle:SetPoint("TOPLEFT", 12, -360)
+    labelsTitle:SetPoint("TOPLEFT", 12, -350)
     labelsTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
     labelsTitle:SetText("LABELS / STATE")
 
-    CreateMinimalCheckbox(page, "Hide Party Label", 12, -380, "hidePartyFrameLabel", false, function()
+    CreateMinimalCheckbox(page, "Hide Party Label", 12, -370, "hidePartyFrameLabel", false, function()
         if MMF_UpdateBlizzardPartyRaidLabels then
             MMF_UpdateBlizzardPartyRaidLabels()
         end
     end)
 
-    CreateMinimalCheckbox(page, "Hide Raid Group Labels", 12, -404, "hideRaidGroupLabels", false, function()
+    CreateMinimalCheckbox(page, "Hide Raid Group Labels", 12, -394, "hideRaidGroupLabels", false, function()
         if MMF_UpdateBlizzardPartyRaidLabels then
             MMF_UpdateBlizzardPartyRaidLabels()
         end
     end)
 
-    CreateMinimalCheckbox(page, "Show Solo Party Frame", 12, -428, "showSoloPartyFrame", false, function()
+    CreateMinimalCheckbox(page, "Show Solo Party Frame", 12, -418, "showSoloPartyFrame", false, function()
         if MMF_UpdateBlizzardSoloPartyFrameVisibility then
             MMF_UpdateBlizzardSoloPartyFrameVisibility()
         end
@@ -484,7 +506,7 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
         end
     end)
 
-    CreateMinimalCheckbox(page, "Hide Self In Party", 12, -452, "hidePlayerInPartyFrame", false, function()
+    CreateMinimalCheckbox(page, "Hide Self In Party", 12, -442, "hidePlayerInPartyFrame", false, function()
         if MMF_UpdateBlizzardPartySelfVisibility then
             MMF_UpdateBlizzardPartySelfVisibility()
         end
