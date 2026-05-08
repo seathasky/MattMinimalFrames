@@ -26,6 +26,16 @@ local partySelfVisibilityHookInstalled = false
 local pendingPartySelfVisibilityRefresh = false
 local pendingPartyRaidRosterRefresh = false
 
+local function IsAccessibleString(value)
+    if issecretvalue and issecretvalue(value) then
+        return false
+    end
+    if canaccessvalue and not canaccessvalue(value) then
+        return false
+    end
+    return type(value) == "string"
+end
+
 local function ApplySoloPartyFrameOverrideFromDB()
     if not _G.CompactPartyFrame then
         return
@@ -498,11 +508,12 @@ local function CapturePartyRaidNameStyle(fontString)
     local points = {}
     for i = 1, pointCount do
         local point, relativeTo, relativePoint, xOfs, yOfs = fontString:GetPoint(i)
-        if type(point) == "string" and point ~= "" then
+        if IsAccessibleString(point) then
+            local safeRelativePoint = IsAccessibleString(relativePoint) and relativePoint or point
             points[#points + 1] = {
                 point = point,
                 relativeTo = relativeTo,
-                relativePoint = (type(relativePoint) == "string" and relativePoint ~= "" and relativePoint) or point,
+                relativePoint = safeRelativePoint,
                 xOfs = tonumber(xOfs) or 0,
                 yOfs = tonumber(yOfs) or 0,
             }
@@ -575,13 +586,14 @@ local function RestorePartyRaidNameLayout(fontString, original)
     if original and type(original.points) == "table" then
         for _, pointData in ipairs(original.points) do
             local point = pointData and pointData.point
-            if type(point) == "string" and point ~= "" then
+            if IsAccessibleString(point) then
+                local safeRelativePoint = IsAccessibleString(pointData.relativePoint) and pointData.relativePoint or point
                 local ok = pcall(
                     fontString.SetPoint,
                     fontString,
                     point,
                     pointData.relativeTo,
-                    (type(pointData.relativePoint) == "string" and pointData.relativePoint ~= "" and pointData.relativePoint) or point,
+                    safeRelativePoint,
                     tonumber(pointData.xOfs) or 0,
                     tonumber(pointData.yOfs) or 0
                 )
@@ -729,20 +741,23 @@ end
 
 local function GetPartyRaidDisplayName(unit)
     local fullName = GetUnitName(unit, true) or UnitName(unit)
-    if type(fullName) ~= "string" or fullName == "" then
+    if not IsAccessibleString(fullName) then
         return nil
     end
 
     if type(_G.Ambiguate) == "function" then
         local ok, shortName = pcall(_G.Ambiguate, fullName, "short")
-        if ok and type(shortName) == "string" and shortName ~= "" then
+        if ok and IsAccessibleString(shortName) then
             return shortName
         end
     end
 
-    local dashPos = string.find(fullName, "-", 1, true)
-    if dashPos and dashPos > 1 then
-        return string.sub(fullName, 1, dashPos - 1)
+    local okDash, dashPos = pcall(string.find, fullName, "-", 1, true)
+    if okDash and dashPos and dashPos > 1 then
+        local okSub, short = pcall(string.sub, fullName, 1, dashPos - 1)
+        if okSub and IsAccessibleString(short) then
+            return short
+        end
     end
 
     return fullName
