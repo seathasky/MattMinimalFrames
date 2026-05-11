@@ -104,6 +104,16 @@ local function MMF_SetupAurasPowerHeader(leftCol, accentColor, requestScrollRefr
         sectionTitle:SetText(section.label or "")
         sectionSubtitle:SetText(section.subtitle or "")
         quickGuideBody:SetText(section.guide or "")
+        -- On the Power page, place the quick guide lower so it sits below the Resource Colors panel.
+        quickGuide:ClearAllPoints()
+        if index == 1 then
+            quickGuide:SetSize(220, 92)
+            quickGuide:SetPoint("TOPRIGHT", -18, -285)
+        else
+            quickGuide:SetSize(184, 128)
+            quickGuide:SetPoint("TOPRIGHT", -18, -62)
+        end
+        quickGuide:SetShown(true)
         sectionViewport:SetSize(FIXED_VIEWPORT_W, FIXED_VIEWPORT_H)
         for sectionIndex = 1, #sectionDefs do
             local root = sectionRoots[sectionIndex]

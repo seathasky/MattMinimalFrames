@@ -29,12 +29,31 @@ local PowerBarColor = PowerBarColor
 local IS_PLAYER_SHAMAN = (UnitClassBase("player") == "SHAMAN")
 local IS_PLAYER_DRUID = (UnitClassBase("player") == "DRUID")
 local SCALE_TO_100 = CurveConstants and CurveConstants.ScaleTo100
+local ClampColorChannel
 
 local function IsCheckedFlag(value)
     return value == true or value == 1
 end
 
-local function ResolvePowerColor(powerType, powerToken)
+local function ResolvePowerColor(unit, powerType, powerToken, db)
+    local function GetOverrideColor(token)
+        if not db or not token or (unit ~= "player" and unit ~= "target") then
+            return nil
+        end
+        local keyBase = "powerColor_" .. unit .. "_" .. tostring(token)
+        local r = db[keyBase .. "_R"]
+        local g = db[keyBase .. "_G"]
+        local b = db[keyBase .. "_B"]
+        local a = db[keyBase .. "_A"]
+        if type(r) == "number" and type(g) == "number" and type(b) == "number" then
+            return ClampColorChannel(r, 1.0),
+                ClampColorChannel(g, 1.0),
+                ClampColorChannel(b, 1.0),
+                ClampColorChannel(a, 1.0)
+        end
+        return nil
+    end
+
     local powerColor = nil
     pcall(function()
         if powerType ~= nil and PowerBarColor then
@@ -45,13 +64,48 @@ local function ResolvePowerColor(powerType, powerToken)
         end
     end)
 
+    local overrideR, overrideG, overrideB, overrideA = GetOverrideColor(powerToken)
+    if overrideR then
+        return overrideR, overrideG, overrideB, overrideA
+    end
+
     if powerType == 0 or powerToken == "MANA" then
-        return 0.2, 0.7, 1
+        local prefix = (unit == "target") and "target" or "player"
+        return ClampColorChannel(db[prefix .. "ManaBarColorR"], 0.2),
+            ClampColorChannel(db[prefix .. "ManaBarColorG"], 0.7),
+            ClampColorChannel(db[prefix .. "ManaBarColorB"], 1.0),
+            ClampColorChannel(db[prefix .. "ManaBarColorA"], 1.0)
     end
     if powerColor then
-        return powerColor.r or 1, powerColor.g or 1, powerColor.b or 1
+        return powerColor.r or 1, powerColor.g or 1, powerColor.b or 1, 1
     end
-    return 1, 1, 1
+    return 1, 1, 1, 1
+end
+
+local function ResolvePowerBGColor(unit, powerType, powerToken, db)
+    if db and powerToken and (unit == "player" or unit == "target") then
+        local keyBase = "powerColor_" .. unit .. "_" .. tostring(powerToken) .. "_BG"
+        local r = db[keyBase .. "_R"]
+        local g = db[keyBase .. "_G"]
+        local b = db[keyBase .. "_B"]
+        local a = db[keyBase .. "_A"]
+        if type(r) == "number" and type(g) == "number" and type(b) == "number" then
+            return ClampColorChannel(r, 0.0),
+                ClampColorChannel(g, 0.0),
+                ClampColorChannel(b, 0.0),
+                ClampColorChannel(a, 0.25)
+        end
+    end
+
+    if powerType == 0 or powerToken == "MANA" then
+        local prefix = (unit == "target") and "target" or "player"
+        return ClampColorChannel(db[prefix .. "ManaBarBGColorR"], 0.0),
+            ClampColorChannel(db[prefix .. "ManaBarBGColorG"], 0.0),
+            ClampColorChannel(db[prefix .. "ManaBarBGColorB"], 0.0),
+            ClampColorChannel(db[prefix .. "ManaBarBGColorA"], 0.25)
+    end
+
+    return 0, 0, 0, 0.25
 end
 
 local function SafeEq(a, b)
@@ -159,7 +213,7 @@ local function SafeStringLen(value)
     return nil
 end
 
-local function ClampColorChannel(value, fallback)
+ClampColorChannel = function(value, fallback)
     local n = SafeToNumber(value, fallback)
     if type(n) ~= "number" then
         n = fallback or 0
@@ -1624,7 +1678,12 @@ local function UpdateUnitFrame(frame)
             r, g, b = gr, gg, gb
         end
     end
-    if Compat and Compat.IsTBC and unit == "target" and not UnitPlayerControlled(unit) and UnitIsTapDenied and UnitIsTapDenied(unit) then
+    if Compat and Compat.IsTBC
+        and (not MattMinimalFramesDB or MattMinimalFramesDB.showTBCTargetTapColor ~= false)
+        and unit == "target"
+        and not UnitPlayerControlled(unit)
+        and UnitIsTapDenied
+        and UnitIsTapDenied(unit) then
         r, g, b = 0.5, 0.5, 0.5
     end
     local colorAlpha = (MMF_GetUnitColorAlpha and MMF_GetUnitColorAlpha(unit)) or 1
@@ -1678,7 +1737,7 @@ local function UpdateUnitFrame(frame)
             frame.powerBar:SetMinMaxValues(0, maxPower)
             frame.powerBar:SetValue(power)
 
-            local pr, pg, pb = ResolvePowerColor(powerType, powerToken)
+            local pr, pg, pb, pa = ResolvePowerColor(unit, powerType, powerToken, db)
             local showPowerBar = false
             if unit == "player" then
                 showPowerBar = (db.showPlayerPowerBar ~= false)
@@ -1686,7 +1745,11 @@ local function UpdateUnitFrame(frame)
                 showPowerBar = (db.showTargetPowerBar ~= false)
             end
 
-            frame.powerBar:SetStatusBarColor(pr, pg, pb, 1)
+            frame.powerBar:SetStatusBarColor(pr, pg, pb, pa or 1)
+            if frame.powerBarBG then
+                local bgR, bgG, bgB, bgA = ResolvePowerBGColor(unit, powerType, powerToken, db)
+                frame.powerBarBG:SetColorTexture(bgR, bgG, bgB, bgA)
+            end
             if showPowerBar then
                 if frame.powerBarBorder then frame.powerBarBorder:Show() end
                 frame.powerBarBG:Show()
@@ -1733,7 +1796,7 @@ local function UpdateUnitFrame(frame)
                     local showPowerPercent = (powerTextMode == "percent" or powerTextMode == "both" or powerTextMode == "both_white_percent")
                     local showPowerValue = (powerTextMode == "value" or powerTextMode == "both" or powerTextMode == "both_white_percent")
                     local display = FormatPercentAndValue(textPower, showPowerPercent, showPowerValue, false, powerPercentText)
-                    local tpr, tpg, tpb = ResolvePowerColor(textPowerType, textPowerToken)
+                    local tpr, tpg, tpb = ResolvePowerColor(unit, textPowerType, textPowerToken, db)
                     if powerTextMode == "both_white_percent" then
                         local valueText = SafeFormatValue(textPower, false)
                         if colorPowerText then

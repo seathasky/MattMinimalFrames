@@ -59,6 +59,7 @@ function MMF_CreatePopupNavigationController(config)
             ["Unit Frames"] = "Frame sizing, text, visibility, style, and cast bar controls.",
             ["Auras / Power"] = "Aura behavior, power options, and related display settings.",
             ["Party / Raid"] = "Blizzard party and raid frame options.",
+            ["TBC Features"] = "TBC-specific gameplay feature toggles.",
             ["Current Class"] = "Class-specific resources and active spec customization.",
             ["Profiles"] = "Manage, copy, and delete settings profiles.",
             ["Tools"] = "Utility settings and addon-wide helper tools.",

@@ -186,6 +186,7 @@ function MMF_ShowWelcomePopup(forceShow)
 
     local leftCol = MMF_CreatePopupPageFrame(pageScrollFrame, POPUP_LAYOUT.aurasPowerContentHeight)
     local partyRaidCol = MMF_CreatePopupPageFrame(pageScrollFrame, POPUP_LAYOUT.partyRaidContentHeight)
+    local tbcCol = MMF_CreatePopupPageFrame(pageScrollFrame, POPUP_LAYOUT.toolsContentHeight)
     local unitFramesCol = MMF_CreatePopupPageFrame(pageScrollFrame, POPUP_LAYOUT.unitFramesContentHeight)
     local middleCol = MMF_CreatePopupPageFrame(pageScrollFrame, POPUP_LAYOUT.currentClassContentHeight)
     local rightCol = MMF_CreatePopupPageFrame(pageScrollFrame, POPUP_LAYOUT.toolsContentHeight)
@@ -254,6 +255,7 @@ function MMF_ShowWelcomePopup(forceShow)
         unitFramesCol,
         leftCol,
         partyRaidCol,
+        tbcCol,
         middleCol,
         rightCol,
         profilesCol,
@@ -274,6 +276,7 @@ function MMF_ShowWelcomePopup(forceShow)
             unitFramesCol,
             leftCol,
             partyRaidCol,
+            tbcCol,
             profilesCol,
             rightCol,
         }
@@ -281,6 +284,7 @@ function MMF_ShowWelcomePopup(forceShow)
             { label = "Unit Frames" },
             { label = "Auras / Power" },
             { label = "Party / Raid" },
+            { label = "TBC Features" },
             { label = "Profiles" },
             { label = "Tools" },
         }
@@ -404,6 +408,9 @@ function MMF_ShowWelcomePopup(forceShow)
     RegisterClosableList(focusAuraAppearanceTypeList)
 
     MMF_CreatePartyRaidPage(partyRaidCol, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider)
+    if Compat.IsTBC and MMF_CreateTBCPage then
+        MMF_CreateTBCPage(tbcCol, ACCENT_COLOR, CreateMinimalCheckbox)
+    end
 
     MMF_CreateCurrentClassSection(middleCol, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider, UpdatePlayerIconModeButtonText, GetCurrentPlayerIconModeValue)
 

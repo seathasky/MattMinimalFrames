@@ -4,6 +4,7 @@ function MMF_BuildAurasPowerPowerSection(ctx)
     local CreateMinimalCheckbox = ctx.createMinimalCheckbox
     local CreateMinimalSlider = ctx.createMinimalSlider
     local CreateMinimalDropdown = MMF_CreateMinimalDropdown
+    local CreateMinimalColorPicker = MMF_CreateMinimalColorPicker
     local RESOURCE_COL_X = ctx.resourceColX
     local isPlayerDruid = ctx.isPlayerDruid
     local RefreshPowerFrames = ctx.refreshPowerFrames or function() end
@@ -182,6 +183,18 @@ function MMF_BuildAurasPowerPowerSection(ctx)
         end
     end
 
+    local function ShiftResetButtonLeft(container, offset)
+        if not container or not container.resetButton then
+            return
+        end
+        local reset = container.resetButton
+        local anchor, relativeTo, relativePoint, xOfs, yOfs = reset:GetPoint(1)
+        if anchor and relativeTo then
+            reset:ClearAllPoints()
+            reset:SetPoint(anchor, relativeTo, relativePoint, (xOfs or 0) - (offset or 28), yOfs or 0)
+        end
+    end
+
     local function UpdatePowerTextDependencies()
         local playerTextEnabled = (MattMinimalFramesDB.showPlayerPowerText == true or MattMinimalFramesDB.showPlayerPowerText == 1)
         local targetTextEnabled = (MattMinimalFramesDB.showTargetPowerText == true or MattMinimalFramesDB.showTargetPowerText == 1)
@@ -204,15 +217,18 @@ function MMF_BuildAurasPowerPowerSection(ctx)
         RefreshPowerFrames()
         UpdatePowerBarSizeDependencies()
     end)
+    ShiftResetButtonLeft(playerPowerBarCheck, 56)
 
-    CreateMinimalCheckbox(root, "Power Text", RESOURCE_COL_X, -96, "showPlayerPowerText", false, function()
+    local playerPowerTextCheck = CreateMinimalCheckbox(root, "Power Text", RESOURCE_COL_X, -96, "showPlayerPowerText", false, function()
         RefreshPowerFrames()
         UpdatePowerTextDependencies()
     end)
+    ShiftResetButtonLeft(playerPowerTextCheck, 56)
 
     playerColorPowerTextCheck = CreateMinimalCheckbox(root, "Color Text by Resource", RESOURCE_COL_X, -120, "colorPlayerPowerTextByResource", false, function()
         RefreshPowerFrames()
     end)
+    ShiftResetButtonLeft(playerColorPowerTextCheck, 36)
 
     local powerTextModeOptions = {
         { value = "value", label = "Value" },
@@ -343,15 +359,18 @@ function MMF_BuildAurasPowerPowerSection(ctx)
         RefreshPowerFrames()
         UpdatePowerBarSizeDependencies()
     end)
+    ShiftResetButtonLeft(targetPowerBarCheck, 56)
 
-    CreateMinimalCheckbox(root, "Power Text", RESOURCE_COL_X, targetPowerTextY, "showTargetPowerText", false, function()
+    local targetPowerTextCheck = CreateMinimalCheckbox(root, "Power Text", RESOURCE_COL_X, targetPowerTextY, "showTargetPowerText", false, function()
         RefreshPowerFrames()
         UpdatePowerTextDependencies()
     end)
+    ShiftResetButtonLeft(targetPowerTextCheck, 56)
 
     targetColorPowerTextCheck = CreateMinimalCheckbox(root, "Color Text by Resource", RESOURCE_COL_X, targetColorTextY, "colorTargetPowerTextByResource", false, function()
         RefreshPowerFrames()
     end)
+    ShiftResetButtonLeft(targetColorPowerTextCheck, 36)
     if CreateMinimalDropdown then
         CreateMinimalDropdown(root, popup, {
             accentColor = accent,
@@ -414,6 +433,275 @@ function MMF_BuildAurasPowerPowerSection(ctx)
             MMF_SetPowerBarSize(MattMinimalFramesDB.targetPowerBarWidth or MattMinimalFramesDB.powerBarWidth or 73, value, "target")
         end
     end, true)
+
+    if CreateMinimalColorPicker and CreateMinimalDropdown then
+        local editorX = RESOURCE_COL_X + 260
+        local editorTitleY = -52
+        local resourceDropdownY = -76
+        local playerColorY = -104
+        local playerBGColorY = -130
+        local targetColorY = -156
+        local targetBGColorY = -182
+
+        local resourceTitle = root:CreateFontString(nil, "OVERLAY")
+        resourceTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
+        resourceTitle:SetPoint("TOPLEFT", editorX, editorTitleY)
+        resourceTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
+        resourceTitle:SetText("RESOURCE COLORS")
+
+        local Compat = _G.MMF_Compat or {}
+        local resourceOptionsRaw = {
+            { value = "MANA", label = "Mana", tbcValid = true },
+            { value = "RAGE", label = "Rage", tbcValid = true },
+            { value = "ENERGY", label = "Energy", tbcValid = true },
+            { value = "FOCUS", label = "Focus", tbcValid = false },
+            { value = "RUNIC_POWER", label = "Runic Power", tbcValid = false },
+            { value = "LUNAR_POWER", label = "Lunar Power", tbcValid = false },
+            { value = "INSANITY", label = "Insanity", tbcValid = false },
+            { value = "MAELSTROM", label = "Maelstrom", tbcValid = false },
+            { value = "FURY", label = "Fury", tbcValid = false },
+            { value = "PAIN", label = "Pain", tbcValid = false },
+        }
+        local resourceOptions = {}
+        local validTokens = {}
+        for _, option in ipairs(resourceOptionsRaw) do
+            if Compat.IsTBC and not option.tbcValid then
+                resourceOptions[#resourceOptions + 1] = {
+                    value = option.value,
+                    label = option.label .. " (N/A)",
+                    divider = true,
+                }
+            else
+                resourceOptions[#resourceOptions + 1] = {
+                    value = option.value,
+                    label = option.label,
+                }
+                validTokens[option.value] = true
+            end
+        end
+        local function IsValidResourceToken(token)
+            return validTokens[token] == true
+        end
+
+        local function GetSelectedResourceToken()
+            local token = MattMinimalFramesDB.powerColorEditorResource
+            if type(token) ~= "string" then
+                token = "MANA"
+            end
+            token = string.upper(token)
+            if not IsValidResourceToken(token) then
+                token = "MANA"
+            end
+            MattMinimalFramesDB.powerColorEditorResource = token
+            return token
+        end
+
+        local function GetDefaultResourceColor(token)
+            local defaults = {
+                MANA = { 0.2, 0.7, 1.0 },
+                RAGE = { 1.0, 0.2, 0.2 },
+                ENERGY = { 1.0, 0.85, 0.1 },
+                FOCUS = { 1.0, 0.5, 0.25 },
+                RUNIC_POWER = { 0.0, 0.82, 1.0 },
+                LUNAR_POWER = { 0.3, 0.52, 0.9 },
+                INSANITY = { 0.5, 0.25, 0.9 },
+                MAELSTROM = { 0.0, 0.5, 1.0 },
+                FURY = { 0.76, 0.36, 1.0 },
+                PAIN = { 1.0, 0.61, 0.0 },
+            }
+            local d = defaults[token]
+            if d then
+                return d[1], d[2], d[3]
+            end
+            return 1, 1, 1
+        end
+
+        local function BuildPowerColorKey(unit, token, isBackground)
+            if isBackground then
+                return "powerColor_" .. unit .. "_" .. token .. "_BG"
+            end
+            return "powerColor_" .. unit .. "_" .. token
+        end
+
+        local function GetResourceColor(unit, isBackground)
+            local token = GetSelectedResourceToken()
+            local keyBase = BuildPowerColorKey(unit, token, isBackground)
+            local defaultR, defaultG, defaultB = 0, 0, 0
+            if not isBackground then
+                defaultR, defaultG, defaultB = GetDefaultResourceColor(token)
+            end
+            -- Backward compatibility: legacy mana keys should be reflected by the new editor.
+            if token == "MANA" then
+                if isBackground then
+                    local legacyPrefix = (unit == "target") and "targetManaBarBGColor" or "playerManaBarBGColor"
+                    local lr = MattMinimalFramesDB[legacyPrefix .. "R"]
+                    local lg = MattMinimalFramesDB[legacyPrefix .. "G"]
+                    local lb = MattMinimalFramesDB[legacyPrefix .. "B"]
+                    if type(lr) == "number" and type(lg) == "number" and type(lb) == "number" then
+                        return lr, lg, lb
+                    end
+                else
+                    local legacyPrefix = (unit == "target") and "targetManaBarColor" or "playerManaBarColor"
+                    local lr = MattMinimalFramesDB[legacyPrefix .. "R"]
+                    local lg = MattMinimalFramesDB[legacyPrefix .. "G"]
+                    local lb = MattMinimalFramesDB[legacyPrefix .. "B"]
+                    if type(lr) == "number" and type(lg) == "number" and type(lb) == "number" then
+                        return lr, lg, lb
+                    end
+                end
+            end
+            return MattMinimalFramesDB[keyBase .. "_R"] or defaultR,
+                MattMinimalFramesDB[keyBase .. "_G"] or defaultG,
+                MattMinimalFramesDB[keyBase .. "_B"] or defaultB
+        end
+
+        local function SetResourceColor(unit, isBackground, r, g, b)
+            local token = GetSelectedResourceToken()
+            local keyBase = BuildPowerColorKey(unit, token, isBackground)
+            MattMinimalFramesDB[keyBase .. "_R"] = r
+            MattMinimalFramesDB[keyBase .. "_G"] = g
+            MattMinimalFramesDB[keyBase .. "_B"] = b
+            if token == "MANA" then
+                if isBackground then
+                    local legacyPrefix = (unit == "target") and "targetManaBarBGColor" or "playerManaBarBGColor"
+                    MattMinimalFramesDB[legacyPrefix .. "R"] = r
+                    MattMinimalFramesDB[legacyPrefix .. "G"] = g
+                    MattMinimalFramesDB[legacyPrefix .. "B"] = b
+                else
+                    local legacyPrefix = (unit == "target") and "targetManaBarColor" or "playerManaBarColor"
+                    MattMinimalFramesDB[legacyPrefix .. "R"] = r
+                    MattMinimalFramesDB[legacyPrefix .. "G"] = g
+                    MattMinimalFramesDB[legacyPrefix .. "B"] = b
+                end
+            end
+            RefreshPowerFrames()
+        end
+
+
+        local function IsResourceColorDefault(unit, isBackground)
+            local token = GetSelectedResourceToken()
+            local keyBase = BuildPowerColorKey(unit, token, isBackground)
+            return MattMinimalFramesDB[keyBase .. "_R"] == nil
+                and MattMinimalFramesDB[keyBase .. "_G"] == nil
+                and MattMinimalFramesDB[keyBase .. "_B"] == nil
+        end
+
+
+        local function ResetResourceColor(unit, isBackground)
+            local token = GetSelectedResourceToken()
+            local keyBase = BuildPowerColorKey(unit, token, isBackground)
+            MattMinimalFramesDB[keyBase .. "_R"] = nil
+            MattMinimalFramesDB[keyBase .. "_G"] = nil
+            MattMinimalFramesDB[keyBase .. "_B"] = nil
+            MattMinimalFramesDB[keyBase .. "_A"] = nil
+            if token == "MANA" then
+                if isBackground then
+                    local legacyPrefix = (unit == "target") and "targetManaBarBGColor" or "playerManaBarBGColor"
+                    MattMinimalFramesDB[legacyPrefix .. "R"] = nil
+                    MattMinimalFramesDB[legacyPrefix .. "G"] = nil
+                    MattMinimalFramesDB[legacyPrefix .. "B"] = nil
+                    MattMinimalFramesDB[legacyPrefix .. "A"] = nil
+                else
+                    local legacyPrefix = (unit == "target") and "targetManaBarColor" or "playerManaBarColor"
+                    MattMinimalFramesDB[legacyPrefix .. "R"] = nil
+                    MattMinimalFramesDB[legacyPrefix .. "G"] = nil
+                    MattMinimalFramesDB[legacyPrefix .. "B"] = nil
+                    MattMinimalFramesDB[legacyPrefix .. "A"] = nil
+                end
+            end
+            RefreshPowerFrames()
+        end
+
+
+        local playerColorPicker
+        local playerBGColorPicker
+        local targetColorPicker
+        local targetBGColorPicker
+
+        CreateMinimalDropdown(root, popup, {
+            accentColor = accent,
+            settingKey = "__tempPowerColorEditorResource",
+            x = editorX,
+            y = resourceDropdownY,
+            width = 220,
+            labelWidth = 66,
+            buttonOffset = 70,
+            buttonWidth = 150,
+            visibleRows = #resourceOptions,
+            label = "Type",
+            options = resourceOptions,
+            getValue = function()
+                return GetSelectedResourceToken()
+            end,
+            onSelect = function(value)
+                MattMinimalFramesDB.powerColorEditorResource = value
+                if playerColorPicker and playerColorPicker.RefreshColor then playerColorPicker:RefreshColor() end
+                if playerBGColorPicker and playerBGColorPicker.RefreshColor then playerBGColorPicker:RefreshColor() end
+                if targetColorPicker and targetColorPicker.RefreshColor then targetColorPicker:RefreshColor() end
+                if targetBGColorPicker and targetBGColorPicker.RefreshColor then targetBGColorPicker:RefreshColor() end
+            end,
+        })
+
+        playerColorPicker = CreateMinimalColorPicker(root, {
+            accentColor = accent,
+            label = "Player",
+            x = editorX,
+            y = playerColorY,
+            width = 220,
+            labelWidth = 66,
+            buttonOffset = 70,
+            buttonWidth = 150,
+            getColor = function() return GetResourceColor("player", false) end,
+            onColorChanged = function(r, g, b) SetResourceColor("player", false, r, g, b) end,
+            isDefault = function() return IsResourceColorDefault("player", false) end,
+            onReset = function() ResetResourceColor("player", false) end,
+        })
+
+        playerBGColorPicker = CreateMinimalColorPicker(root, {
+            accentColor = accent,
+            label = "Player BG",
+            x = editorX,
+            y = playerBGColorY,
+            width = 220,
+            labelWidth = 66,
+            buttonOffset = 70,
+            buttonWidth = 150,
+            getColor = function() return GetResourceColor("player", true) end,
+            onColorChanged = function(r, g, b) SetResourceColor("player", true, r, g, b) end,
+            isDefault = function() return IsResourceColorDefault("player", true) end,
+            onReset = function() ResetResourceColor("player", true) end,
+        })
+
+        targetColorPicker = CreateMinimalColorPicker(root, {
+            accentColor = accent,
+            label = "Target",
+            x = editorX,
+            y = targetColorY,
+            width = 220,
+            labelWidth = 66,
+            buttonOffset = 70,
+            buttonWidth = 150,
+            getColor = function() return GetResourceColor("target", false) end,
+            onColorChanged = function(r, g, b) SetResourceColor("target", false, r, g, b) end,
+            isDefault = function() return IsResourceColorDefault("target", false) end,
+            onReset = function() ResetResourceColor("target", false) end,
+        })
+
+        targetBGColorPicker = CreateMinimalColorPicker(root, {
+            accentColor = accent,
+            label = "Target BG",
+            x = editorX,
+            y = targetBGColorY,
+            width = 220,
+            labelWidth = 66,
+            buttonOffset = 70,
+            buttonWidth = 150,
+            getColor = function() return GetResourceColor("target", true) end,
+            onColorChanged = function(r, g, b) SetResourceColor("target", true, r, g, b) end,
+            isDefault = function() return IsResourceColorDefault("target", true) end,
+            onReset = function() ResetResourceColor("target", true) end,
+        })
+    end
 
     UpdatePowerBarSizeDependencies()
 end

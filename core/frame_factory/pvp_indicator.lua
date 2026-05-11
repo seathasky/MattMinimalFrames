@@ -1,6 +1,13 @@
 local cfg = MMF_Config or {}
 local Compat = _G.MMF_Compat
 
+local function IsTBCPVPFlagEnabled()
+    if not MattMinimalFramesDB then
+        return true
+    end
+    return MattMinimalFramesDB.showTBCPVPFlagIndicator ~= false
+end
+
 local function CreatePVPFlagIndicator(frame, unit)
     if not frame or not frame.nameOverlay then return end
     if not Compat.IsTBC then return end
@@ -32,6 +39,10 @@ end
 local function UpdatePVPFlagIndicator(frame)
     if not frame or not frame.unit then return end
     if not frame.pvpFlagText then return end
+    if not IsTBCPVPFlagEnabled() then
+        frame.pvpFlagText:Hide()
+        return
+    end
     if not Compat.IsTBC then
         frame.pvpFlagText:Hide()
         return

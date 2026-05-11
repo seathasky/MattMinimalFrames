@@ -1,7 +1,7 @@
 ## Interface: 120005
 ## Title: Matt's Minimal Frames
 ## Author: Seathasky
-## Version: 7.5.2
+## Version: 7.5.3
 ## X-Curse-Project-ID: 1362998
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
 ## SavedVariables: MattMinimalFramesDB, MattMinimalFramesProfilesDB, MattMinimalFramesGlobalDB
@@ -84,6 +84,7 @@ core/popup/unit_frames_tabs/overlays.lua
 # Popup: page builders
 core/popup/unit_frames/unit_frames_page.lua
 core/popup/party_raid/party_raid_page.lua
+core/popup/tbc/tbc_page.lua
 core/popup/tools/reset.lua
 core/popup/tools/tools_page.lua
 core/popup/profiles/profiles_page.lua
