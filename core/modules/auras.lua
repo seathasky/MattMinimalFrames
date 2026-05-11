@@ -910,7 +910,7 @@ function MMF_UpdateAuraTextScale(scale)
         if container and container.auras then
             for _, aura in ipairs(container.auras) do
                 if aura.count then
-                    aura.count:SetFont(STANDARD_TEXT_FONT, fontSize, "OUTLINE")
+                    aura.count:SetFont(STANDARD_TEXT_FONT, fontSize, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
                 end
             end
         end
@@ -939,7 +939,7 @@ function MMF_UpdateTimerTextScale(scale)
         if container and container.auras then
             for _, aura in ipairs(container.auras) do
                 if aura.timerText then
-                    aura.timerText:SetFont(STANDARD_TEXT_FONT, fontSize, "OUTLINE")
+                    aura.timerText:SetFont(STANDARD_TEXT_FONT, fontSize, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
                 end
             end
         end
@@ -1089,7 +1089,7 @@ local function CreateAuraIcon(parent, index, isDebuff, iconSize)
     aura.cooldown:EnableMouse(false)
     aura.timerText = aura.cooldown:GetRegions()
     if aura.timerText and aura.timerText.SetFont then
-        aura.timerText:SetFont(STANDARD_TEXT_FONT, 12, "OUTLINE")
+        aura.timerText:SetFont(STANDARD_TEXT_FONT, 12, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
         aura.timerText:ClearAllPoints()
         aura.timerText:SetPoint("CENTER", aura.cooldown, "CENTER", 0, 0)
     end
@@ -1198,7 +1198,7 @@ local function CreateAuraContainer(parent, isDebuff, unitToken)
     LayoutAuraContainer(container, isDebuff, iconSize, 1)
 
     local label = container:CreateFontString(nil, "OVERLAY")
-    label:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "OUTLINE")
+    label:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
     if isDebuff then
         label:SetPoint("BOTTOMLEFT", container, "TOPLEFT", 0, 6)
     else
@@ -1298,7 +1298,7 @@ local function UpdateAuraIcon(auraFrame, auraData, filter, unit, index)
             auraFrame.count:SetPoint("BOTTOMRIGHT", auraFrame, "BOTTOMRIGHT", -1, 1)
         end
         local scale = MMF_GetAuraTextScale()
-        auraFrame.count:SetFont("Fonts\\FRIZQT__.TTF", math.max(6, math.floor(10 * scale)), "OUTLINE")
+        auraFrame.count:SetFont("Fonts\\FRIZQT__.TTF", math.max(6, math.floor(10 * scale)), (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
         auraFrame.count:SetText(C_UnitAuras.GetAuraApplicationDisplayCount(unit, auraInstanceID, 2, 999))
         auraFrame.count:Show()
     elseif auraData.count and auraData.count > 1 then
@@ -1307,7 +1307,7 @@ local function UpdateAuraIcon(auraFrame, auraData, filter, unit, index)
             auraFrame.count:SetPoint("BOTTOMRIGHT", auraFrame, "BOTTOMRIGHT", -1, 1)
         end
         local scale = MMF_GetAuraTextScale()
-        auraFrame.count:SetFont("Fonts\\FRIZQT__.TTF", math.max(6, math.floor(10 * scale)), "OUTLINE")
+        auraFrame.count:SetFont("Fonts\\FRIZQT__.TTF", math.max(6, math.floor(10 * scale)), (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
         auraFrame.count:SetText(auraData.count)
         auraFrame.count:Show()
     end
@@ -1317,7 +1317,7 @@ local function UpdateAuraIcon(auraFrame, auraData, filter, unit, index)
         if auraFrame.timerText and auraFrame.timerText.SetFont then
             local timerScale = MMF_GetTimerTextScale()
             local timerFontSize = math.max(8, math.floor(12 * timerScale))
-            auraFrame.timerText:SetFont(STANDARD_TEXT_FONT, timerFontSize, "OUTLINE")
+            auraFrame.timerText:SetFont(STANDARD_TEXT_FONT, timerFontSize, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
         end
     end
     
@@ -1341,7 +1341,7 @@ local function UpdateFakeAuraIcon(auraFrame, index, isDebuff)
         auraFrame.count:SetPoint("BOTTOMRIGHT", auraFrame, "BOTTOMRIGHT", -1, 1)
     end
     local scale = MMF_GetAuraTextScale()
-    auraFrame.count:SetFont("Fonts\\FRIZQT__.TTF", math.max(6, math.floor(10 * scale)), "OUTLINE")
+    auraFrame.count:SetFont("Fonts\\FRIZQT__.TTF", math.max(6, math.floor(10 * scale)), (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
     local count = (index % 4) + 1
     auraFrame.count:SetText(count > 1 and count or "")
     auraFrame.count:Show()

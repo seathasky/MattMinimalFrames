@@ -490,10 +490,11 @@ local function CreateBaseResourceBar(frameName, prefix, moveLabel, color, numRun
     end)
 
     frame.moveHint = frame:CreateFontString(nil, "OVERLAY")
+    local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
     if MMF_SetFontSafe then
-        MMF_SetFontSafe(frame.moveHint, (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "OUTLINE")
+        MMF_SetFontSafe(frame.moveHint, (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, fontFlags)
     else
-        frame.moveHint:SetFont((MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "OUTLINE")
+        frame.moveHint:SetFont((MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, fontFlags)
     end
     frame.moveHint:SetText(moveLabel)
     frame.moveHint:SetPoint("BOTTOM", frame, "TOP", 0, 2)
@@ -501,9 +502,9 @@ local function CreateBaseResourceBar(frameName, prefix, moveLabel, color, numRun
 
     frame.moveSubtext = frame:CreateFontString(nil, "OVERLAY")
     if MMF_SetFontSafe then
-        MMF_SetFontSafe(frame.moveSubtext, (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "OUTLINE")
+        MMF_SetFontSafe(frame.moveSubtext, (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, fontFlags)
     else
-        frame.moveSubtext:SetFont((MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "OUTLINE")
+        frame.moveSubtext:SetFont((MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, fontFlags)
     end
     frame.moveSubtext:SetText(GetResourceBarDragHint())
     frame.moveSubtext:SetPoint("TOP", frame.moveHint, "BOTTOM", 0, -2)

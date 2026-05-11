@@ -135,10 +135,11 @@ local function EnsureBlizzardEditModeNotice()
     headline:SetJustifyV("MIDDLE")
     headline:SetWordWrap(false)
     headline:SetTextColor(1, 0.86, 0.18, 1)
+    local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
     if MMF_SetFontSafe then
-        MMF_SetFontSafe(headline, MMF_Config and MMF_Config.FONT_PATH or "Fonts\\FRIZQT__.TTF", 16, "OUTLINE")
+        MMF_SetFontSafe(headline, MMF_Config and MMF_Config.FONT_PATH or "Fonts\\FRIZQT__.TTF", 16, fontFlags)
     else
-        headline:SetFont("Fonts\\FRIZQT__.TTF", 16, "OUTLINE")
+        headline:SetFont("Fonts\\FRIZQT__.TTF", 16, fontFlags)
     end
     headline:SetText("You are in Blizzard Edit Mode")
 

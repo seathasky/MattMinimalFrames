@@ -563,6 +563,17 @@ local function EnsureOutlineFlag(flags)
     return JoinFontFlags(tokens)
 end
 
+local function RemoveOutlineFlag(flags)
+    local tokens = SplitFontFlags(flags)
+    local out = {}
+    for _, token in ipairs(tokens) do
+        if token ~= "OUTLINE" then
+            out[#out + 1] = token
+        end
+    end
+    return JoinFontFlags(out)
+end
+
 local function RestorePartyRaidNameFont(fontString, original)
     local path = original and original.path
     local size = tonumber((fontString.GetFont and select(2, fontString:GetFont())) or (original and original.size)) or 10
@@ -649,8 +660,11 @@ local function ApplyPartyRaidNameFont(fontString, frame)
         if size > 32 then size = 32 end
     end
     local flags = (original and original.flags) or currentFlags or ""
-    if MattMinimalFramesDB and MattMinimalFramesDB.partyRaidNameOutline == true then
+    local globalOutlineEnabled = not (MattMinimalFramesDB and MattMinimalFramesDB.useTextOutline == false)
+    if globalOutlineEnabled and MattMinimalFramesDB and MattMinimalFramesDB.partyRaidNameOutline == true then
         flags = EnsureOutlineFlag(flags)
+    elseif not globalOutlineEnabled then
+        flags = RemoveOutlineFlag(flags)
     end
 
     local cached = cachedPartyRaidNameFontState[fontString]

@@ -10,7 +10,7 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
     title:SetText("BLIZZARD PARTY / RAID FRAME APPEARANCE")
 
     local subtextLead = page:CreateFontString(nil, "OVERLAY")
-    subtextLead:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "OUTLINE")
+    subtextLead:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
     subtextLead:SetPoint("TOPLEFT", 12, -32)
     subtextLead:SetWidth(420)
     subtextLead:SetJustifyH("LEFT")

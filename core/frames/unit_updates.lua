@@ -900,7 +900,8 @@ local function ApplyNameTextFontSize(frame, size, minSize)
         return
     end
     local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or cfg.FONT_PATH
-    if TryApplyFont(frame.nameText, fontPath, rounded, "OUTLINE") then
+    local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
+    if TryApplyFont(frame.nameText, fontPath, rounded, fontFlags) then
         frame.mmfAppliedNameFontSize = rounded
     else
         frame.mmfAppliedNameFontSize = nil
@@ -916,7 +917,8 @@ local function ApplyHPTextFontSize(frame, size)
         return
     end
     local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or cfg.FONT_PATH
-    if TryApplyFont(frame.hpText, fontPath, rounded, "OUTLINE") then
+    local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
+    if TryApplyFont(frame.hpText, fontPath, rounded, fontFlags) then
         frame.mmfAppliedHPFontSize = rounded
     else
         frame.mmfAppliedHPFontSize = nil
@@ -937,7 +939,8 @@ local function ApplyPowerTextFontSize(frame, scale)
     end
 
     local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or cfg.FONT_PATH
-    if TryApplyFont(frame.powerText, fontPath, size, "OUTLINE") then
+    local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
+    if TryApplyFont(frame.powerText, fontPath, size, fontFlags) then
         frame.mmfAppliedPowerFontSize = size
     else
         frame.mmfAppliedPowerFontSize = nil
@@ -960,8 +963,9 @@ local function ApplyCastBarFontSizes(frame, unit)
     local roundedSpellName = math.floor(spellNameSize + 0.5)
 
     local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or cfg.FONT_PATH
+    local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
     if frame.castBarText and frame.mmfAppliedCastBarNameFontSize ~= roundedSpellName then
-        if TryApplyFont(frame.castBarText, fontPath, roundedSpellName, "OUTLINE") then
+        if TryApplyFont(frame.castBarText, fontPath, roundedSpellName, fontFlags) then
             frame.mmfAppliedCastBarNameFontSize = roundedSpellName
         else
             frame.mmfAppliedCastBarNameFontSize = nil
@@ -972,7 +976,7 @@ local function ApplyCastBarFontSizes(frame, unit)
     if castTimeSize < 6 then castTimeSize = 6 end
     castTimeSize = math.floor(castTimeSize + 0.5)
     if frame.castBarTime and frame.mmfAppliedCastBarHPFontSize ~= castTimeSize then
-        if TryApplyFont(frame.castBarTime, fontPath, castTimeSize, "OUTLINE") then
+        if TryApplyFont(frame.castBarTime, fontPath, castTimeSize, fontFlags) then
             frame.mmfAppliedCastBarHPFontSize = castTimeSize
         else
             frame.mmfAppliedCastBarHPFontSize = nil

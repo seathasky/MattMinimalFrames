@@ -437,6 +437,29 @@ function MMF_GetGlobalFontPath()
     return MMF_FONT_DEFAULT_PATH
 end
 
+function MMF_GetGlobalTextFontFlags()
+    if MattMinimalFramesDB and MattMinimalFramesDB.useTextOutline == false then
+        return ""
+    end
+    return "OUTLINE"
+end
+
+function MMF_ApplyGlobalTextShadow(fontString)
+    if not fontString then
+        return
+    end
+    if not fontString.SetShadowOffset or not fontString.SetShadowColor then
+        return
+    end
+    if MattMinimalFramesDB and MattMinimalFramesDB.useTextShadow == false then
+        fontString:SetShadowOffset(0, 0)
+        fontString:SetShadowColor(0, 0, 0, 0)
+        return
+    end
+    fontString:SetShadowOffset(1, -1)
+    fontString:SetShadowColor(0, 0, 0, 0.9)
+end
+
 local function GetGlobalFontPathByName(fontName)
     local selected = NormalizeMediaName(fontName) or MMF_FONT_DEFAULT
     if LSM then
@@ -1206,9 +1229,10 @@ function MMF_UpdateNameTextSize(size, unit)
     if size < 6 then size = 6 end
     size = math.floor(size + 0.5)
     local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or MMF_Config.FONT_PATH
+    local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
     ForEachUnitFrame(unit, function(frame)
         if frame and frame.nameText then
-            if TryApplyFrameFont(frame.nameText, fontPath, size, "OUTLINE") then
+            if TryApplyFrameFont(frame.nameText, fontPath, size, fontFlags) then
                 frame.mmfAppliedNameFontSize = size
             else
                 frame.mmfAppliedNameFontSize = nil
@@ -1227,9 +1251,10 @@ function MMF_UpdateHPTextSize(size, unit)
     if size < 6 then size = 6 end
     size = math.floor(size + 0.5)
     local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or MMF_Config.FONT_PATH
+    local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
     ForEachUnitFrame(unit, function(frame)
         if frame and frame.hpText then
-            if TryApplyFrameFont(frame.hpText, fontPath, size, "OUTLINE") then
+            if TryApplyFrameFont(frame.hpText, fontPath, size, fontFlags) then
                 frame.mmfAppliedHPFontSize = size
             else
                 frame.mmfAppliedHPFontSize = nil

@@ -47,6 +47,7 @@ end
 
 local function CreateNameText(frame, unit)
     local fontPath = cfg.FONT_PATH
+    local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
 
     frame.nameOverlay = CreateFrame("Frame", nil, frame)
     frame.nameOverlay:SetAllPoints(frame)
@@ -58,13 +59,14 @@ local function CreateNameText(frame, unit)
     local nameX = MMF_GetNameTextXOffset and MMF_GetNameTextXOffset(unit) or 0
     local nameY = MMF_GetNameTextYOffset and MMF_GetNameTextYOffset(unit) or 0
     if MMF_SetFontSafe then
-        MMF_SetFontSafe(frame.nameText, fontPath, fontSize, "OUTLINE")
+        MMF_SetFontSafe(frame.nameText, fontPath, fontSize, fontFlags)
     else
-        frame.nameText:SetFont(fontPath, fontSize, "OUTLINE")
+        frame.nameText:SetFont(fontPath, fontSize, fontFlags)
     end
     frame.nameText:SetTextColor(1, 1, 1, 1)
-    frame.nameText:SetShadowOffset(1, -1)
-    frame.nameText:SetShadowColor(0, 0, 0, 0.9)
+    if MMF_ApplyGlobalTextShadow then
+        MMF_ApplyGlobalTextShadow(frame.nameText)
+    end
 
     local positions = {
         player = { point = "LEFT", relPoint = "TOPLEFT", x = 2, y = 0, justify = "LEFT" },
@@ -96,21 +98,22 @@ end
 
 local function CreateResourceText(frame, unit)
     local fontPath = cfg.FONT_PATH
+    local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
     local hpSize = MMF_GetHPTextSize and MMF_GetHPTextSize(unit) or 13
 
     frame.hpText = frame.nameOverlay:CreateFontString(nil, "OVERLAY")
     if MMF_SetFontSafe then
-        MMF_SetFontSafe(frame.hpText, fontPath, hpSize, "OUTLINE")
+        MMF_SetFontSafe(frame.hpText, fontPath, hpSize, fontFlags)
     else
-        frame.hpText:SetFont(fontPath, hpSize, "OUTLINE")
+        frame.hpText:SetFont(fontPath, hpSize, fontFlags)
     end
     frame.hpText:SetTextColor(1, 1, 1)
 
     frame.powerText = frame.nameOverlay:CreateFontString(nil, "OVERLAY")
     if MMF_SetFontSafe then
-        MMF_SetFontSafe(frame.powerText, fontPath, 13, "OUTLINE")
+        MMF_SetFontSafe(frame.powerText, fontPath, 13, fontFlags)
     else
-        frame.powerText:SetFont(fontPath, 13, "OUTLINE")
+        frame.powerText:SetFont(fontPath, 13, fontFlags)
     end
     frame.powerText:SetTextColor(1, 1, 1)
 

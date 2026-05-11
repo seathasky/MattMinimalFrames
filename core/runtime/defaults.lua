@@ -418,6 +418,8 @@ local mmfDefaults = {
     healthBarBorderSize = 1,
     statusBarTexture = "MMF Melli",
     globalFont = "MMF Naowh",
+    useTextOutline = true,
+    useTextShadow = true,
 }
 
 -- Power bar configuration constants (for convenience)

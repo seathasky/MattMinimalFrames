@@ -17,7 +17,7 @@ function MMF_CreateCurrentClassSection(middleCol, accentColor, createMinimalChec
     if classCfg then
         local classColor = classCfg.classColor or {0.9, 0.9, 0.9}
         local currentClassTitle = middleCol:CreateFontString(nil, "OVERLAY")
-        currentClassTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 14, "OUTLINE")
+        currentClassTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 14, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
         currentClassTitle:SetPoint("TOPLEFT", 12, -36)
         currentClassTitle:SetTextColor(classColor[1], classColor[2], classColor[3])
         currentClassTitle:SetText(classCfg.classLabel or "Unknown")

@@ -459,6 +459,7 @@ function MMF_ApplyGlobalFont()
     end
 
     local frames = MMF_GetAllFrames and MMF_GetAllFrames() or {}
+    local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
     for _, frame in ipairs(frames) do
         if frame then
             local unit = frame.unit
@@ -475,24 +476,33 @@ function MMF_ApplyGlobalFont()
             if powerScale > 2.0 then powerScale = 2.0 end
             local powerSize = math.max(6, math.floor((13 * powerScale) + 0.5))
             if frame.nameText then
-                if SafeSetFont(frame.nameText, fontPath, nameSize, "OUTLINE") then
+                if SafeSetFont(frame.nameText, fontPath, nameSize, fontFlags) then
                     frame.mmfAppliedNameFontSize = math.floor((tonumber(nameSize) or 12) + 0.5)
                 else
                     frame.mmfAppliedNameFontSize = nil
                 end
+                if MMF_ApplyGlobalTextShadow then
+                    MMF_ApplyGlobalTextShadow(frame.nameText)
+                end
             end
             if frame.hpText then
-                if SafeSetFont(frame.hpText, fontPath, hpSize, "OUTLINE") then
+                if SafeSetFont(frame.hpText, fontPath, hpSize, fontFlags) then
                     frame.mmfAppliedHPFontSize = math.floor((tonumber(hpSize) or 13) + 0.5)
                 else
                     frame.mmfAppliedHPFontSize = nil
                 end
+                if MMF_ApplyGlobalTextShadow then
+                    MMF_ApplyGlobalTextShadow(frame.hpText)
+                end
             end
             if frame.powerText then
-                if SafeSetFont(frame.powerText, fontPath, powerSize, "OUTLINE") then
+                if SafeSetFont(frame.powerText, fontPath, powerSize, fontFlags) then
                     frame.mmfAppliedPowerFontSize = powerSize
                 else
                     frame.mmfAppliedPowerFontSize = nil
+                end
+                if MMF_ApplyGlobalTextShadow then
+                    MMF_ApplyGlobalTextShadow(frame.powerText)
                 end
             end
             if frame.castBarText then
@@ -507,7 +517,10 @@ function MMF_ApplyGlobalFont()
                         or 12
                 end
                 castNameSize = math.max(6, math.floor((tonumber(castNameSize) or 12) + 0.5))
-                SafeSetFont(frame.castBarText, fontPath, castNameSize, "OUTLINE")
+                SafeSetFont(frame.castBarText, fontPath, castNameSize, fontFlags)
+                if MMF_ApplyGlobalTextShadow then
+                    MMF_ApplyGlobalTextShadow(frame.castBarText)
+                end
             end
             if frame.castBarTime then
                 local castTimeSize = 9
@@ -519,10 +532,29 @@ function MMF_ApplyGlobalFont()
                     castTimeSize = tonumber(MattMinimalFramesDB and MattMinimalFramesDB[prefix .. "CastTimeTextSize"]) or 9
                 end
                 castTimeSize = math.max(6, math.floor((tonumber(castTimeSize) or 9) + 0.5))
-                SafeSetFont(frame.castBarTime, fontPath, castTimeSize, "OUTLINE")
+                SafeSetFont(frame.castBarTime, fontPath, castTimeSize, fontFlags)
+                if MMF_ApplyGlobalTextShadow then
+                    MMF_ApplyGlobalTextShadow(frame.castBarTime)
+                end
             end
-            if frame.moveHint then SafeSetFont(frame.moveHint, fontPath, 10, "OUTLINE") end
-            if frame.moveSubtext then SafeSetFont(frame.moveSubtext, fontPath, 9, "OUTLINE") end
+            if frame.moveHint then
+                SafeSetFont(frame.moveHint, fontPath, 10, fontFlags)
+                if MMF_ApplyGlobalTextShadow then
+                    MMF_ApplyGlobalTextShadow(frame.moveHint)
+                end
+            end
+            if frame.moveSubtext then
+                SafeSetFont(frame.moveSubtext, fontPath, 9, fontFlags)
+                if MMF_ApplyGlobalTextShadow then
+                    MMF_ApplyGlobalTextShadow(frame.moveSubtext)
+                end
+            end
+            if frame.pvpFlagText then
+                SafeSetFont(frame.pvpFlagText, fontPath, 10, fontFlags)
+                if MMF_ApplyGlobalTextShadow then
+                    MMF_ApplyGlobalTextShadow(frame.pvpFlagText)
+                end
+            end
         end
     end
 
@@ -538,8 +570,16 @@ function MMF_ApplyGlobalFont()
     }
     for _, bar in ipairs(classBars) do
         if bar then
-            if bar.moveHint then SafeSetFont(bar.moveHint, fontPath, 10, "OUTLINE") end
-            if bar.moveSubtext then SafeSetFont(bar.moveSubtext, fontPath, 9, "OUTLINE") end
+            if bar.moveHint then SafeSetFont(bar.moveHint, fontPath, 10, fontFlags) end
+            if bar.moveSubtext then SafeSetFont(bar.moveSubtext, fontPath, 9, fontFlags) end
+            if MMF_ApplyGlobalTextShadow then
+                if bar.moveHint then
+                    MMF_ApplyGlobalTextShadow(bar.moveHint)
+                end
+                if bar.moveSubtext then
+                    MMF_ApplyGlobalTextShadow(bar.moveSubtext)
+                end
+            end
         end
     end
 

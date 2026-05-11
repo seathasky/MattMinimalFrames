@@ -64,7 +64,21 @@ local function NormalizeGUIScaleSetting()
     MattMinimalFramesDB.guiScale = MMF_ClampGUIScale(MattMinimalFramesDB.guiScale)
 end
 
+local function NormalizeLegacyTextEffectsSetting(db)
+    if type(db) ~= "table" then
+        return
+    end
+    if db.useTextShadow == nil then
+        if db.useTextOutline == false then
+            db.useTextShadow = false
+        else
+            db.useTextShadow = true
+        end
+    end
+end
+
 _G.MMF_Startup_ApplyDefaultsSafe = ApplyDefaultsSafe
 _G.MMF_Startup_NormalizeLegacyIconModes = NormalizeLegacyIconModes
 _G.MMF_Startup_NormalizeLegacyPartyRaidFontSetting = NormalizeLegacyPartyRaidFontSetting
 _G.MMF_Startup_NormalizeGUIScaleSetting = NormalizeGUIScaleSetting
+_G.MMF_Startup_NormalizeLegacyTextEffectsSetting = NormalizeLegacyTextEffectsSetting

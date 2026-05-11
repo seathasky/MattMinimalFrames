@@ -51,6 +51,7 @@ local function ApplyCastBarPosition(frame, unit)
 end
 
 local function CreateCastBar(frame, unit)
+    local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
     local settingKey = (unit == "player" and "showPlayerCastBar")
         or (unit == "target" and "showTargetCastBar")
         or (unit == "focus" and "showFocusCastBar")
@@ -92,18 +93,18 @@ local function CreateCastBar(frame, unit)
 
     frame.castBarText = frame.castBarTextOverlay:CreateFontString(nil, "OVERLAY")
     if MMF_SetFontSafe then
-        MMF_SetFontSafe(frame.castBarText, cfg.FONT_PATH, 9, "OUTLINE")
+        MMF_SetFontSafe(frame.castBarText, cfg.FONT_PATH, 9, fontFlags)
     else
-        frame.castBarText:SetFont(cfg.FONT_PATH, 9, "OUTLINE")
+        frame.castBarText:SetFont(cfg.FONT_PATH, 9, fontFlags)
     end
     frame.castBarText:SetTextColor(0.9, 0.9, 0.9, 1)
     frame.castBarText:SetWordWrap(false)
 
     frame.castBarTime = frame.castBarTextOverlay:CreateFontString(nil, "OVERLAY")
     if MMF_SetFontSafe then
-        MMF_SetFontSafe(frame.castBarTime, cfg.FONT_PATH, 9, "OUTLINE")
+        MMF_SetFontSafe(frame.castBarTime, cfg.FONT_PATH, 9, fontFlags)
     else
-        frame.castBarTime:SetFont(cfg.FONT_PATH, 9, "OUTLINE")
+        frame.castBarTime:SetFont(cfg.FONT_PATH, 9, fontFlags)
     end
     frame.castBarTime:SetTextColor(0.9, 0.9, 0.9, 1)
     frame.castBarTime:SetWordWrap(false)

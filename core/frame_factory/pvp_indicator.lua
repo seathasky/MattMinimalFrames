@@ -15,15 +15,17 @@ local function CreatePVPFlagIndicator(frame, unit)
     if frame.pvpFlagText then return end
 
     local text = frame.nameOverlay:CreateFontString(nil, "OVERLAY", nil, 7)
+    local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
     if MMF_SetFontSafe then
-        MMF_SetFontSafe(text, cfg.FONT_PATH, 10, "OUTLINE")
+        MMF_SetFontSafe(text, cfg.FONT_PATH, 10, fontFlags)
     else
-        text:SetFont(cfg.FONT_PATH, 10, "OUTLINE")
+        text:SetFont(cfg.FONT_PATH, 10, fontFlags)
     end
     text:SetText("PVP")
     text:SetTextColor(1, 0.2, 0.2, 1)
-    text:SetShadowOffset(1, -1)
-    text:SetShadowColor(0, 0, 0, 0.9)
+    if MMF_ApplyGlobalTextShadow then
+        MMF_ApplyGlobalTextShadow(text)
+    end
 
     text:ClearAllPoints()
     if unit == "player" then

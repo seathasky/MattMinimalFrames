@@ -185,7 +185,7 @@ function MMF_BuildUnitFramesMediaSection(ctx)
         buttonOffset = RIGHT_STYLE_BUTTON_OFFSET,
         buttonWidth = RIGHT_STYLE_BUTTON_WIDTH,
         visibleRows = 9,
-        label = "Font",
+        label = "Global Font",
         options = BuildFontDropdownOptions(),
         getValue = function()
             return GetSelectedFont()
@@ -206,6 +206,24 @@ function MMF_BuildUnitFramesMediaSection(ctx)
     })
     dropdownLists.unitFontList = rightSection.unitFontDropdown.list
 
+    rightSection.unitTextOutlineCheckbox = CreateMinimalCheckbox(unitFramesCol, "Text Outline", RIGHT_COL_X, -440 + RIGHT_STACK_Y_OFFSET, "useTextOutline", true, function()
+        if MMF_ApplyGlobalFont then
+            MMF_ApplyGlobalFont()
+        end
+        if MMF_RequestAllFramesUpdate then
+            MMF_RequestAllFramesUpdate()
+        end
+    end)
+
+    rightSection.unitTextShadowCheckbox = CreateMinimalCheckbox(unitFramesCol, "Text Shadow", RIGHT_COL_X, -464 + RIGHT_STACK_Y_OFFSET, "useTextShadow", true, function()
+        if MMF_ApplyGlobalFont then
+            MMF_ApplyGlobalFont()
+        end
+        if MMF_RequestAllFramesUpdate then
+            MMF_RequestAllFramesUpdate()
+        end
+    end)
+
     local function ClampColorChannel(value, fallback)
         local n = tonumber(value)
         if not n then
@@ -216,18 +234,20 @@ function MMF_BuildUnitFramesMediaSection(ctx)
         return n
     end
 
+    local fontEffectsSectionYOffset = 72
+
     rightSection.frameColorsDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     rightSection.frameColorsDivider:SetSize(RIGHT_COL_WIDTH, 1)
-    rightSection.frameColorsDivider:SetPoint("TOPLEFT", RIGHT_COL_X, -438 + RIGHT_STACK_Y_OFFSET)
+    rightSection.frameColorsDivider:SetPoint("TOPLEFT", RIGHT_COL_X, -438 - fontEffectsSectionYOffset + RIGHT_STACK_Y_OFFSET)
     rightSection.frameColorsDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     rightSection.frameColorsTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     rightSection.frameColorsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    rightSection.frameColorsTitle:SetPoint("TOPLEFT", RIGHT_COL_X, -450 + RIGHT_STACK_Y_OFFSET)
+    rightSection.frameColorsTitle:SetPoint("TOPLEFT", RIGHT_COL_X, -450 - fontEffectsSectionYOffset + RIGHT_STACK_Y_OFFSET)
     rightSection.frameColorsTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
     rightSection.frameColorsTitle:SetText("FRAME COLORS")
 
-    local frameColorHeaderRowY = -466 + RIGHT_STACK_Y_OFFSET
+    local frameColorHeaderRowY = -466 - fontEffectsSectionYOffset + RIGHT_STACK_Y_OFFSET
     local frameColorRowsStartY = frameColorHeaderRowY - 28
     local frameColorRowSpacing = 26
     local frameColorPetY = frameColorRowsStartY - (frameColorRowSpacing * 4)

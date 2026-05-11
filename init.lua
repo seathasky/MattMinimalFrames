@@ -22,6 +22,12 @@ local function NormalizeGUIScaleSetting()
     end
 end
 
+local function NormalizeLegacyTextEffectsSetting(db)
+    if _G.MMF_Startup_NormalizeLegacyTextEffectsSetting then
+        _G.MMF_Startup_NormalizeLegacyTextEffectsSetting(db)
+    end
+end
+
 local function Initialize()
     if MMF_Profiles_Initialize then
         MMF_Profiles_Initialize()
@@ -38,6 +44,7 @@ local function Initialize()
         end
     end
     NormalizeLegacyPartyRaidFontSetting(MattMinimalFramesDB)
+    NormalizeLegacyTextEffectsSetting(MattMinimalFramesDB)
     if MattMinimalFramesDB then
         -- Always reset preview-only aura test mode on UI load/reload.
         MattMinimalFramesDB.auraTestMode = false

@@ -8,6 +8,7 @@ local function CreateDragHandlers(frame, frameName)
     local GetFrameDefinition = deps.GetFrameDefinition or MMF_GetFrameDefinition
     local cfg = deps.cfg or MMF_Config or {}
     local SetFontSafe = deps.SetFontSafe or MMF_SetFontSafe
+    local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
 
     frame:SetScript("OnDragStart", function(self)
         if CanStartFrameDrag and CanStartFrameDrag(self) then
@@ -60,9 +61,9 @@ local function CreateDragHandlers(frame, frameName)
 
     frame.moveHint = frame:CreateFontString(nil, "OVERLAY")
     if SetFontSafe then
-        SetFontSafe(frame.moveHint, cfg.FONT_PATH, 10, "OUTLINE")
+        SetFontSafe(frame.moveHint, cfg.FONT_PATH, 10, fontFlags)
     else
-        frame.moveHint:SetFont(cfg.FONT_PATH, 10, "OUTLINE")
+        frame.moveHint:SetFont(cfg.FONT_PATH, 10, fontFlags)
     end
     frame.moveHint:SetText(frameLabel)
     frame.moveHint:SetPoint("BOTTOM", frame, "TOP", 0, 2)
@@ -70,9 +71,9 @@ local function CreateDragHandlers(frame, frameName)
 
     frame.moveSubtext = frame:CreateFontString(nil, "OVERLAY")
     if SetFontSafe then
-        SetFontSafe(frame.moveSubtext, cfg.FONT_PATH, 9, "OUTLINE")
+        SetFontSafe(frame.moveSubtext, cfg.FONT_PATH, 9, fontFlags)
     else
-        frame.moveSubtext:SetFont(cfg.FONT_PATH, 9, "OUTLINE")
+        frame.moveSubtext:SetFont(cfg.FONT_PATH, 9, fontFlags)
     end
     frame.moveSubtext:SetText(GetDragHintText and GetDragHintText() or "Shift+Drag to move")
     frame.moveSubtext:SetPoint("TOP", frame.moveHint, "BOTTOM", 0, -2)
