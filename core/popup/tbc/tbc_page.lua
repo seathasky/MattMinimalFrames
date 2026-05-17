@@ -1,4 +1,4 @@
-function MMF_CreateTBCPage(page, accentColor, createMinimalCheckbox)
+function MMF_CreateTBCPage(page, accentColor, createMinimalCheckbox, createMinimalSlider)
     local Compat = _G.MMF_Compat or {}
     if not Compat.IsTBC then
         return
@@ -6,6 +6,7 @@ function MMF_CreateTBCPage(page, accentColor, createMinimalCheckbox)
 
     local ACCENT_COLOR = accentColor or { 0.2, 0.9, 0.4 }
     local CreateMinimalCheckbox = createMinimalCheckbox or MMF_CreateMinimalCheckbox
+    local CreateMinimalSlider = createMinimalSlider or MMF_CreateMinimalSlider
 
     local title = page:CreateFontString(nil, "OVERLAY")
     title:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
@@ -71,4 +72,83 @@ function MMF_CreateTBCPage(page, accentColor, createMinimalCheckbox)
     note:SetJustifyH("LEFT")
     note:SetTextColor(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.95)
     note:SetText("These two options control the TBC-only frame behaviors.")
+
+    local classSectionTitle = page:CreateFontString(nil, "OVERLAY")
+    classSectionTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
+    classSectionTitle:SetPoint("TOPLEFT", 12, -164)
+    classSectionTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
+    classSectionTitle:SetText("CLASS BAR VISIBILITY")
+
+    local classSectionBody = page:CreateFontString(nil, "OVERLAY")
+    classSectionBody:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
+    classSectionBody:SetPoint("TOPLEFT", 12, -182)
+    classSectionBody:SetWidth(520)
+    classSectionBody:SetJustifyH("LEFT")
+    classSectionBody:SetTextColor(0.68, 0.74, 0.78)
+    classSectionBody:SetText("Show or hide TBC-supported class bars from this tab.")
+
+    local classDivider = page:CreateTexture(nil, "ARTWORK")
+    classDivider:SetSize(420, 1)
+    classDivider:SetPoint("TOPLEFT", 12, -202)
+    classDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
+
+    local function RefreshClassBar()
+        if MMF_EnsureComboPointBarInitialized then
+            MMF_EnsureComboPointBarInitialized()
+        end
+        if MMF_UpdateClassBarLayout then
+            MMF_UpdateClassBarLayout("comboPointBar")
+        end
+        if MMF_UpdateClassBarLayoutForCurrentClass then
+            MMF_UpdateClassBarLayoutForCurrentClass()
+        end
+        if MMF_RefreshClassResourceVisibility then
+            MMF_RefreshClassResourceVisibility()
+        end
+        RefreshFrames()
+    end
+
+    local classBarToggles = {
+        { label = "Rogue/Druid Combo Bar", key = "showComboPointBar", defaultValue = true },
+    }
+
+    local startX = 12
+    local startY = -218
+    local rowHeight = 22
+    for index, toggle in ipairs(classBarToggles) do
+        local row = index - 1
+        local x = startX
+        local y = startY - (row * rowHeight)
+        CreateMinimalCheckbox(
+            page,
+            toggle.label,
+            x,
+            y,
+            toggle.key,
+            toggle.defaultValue,
+            RefreshClassBar
+        )
+    end
+
+    CreateMinimalSlider(
+        page,
+        "Combo Bar Scale",
+        12,
+        -244,
+        280,
+        "comboPointBarScale",
+        0.5,
+        3.0,
+        0.05,
+        1.0,
+        function(value)
+            if MMF_EnsureComboPointBarInitialized then
+                MMF_EnsureComboPointBarInitialized()
+            end
+            if MMF_UpdateComboPointBarScale then
+                MMF_UpdateComboPointBarScale(value)
+            end
+            RefreshClassBar()
+        end
+    )
 end

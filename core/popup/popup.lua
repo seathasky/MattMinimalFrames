@@ -409,7 +409,7 @@ function MMF_ShowWelcomePopup(forceShow)
 
     MMF_CreatePartyRaidPage(partyRaidCol, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider)
     if Compat.IsTBC and MMF_CreateTBCPage then
-        MMF_CreateTBCPage(tbcCol, ACCENT_COLOR, CreateMinimalCheckbox)
+        MMF_CreateTBCPage(tbcCol, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider)
     end
 
     MMF_CreateCurrentClassSection(middleCol, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider, UpdatePlayerIconModeButtonText, GetCurrentPlayerIconModeValue)

@@ -600,6 +600,43 @@ local function CreateMaelstromBar()
     return MMF_MaelstromBar
 end
 
+local function EnsureComboPointBarInitialized()
+    if playerClass ~= "ROGUE" and playerClass ~= "DRUID" then
+        return nil
+    end
+    if MMF_ComboPointBar then
+        return MMF_ComboPointBar
+    end
+
+    local frame = CreateComboPointBar()
+    ApplyLegacyScale(frame, "comboPointBar")
+    frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+    if playerClass == "DRUID" then
+        frame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
+        frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "player")
+    end
+    if isClassicComboMode then
+        frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
+        frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
+        frame:RegisterEvent("PLAYER_TARGET_CHANGED")
+        frame:RegisterEvent("COMBO_TARGET_CHANGED")
+        frame:RegisterUnitEvent("UNIT_ENTERED_VEHICLE", "player")
+        frame:RegisterUnitEvent("UNIT_EXITED_VEHICLE", "player")
+    else
+        frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
+        frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
+        frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+        frame:RegisterEvent("PLAYER_TALENT_UPDATE")
+    end
+    frame:SetScript("OnEvent", UpdateComboPointBar)
+    UpdateComboPointBar(frame)
+    return frame
+end
+
+function MMF_EnsureComboPointBarInitialized()
+    return EnsureComboPointBarInitialized()
+end
+
 --------------------------------------------------
 -- LAYOUT UPDATE API
 --------------------------------------------------
@@ -1158,30 +1195,9 @@ function MMF_InitializeClassResources()
             UpdateHolyPowerBar(frame)
         end
     elseif playerClass == "ROGUE" or playerClass == "DRUID" then
-        if MattMinimalFramesDB and MattMinimalFramesDB.showComboPointBar then
-            local frame = CreateComboPointBar()
-            ApplyLegacyScale(frame, "comboPointBar")
+        local frame = EnsureComboPointBarInitialized()
+        if MattMinimalFramesDB and MattMinimalFramesDB.showComboPointBar and frame then
             frame:Show()
-            frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-            if playerClass == "DRUID" then
-                frame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
-                frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "player")
-            end
-            if isClassicComboMode then
-                frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
-                frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
-                frame:RegisterEvent("PLAYER_TARGET_CHANGED")
-                frame:RegisterEvent("COMBO_TARGET_CHANGED")
-                frame:RegisterUnitEvent("UNIT_ENTERED_VEHICLE", "player")
-                frame:RegisterUnitEvent("UNIT_EXITED_VEHICLE", "player")
-            else
-                frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
-                frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
-                frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
-                frame:RegisterEvent("PLAYER_TALENT_UPDATE")
-            end
-            frame:SetScript("OnEvent", UpdateComboPointBar)
-            UpdateComboPointBar(frame)
         end
     elseif playerClass == "WARLOCK" then
         if MattMinimalFramesDB and MattMinimalFramesDB.showSoulShardBar then
