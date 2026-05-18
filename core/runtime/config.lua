@@ -176,8 +176,6 @@ local MMF_SOUND_REGISTRY = {
     { name = "MMF Are You Sure", path = "Interface\\AddOns\\MattMinimalFrames\\Sounds\\are-you-sure-about-that.mp3" },
     { name = "MMF Click", path = "Interface\\AddOns\\MattMinimalFrames\\Sounds\\click.mp3" },
     { name = "MMF ESPARK1", path = "Interface\\AddOns\\MattMinimalFrames\\Sounds\\ESPARK1.ogg" },
-    { name = "MMF HP", path = "Interface\\AddOns\\MattMinimalFrames\\Sounds\\hp.mp3" },
-    { name = "MMF HPC", path = "Interface\\AddOns\\MattMinimalFrames\\Sounds\\hpc.mp3" },
     { name = "MMF HPF", path = "Interface\\AddOns\\MattMinimalFrames\\Sounds\\hpf.mp3" },
     { name = "MMF Sonar", path = "Interface\\AddOns\\MattMinimalFrames\\Sounds\\sonar.ogg" },
     { name = "MMF Sword Echo", path = "Interface\\AddOns\\MattMinimalFrames\\Sounds\\swordecho.ogg" },
