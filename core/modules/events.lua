@@ -414,6 +414,28 @@ local function RefreshPVPIndicators()
     end
 end
 
+local function RefreshClickCastSecureAttributes()
+    local apply = function()
+        if type(MMF_GetAllFrames) ~= "function" or type(MMF_ResetSecureAttributes) ~= "function" then
+            return
+        end
+        for _, frame in ipairs(MMF_GetAllFrames()) do
+            if frame then
+                MMF_ResetSecureAttributes(frame)
+            end
+        end
+    end
+
+    if InCombatLockdown and InCombatLockdown() then
+        if MMF_RunAfterCombat then
+            MMF_RunAfterCombat("click_cast_secure_refresh", apply)
+        end
+        return
+    end
+
+    apply()
+end
+
 local coreEventFrame = CreateFrame("Frame")
 local function SafeRegisterEvent(frame, eventName)
     local ok = pcall(frame.RegisterEvent, frame, eventName)
@@ -442,6 +464,20 @@ coreEventFrame:RegisterEvent("UNIT_FACTION")
 coreEventFrame:RegisterEvent("PLAYER_FLAGS_CHANGED")
 coreEventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 SafeRegisterEvent(coreEventFrame, "PLAYER_PVP_UPDATE")
+SafeRegisterEvent(coreEventFrame, "UPDATE_BINDINGS")
+
+if C_ClickBindings then
+    if type(hooksecurefunc) == "function" and type(C_ClickBindings.SetProfileByInfo) == "function" then
+        hooksecurefunc(C_ClickBindings, "SetProfileByInfo", function()
+            RefreshClickCastSecureAttributes()
+        end)
+    end
+    if type(hooksecurefunc) == "function" and type(C_ClickBindings.ResetCurrentProfile) == "function" then
+        hooksecurefunc(C_ClickBindings, "ResetCurrentProfile", function()
+            RefreshClickCastSecureAttributes()
+        end)
+    end
+end
 
 coreEventFrame:SetScript("OnEvent", function(_, event, unit)
     if ShouldSuspendForBlizzardEditMode() then
@@ -528,6 +564,9 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
     elseif event == "GROUP_ROSTER_UPDATE" then
         RequestUnitUpdate("player")
         RequestUnitUpdate("target")
+
+    elseif event == "UPDATE_BINDINGS" then
+        RefreshClickCastSecureAttributes()
 
     elseif event == "UNIT_NAME_UPDATE" or event == "UNIT_HEALTH" or event == "UNIT_POWER_UPDATE" or event == "UNIT_DISPLAYPOWER" or event == "UNIT_HEAL_PREDICTION" or event == "UNIT_ABSORB_AMOUNT_CHANGED" or event == "UNIT_HEAL_ABSORB_AMOUNT_CHANGED" then
         RequestUnitUpdate(unit)

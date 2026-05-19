@@ -1,4 +1,0 @@
-*.lua text eol=crlf
-*.toc text eol=crlf
-*.xml text eol=crlf
-*.txt text eol=crlf

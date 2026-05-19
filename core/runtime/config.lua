@@ -824,11 +824,30 @@ end
 function MMF_ResetSecureAttributes(frame)
     if not frame or not frame.unit then return end
     frame:SetAttribute("unit", frame.unit)
-    frame:SetAttribute("type1", "target")
-    frame:SetAttribute("target", frame.unit)
-    frame:SetAttribute("type2", "togglemenu")
+    frame:SetAttribute("*type1", "target")
+    frame:SetAttribute("*type2", "togglemenu")
+    -- If Retail click-cast moves interaction bindings onto modified clicks
+    -- (e.g. CTRL+Left/Right), block plain Left/Right so click-cast overrides.
+    local targetUsesModifier = false
+    local menuUsesModifier = false
+    if C_ClickBindings and Enum and Enum.ClickBindingType and Enum.ClickBindingInteraction then
+        local profile = C_ClickBindings.GetProfileInfo and C_ClickBindings.GetProfileInfo()
+        if type(profile) == "table" then
+            for _, bindingInfo in ipairs(profile) do
+                if bindingInfo and bindingInfo.type == Enum.ClickBindingType.Interaction then
+                    local modifiers = tonumber(bindingInfo.modifiers) or 0
+                    if bindingInfo.actionID == Enum.ClickBindingInteraction.Target then
+                        targetUsesModifier = modifiers ~= 0
+                    elseif bindingInfo.actionID == Enum.ClickBindingInteraction.OpenContextMenu then
+                        menuUsesModifier = modifiers ~= 0
+                    end
+                end
+            end
+        end
+    end
+    frame:SetAttribute("type1", targetUsesModifier and "none" or nil)
+    frame:SetAttribute("type2", menuUsesModifier and "none" or nil)
     frame:SetAttribute("alt-type2", "focus")
-    frame:SetAttribute("focus", frame.unit)
     frame:SetAttribute("shift-alt-type2", "macro")
     frame:SetAttribute("shift-alt-macrotext2", "/clearfocus")
 end
