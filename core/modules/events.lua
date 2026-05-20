@@ -462,7 +462,7 @@ local function IsTargetOfTargetUnitToken(unit)
         return false
     end
     local ok, isSameUnit = pcall(UnitIsUnit, unit, "targettarget")
-    return ok and isSameUnit == true
+    return ok and isSameUnit
 end
 
 local function RefreshClickCastSecureAttributes()

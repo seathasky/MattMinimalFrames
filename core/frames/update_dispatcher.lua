@@ -1,4 +1,5 @@
 local cfg = MMF_Config or {}
+local Compat = _G.MMF_Compat
 local TICK_INTERVAL = cfg.UPDATE_INTERVAL or 0.1
 local FALLBACK_INTERVAL = 0.8
 
@@ -77,6 +78,10 @@ local function ResolveFramesForUnit(unit)
         return resolved
     end
 
+    if not (Compat and Compat.IsTBC == true) then
+        return resolved
+    end
+
     if type(UnitIsUnit) ~= "function" or not MMF_Config or type(MMF_Config.FRAME_DEFINITIONS) ~= "table" then
         return resolved
     end
@@ -85,7 +90,7 @@ local function ResolveFramesForUnit(unit)
         local trackedUnit = def and def.unit
         if type(trackedUnit) == "string" and trackedUnit ~= unit then
             local ok, isSameUnit = pcall(UnitIsUnit, unit, trackedUnit)
-            if ok and isSameUnit == true and MMF_GetFrameForUnit then
+            if ok and isSameUnit and MMF_GetFrameForUnit then
                 local aliasFrame = MMF_GetFrameForUnit(trackedUnit)
                 if aliasFrame then
                     resolved[aliasFrame] = true
