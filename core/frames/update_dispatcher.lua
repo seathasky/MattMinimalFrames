@@ -60,6 +60,43 @@ local function SafeUpdateUnitFrame(frame)
     pcall(MMF_UpdateUnitFrame, frame)
 end
 
+local function ResolveFramesForUnit(unit)
+    local resolved = {}
+    if type(unit) ~= "string" or unit == "" then
+        return resolved
+    end
+
+    if MMF_GetFrameForUnit then
+        local directFrame = MMF_GetFrameForUnit(unit)
+        if directFrame then
+            resolved[directFrame] = true
+        end
+    end
+
+    if next(resolved) then
+        return resolved
+    end
+
+    if type(UnitIsUnit) ~= "function" or not MMF_Config or type(MMF_Config.FRAME_DEFINITIONS) ~= "table" then
+        return resolved
+    end
+
+    for _, def in ipairs(MMF_Config.FRAME_DEFINITIONS) do
+        local trackedUnit = def and def.unit
+        if type(trackedUnit) == "string" and trackedUnit ~= unit then
+            local ok, isSameUnit = pcall(UnitIsUnit, unit, trackedUnit)
+            if ok and isSameUnit == true and MMF_GetFrameForUnit then
+                local aliasFrame = MMF_GetFrameForUnit(trackedUnit)
+                if aliasFrame then
+                    resolved[aliasFrame] = true
+                end
+            end
+        end
+    end
+
+    return resolved
+end
+
 local function UpdateAllFramesNow()
     if not MMF_GetAllFrames or not MMF_UpdateUnitFrame then
         return
@@ -89,9 +126,9 @@ function MMF_FlushRequestedUpdates()
         SafeUpdateUnitFrame(frame)
     end
 
-    if MMF_GetFrameForUnit then
-        for unit in pairs(dirtyUnits) do
-            local frame = MMF_GetFrameForUnit(unit)
+    for unit in pairs(dirtyUnits) do
+        local resolvedFrames = ResolveFramesForUnit(unit)
+        for frame in pairs(resolvedFrames) do
             SafeUpdateUnitFrame(frame)
         end
     end

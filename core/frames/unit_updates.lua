@@ -6,6 +6,10 @@ local function ShouldSuspendForBlizzardEditMode()
     return _G.MMF_ShouldSuspendForBlizzardEditMode and _G.MMF_ShouldSuspendForBlizzardEditMode() == true
 end
 
+local function IsTBCTargetOfTargetTransitionFixEnabled()
+    return Compat and Compat.IsTBC == true
+end
+
 local UnitExists = UnitExists
 local UnitHealthMax = UnitHealthMax
 local UnitHealth = UnitHealth
@@ -1588,6 +1592,7 @@ local function UpdateUnitFrame(frame)
         MMF_UpdatePVPFlagIndicator(frame)
     end
 
+    local unitExistsNow = UnitExists(unit)
     local maxHP = UnitHealthMax(unit)
     local hp = UnitHealth(unit)
     if auraTestPreviewTarget then
@@ -1595,9 +1600,41 @@ local function UpdateUnitFrame(frame)
         hp = 1000000
     end
 
-    if frame.healthBar then
-        frame.healthBar:SetMinMaxValues(0, maxHP)
-        frame.healthBar:SetValue(hp)
+    local isPendingTargetOfTargetHealth = false
+    if IsTBCTargetOfTargetTransitionFixEnabled()
+        and unit == "targettarget"
+        and not auraTestPreviewTarget
+        and unitExistsNow then
+        local safeMaxForReadyCheck = tonumber(maxHP) or 0
+        local safeHPForReadyCheck = tonumber(hp) or 0
+        local isDead = false
+        if type(UnitIsDeadOrGhost) == "function" then
+            local okDead, deadResult = pcall(UnitIsDeadOrGhost, unit)
+            isDead = okDead and deadResult == true
+        elseif type(UnitIsDead) == "function" then
+            local okDead, deadResult = pcall(UnitIsDead, unit)
+            isDead = okDead and deadResult == true
+        end
+        if not isDead and (safeMaxForReadyCheck <= 0 or safeHPForReadyCheck <= 0) then
+            isPendingTargetOfTargetHealth = true
+        end
+    end
+
+    if frame.healthBar and not isPendingTargetOfTargetHealth then
+        frame.healthBar:Show()
+        if frame.healthBarBG then frame.healthBarBG:Show() end
+        if frame.healthBarBorder then frame.healthBarBorder:Show() end
+        if not unitExistsNow and not previewMode and not auraTestPreviewTarget then
+            frame.healthBar:SetMinMaxValues(0, 1)
+            frame.healthBar:SetValue(1)
+        else
+            frame.healthBar:SetMinMaxValues(0, maxHP)
+            frame.healthBar:SetValue(hp)
+        end
+    elseif frame.healthBar and isPendingTargetOfTargetHealth then
+        frame.healthBar:Hide()
+        if frame.healthBarBG then frame.healthBarBG:Hide() end
+        if frame.healthBarBorder then frame.healthBarBorder:Hide() end
     end
 
     local healthPercentNormalized = nil
@@ -1625,7 +1662,17 @@ local function UpdateUnitFrame(frame)
             frame.hpText:SetText("")
             frame.hpText:Hide()
             if frame.hpTextDragFrame then frame.hpTextDragFrame:Hide() end
-        elseif (previewMode or auraTestPreviewTarget) and not UnitExists(unit) then
+        elseif isPendingTargetOfTargetHealth then
+            -- Keep HP text blank until the first valid value arrives.
+            frame.hpText:SetText("")
+            frame.hpText:Show()
+            if frame.hpTextDragFrame then frame.hpTextDragFrame:Show() end
+        elseif not unitExistsNow and not (previewMode or auraTestPreviewTarget) then
+            frame.hpText:SetText("")
+            frame.hpText:Hide()
+            if frame.hpTextDragFrame then frame.hpTextDragFrame:Hide() end
+            healthPercentNormalized = nil
+        elseif (previewMode or auraTestPreviewTarget) and not unitExistsNow then
             local showHPValueText = MMF_GetShowHPValueText and MMF_GetShowHPValueText(unit)
             if showHPValueText == nil then
                 showHPValueText = (db.showHPValueText ~= false)
@@ -1662,8 +1709,41 @@ local function UpdateUnitFrame(frame)
         end
     end
 
-    UpdateHealPrediction(frame)
-    UpdateAbsorbBar(frame)
+    if isPendingTargetOfTargetHealth then
+        if frame.healthBar then frame.healthBar:Hide() end
+        if frame.healthBarBG then frame.healthBarBG:Hide() end
+        if frame.healthBarBorder then frame.healthBarBorder:Hide() end
+        if frame.myHealPrediction then frame.myHealPrediction:Hide() end
+        if frame.otherHealPrediction then frame.otherHealPrediction:Hide() end
+        if frame.healAbsorbBar then frame.healAbsorbBar:Hide() end
+        if frame.absorbBar then frame.absorbBar:Hide() end
+        if not frame.mmfPendingTargetOfTargetHealthRetry then
+            frame.mmfPendingTargetOfTargetHealthRetry = true
+            if C_Timer and C_Timer.After then
+                C_Timer.After(0.05, function()
+                    frame.mmfPendingTargetOfTargetHealthRetry = nil
+                    if frame and frame.unit == "targettarget" and frame:IsShown() then
+                        if MMF_RequestFrameUpdate then
+                            MMF_RequestFrameUpdate(frame)
+                        elseif MMF_UpdateUnitFrame then
+                            MMF_UpdateUnitFrame(frame)
+                        end
+                    end
+                end)
+            else
+                frame.mmfPendingTargetOfTargetHealthRetry = nil
+            end
+        end
+        -- Stop here so stale zero-valued data cannot repaint later in this pass.
+        return
+    else
+        frame.mmfPendingTargetOfTargetHealthRetry = nil
+    end
+
+    if not isPendingTargetOfTargetHealth then
+        UpdateHealPrediction(frame)
+        UpdateAbsorbBar(frame)
+    end
     UpdateCastBarForEditMode(frame, unit, previewMode, db)
 
     if unit ~= "player" and unit ~= "target"

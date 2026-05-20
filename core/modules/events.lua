@@ -1,4 +1,5 @@
 local LibCustomGlow = LibStub("LibCustomGlow-1.0")
+local Compat = _G.MMF_Compat
 
 local function ShouldSuspendForBlizzardEditMode()
     return _G.MMF_ShouldSuspendForBlizzardEditMode and _G.MMF_ShouldSuspendForBlizzardEditMode() == true
@@ -414,6 +415,56 @@ local function RefreshPVPIndicators()
     end
 end
 
+local function ClearTargetOfTargetTransientVisuals()
+    local frame = MMF_TargetOfTargetFrame
+    if not frame then
+        return
+    end
+    if frame.healthBar then
+        frame.healthBar:SetMinMaxValues(0, 1)
+        frame.healthBar:SetValue(0)
+        frame.healthBar:Hide()
+    end
+    if frame.healthBarBG then
+        frame.healthBarBG:Hide()
+    end
+    if frame.healthBarBorder then
+        frame.healthBarBorder:Hide()
+    end
+    if frame.nameText then
+        frame.nameText:SetText("")
+    end
+    if frame.hpText then
+        frame.hpText:SetText("")
+        frame.hpText:Hide()
+    end
+    if frame.hpTextDragFrame then
+        frame.hpTextDragFrame:Hide()
+    end
+    if frame.myHealPrediction then frame.myHealPrediction:Hide() end
+    if frame.otherHealPrediction then frame.otherHealPrediction:Hide() end
+    if frame.healAbsorbBar then frame.healAbsorbBar:Hide() end
+    if frame.absorbBar then frame.absorbBar:Hide() end
+end
+
+local function IsTBCTargetOfTargetTransitionFixEnabled()
+    return Compat and Compat.IsTBC == true
+end
+
+local function IsTargetOfTargetUnitToken(unit)
+    if type(unit) ~= "string" or unit == "" then
+        return false
+    end
+    if unit == "targettarget" then
+        return true
+    end
+    if type(UnitIsUnit) ~= "function" then
+        return false
+    end
+    local ok, isSameUnit = pcall(UnitIsUnit, unit, "targettarget")
+    return ok and isSameUnit == true
+end
+
 local function RefreshClickCastSecureAttributes()
     local apply = function()
         if type(MMF_GetAllFrames) ~= "function" or type(MMF_ResetSecureAttributes) ~= "function" then
@@ -480,6 +531,7 @@ if C_ClickBindings then
 end
 
 coreEventFrame:SetScript("OnEvent", function(_, event, unit)
+    local shouldFlushNow = false
     if ShouldSuspendForBlizzardEditMode() then
         return
     end
@@ -514,6 +566,7 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
         end
 
     elseif event == "PLAYER_TARGET_CHANGED" then
+        ClearTargetOfTargetTransientVisuals()
         if MMF_UpdateUnitFrame then
             if MMF_TargetFrame then
                 MMF_UpdateUnitFrame(MMF_TargetFrame)
@@ -521,6 +574,9 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
                 RequestFrameUpdate(MMF_TargetFrame)
             end
             if MMF_TargetOfTargetFrame then
+                if IsTBCTargetOfTargetTransitionFixEnabled() then
+                    MMF_TargetOfTargetFrame.mmfLastAcquireAt = (GetTime and GetTime()) or 0
+                end
                 MMF_UpdateUnitFrame(MMF_TargetOfTargetFrame)
             else
                 RequestFrameUpdate(MMF_TargetOfTargetFrame)
@@ -529,6 +585,7 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
             RequestFrameUpdate(MMF_TargetFrame)
             RequestFrameUpdate(MMF_TargetOfTargetFrame)
         end
+        shouldFlushNow = true
 
     elseif event == "PLAYER_FOCUS_CHANGED" then
         RequestFrameUpdate(MMF_FocusFrame)
@@ -546,7 +603,14 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
 
     elseif event == "UNIT_TARGET" then
         if unit == "target" then
+            ClearTargetOfTargetTransientVisuals()
+            if MMF_TargetOfTargetFrame then
+                if IsTBCTargetOfTargetTransitionFixEnabled() then
+                    MMF_TargetOfTargetFrame.mmfLastAcquireAt = (GetTime and GetTime()) or 0
+                end
+            end
             RequestFrameUpdate(MMF_TargetOfTargetFrame)
+            shouldFlushNow = true
         end
 
     elseif event == "PLAYER_FLAGS_CHANGED" then
@@ -570,6 +634,10 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
 
     elseif event == "UNIT_NAME_UPDATE" or event == "UNIT_HEALTH" or event == "UNIT_POWER_UPDATE" or event == "UNIT_DISPLAYPOWER" or event == "UNIT_HEAL_PREDICTION" or event == "UNIT_ABSORB_AMOUNT_CHANGED" or event == "UNIT_HEAL_ABSORB_AMOUNT_CHANGED" then
         RequestUnitUpdate(unit)
+        if IsTargetOfTargetUnitToken(unit) then
+            RequestFrameUpdate(MMF_TargetOfTargetFrame)
+            shouldFlushNow = true
+        end
 
     elseif event == "UNIT_FACTION" then
         if unit == nil or unit == "player" or unit == "target" then
@@ -583,8 +651,9 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
     end
 
     if MMF_FlushRequestedUpdates then
-        if (event == "UNIT_HEALTH" or event == "UNIT_POWER_UPDATE" or event == "UNIT_DISPLAYPOWER")
-            and (unit == nil or unit == "player") then
+        if shouldFlushNow
+            or ((event == "UNIT_HEALTH" or event == "UNIT_POWER_UPDATE" or event == "UNIT_DISPLAYPOWER")
+            and (unit == nil or unit == "player")) then
             MMF_FlushRequestedUpdates()
         end
     end
