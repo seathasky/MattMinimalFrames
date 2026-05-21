@@ -900,15 +900,15 @@ local function ApplyNameTextFontSize(frame, size, minSize)
     if minSize < 1 then minSize = 1 end
     if size < minSize then size = minSize end
     local rounded = math.floor(size + 0.5)
-    if frame.mmfAppliedNameFontSize == rounded then
-        return
-    end
     local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or cfg.FONT_PATH
     local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
     if TryApplyFont(frame.nameText, fontPath, rounded, fontFlags) then
         frame.mmfAppliedNameFontSize = rounded
     else
         frame.mmfAppliedNameFontSize = nil
+    end
+    if MMF_ApplyGlobalTextShadow then
+        MMF_ApplyGlobalTextShadow(frame.nameText)
     end
 end
 
@@ -1582,6 +1582,8 @@ local function UpdateUnitFrame(frame)
         end
         if not useAnchorNamePosition then
             ApplyAutoResizeNameText(frame, unit, displayNameWithLeaderIcon)
+        else
+            ApplyNameTextFontSize(frame, MMF_GetNameTextSize and MMF_GetNameTextSize(unit) or tonumber(db.nameTextSize) or 12)
         end
     end
 

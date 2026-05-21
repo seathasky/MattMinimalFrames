@@ -174,5 +174,6 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
             reopenMainGUIAfterEditModeReset = false
             MMF_ShowWelcomePopup(true)
         end
+        return
     end
 end)
