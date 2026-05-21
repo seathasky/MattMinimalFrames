@@ -698,6 +698,9 @@ end
 
 function MMF_GetUnitColor(unit)
     if not unit then return 1, 1, 1 end
+    local isBossUnit = (unit == "boss1" or unit == "boss2" or unit == "boss3" or unit == "boss4" or unit == "boss5")
+    MMF_BossHostileColorMemory = MMF_BossHostileColorMemory or {}
+    local now = (type(GetTime) == "function" and GetTime()) or 0
     if unit == "target" and MattMinimalFramesDB then
         local mode = tostring(MattMinimalFramesDB.targetBarColorMode or "default"):lower()
         if mode == "custom" then
@@ -789,9 +792,25 @@ function MMF_GetUnitColor(unit)
             end
         end
     else
-        if UnitIsEnemy("player", unit) then
+        local isEnemy = UnitIsEnemy("player", unit)
+        local isFriend = UnitIsFriend("player", unit)
+        if isEnemy then
+            if isBossUnit then
+                MMF_BossHostileColorMemory[unit] = now
+            end
             return 0.8, 0.2, 0.2
-        elseif not UnitIsFriend("player", unit) then
+        elseif isBossUnit and (not isFriend) then
+            local recentlyHostile = false
+            local lastHostileAt = MMF_BossHostileColorMemory[unit]
+            if type(lastHostileAt) == "number" and (now - lastHostileAt) <= 1.5 then
+                recentlyHostile = true
+            end
+            local inCombat = (type(InCombatLockdown) == "function") and InCombatLockdown() or false
+            if recentlyHostile or inCombat then
+                return 0.8, 0.2, 0.2
+            end
+            return 0.8, 0.2, 0.2
+        elseif not isFriend then
             return 1, 1, 0
         else
             return 0.2, 0.8, 0.2

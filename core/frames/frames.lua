@@ -20,6 +20,15 @@ function MMF_CreateAllMinimalFrames()
             self.mmfAppliedPowerFontSize = nil
             self.mmfAppliedCastBarNameFontSize = nil
             self.mmfAppliedCastBarTimeFontSize = nil
+
+            if MMF_RequestFrameUpdate then
+                MMF_RequestFrameUpdate(self)
+            elseif MMF_UpdateUnitFrame then
+                MMF_UpdateUnitFrame(self)
+            end
+            if MMF_FlushRequestedUpdates then
+                MMF_FlushRequestedUpdates()
+            end
         end)
 
         _G[def.name] = frame
