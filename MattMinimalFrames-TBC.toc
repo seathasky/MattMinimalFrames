@@ -1,7 +1,7 @@
 ## Interface: 20505
 ## Title: Matt's Minimal Frames
 ## Author: Seathasky
-## Version: 7.5.9b
+## Version: 7.6.0
 ## X-Curse-Project-ID: 1362998
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
 ## SavedVariables: MattMinimalFramesDB, MattMinimalFramesProfilesDB, MattMinimalFramesGlobalDB
@@ -130,3 +130,6 @@ init.lua
 core/frames/range_check.lua
 core/frames/class_resources.lua
 core/frames/clique_support.lua
+
+# Optional Debug Modules
+# debug.lua

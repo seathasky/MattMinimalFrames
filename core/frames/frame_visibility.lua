@@ -480,13 +480,8 @@ local function ApplyBossFrameVisibility()
                 frame:Show()
             else
                 ResumeUnitWatch(frame)
-                if type(UnitExists) == "function" and UnitExists(unit) then
-                    frame.mmfSuppressCombatVisibilityOnShow = true
-                    frame:Show()
-                else
-                    frame.mmfSuppressCombatVisibilityOnShow = true
-                    frame:Hide()
-                end
+                -- Let RegisterUnitWatch control live boss visibility.
+                -- Forcing show/hide on every event can fight UnitWatch and cause flicker.
             end
         end
     end

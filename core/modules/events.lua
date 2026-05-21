@@ -520,6 +520,9 @@ SafeRegisterEvent(coreEventFrame, "UNIT_HEAL_ABSORB_AMOUNT_CHANGED")
 coreEventFrame:RegisterEvent("UNIT_FACTION")
 coreEventFrame:RegisterEvent("PLAYER_FLAGS_CHANGED")
 coreEventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+SafeRegisterEvent(coreEventFrame, "INSTANCE_ENCOUNTER_ENGAGE_UNIT")
+SafeRegisterEvent(coreEventFrame, "ENCOUNTER_START")
+SafeRegisterEvent(coreEventFrame, "ENCOUNTER_END")
 SafeRegisterEvent(coreEventFrame, "PLAYER_PVP_UPDATE")
 SafeRegisterEvent(coreEventFrame, "UPDATE_BINDINGS")
 
@@ -634,6 +637,12 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
     elseif event == "GROUP_ROSTER_UPDATE" then
         RequestUnitUpdate("player")
         RequestUnitUpdate("target")
+
+    elseif event == "INSTANCE_ENCOUNTER_ENGAGE_UNIT" or event == "ENCOUNTER_START" or event == "ENCOUNTER_END" then
+        for i = 1, 5 do
+            RequestUnitUpdate("boss" .. i)
+        end
+        shouldFlushNow = true
 
     elseif event == "UPDATE_BINDINGS" then
         RefreshClickCastSecureAttributes()
