@@ -589,6 +589,8 @@ local function CreateMaelstromBar()
     return MMF_MaelstromBar
 end
 
+local UpdateComboPointBar
+
 local function EnsureComboPointBarInitialized()
     if playerClass ~= "ROGUE" and playerClass ~= "DRUID" then
         return nil
@@ -758,7 +760,7 @@ local function UpdateHolyPowerBar(self, event, unit)
     end
 end
 
-local function UpdateComboPointBar()
+UpdateComboPointBar = function()
     if not MMF_ComboPointBar then return end
 
     if playerClass == "DRUID" then
