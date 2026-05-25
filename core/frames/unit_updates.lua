@@ -1798,38 +1798,45 @@ local function UpdateUnitFrame(frame)
         end
 
         local maxPower, power
+        local okMaxPower, okPower
         if useManaPowerType then
-            maxPower = UnitPowerMax(unit, 0)
-            power = UnitPower(unit, 0)
+            okMaxPower, maxPower = pcall(UnitPowerMax, unit, 0)
+            okPower, power = pcall(UnitPower, unit, 0)
         else
             if powerType ~= nil then
-                maxPower = UnitPowerMax(unit, powerType)
-                power = UnitPower(unit, powerType)
+                okMaxPower, maxPower = pcall(UnitPowerMax, unit, powerType)
+                okPower, power = pcall(UnitPower, unit, powerType)
             else
-                maxPower = UnitPowerMax(unit)
-                power = UnitPower(unit)
+                okMaxPower, maxPower = pcall(UnitPowerMax, unit)
+                okPower, power = pcall(UnitPower, unit)
             end
+        end
+        if not okMaxPower then
+            maxPower = 1
+        end
+        if not okPower then
+            power = maxPower
         end
         if previewMode and not UnitExists(unit) then
             maxPower = 100
             power = 72
         end
-        local hasPower = false
-        pcall(function()
-            hasPower = (maxPower and maxPower > 0) and true or false
-        end)
+        local readableMaxPower = SafeAccessibleNumber(maxPower, nil)
+        local readablePower = SafeAccessibleNumber(power, nil)
+        local hasReadablePower = type(readableMaxPower) == "number" and readableMaxPower > 0 and type(readablePower) == "number"
 
-        if hasPower then
+        local showPowerBar = false
+        if unit == "player" then
+            showPowerBar = (db.showPlayerPowerBar ~= false)
+        else
+            showPowerBar = (db.showTargetPowerBar ~= false)
+        end
+
+        if showPowerBar then
             frame.powerBar:SetMinMaxValues(0, maxPower)
             frame.powerBar:SetValue(power)
 
             local pr, pg, pb, pa = ResolvePowerColor(unit, powerType, powerToken, db)
-            local showPowerBar = false
-            if unit == "player" then
-                showPowerBar = (db.showPlayerPowerBar ~= false)
-            else
-                showPowerBar = (db.showTargetPowerBar ~= false)
-            end
 
             frame.powerBar:SetStatusBarColor(pr, pg, pb, pa or 1)
             if frame.powerBarBG then
@@ -1869,12 +1876,18 @@ local function UpdateUnitFrame(frame)
                     showPowerText = true
                 end
 
-                if showPowerText then
+                if showPowerText and hasReadablePower then
                     local textPower = power
                     local textMaxPower = maxPower
                     if textPowerType ~= powerType then
-                        textMaxPower = UnitPowerMax(unit, textPowerType)
-                        textPower = UnitPower(unit, textPowerType)
+                        local okTextMaxPower
+                        local okTextPower
+                        okTextMaxPower, textMaxPower = pcall(UnitPowerMax, unit, textPowerType)
+                        okTextPower, textPower = pcall(UnitPower, unit, textPowerType)
+                        if not okTextMaxPower or not okTextPower then
+                            textMaxPower = nil
+                            textPower = nil
+                        end
                     end
 
                     local powerTextMode = GetPowerTextModeForUnit(db, unit)

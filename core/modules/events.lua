@@ -502,6 +502,10 @@ coreEventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 coreEventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 coreEventFrame:RegisterEvent("UNIT_HEALTH")
 coreEventFrame:RegisterEvent("UNIT_POWER_UPDATE")
+coreEventFrame:RegisterEvent("UNIT_POWER_FREQUENT")
+coreEventFrame:RegisterEvent("UNIT_MAXPOWER")
+coreEventFrame:RegisterEvent("UNIT_POWER_BAR_HIDE")
+coreEventFrame:RegisterEvent("UNIT_POWER_BAR_SHOW")
 coreEventFrame:RegisterEvent("PLAYER_ALIVE")
 coreEventFrame:RegisterEvent("PLAYER_DEAD")
 coreEventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
@@ -647,7 +651,7 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
     elseif event == "UPDATE_BINDINGS" then
         RefreshClickCastSecureAttributes()
 
-    elseif event == "UNIT_NAME_UPDATE" or event == "UNIT_HEALTH" or event == "UNIT_POWER_UPDATE" or event == "UNIT_DISPLAYPOWER" or event == "UNIT_HEAL_PREDICTION" or event == "UNIT_ABSORB_AMOUNT_CHANGED" or event == "UNIT_HEAL_ABSORB_AMOUNT_CHANGED" then
+    elseif event == "UNIT_NAME_UPDATE" or event == "UNIT_HEALTH" or event == "UNIT_POWER_UPDATE" or event == "UNIT_POWER_FREQUENT" or event == "UNIT_MAXPOWER" or event == "UNIT_POWER_BAR_HIDE" or event == "UNIT_POWER_BAR_SHOW" or event == "UNIT_DISPLAYPOWER" or event == "UNIT_HEAL_PREDICTION" or event == "UNIT_ABSORB_AMOUNT_CHANGED" or event == "UNIT_HEAL_ABSORB_AMOUNT_CHANGED" then
         RequestUnitUpdate(unit)
         if IsTargetOfTargetUnitToken(unit) then
             RequestFrameUpdate(MMF_TargetOfTargetFrame)
@@ -667,7 +671,7 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
 
     if MMF_FlushRequestedUpdates then
         if shouldFlushNow
-            or ((event == "UNIT_HEALTH" or event == "UNIT_POWER_UPDATE" or event == "UNIT_DISPLAYPOWER")
+            or ((event == "UNIT_HEALTH" or event == "UNIT_POWER_UPDATE" or event == "UNIT_POWER_FREQUENT" or event == "UNIT_MAXPOWER" or event == "UNIT_POWER_BAR_HIDE" or event == "UNIT_POWER_BAR_SHOW" or event == "UNIT_DISPLAYPOWER")
             and (unit == nil or unit == "player")) then
             MMF_FlushRequestedUpdates()
         end
