@@ -373,6 +373,7 @@ function MMF.GetUnitAuras(unit, filter)
     -- Classic/TBC path.
     if AuraUtil and AuraUtil.ForEachAura then
         AuraUtil.ForEachAura(unit, filterString, 40, function(name, icon, count, debuffType, duration, expirationTime, source, isStealable, _, spellId, ...)
+            local value1, value2, value3 = ...
             if name then
                 table.insert(auras, {
                     name = SafeAuraField(name),
@@ -383,6 +384,9 @@ function MMF.GetUnitAuras(unit, filter)
                     expirationTime = SafeAuraField(expirationTime),
                     source = SafeAuraField(source),
                     spellId = SafeAuraField(spellId),
+                    value1 = SafeAuraField(value1),
+                    value2 = SafeAuraField(value2),
+                    value3 = SafeAuraField(value3),
                     _index = #auras + 1,
                 })
             end
@@ -395,7 +399,7 @@ function MMF.GetUnitAuras(unit, filter)
             unitFilter = "PLAYER"
         end
         for i = 1, 40 do
-            local name, icon, count, debuffType, duration, expirationTime, source, _, _, spellId = auraFunc(unit, i, unitFilter)
+            local name, icon, count, debuffType, duration, expirationTime, source, _, _, spellId, _, _, _, _, _, _, value1, value2, value3 = auraFunc(unit, i, unitFilter)
             if not name then break end
             table.insert(auras, {
                 name = SafeAuraField(name),
@@ -406,6 +410,9 @@ function MMF.GetUnitAuras(unit, filter)
                 expirationTime = SafeAuraField(expirationTime),
                 source = SafeAuraField(source),
                 spellId = SafeAuraField(spellId),
+                value1 = SafeAuraField(value1),
+                value2 = SafeAuraField(value2),
+                value3 = SafeAuraField(value3),
                 _index = i,
             })
         end

@@ -501,6 +501,10 @@ end
 coreEventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
 coreEventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
 coreEventFrame:RegisterEvent("UNIT_HEALTH")
+if Compat and Compat.IsTBC == true then
+    coreEventFrame:RegisterEvent("UNIT_MAXHEALTH")
+end
+coreEventFrame:RegisterEvent("UNIT_AURA")
 coreEventFrame:RegisterEvent("UNIT_POWER_UPDATE")
 coreEventFrame:RegisterEvent("UNIT_POWER_FREQUENT")
 coreEventFrame:RegisterEvent("UNIT_MAXPOWER")
@@ -521,6 +525,9 @@ coreEventFrame:RegisterEvent("UNIT_TARGET")
 coreEventFrame:RegisterEvent("UNIT_HEAL_PREDICTION")
 coreEventFrame:RegisterEvent("UNIT_ABSORB_AMOUNT_CHANGED")
 SafeRegisterEvent(coreEventFrame, "UNIT_HEAL_ABSORB_AMOUNT_CHANGED")
+if Compat and Compat.IsTBC == true then
+    coreEventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+end
 coreEventFrame:RegisterEvent("UNIT_FACTION")
 coreEventFrame:RegisterEvent("PLAYER_FLAGS_CHANGED")
 coreEventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
@@ -651,7 +658,47 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
     elseif event == "UPDATE_BINDINGS" then
         RefreshClickCastSecureAttributes()
 
-    elseif event == "UNIT_NAME_UPDATE" or event == "UNIT_HEALTH" or event == "UNIT_POWER_UPDATE" or event == "UNIT_POWER_FREQUENT" or event == "UNIT_MAXPOWER" or event == "UNIT_POWER_BAR_HIDE" or event == "UNIT_POWER_BAR_SHOW" or event == "UNIT_DISPLAYPOWER" or event == "UNIT_HEAL_PREDICTION" or event == "UNIT_ABSORB_AMOUNT_CHANGED" or event == "UNIT_HEAL_ABSORB_AMOUNT_CHANGED" then
+    elseif event == "COMBAT_LOG_EVENT_UNFILTERED" then
+        local info = { CombatLogGetCurrentEventInfo() }
+        local subevent = info[2]
+        local destGUID = info[8]
+        local absorbedAmount = 0
+
+        if subevent == "SWING_MISSED" then
+            if info[12] == "ABSORB" then
+                absorbedAmount = tonumber(info[15]) or 0
+            end
+        elseif subevent == "RANGE_MISSED" or subevent == "SPELL_MISSED" or subevent == "SPELL_PERIODIC_MISSED" then
+            if info[15] == "ABSORB" then
+                absorbedAmount = tonumber(info[18]) or 0
+            end
+        elseif subevent == "SWING_DAMAGE" then
+            absorbedAmount = tonumber(info[17]) or 0
+        elseif subevent == "RANGE_DAMAGE" or subevent == "SPELL_DAMAGE" or subevent == "SPELL_PERIODIC_DAMAGE" then
+            absorbedAmount = tonumber(info[20]) or 0
+        elseif subevent == "SPELL_ABSORBED" then
+            local absorbSpellId, absorbAmount = nil, nil
+            if type(info[13]) == "number" then
+                absorbSpellId = info[13]
+                absorbAmount = info[16]
+            elseif type(info[16]) == "number" then
+                absorbSpellId = info[16]
+                absorbAmount = info[19]
+            end
+            if type(absorbSpellId) == "number" and type(absorbAmount) == "number" and absorbAmount > 0 then
+                absorbedAmount = absorbAmount
+            end
+        end
+
+        if destGUID and absorbedAmount > 0 and MMF_TBCConsumeTrackedAbsorbAmount then
+            MMF_TBCConsumeTrackedAbsorbAmount(destGUID, absorbedAmount)
+            RequestUnitUpdate("player")
+            RequestUnitUpdate("target")
+            RequestUnitUpdate("targettarget")
+            shouldFlushNow = true
+        end
+
+    elseif event == "UNIT_NAME_UPDATE" or event == "UNIT_HEALTH" or event == "UNIT_MAXHEALTH" or event == "UNIT_AURA" or event == "UNIT_POWER_UPDATE" or event == "UNIT_POWER_FREQUENT" or event == "UNIT_MAXPOWER" or event == "UNIT_POWER_BAR_HIDE" or event == "UNIT_POWER_BAR_SHOW" or event == "UNIT_DISPLAYPOWER" or event == "UNIT_HEAL_PREDICTION" or event == "UNIT_ABSORB_AMOUNT_CHANGED" or event == "UNIT_HEAL_ABSORB_AMOUNT_CHANGED" then
         RequestUnitUpdate(unit)
         if IsTargetOfTargetUnitToken(unit) then
             RequestFrameUpdate(MMF_TargetOfTargetFrame)
@@ -671,7 +718,7 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
 
     if MMF_FlushRequestedUpdates then
         if shouldFlushNow
-            or ((event == "UNIT_HEALTH" or event == "UNIT_POWER_UPDATE" or event == "UNIT_POWER_FREQUENT" or event == "UNIT_MAXPOWER" or event == "UNIT_POWER_BAR_HIDE" or event == "UNIT_POWER_BAR_SHOW" or event == "UNIT_DISPLAYPOWER")
+            or ((event == "UNIT_HEALTH" or event == "UNIT_MAXHEALTH" or event == "UNIT_AURA" or event == "UNIT_POWER_UPDATE" or event == "UNIT_POWER_FREQUENT" or event == "UNIT_MAXPOWER" or event == "UNIT_POWER_BAR_HIDE" or event == "UNIT_POWER_BAR_SHOW" or event == "UNIT_DISPLAYPOWER")
             and (unit == nil or unit == "player")) then
             MMF_FlushRequestedUpdates()
         end

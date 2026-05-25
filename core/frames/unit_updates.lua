@@ -29,11 +29,24 @@ local UnitGetDetailedHealPrediction = UnitGetDetailedHealPrediction
 local UnitGetTotalAbsorbs = UnitGetTotalAbsorbs
 local UnitGetTotalHealAbsorbs = UnitGetTotalHealAbsorbs
 local PowerBarColor = PowerBarColor
+local UnitAura = UnitAura
 
 local IS_PLAYER_SHAMAN = (UnitClassBase("player") == "SHAMAN")
 local IS_PLAYER_DRUID = (UnitClassBase("player") == "DRUID")
 local SCALE_TO_100 = CurveConstants and CurveConstants.ScaleTo100
 local ClampColorChannel
+
+local TBC_TRACKED_ABSORB_SPELLS = {
+    -- Power Word: Shield
+    [17] = 44, [592] = 88, [600] = 158, [3747] = 234, [6065] = 301, [6066] = 381,
+    [10898] = 484, [10899] = 605, [10900] = 760, [10901] = 942, [25217] = 1104, [25218] = 1265,
+    -- Ice Barrier
+    [11426] = 438, [13031] = 549, [13032] = 678, [13033] = 818, [27134] = 925, [33405] = 1075,
+    -- Voidwalker Sacrifice
+    [30115] = 0,
+}
+local GetTBCTrackedAbsorbTotal
+local TBCTrackedAbsorbStateByGUID = {}
 
 local function IsCheckedFlag(value)
     return value == true or value == 1
@@ -1422,12 +1435,35 @@ local function UpdateAbsorbBar(frame)
         return
     end
 
-    if not UnitGetTotalAbsorbs then
+    local isTBC = Compat and Compat.IsTBC == true
+    local unitGetTotalAbsorbs = UnitGetTotalAbsorbs or _G.UnitGetTotalAbsorbs
+    local tbcTotalAbsorb = nil
+    if isTBC then
+        if unitGetTotalAbsorbs then
+            local ok, totalAbsorb = pcall(unitGetTotalAbsorbs, unit)
+            tbcTotalAbsorb = ok and SafeToNumber(totalAbsorb, 0) or 0
+        else
+            tbcTotalAbsorb = 0
+        end
+        if tbcTotalAbsorb <= 0 then
+            tbcTotalAbsorb = GetTBCTrackedAbsorbTotal(unit)
+        end
+        if tbcTotalAbsorb <= 0 then
+            frame.absorbBar:Hide()
+            return
+        end
+    elseif not unitGetTotalAbsorbs then
         frame.absorbBar:Hide()
         return
     end
 
     local maxHealth = UnitHealthMax(unit)
+    if isTBC and (SafeToNumber(maxHealth, 0) or 0) <= 0 then
+        frame.absorbBar:Hide()
+        return
+    end
+    local currentHealth = isTBC and (SafeToNumber(UnitHealth(unit), 0) or 0) or 0
+    local tbcOverAbsorb = isTBC and (currentHealth + (tbcTotalAbsorb or 0) >= maxHealth)
     local barWidth = frame.healthBar:GetWidth()
     local barHeight = frame.healthBar:GetHeight()
     local verticalHealthFill = MattMinimalFramesDB and MattMinimalFramesDB.healthFillTopToBottom == true
@@ -1442,23 +1478,181 @@ local function UpdateAbsorbBar(frame)
     end
 
     frame.absorbBar:ClearAllPoints()
-    if verticalHealthFill then
+    if tbcOverAbsorb then
+        if frame.absorbBar.SetReverseFill then
+            frame.absorbBar:SetReverseFill(true)
+        end
+        if verticalHealthFill then
+            frame.absorbBar:SetPoint("TOPLEFT", frame.healthBar, "TOPLEFT", 0, 0)
+            frame.absorbBar:SetPoint("TOPRIGHT", frame.healthBar, "TOPRIGHT", 0, 0)
+            frame.absorbBar:SetHeight(barHeight)
+        else
+            frame.absorbBar:SetPoint("TOPRIGHT", frame.healthBar, "TOPRIGHT", 0, 0)
+            frame.absorbBar:SetPoint("BOTTOMRIGHT", frame.healthBar, "BOTTOMRIGHT", 0, 0)
+            frame.absorbBar:SetWidth(barWidth)
+        end
+    elseif verticalHealthFill then
+        if frame.absorbBar.SetReverseFill then
+            frame.absorbBar:SetReverseFill(false)
+        end
         frame.absorbBar:SetPoint("BOTTOMLEFT", anchorTexture, "TOPLEFT", 0, 0)
         frame.absorbBar:SetPoint("BOTTOMRIGHT", anchorTexture, "TOPRIGHT", 0, 0)
         frame.absorbBar:SetHeight(barHeight)
     else
+        if frame.absorbBar.SetReverseFill then
+            frame.absorbBar:SetReverseFill(false)
+        end
         frame.absorbBar:SetPoint("TOPLEFT", anchorTexture, "TOPRIGHT", 0, 0)
         frame.absorbBar:SetPoint("BOTTOMLEFT", anchorTexture, "BOTTOMRIGHT", 0, 0)
         frame.absorbBar:SetWidth(barWidth)
     end
     frame.absorbBar:SetMinMaxValues(0, maxHealth)
-
-    pcall(function()
-        local totalAbsorb = UnitGetTotalAbsorbs(unit) or 0
-        frame.absorbBar:SetValue(totalAbsorb)
-    end)
+    if isTBC then
+        frame.absorbBar:SetValue(tbcTotalAbsorb)
+    else
+        pcall(function()
+            local totalAbsorb = unitGetTotalAbsorbs(unit) or 0
+            frame.absorbBar:SetValue(totalAbsorb)
+        end)
+    end
 
     frame.absorbBar:Show()
+end
+
+local function BuildTrackedAbsorbAuraSignature(auras)
+    if type(auras) ~= "table" then
+        return ""
+    end
+    local parts = {}
+    for _, aura in ipairs(auras) do
+        local spellId = aura and aura.spellId
+        if TBC_TRACKED_ABSORB_SPELLS[spellId] ~= nil then
+            local expiration = SafeToNumber(aura.expirationTime, 0) or 0
+            parts[#parts + 1] = tostring(spellId) .. ":" .. tostring(expiration)
+        end
+    end
+    table.sort(parts)
+    return table.concat(parts, "|")
+end
+
+GetTBCTrackedAbsorbTotal = function(unit)
+    if type(unit) ~= "string" or unit == "" or not UnitExists(unit) then
+        return 0
+    end
+
+    local compat = _G.MMF_Compat
+    if not compat or type(compat.GetUnitAuras) ~= "function" then
+        return 0
+    end
+
+    local auras = compat.GetUnitAuras(unit, "HELPFUL")
+    if type(auras) ~= "table" then
+        return 0
+    end
+
+    local total = 0
+    local usedLiveValue = false
+    for _, aura in ipairs(auras) do
+        local spellId = aura and aura.spellId
+        if TBC_TRACKED_ABSORB_SPELLS[spellId] ~= nil then
+            local auraValue = SafeToNumber(aura.value1, nil) or SafeToNumber(aura.value2, nil) or SafeToNumber(aura.value3, nil)
+            if type(auraValue) == "number" and auraValue > 0 then
+                total = total + auraValue
+                usedLiveValue = true
+            else
+                total = total + (TBC_TRACKED_ABSORB_SPELLS[spellId] or 0)
+            end
+        end
+    end
+
+    local guid = UnitGUID(unit)
+    if type(guid) ~= "string" or guid == "" then
+        return total
+    end
+
+    local signature = BuildTrackedAbsorbAuraSignature(auras)
+    if signature == "" then
+        TBCTrackedAbsorbStateByGUID[guid] = nil
+        return 0
+    end
+
+    local state = TBCTrackedAbsorbStateByGUID[guid]
+    if not state then
+        state = { current = total, signature = signature, base = total }
+        TBCTrackedAbsorbStateByGUID[guid] = state
+        return total
+    end
+
+    if usedLiveValue then
+        state.current = total
+        state.base = total
+        state.signature = signature
+        return total
+    end
+
+    if state.signature ~= signature or total > (state.base or 0) then
+        state.current = total
+        state.base = total
+        state.signature = signature
+        return total
+    end
+
+    local current = SafeToNumber(state.current, total) or total
+    if current < 0 then current = 0 end
+    if current > total then current = total end
+    state.current = current
+    state.base = total
+    state.signature = signature
+    return current
+end
+
+function MMF_TBCConsumeTrackedAbsorb(destGUID, absorbSpellId, amount)
+    if not (Compat and Compat.IsTBC == true) then
+        return
+    end
+    if type(destGUID) ~= "string" or destGUID == "" then
+        return
+    end
+    if TBC_TRACKED_ABSORB_SPELLS[absorbSpellId] == nil then
+        return
+    end
+    local absorbAmount = SafeToNumber(amount, 0) or 0
+    if absorbAmount <= 0 then
+        return
+    end
+
+    local state = TBCTrackedAbsorbStateByGUID[destGUID]
+    if not state then
+        return
+    end
+
+    local current = SafeToNumber(state.current, 0) or 0
+    current = current - absorbAmount
+    if current < 0 then current = 0 end
+    state.current = current
+end
+
+function MMF_TBCConsumeTrackedAbsorbAmount(destGUID, amount)
+    if not (Compat and Compat.IsTBC == true) then
+        return
+    end
+    if type(destGUID) ~= "string" or destGUID == "" then
+        return
+    end
+    local absorbAmount = SafeToNumber(amount, 0) or 0
+    if absorbAmount <= 0 then
+        return
+    end
+
+    local state = TBCTrackedAbsorbStateByGUID[destGUID]
+    if not state then
+        return
+    end
+
+    local current = SafeToNumber(state.current, 0) or 0
+    current = current - absorbAmount
+    if current < 0 then current = 0 end
+    state.current = current
 end
 
 local function UpdateCastBarForEditMode(frame, unit, unlockedEditMode, db)
