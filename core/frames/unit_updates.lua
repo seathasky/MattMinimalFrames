@@ -1798,142 +1798,127 @@ local function UpdateUnitFrame(frame)
         end
 
         local maxPower, power
-        local okMaxPower, okPower
         if useManaPowerType then
-            okMaxPower, maxPower = pcall(UnitPowerMax, unit, 0)
-            okPower, power = pcall(UnitPower, unit, 0)
+            maxPower = UnitPowerMax(unit, 0)
+            power = UnitPower(unit, 0)
         else
             if powerType ~= nil then
-                okMaxPower, maxPower = pcall(UnitPowerMax, unit, powerType)
-                okPower, power = pcall(UnitPower, unit, powerType)
+                maxPower = UnitPowerMax(unit, powerType)
+                power = UnitPower(unit, powerType)
             else
-                okMaxPower, maxPower = pcall(UnitPowerMax, unit)
-                okPower, power = pcall(UnitPower, unit)
+                maxPower = UnitPowerMax(unit)
+                power = UnitPower(unit)
             end
-        end
-        if not okMaxPower then
-            maxPower = 1
-        end
-        if not okPower then
-            power = maxPower
         end
         if previewMode and not UnitExists(unit) then
             maxPower = 100
             power = 72
         end
-        local readableMaxPower = SafeAccessibleNumber(maxPower, nil)
-        local readablePower = SafeAccessibleNumber(power, nil)
-        local hasReadablePower = type(readableMaxPower) == "number" and readableMaxPower > 0 and type(readablePower) == "number"
-
         local showPowerBar = false
         if unit == "player" then
             showPowerBar = (db.showPlayerPowerBar ~= false)
         else
             showPowerBar = (db.showTargetPowerBar ~= false)
         end
+        local hasPower = false
+        pcall(function()
+            hasPower = (maxPower and maxPower > 0) and true or false
+        end)
 
         if showPowerBar then
-            frame.powerBar:SetMinMaxValues(0, maxPower)
-            frame.powerBar:SetValue(power)
-
+            local barMaxPower = maxPower or 1
+            local barPower = power or 0
+            if frame.powerBarFrame then frame.powerBarFrame:Show() end
+            frame.powerBar:SetMinMaxValues(0, barMaxPower)
+            frame.powerBar:SetValue(barPower)
             local pr, pg, pb, pa = ResolvePowerColor(unit, powerType, powerToken, db)
-
             frame.powerBar:SetStatusBarColor(pr, pg, pb, pa or 1)
             if frame.powerBarBG then
                 local bgR, bgG, bgB, bgA = ResolvePowerBGColor(unit, powerType, powerToken, db)
                 frame.powerBarBG:SetColorTexture(bgR, bgG, bgB, bgA)
             end
-            if showPowerBar then
-                if frame.powerBarBorder then frame.powerBarBorder:Show() end
-                frame.powerBarBG:Show()
-                frame.powerBar:Show()
-            else
-                if frame.powerBarBorder then frame.powerBarBorder:Hide() end
-                frame.powerBarBG:Hide()
-                frame.powerBar:Hide()
-            end
-
-            if frame.powerText then
-                local showPowerText = false
-                local colorPowerText = false
-                local textPowerType = powerType
-                local textPowerToken = powerToken
-                local anchorPowerEnabled = (MMF_IsPowerTextAnchorEnabled and MMF_IsPowerTextAnchorEnabled(unit)) or false
-                if unit == "player" then
-                    showPowerText = IsCheckedFlag(db.showPlayerPowerText)
-                    colorPowerText = IsCheckedFlag(db.colorPlayerPowerTextByResource)
-                    if IS_PLAYER_DRUID and IsCheckedFlag(db.showDruidManaPowerText) then
-                        textPowerType = 0
-                        textPowerToken = "MANA"
-                    end
-                else
-                    showPowerText = IsCheckedFlag(db.showTargetPowerText)
-                    colorPowerText = IsCheckedFlag(db.colorTargetPowerTextByResource)
-                end
-
-                if anchorPowerEnabled then
-                    -- Anchor mode overrides normal power text visibility/position.
-                    showPowerText = true
-                end
-
-                if showPowerText and hasReadablePower then
-                    local textPower = power
-                    local textMaxPower = maxPower
-                    if textPowerType ~= powerType then
-                        local okTextMaxPower
-                        local okTextPower
-                        okTextMaxPower, textMaxPower = pcall(UnitPowerMax, unit, textPowerType)
-                        okTextPower, textPower = pcall(UnitPower, unit, textPowerType)
-                        if not okTextMaxPower or not okTextPower then
-                            textMaxPower = nil
-                            textPower = nil
-                        end
-                    end
-
-                    local powerTextMode = GetPowerTextModeForUnit(db, unit)
-                    local powerPercentText = GetPowerPercentText(unit, textPower, textMaxPower, textPowerType)
-                    local showPowerPercent = (powerTextMode == "percent" or powerTextMode == "both" or powerTextMode == "both_white_percent")
-                    local showPowerValue = (powerTextMode == "value" or powerTextMode == "both" or powerTextMode == "both_white_percent")
-                    local display = FormatPercentAndValue(textPower, showPowerPercent, showPowerValue, false, powerPercentText)
-                    local tpr, tpg, tpb = ResolvePowerColor(unit, textPowerType, textPowerToken, db)
-                    if powerTextMode == "both_white_percent" then
-                        local valueText = SafeFormatValue(textPower, false)
-                        if colorPowerText then
-                            valueText = ColorizeTextRGB(valueText, tpr, tpg, tpb)
-                        end
-                        display = string.format("%s | %s", valueText, ColorizeTextRGB(powerPercentText, 1, 1, 1))
-                    end
-                    local textScale = db.powerTextScale or 1.0
-                    if unit == "player" then
-                        textScale = db.playerPowerTextScale or textScale
-                    elseif unit == "target" then
-                        textScale = db.targetPowerTextScale or textScale
-                    end
-                    ApplyPowerTextFontSize(frame, textScale)
-                    frame.powerText:SetText(display)
-                    if colorPowerText and powerTextMode ~= "both_white_percent" then
-                        frame.powerText:SetTextColor(tpr, tpg, tpb, 1)
-                    else
-                        frame.powerText:SetTextColor(1, 1, 1, 1)
-                    end
-                    frame.powerText:Show()
-                    if frame.powerTextDragFrame then
-                        frame.powerTextDragFrame:SetShown(not anchorPowerEnabled)
-                    end
-                    if MMF_ApplyPowerTextPosition then
-                        MMF_ApplyPowerTextPosition(frame, unit)
-                    end
-                else
-                    frame.powerText:Hide()
-                    if frame.powerTextDragFrame then frame.powerTextDragFrame:Hide() end
-                end
-            end
+            if frame.powerBarBorder then frame.powerBarBorder:Show() end
+            frame.powerBarBG:Show()
+            frame.powerBar:Show()
         else
+            if frame.powerBarFrame then frame.powerBarFrame:Hide() end
             if frame.powerBarBorder then frame.powerBarBorder:Hide() end
             frame.powerBarBG:Hide()
             frame.powerBar:Hide()
-            if frame.powerText then frame.powerText:Hide() end
-            if frame.powerTextDragFrame then frame.powerTextDragFrame:Hide() end
+        end
+
+        if frame.powerText then
+            local showPowerText = false
+            local colorPowerText = false
+            local textPowerType = powerType
+            local textPowerToken = powerToken
+            local anchorPowerEnabled = (MMF_IsPowerTextAnchorEnabled and MMF_IsPowerTextAnchorEnabled(unit)) or false
+            if unit == "player" then
+                showPowerText = IsCheckedFlag(db.showPlayerPowerText)
+                colorPowerText = IsCheckedFlag(db.colorPlayerPowerTextByResource)
+                if IS_PLAYER_DRUID and IsCheckedFlag(db.showDruidManaPowerText) then
+                    textPowerType = 0
+                    textPowerToken = "MANA"
+                end
+            else
+                showPowerText = IsCheckedFlag(db.showTargetPowerText)
+                colorPowerText = IsCheckedFlag(db.colorTargetPowerTextByResource)
+            end
+
+            if anchorPowerEnabled then
+                -- Anchor mode overrides normal power text visibility/position.
+                showPowerText = true
+            end
+
+            if showPowerText then
+                local textPower = power
+                local textMaxPower = maxPower
+                if textPowerType ~= powerType then
+                    local okTextMaxPower
+                    local okTextPower
+                    okTextMaxPower, textMaxPower = pcall(UnitPowerMax, unit, textPowerType)
+                    okTextPower, textPower = pcall(UnitPower, unit, textPowerType)
+                    if not okTextMaxPower then textMaxPower = maxPower end
+                    if not okTextPower then textPower = power end
+                end
+
+                local powerTextMode = GetPowerTextModeForUnit(db, unit)
+                local powerPercentText = GetPowerPercentText(unit, textPower, textMaxPower, textPowerType)
+                local showPowerPercent = (powerTextMode == "percent" or powerTextMode == "both" or powerTextMode == "both_white_percent")
+                local showPowerValue = (powerTextMode == "value" or powerTextMode == "both" or powerTextMode == "both_white_percent")
+                local display = FormatPercentAndValue(textPower, showPowerPercent, showPowerValue, false, powerPercentText)
+                local tpr, tpg, tpb = ResolvePowerColor(unit, textPowerType, textPowerToken, db)
+                if powerTextMode == "both_white_percent" then
+                    local valueText = SafeFormatValue(textPower, false)
+                    if colorPowerText then
+                        valueText = ColorizeTextRGB(valueText, tpr, tpg, tpb)
+                    end
+                    display = string.format("%s | %s", valueText, ColorizeTextRGB(powerPercentText, 1, 1, 1))
+                end
+                local textScale = db.powerTextScale or 1.0
+                if unit == "player" then
+                    textScale = db.playerPowerTextScale or textScale
+                elseif unit == "target" then
+                    textScale = db.targetPowerTextScale or textScale
+                end
+                ApplyPowerTextFontSize(frame, textScale)
+                frame.powerText:SetText(display)
+                if colorPowerText and powerTextMode ~= "both_white_percent" then
+                    frame.powerText:SetTextColor(tpr, tpg, tpb, 1)
+                else
+                    frame.powerText:SetTextColor(1, 1, 1, 1)
+                end
+                frame.powerText:Show()
+                if frame.powerTextDragFrame then
+                    frame.powerTextDragFrame:SetShown(not anchorPowerEnabled)
+                end
+                if MMF_ApplyPowerTextPosition then
+                    MMF_ApplyPowerTextPosition(frame, unit)
+                end
+            else
+                frame.powerText:Hide()
+                if frame.powerTextDragFrame then frame.powerTextDragFrame:Hide() end
+            end
         end
     end
 end
