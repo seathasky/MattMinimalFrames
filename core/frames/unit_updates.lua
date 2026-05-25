@@ -1422,42 +1422,58 @@ local function UpdateAbsorbBar(frame)
         return
     end
 
-    if not UnitGetTotalAbsorbs then
+    -- Prefer the Classic absorb tracker (core/frames/absorb_tracker.lua)
+    -- when available. The TBC Anniversary client exposes
+    -- UnitGetTotalAbsorbs as a stub that always returns 0, so a simple
+    -- "UnitGetTotalAbsorbs or fallback" never reaches the fallback.
+    local getTotalAbsorbs = _G.MMF_GetTotalAbsorbs or UnitGetTotalAbsorbs
+    if not getTotalAbsorbs then
         frame.absorbBar:Hide()
         return
     end
 
+    -- Reparent off healPredictionClip so the bar isn't swallowed by
+    -- SetClipsChildren(true) when it tries to render outside the
+    -- health bar's bounds.
+    if not frame.mmfAbsorbReparented then
+        frame.absorbBar:SetParent(frame.healthBar)
+        frame.absorbBar:SetFrameLevel(frame.healthBar:GetFrameLevel() + 2)
+        frame.mmfAbsorbReparented = true
+    end
+
     local maxHealth = UnitHealthMax(unit)
+    local totalAbsorb = 0
+    pcall(function() totalAbsorb = getTotalAbsorbs(unit) or 0 end)
+
+    if not maxHealth or maxHealth <= 0 or totalAbsorb <= 0 then
+        frame.absorbBar:Hide()
+        return
+    end
+
     local barWidth = frame.healthBar:GetWidth()
     local barHeight = frame.healthBar:GetHeight()
     local verticalHealthFill = MattMinimalFramesDB and MattMinimalFramesDB.healthFillTopToBottom == true
 
-    local anchorTexture
-    if frame.otherHealPrediction and frame.otherHealPrediction:IsShown() then
-        anchorTexture = frame.otherHealPrediction:GetStatusBarTexture()
-    elseif frame.myHealPrediction and frame.myHealPrediction:IsShown() then
-        anchorTexture = frame.myHealPrediction:GetStatusBarTexture()
-    else
-        anchorTexture = frame.healthBar:GetStatusBarTexture()
-    end
-
+    -- Overlay the shield on the right side of the health bar using
+    -- reverse-fill from the right edge, instead of anchoring to the
+    -- right of the filled health texture and extending past it. Keeps
+    -- the shield inside the health bar's bounds.
     frame.absorbBar:ClearAllPoints()
     if verticalHealthFill then
-        frame.absorbBar:SetPoint("BOTTOMLEFT", anchorTexture, "TOPLEFT", 0, 0)
-        frame.absorbBar:SetPoint("BOTTOMRIGHT", anchorTexture, "TOPRIGHT", 0, 0)
+        frame.absorbBar:SetPoint("TOPLEFT", frame.healthBar, "TOPLEFT", 0, 0)
+        frame.absorbBar:SetPoint("TOPRIGHT", frame.healthBar, "TOPRIGHT", 0, 0)
         frame.absorbBar:SetHeight(barHeight)
     else
-        frame.absorbBar:SetPoint("TOPLEFT", anchorTexture, "TOPRIGHT", 0, 0)
-        frame.absorbBar:SetPoint("BOTTOMLEFT", anchorTexture, "BOTTOMRIGHT", 0, 0)
+        frame.absorbBar:SetPoint("TOPRIGHT", frame.healthBar, "TOPRIGHT", 0, 0)
+        frame.absorbBar:SetPoint("BOTTOMRIGHT", frame.healthBar, "BOTTOMRIGHT", 0, 0)
         frame.absorbBar:SetWidth(barWidth)
     end
+    if frame.absorbBar.SetReverseFill then
+        frame.absorbBar:SetReverseFill(true)
+    end
+
     frame.absorbBar:SetMinMaxValues(0, maxHealth)
-
-    pcall(function()
-        local totalAbsorb = UnitGetTotalAbsorbs(unit) or 0
-        frame.absorbBar:SetValue(totalAbsorb)
-    end)
-
+    frame.absorbBar:SetValue(totalAbsorb)
     frame.absorbBar:Show()
 end
 

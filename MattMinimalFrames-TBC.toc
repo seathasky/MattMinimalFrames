@@ -49,6 +49,7 @@ core/frame_factory/castbar.lua
 core/frame_factory/pvp_indicator.lua
 core/frame_factory/bootstrap.lua
 core/frame_factory/frame_factory_main.lua
+core/frames/absorb_tracker.lua
 core/frames/unit_updates.lua
 core/modules/combat_queue.lua
 core/frames/update_dispatcher.lua
