@@ -43,7 +43,13 @@ local function UpdateFrameTargetMarker(frame)
 end
 
 local function UpdatePlayerClassIconVisibility(enabled)
-    if not MMF_PlayerFrame or not MMF_PlayerFrame.classIcon then
+    if not MMF_PlayerFrame then
+        return
+    end
+    if not MMF_PlayerFrame.classIcon and Icons.CreatePlayerClassIcon then
+        Icons.CreatePlayerClassIcon(MMF_PlayerFrame)
+    end
+    if not MMF_PlayerFrame.classIcon then
         return
     end
 
@@ -54,7 +60,7 @@ local function UpdatePlayerClassIconVisibility(enabled)
     if mode == nil then
         mode = GetPlayerFrameIconMode()
     end
-    if mode ~= "off" and mode ~= "class" and mode ~= "portrait" and mode ~= "sharedmedia" and mode ~= "jiberish" then
+    if mode ~= "off" and mode ~= "class" and mode ~= "portrait" and mode ~= "portrait_zoomed" and mode ~= "portrait_more_zoomed" and mode ~= "portrait_animated" and mode ~= "sharedmedia" and mode ~= "jiberish" then
         mode = "off"
     end
     if MattMinimalFramesDB then
@@ -63,6 +69,14 @@ local function UpdatePlayerClassIconVisibility(enabled)
     end
 
     ApplyPlayerFrameIconMode(MMF_PlayerFrame, mode)
+
+    if (mode == "portrait" or mode == "portrait_zoomed" or mode == "portrait_more_zoomed" or mode == "portrait_animated") and C_Timer and C_Timer.After then
+        C_Timer.After(0, function()
+            if MMF_PlayerFrame and MMF_PlayerFrame.classIcon then
+                ApplyPlayerFrameIconMode(MMF_PlayerFrame, mode)
+            end
+        end)
+    end
 end
 
 local function UpdateTargetFrameIconVisibility(enabled)
@@ -77,7 +91,7 @@ local function UpdateTargetFrameIconVisibility(enabled)
     if mode == nil then
         mode = GetTargetFrameIconMode()
     end
-    if mode ~= "off" and mode ~= "class" and mode ~= "portrait" and mode ~= "sharedmedia" and mode ~= "jiberish" then
+    if mode ~= "off" and mode ~= "class" and mode ~= "portrait" and mode ~= "portrait_zoomed" and mode ~= "portrait_more_zoomed" and mode ~= "portrait_animated" and mode ~= "sharedmedia" and mode ~= "jiberish" then
         mode = "off"
     end
     if MattMinimalFramesDB then

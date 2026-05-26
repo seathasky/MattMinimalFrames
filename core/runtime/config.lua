@@ -1419,6 +1419,9 @@ function MMF_UpdateFrameScale(unit)
     if MMF_UpdateTargetMarkers then
         MMF_UpdateTargetMarkers()
     end
+    if MMF_UpdatePlayerClassIconVisibility and unit == "player" then
+        MMF_UpdatePlayerClassIconVisibility()
+    end
     if MMF_UpdateTargetFrameIconVisibility and unit == "target" then
         MMF_UpdateTargetFrameIconVisibility()
     end

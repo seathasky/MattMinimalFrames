@@ -236,14 +236,14 @@ function MMF_ShowWelcomePopup(forceShow)
     end
     local GetCurrentPlayerIconModeValue = function()
         local mode = MattMinimalFramesDB and MattMinimalFramesDB.playerFrameIconMode or nil
-        if mode ~= "off" and mode ~= "class" and mode ~= "portrait" and mode ~= "sharedmedia" and mode ~= "jiberish" then
+        if mode ~= "off" and mode ~= "class" and mode ~= "portrait" and mode ~= "portrait_zoomed" and mode ~= "portrait_more_zoomed" and mode ~= "portrait_animated" and mode ~= "sharedmedia" and mode ~= "jiberish" then
             mode = "off"
         end
         return mode
     end
     local GetCurrentTargetIconModeValue = function()
         local mode = MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconMode or nil
-        if mode ~= "off" and mode ~= "class" and mode ~= "portrait" and mode ~= "sharedmedia" and mode ~= "jiberish" then
+        if mode ~= "off" and mode ~= "class" and mode ~= "portrait" and mode ~= "portrait_zoomed" and mode ~= "portrait_more_zoomed" and mode ~= "portrait_animated" and mode ~= "sharedmedia" and mode ~= "jiberish" then
             mode = "off"
         end
         return mode

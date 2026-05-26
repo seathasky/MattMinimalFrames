@@ -3,7 +3,7 @@ local function GetPlayerFrameIconMode()
     if mode == "sharedmedia" and MattMinimalFramesDB and MattMinimalFramesDB.playerFrameIconMediaType == "jiberish" then
         return "jiberish"
     end
-    if mode == "off" or mode == "class" or mode == "portrait" or mode == "sharedmedia" or mode == "jiberish" then
+    if mode == "off" or mode == "class" or mode == "portrait" or mode == "portrait_zoomed" or mode == "portrait_more_zoomed" or mode == "portrait_animated" or mode == "sharedmedia" or mode == "jiberish" then
         return mode
     end
     if MattMinimalFramesDB and MattMinimalFramesDB.showPlayerClassIcon ~= nil then
@@ -20,7 +20,7 @@ local function GetTargetFrameIconMode()
     if mode == "sharedmedia" and MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconMediaType == "jiberish" then
         return "jiberish"
     end
-    if mode == "off" or mode == "class" or mode == "portrait" or mode == "sharedmedia" or mode == "jiberish" then
+    if mode == "off" or mode == "class" or mode == "portrait" or mode == "portrait_zoomed" or mode == "portrait_more_zoomed" or mode == "portrait_animated" or mode == "sharedmedia" or mode == "jiberish" then
         return mode
     end
     if MattMinimalFramesDB and MattMinimalFramesDB.showTargetFrameIcon ~= nil then
@@ -59,6 +59,52 @@ local function ClampIconScale(value)
     return scale
 end
 
+local function GetIconSquaredInset(moreZoomed)
+    if moreZoomed then
+        return 0.20
+    end
+    return 0.12
+end
+
+local function ApplySquareZoomTexCoord(icon, moreZoomed)
+    if not icon then
+        return
+    end
+    local inset = GetIconSquaredInset(moreZoomed)
+    icon:SetTexCoord(inset, 1 - inset, inset, 1 - inset)
+end
+
+local function ApplyClassCoords(icon, coords)
+    if not icon or type(coords) ~= "table" then
+        return
+    end
+    local inset = 0.02
+    local left = coords[1] + inset
+    local right = coords[2] - inset
+    local top = coords[3] + inset
+    local bottom = coords[4] - inset
+    icon:SetTexCoord(left, right, top, bottom)
+end
+
+local function ApplyUnitPortrait(icon, unit, zoomMode)
+    if not icon then
+        return
+    end
+
+    if SetPortraitTexture then
+        pcall(SetPortraitTexture, icon, unit)
+    end
+
+    if zoomMode == "portrait_zoomed" then
+        ApplySquareZoomTexCoord(icon, false)
+    elseif zoomMode == "portrait_more_zoomed" then
+        ApplySquareZoomTexCoord(icon, true)
+    else
+        icon:SetTexCoord(0, 1, 0, 1)
+    end
+    icon:Show()
+end
+
 local function GetIconScaleForUnit(unit)
     if unit == "player" then
         return ClampIconScale(MattMinimalFramesDB and MattMinimalFramesDB.playerFrameIconScale or 1)
@@ -66,6 +112,62 @@ local function GetIconScaleForUnit(unit)
         return ClampIconScale(MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconScale or 1)
     end
     return 1
+end
+
+local function EnsurePortraitModel(frame, unit)
+    if not frame or not frame.nameOverlay then
+        return nil
+    end
+    if frame.portraitModel then
+        return frame.portraitModel
+    end
+    local model = CreateFrame("PlayerModel", nil, frame.nameOverlay)
+    model:SetFrameLevel(frame.nameOverlay:GetFrameLevel() + 1)
+    model:Hide()
+    frame.portraitModel = model
+    frame.portraitModelUnit = unit
+    return model
+end
+
+local function ApplyAnimatedPortrait(frame, unit)
+    if not frame then
+        return
+    end
+    local model = EnsurePortraitModel(frame, unit)
+    if not model then
+        return
+    end
+    local baseSize = math.max(8, (frame:GetHeight() or frame.originalHeight or 28))
+    local iconSize = math.max(8, math.floor((baseSize * GetIconScaleForUnit(unit)) + 0.5))
+    local xOffset, yOffset = GetIconOffsetsForUnit(unit)
+    model:ClearAllPoints()
+    model:SetSize(iconSize, iconSize)
+    if unit == "player" then
+        model:SetPoint("RIGHT", frame, "LEFT", xOffset, yOffset)
+    else
+        model:SetPoint("LEFT", frame, "RIGHT", xOffset, yOffset)
+    end
+    if model.ClearModel then
+        pcall(function()
+            model:ClearModel()
+        end)
+    end
+    if model.SetUnit then
+        pcall(function()
+            model:SetUnit(unit)
+        end)
+    end
+    if model.SetPortraitZoom then
+        pcall(function()
+            model:SetPortraitZoom(1)
+        end)
+    end
+    if model.SetCamDistanceScale then
+        pcall(function()
+            model:SetCamDistanceScale(1)
+        end)
+    end
+    model:Show()
 end
 
 local function ApplySingleIconPlacement(frame, icon, unit)
@@ -125,17 +227,24 @@ local function ApplyPlayerFrameIconMode(frame, mode)
     local icon = frame.classIcon
     if mode == "off" then
         icon:Hide()
+        if frame.portraitModel then
+            frame.portraitModel:Hide()
+        end
+        return
+    end
+    icon:SetVertexColor(1, 1, 1, 1)
+    if frame.portraitModel then
+        frame.portraitModel:Hide()
+    end
+
+    if mode == "portrait_animated" then
+        icon:Hide()
+        ApplyAnimatedPortrait(frame, "player")
         return
     end
 
-    if mode == "portrait" then
-        if SetPortraitTexture then
-            SetPortraitTexture(icon, "player")
-        else
-            icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-        end
-        icon:SetTexCoord(0, 1, 0, 1)
-        icon:Show()
+    if mode == "portrait" or mode == "portrait_zoomed" or mode == "portrait_more_zoomed" then
+        ApplyUnitPortrait(icon, "player", mode)
         return
     end
 
@@ -157,8 +266,8 @@ local function ApplyPlayerFrameIconMode(frame, mode)
         return
     end
     icon:SetTexture("Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES")
-    local inset = 0.02
-    icon:SetTexCoord(coords[1] + inset, coords[2] - inset, coords[3] + inset, coords[4] - inset)
+    ApplyClassCoords(icon, coords)
+    icon:SetVertexColor(0.7, 0.7, 0.7, 1)
     icon:Show()
 end
 
@@ -170,22 +279,32 @@ local function ApplyTargetFrameIconMode(frame, mode)
     local icon = frame.targetIcon
     if mode == "off" then
         icon:Hide()
+        if frame.portraitModel then
+            frame.portraitModel:Hide()
+        end
         return
+    end
+    icon:SetVertexColor(1, 1, 1, 1)
+    if frame.portraitModel then
+        frame.portraitModel:Hide()
     end
 
     if not UnitExists("target") then
         icon:Hide()
+        if frame.portraitModel then
+            frame.portraitModel:Hide()
+        end
         return
     end
 
-    if mode == "portrait" then
-        if SetPortraitTexture then
-            SetPortraitTexture(icon, "target")
-        else
-            icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-        end
-        icon:SetTexCoord(0, 1, 0, 1)
-        icon:Show()
+    if mode == "portrait_animated" then
+        icon:Hide()
+        ApplyAnimatedPortrait(frame, "target")
+        return
+    end
+
+    if mode == "portrait" or mode == "portrait_zoomed" or mode == "portrait_more_zoomed" then
+        ApplyUnitPortrait(icon, "target", mode)
         return
     end
 
@@ -205,8 +324,8 @@ local function ApplyTargetFrameIconMode(frame, mode)
         local coords = classFile and CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[classFile]
         if coords then
             icon:SetTexture("Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES")
-            local inset = 0.02
-            icon:SetTexCoord(coords[1] + inset, coords[2] - inset, coords[3] + inset, coords[4] - inset)
+            ApplyClassCoords(icon, coords)
+            icon:SetVertexColor(0.7, 0.7, 0.7, 1)
             icon:Show()
             return
         end

@@ -53,6 +53,31 @@ function MMF_BuildUnitFramesIconsSection(ctx)
     end
     local JIBERISH_DOWNLOAD_VALUE = "__mmf_jiberish_download__"
     local JIBERISH_DOWNLOAD_URL = "https://www.curseforge.com/wow/addons/jiberish-fabled-icons"
+    local PORTRAIT_ANIMATED_VALUE = "portrait_animated"
+    local PORTRAIT_ANIMATED_LABEL = "Portrait Animated (MMF)"
+
+    local function BuildRainbowScrollingText(text, phase)
+        if type(text) ~= "string" or text == "" then
+            return ""
+        end
+        local out = {}
+        local idx = 1
+        for i = 1, #text do
+            local ch = text:sub(i, i)
+            if ch == " " then
+                out[idx] = ch
+                idx = idx + 1
+            else
+                local wave = (phase + (i * 0.45))
+                local r = math.floor((math.sin(wave) * 0.5 + 0.5) * 255)
+                local g = math.floor((math.sin(wave + 2.094) * 0.5 + 0.5) * 255)
+                local b = math.floor((math.sin(wave + 4.188) * 0.5 + 0.5) * 255)
+                out[idx] = string.format("|cff%02x%02x%02x%s|r", r, g, b, ch)
+                idx = idx + 1
+            end
+        end
+        return table.concat(out)
+    end
 
     local function ParseJiberishStyleValue(value)
         if type(value) ~= "string" then
@@ -70,6 +95,9 @@ function MMF_BuildUnitFramesIconsSection(ctx)
             { value = "off", label = "|cff33ff66Off (MMF)|r" },
             { value = "class", label = "|cff33ff66Class Icon (MMF)|r" },
             { value = "portrait", label = "|cff33ff66Portrait (MMF)|r" },
+            { value = "portrait_zoomed", label = "|cff33ff66Portrait Zoomed (MMF)|r" },
+            { value = "portrait_more_zoomed", label = "|cff33ff66Portrait Close Up (MMF)|r" },
+            { value = PORTRAIT_ANIMATED_VALUE, label = "|cff33ff66Portrait Animated (MMF)|r" },
         }
 
         local styleOptions = MMF_GetIconTextureOptions and MMF_GetIconTextureOptions() or {}
@@ -244,6 +272,74 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         end,
     })
     dropdownLists.targetIconModeList = rightSection.targetIconModeDropdown.list
+
+    local function RefreshAnimatedPortraitLabel(animatedLabel)
+        local function UpdateDropdown(dropdown)
+            if not dropdown or not dropdown.GetOptions or not dropdown.SetOptions then
+                return
+            end
+            local options = dropdown.GetOptions() or {}
+            local changed = false
+            for _, option in ipairs(options) do
+                if option and option.value == PORTRAIT_ANIMATED_VALUE and option.label ~= animatedLabel then
+                    option.label = animatedLabel
+                    changed = true
+                end
+            end
+            if changed then
+                local selected = dropdown.GetSelectedValue and dropdown.GetSelectedValue() or nil
+                dropdown.SetOptions(options)
+                if selected and dropdown.SetSelectedValue then
+                    dropdown.SetSelectedValue(selected)
+                end
+            end
+        end
+
+        UpdateDropdown(rightSection.playerIconModeDropdown)
+        UpdateDropdown(rightSection.targetIconModeDropdown)
+    end
+
+    local function StopAnimatedPortraitLabelTicker()
+        if rightSection.animatedPortraitLabelTicker and rightSection.animatedPortraitLabelTicker.Cancel then
+            rightSection.animatedPortraitLabelTicker:Cancel()
+        end
+        rightSection.animatedPortraitLabelTicker = nil
+        RefreshAnimatedPortraitLabel("|cff33ff66" .. PORTRAIT_ANIMATED_LABEL .. "|r")
+    end
+
+    local function StartAnimatedPortraitLabelTicker()
+        if not (C_Timer and C_Timer.NewTicker) then
+            return
+        end
+        if rightSection.animatedPortraitLabelTicker then
+            return
+        end
+        local phase = 0
+        rightSection.animatedPortraitLabelTicker = C_Timer.NewTicker(0.12, function()
+            phase = phase + 0.35
+            RefreshAnimatedPortraitLabel(BuildRainbowScrollingText(PORTRAIT_ANIMATED_LABEL, phase))
+        end)
+    end
+
+    local function UpdateAnimatedPortraitTickerState()
+        local sectionVisible = unitFramesCol and unitFramesCol.IsShown and unitFramesCol:IsShown()
+        local popupVisible = popup and popup.IsShown and popup:IsShown()
+        if sectionVisible and popupVisible then
+            StartAnimatedPortraitLabelTicker()
+        else
+            StopAnimatedPortraitLabelTicker()
+        end
+    end
+
+    if unitFramesCol and unitFramesCol.HookScript then
+        unitFramesCol:HookScript("OnShow", UpdateAnimatedPortraitTickerState)
+        unitFramesCol:HookScript("OnHide", UpdateAnimatedPortraitTickerState)
+    end
+    if popup and popup.HookScript then
+        popup:HookScript("OnShow", UpdateAnimatedPortraitTickerState)
+        popup:HookScript("OnHide", UpdateAnimatedPortraitTickerState)
+    end
+    UpdateAnimatedPortraitTickerState()
 
     local function NormalizeIconOffset(value)
         local offset = tonumber(value) or 0

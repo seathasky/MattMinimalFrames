@@ -1463,10 +1463,80 @@ local function UpdateAbsorbBar(frame)
         return
     end
     local currentHealth = isTBC and (SafeToNumber(UnitHealth(unit), 0) or 0) or 0
-    local tbcOverAbsorb = isTBC and (currentHealth + (tbcTotalAbsorb or 0) >= maxHealth)
     local barWidth = frame.healthBar:GetWidth()
     local barHeight = frame.healthBar:GetHeight()
     local verticalHealthFill = MattMinimalFramesDB and MattMinimalFramesDB.healthFillTopToBottom == true
+
+    if isTBC then
+        local healthTexture = frame.healthBar:GetStatusBarTexture()
+        if not healthTexture then
+            frame.absorbBar:Hide()
+            return
+        end
+
+        local safeMaxHealth = SafeToNumber(maxHealth, 1) or 1
+        if safeMaxHealth <= 0 then
+            safeMaxHealth = 1
+        end
+        local safeCurrentHealth = SafeToNumber(currentHealth, 0) or 0
+        if safeCurrentHealth < 0 then
+            safeCurrentHealth = 0
+        elseif safeCurrentHealth > safeMaxHealth then
+            safeCurrentHealth = safeMaxHealth
+        end
+
+        local totalAbsorb = SafeToNumber(tbcTotalAbsorb, 0) or 0
+        local missingHealth = safeMaxHealth - safeCurrentHealth
+        if missingHealth < 0 then missingHealth = 0 end
+
+        frame.absorbBar:ClearAllPoints()
+        frame.absorbBar:SetMinMaxValues(0, safeMaxHealth)
+
+        if missingHealth <= 0 and totalAbsorb > 0 then
+            -- Full HP: keep a tiny overflow sliver so shield presence is still visible.
+            if frame.absorbBar.SetReverseFill then
+                frame.absorbBar:SetReverseFill(false)
+            end
+            if verticalHealthFill then
+                frame.absorbBar:SetPoint("BOTTOMLEFT", frame.healthBar, "TOPLEFT", 0, 0)
+                frame.absorbBar:SetPoint("BOTTOMRIGHT", frame.healthBar, "TOPRIGHT", 0, 0)
+                frame.absorbBar:SetHeight(2)
+            else
+                frame.absorbBar:SetPoint("TOPLEFT", frame.healthBar, "TOPRIGHT", 0, 0)
+                frame.absorbBar:SetPoint("BOTTOMLEFT", frame.healthBar, "BOTTOMRIGHT", 0, 0)
+                frame.absorbBar:SetWidth(2)
+            end
+            frame.absorbBar:SetMinMaxValues(0, 1)
+            frame.absorbBar:SetValue(1)
+            frame.absorbBar:Show()
+            return
+        end
+
+        local shownAbsorb = totalAbsorb
+        if shownAbsorb > missingHealth then
+            shownAbsorb = missingHealth
+        end
+        if shownAbsorb <= 0 then
+            frame.absorbBar:Hide()
+            return
+        end
+
+        if frame.absorbBar.SetReverseFill then
+            frame.absorbBar:SetReverseFill(false)
+        end
+        if verticalHealthFill then
+            frame.absorbBar:SetPoint("BOTTOMLEFT", healthTexture, "TOPLEFT", 0, 0)
+            frame.absorbBar:SetPoint("BOTTOMRIGHT", healthTexture, "TOPRIGHT", 0, 0)
+            frame.absorbBar:SetHeight(barHeight)
+        else
+            frame.absorbBar:SetPoint("TOPLEFT", healthTexture, "TOPRIGHT", 0, 0)
+            frame.absorbBar:SetPoint("BOTTOMLEFT", healthTexture, "BOTTOMRIGHT", 0, 0)
+            frame.absorbBar:SetWidth(barWidth)
+        end
+        frame.absorbBar:SetValue(shownAbsorb)
+        frame.absorbBar:Show()
+        return
+    end
 
     local anchorTexture
     if frame.otherHealPrediction and frame.otherHealPrediction:IsShown() then
@@ -1478,20 +1548,7 @@ local function UpdateAbsorbBar(frame)
     end
 
     frame.absorbBar:ClearAllPoints()
-    if tbcOverAbsorb then
-        if frame.absorbBar.SetReverseFill then
-            frame.absorbBar:SetReverseFill(true)
-        end
-        if verticalHealthFill then
-            frame.absorbBar:SetPoint("TOPLEFT", frame.healthBar, "TOPLEFT", 0, 0)
-            frame.absorbBar:SetPoint("TOPRIGHT", frame.healthBar, "TOPRIGHT", 0, 0)
-            frame.absorbBar:SetHeight(barHeight)
-        else
-            frame.absorbBar:SetPoint("TOPRIGHT", frame.healthBar, "TOPRIGHT", 0, 0)
-            frame.absorbBar:SetPoint("BOTTOMRIGHT", frame.healthBar, "BOTTOMRIGHT", 0, 0)
-            frame.absorbBar:SetWidth(barWidth)
-        end
-    elseif verticalHealthFill then
+    if verticalHealthFill then
         if frame.absorbBar.SetReverseFill then
             frame.absorbBar:SetReverseFill(false)
         end
