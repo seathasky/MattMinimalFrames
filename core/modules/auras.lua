@@ -23,6 +23,58 @@ local function NotSecretValue(value)
     return not issecretvalue or not issecretvalue(value)
 end
 
+local function ShouldUseOmniCCAuraText()
+    if not Compat.IsTBC or type(_G.OmniCC) ~= "table" then
+        return false
+    end
+
+    return type(_G.OmniCC.Cooldown) == "table"
+end
+
+local function ConfigureOmniCCAuraText(cooldownFrame)
+    local useOmniCC = ShouldUseOmniCCAuraText()
+    cooldownFrame:SetHideCountdownNumbers(useOmniCC)
+
+    if not useOmniCC then
+        cooldownFrame._occ_settings_force = nil
+        return false
+    end
+
+    local omniCC = _G.OmniCC
+    if not cooldownFrame.mmfOmniCCSettings and type(omniCC.GetDefaultTheme) == "function" then
+        local settings = omniCC:GetDefaultTheme()
+        if settings then
+            cooldownFrame.mmfOmniCCSettings = setmetatable({ minSize = 0 }, { __index = settings })
+        end
+    end
+    cooldownFrame._occ_settings_force = cooldownFrame.mmfOmniCCSettings
+    cooldownFrame._occ_settings = cooldownFrame.mmfOmniCCSettings
+    return true
+end
+
+local function SetOmniCCAuraTimer(cooldownFrame, auraData)
+    if not Compat.IsTBC then
+        return
+    end
+
+    local omniCCCooldown = _G.OmniCC and _G.OmniCC.Cooldown
+    if type(omniCCCooldown) ~= "table" or type(omniCCCooldown.SetTimer) ~= "function" then
+        return
+    end
+
+    if type(omniCCCooldown.Initialize) == "function" then
+        omniCCCooldown.Initialize(cooldownFrame)
+    end
+
+    local duration = tonumber(auraData and auraData.duration) or 0
+    local expirationTime = tonumber(auraData and auraData.expirationTime) or 0
+    if duration > 0 and expirationTime > 0 then
+        omniCCCooldown.SetTimer(cooldownFrame, expirationTime - duration, duration, 1)
+    else
+        omniCCCooldown.SetTimer(cooldownFrame, 0, 0, 1)
+    end
+end
+
 local function ShouldUseBlizzardAuraAnchoring(unitToken)
     local db = MattMinimalFramesDB or {}
     if unitToken == "player" then
@@ -1312,7 +1364,16 @@ local function UpdateAuraIcon(auraFrame, auraData, filter, unit, index)
         auraFrame.count:Show()
     end
     if auraFrame.cooldown then
+        local useOmniCC = false
+        if Compat.IsTBC then
+            useOmniCC = ConfigureOmniCCAuraText(auraFrame.cooldown)
+        end
+
         SetAuraCooldown(auraFrame.cooldown, auraData, unit)
+
+        if useOmniCC then
+            SetOmniCCAuraTimer(auraFrame.cooldown, auraData)
+        end
         
         if auraFrame.timerText and auraFrame.timerText.SetFont then
             local timerScale = MMF_GetTimerTextScale()
