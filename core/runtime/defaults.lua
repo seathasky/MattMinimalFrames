@@ -49,6 +49,7 @@ local mmfDefaults = {
     hidePlayerInPartyFrame = false,
     hidePartyRaidRemainingHealth = true,
     showDruidManaPowerText = false,
+    showPVPFlagIndicator = false,
     showTBCPVPFlagIndicator = true,
     showTBCTargetTapColor = true,
     playerManaBarColorR = 0.2,

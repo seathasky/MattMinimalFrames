@@ -1,5 +1,5 @@
 local cfg = MMF_Config or {}
-local Compat = _G.MMF_Compat
+local Compat = _G.MMF_Compat or {}
 
 local function IsTBCPVPFlagEnabled()
     if not MattMinimalFramesDB then
@@ -8,9 +8,15 @@ local function IsTBCPVPFlagEnabled()
     return MattMinimalFramesDB.showTBCPVPFlagIndicator ~= false
 end
 
+local function IsRetailPVPFlagEnabled()
+    if not MattMinimalFramesDB then
+        return true
+    end
+    return MattMinimalFramesDB.showPVPFlagIndicator ~= false
+end
+
 local function CreatePVPFlagIndicator(frame, unit)
     if not frame or not frame.nameOverlay then return end
-    if not Compat.IsTBC then return end
     if unit ~= "player" and unit ~= "target" then return end
     if frame.pvpFlagText then return end
 
@@ -41,11 +47,11 @@ end
 local function UpdatePVPFlagIndicator(frame)
     if not frame or not frame.unit then return end
     if not frame.pvpFlagText then return end
-    if not IsTBCPVPFlagEnabled() then
+    if Compat.IsTBC and not IsTBCPVPFlagEnabled() then
         frame.pvpFlagText:Hide()
         return
     end
-    if not Compat.IsTBC then
+    if not Compat.IsTBC and not IsRetailPVPFlagEnabled() then
         frame.pvpFlagText:Hide()
         return
     end
@@ -72,7 +78,13 @@ local function UpdatePVPFlagIndicator(frame)
     if unit == "player" then
         local desired = (GetPVPDesired and GetPVPDesired()) == true
         local timerRunning = (IsPVPTimerRunning and IsPVPTimerRunning()) == true
-        isFlagged = isFFA or (UnitIsPVP(unit) and (desired or timerRunning))
+        if Compat.IsTBC then
+            isFlagged = isFFA or (UnitIsPVP(unit) and (desired or timerRunning))
+        else
+            local warModeActive = C_PvP and C_PvP.IsWarModeActive and C_PvP.IsWarModeActive() == true
+            local warModeDesired = C_PvP and C_PvP.IsWarModeDesired and C_PvP.IsWarModeDesired() == true
+            isFlagged = isFFA or warModeActive or warModeDesired or UnitIsPVP(unit)
+        end
         if timerRunning and not desired and GetPVPTimer then
             local timerText = FormatPVPTimerText(GetPVPTimer())
             local timerHex = "ffffd933"
