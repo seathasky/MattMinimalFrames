@@ -115,6 +115,7 @@ local function ClearAuraFrameState(auraFrame)
         auraFrame.timerText:Hide()
     end
 
+    auraFrame:EnableMouse(false)
     auraFrame:Hide()
 end
 
@@ -415,6 +416,10 @@ local function StartAuraContainerDrag(container)
     if container.mmfAuraDragging then
         return
     end
+    local dragHelpers = _G.MMF_FrameFactoryDragHelpers or {}
+    if dragHelpers.TryClaimDragOwner and not dragHelpers.TryClaimDragOwner(container, "aura container") then
+        return
+    end
 
     local isDebuff = container.mmfAuraIsDebuff == true
     local xKey, yKey, defaultX, defaultY = GetAuraOffsetKeysForContainer(container, isDebuff)
@@ -516,6 +521,13 @@ end
 local function StopAuraContainerDrag(container)
     if not container then
         return
+    end
+    if not container.mmfAuraDragging then
+        return
+    end
+    local dragHelpers = _G.MMF_FrameFactoryDragHelpers or {}
+    if dragHelpers.ReleaseDragOwner then
+        dragHelpers.ReleaseDragOwner(container)
     end
     container.mmfAuraDragging = nil
     container:SetScript("OnUpdate", nil)
@@ -878,12 +890,20 @@ local function LayoutAuraContainer(container, isDebuff, size, activeCount)
     local step = iconSize + AURA_ICON_SPACING
 
     local visibleLimit = GetVisibleAuraLimit(isDebuff, unitToken)
-    local active = math.floor(tonumber(activeCount) or GetActiveAuraCount(container) or 0)
+    local activeRaw = math.floor(tonumber(activeCount) or GetActiveAuraCount(container) or 0)
+    local active = activeRaw
     if active < 1 then
         active = 1
     end
     if active > visibleLimit then
         active = visibleLimit
+    end
+    local activeMouseCount = activeRaw
+    if activeMouseCount < 0 then
+        activeMouseCount = 0
+    end
+    if activeMouseCount > visibleLimit then
+        activeMouseCount = visibleLimit
     end
 
     local effectiveRows = rows
@@ -904,6 +924,7 @@ local function LayoutAuraContainer(container, isDebuff, size, activeCount)
 
     for i, aura in ipairs(container.auras) do
         aura:SetSize(iconSize, iconSize)
+        aura:EnableMouse(i <= activeMouseCount)
         local index = i - 1
         local row, col
         if primary == "vertical" then
@@ -945,6 +966,15 @@ local function LayoutAuraContainer(container, isDebuff, size, activeCount)
             container.mmfAuraLabel:SetPoint("BOTTOMLEFT", container, "TOPLEFT", 0, 6 + extraAbove)
         else
             container.mmfAuraLabel:SetPoint("TOPLEFT", container, "BOTTOMLEFT", 0, -3)
+        end
+    end
+
+    if container.SetHitRectInsets then
+        if vSign > 0 then
+            local extraAbove = math.max(0, (effectiveRows - 1) * step)
+            container:SetHitRectInsets(0, 0, -extraAbove, extraAbove)
+        else
+            container:SetHitRectInsets(0, 0, 0, 0)
         end
     end
 end
@@ -1382,6 +1412,7 @@ local function UpdateAuraIcon(auraFrame, auraData, filter, unit, index)
         end
     end
     
+    auraFrame:EnableMouse(true)
     auraFrame:Show()
 end
 
@@ -1422,6 +1453,7 @@ local function UpdateFakeAuraIcon(auraFrame, index, isDebuff)
         end
     end
 
+    auraFrame:EnableMouse(true)
     auraFrame:Show()
 end
 

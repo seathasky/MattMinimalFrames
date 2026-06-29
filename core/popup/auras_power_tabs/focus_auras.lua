@@ -305,12 +305,17 @@ function MMF_BuildAurasPowerFocusAurasSection(ctx)
     end
     SyncAuraOffsetSliders()
 
-    local LEGACY_BUFF_X = -2
-    local LEGACY_BUFF_Y = -6
-    local LEGACY_BUFF_DIRECTION = "left_down"
-    local LEGACY_DEBUFF_X = 3
-    local LEGACY_DEBUFF_Y = 27
-    local LEGACY_DEBUFF_DIRECTION = "right_up"
+    local function GetFocusAuraPositionDefaults(kind)
+        local defaults = MattMinimalFrames_Defaults or {}
+        if kind == "debuff" then
+            return tonumber(defaults.focusDebuffXOffset) or 3,
+                tonumber(defaults.focusDebuffYOffset) or 27,
+                NormalizeAuraDirection(defaults.focusDebuffAuraDirection, "right_up")
+        end
+        return tonumber(defaults.focusBuffXOffset) or -2,
+            tonumber(defaults.focusBuffYOffset) or -6,
+            NormalizeAuraDirection(defaults.focusBuffAuraDirection, "left_down")
+    end
 
     local buffPositionResetButton
     local debuffPositionResetButton
@@ -318,19 +323,17 @@ function MMF_BuildAurasPowerFocusAurasSection(ctx)
     local function IsPositionDefault(kind)
         local db = MattMinimalFramesDB or {}
         if kind == "debuff" then
-            local x = tonumber(db.focusDebuffXOffset) or LEGACY_DEBUFF_X
-            local y = tonumber(db.focusDebuffYOffset) or LEGACY_DEBUFF_Y
+            local defaultX, defaultY, defaultDirection = GetFocusAuraPositionDefaults("debuff")
+            local x = tonumber(db.focusDebuffXOffset) or defaultX
+            local y = tonumber(db.focusDebuffYOffset) or defaultY
             local dir = NormalizeAuraDirection(db.focusDebuffAuraDirection, "right_up")
-            return x == LEGACY_DEBUFF_X
-                and y == LEGACY_DEBUFF_Y
-                and dir == NormalizeAuraDirection(LEGACY_DEBUFF_DIRECTION, "right_up")
+            return x == defaultX and y == defaultY and dir == defaultDirection
         end
-        local x = tonumber(db.focusBuffXOffset) or LEGACY_BUFF_X
-        local y = tonumber(db.focusBuffYOffset) or LEGACY_BUFF_Y
+        local defaultX, defaultY, defaultDirection = GetFocusAuraPositionDefaults("buff")
+        local x = tonumber(db.focusBuffXOffset) or defaultX
+        local y = tonumber(db.focusBuffYOffset) or defaultY
         local dir = NormalizeAuraDirection(db.focusBuffAuraDirection, "left_down")
-        return x == LEGACY_BUFF_X
-            and y == LEGACY_BUFF_Y
-            and dir == NormalizeAuraDirection(LEGACY_BUFF_DIRECTION, "left_down")
+        return x == defaultX and y == defaultY and dir == defaultDirection
     end
 
     RefreshPositionResetButtons = function()
@@ -344,9 +347,7 @@ function MMF_BuildAurasPowerFocusAurasSection(ctx)
 
     local function ResetAuraPosition(kind)
         if kind == "debuff" then
-            local x = LEGACY_DEBUFF_X
-            local y = LEGACY_DEBUFF_Y
-            local direction = LEGACY_DEBUFF_DIRECTION
+            local x, y, direction = GetFocusAuraPositionDefaults("debuff")
             MattMinimalFramesDB.focusDebuffXOffset = x
             MattMinimalFramesDB.focusDebuffYOffset = y
             MattMinimalFramesDB.focusDebuffAuraDirection = NormalizeAuraDirection(direction, "right_up")
@@ -360,9 +361,7 @@ function MMF_BuildAurasPowerFocusAurasSection(ctx)
                 SyncAuraOffsetSliders()
             end
         else
-            local x = LEGACY_BUFF_X
-            local y = LEGACY_BUFF_Y
-            local direction = LEGACY_BUFF_DIRECTION
+            local x, y, direction = GetFocusAuraPositionDefaults("buff")
             MattMinimalFramesDB.focusBuffXOffset = x
             MattMinimalFramesDB.focusBuffYOffset = y
             MattMinimalFramesDB.focusBuffAuraDirection = NormalizeAuraDirection(direction, "left_down")

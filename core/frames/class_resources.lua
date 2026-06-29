@@ -438,6 +438,8 @@ local function GetResourceBarDragHint()
     return "Shift+Drag to move"
 end
 
+local DragHelpers = _G.MMF_FrameFactoryDragHelpers or {}
+
 local function CreateBaseResourceBar(frameName, prefix, moveLabel, color, numRunes, initialValue)
     local frame = CreateFrame("Frame", frameName, UIParent)
     frame.mmfLayoutKey = prefix
@@ -466,7 +468,9 @@ local function CreateBaseResourceBar(frameName, prefix, moveLabel, color, numRun
     end
 
     frame:SetScript("OnDragStart", function(self)
-        if CanStartResourceBarDrag(self) then
+        if DragHelpers.TryBeginFrameMoving then
+            DragHelpers.TryBeginFrameMoving(self, moveLabel)
+        elseif CanStartResourceBarDrag(self) then
             self:StartMoving()
         end
     end)
@@ -474,7 +478,13 @@ local function CreateBaseResourceBar(frameName, prefix, moveLabel, color, numRun
         if InCombatLockdown and InCombatLockdown() then
             return
         end
-        self:StopMovingOrSizing()
+        if DragHelpers.TryStopFrameMoving then
+            if not DragHelpers.TryStopFrameMoving(self) then
+                return
+            end
+        else
+            self:StopMovingOrSizing()
+        end
         SaveCenterOffsets(self, self.mmfLayoutKey)
     end)
 

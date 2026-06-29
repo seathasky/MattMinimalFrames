@@ -38,6 +38,17 @@ local function TryStopFrameMoving(frame)
     return false
 end
 
+local function TryBeginFrameMoving(frame, ownerName)
+    if DragHelpers.TryBeginFrameMoving then
+        return DragHelpers.TryBeginFrameMoving(frame, ownerName)
+    end
+    if CanStartFrameDrag(frame) then
+        frame:StartMoving()
+        return true
+    end
+    return false
+end
+
 local function SaveCastBarPosition(frame, unit)
     if CastbarOffsetUtils.SaveCastBarPosition then
         return CastbarOffsetUtils.SaveCastBarPosition(frame, unit)
@@ -119,9 +130,7 @@ local function CreateCastBar(frame, unit)
     ApplyCastBarPosition(frame, unit)
 
     frame.castBarFrame:SetScript("OnDragStart", function(self)
-        if CanStartFrameDrag(self) then
-            self:StartMoving()
-        end
+        TryBeginFrameMoving(self, unit .. " castbar")
     end)
 
     frame.castBarFrame:SetScript("OnDragStop", function(self)

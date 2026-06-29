@@ -108,16 +108,31 @@ local function EnsurePetActionBarEditBackdrop(frame)
         if not editMode and not testModeShiftDrag then
             return
         end
+        local dragHelpers = _G.MMF_FrameFactoryDragHelpers or {}
+        if dragHelpers.TryClaimDragOwner and not dragHelpers.TryClaimDragOwner(frame, "pet action bar") then
+            return
+        end
         frame:StartMoving()
         self.mmfDragInProgress = true
     end)
 
     backdrop:SetScript("OnDragStop", function(self)
+        if not self.mmfDragInProgress then
+            return
+        end
         if InCombatLockdown and InCombatLockdown() then
+            local dragHelpers = _G.MMF_FrameFactoryDragHelpers or {}
+            if dragHelpers.ReleaseDragOwner then
+                dragHelpers.ReleaseDragOwner(frame)
+            end
             self.mmfDragInProgress = nil
             return
         end
         frame:StopMovingOrSizing()
+        local dragHelpers = _G.MMF_FrameFactoryDragHelpers or {}
+        if dragHelpers.ReleaseDragOwner then
+            dragHelpers.ReleaseDragOwner(frame)
+        end
         SavePetActionBarPosition(frame)
         self.mmfDragInProgress = nil
     end)
@@ -145,14 +160,26 @@ local function EnsurePetActionBarMover()
         if not editMode and not testModeShiftDrag then
             return
         end
-        self:StartMoving()
+        local dragHelpers = _G.MMF_FrameFactoryDragHelpers or {}
+        if dragHelpers.TryBeginFrameMoving then
+            dragHelpers.TryBeginFrameMoving(self, "pet action bar")
+        else
+            self:StartMoving()
+        end
     end)
 
     frame:HookScript("OnDragStop", function(self)
         if InCombatLockdown and InCombatLockdown() then
             return
         end
-        self:StopMovingOrSizing()
+        local dragHelpers = _G.MMF_FrameFactoryDragHelpers or {}
+        if dragHelpers.TryStopFrameMoving then
+            if not dragHelpers.TryStopFrameMoving(self) then
+                return
+            end
+        else
+            self:StopMovingOrSizing()
+        end
         SavePetActionBarPosition(self)
     end)
 
@@ -176,8 +203,7 @@ function MMF_UpdatePetActionBarEditMode()
         end
         if backdrop then
             backdrop:ClearAllPoints()
-            backdrop:SetPoint("TOPLEFT", frame, "TOPLEFT", -12, 10)
-            backdrop:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", 12, -10)
+            backdrop:SetAllPoints(frame)
             if not (InCombatLockdown and InCombatLockdown()) then
                 backdrop:Show()
             else

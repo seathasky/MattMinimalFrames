@@ -19,6 +19,7 @@ local function SetupPowerBar(frame, unit)
     local deps = _G.MMF_FrameFactoryPowerBarDeps or {}
     local cfg = deps.cfg or MMF_Config or {}
     local CanStartFrameDrag = deps.CanStartFrameDrag
+    local TryBeginFrameMoving = deps.TryBeginFrameMoving
     local TryStopFrameMoving = deps.TryStopFrameMoving
     local GetDragHintText = deps.GetDragHintText
 
@@ -49,7 +50,9 @@ local function SetupPowerBar(frame, unit)
     end
 
     frame.powerBarFrame:SetScript("OnDragStart", function(self)
-        if CanStartFrameDrag and CanStartFrameDrag(self) then
+        if TryBeginFrameMoving then
+            TryBeginFrameMoving(self, unit .. " power bar")
+        elseif CanStartFrameDrag and CanStartFrameDrag(self) then
             self:StartMoving()
         end
     end)

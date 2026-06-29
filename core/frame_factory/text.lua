@@ -16,6 +16,17 @@ local function TryStopFrameMoving(frame)
     return false
 end
 
+local function TryBeginFrameMoving(frame, ownerName)
+    if DragHelpers.TryBeginFrameMoving then
+        return DragHelpers.TryBeginFrameMoving(frame, ownerName)
+    end
+    if CanStartFrameDrag(frame) then
+        frame:StartMoving()
+        return true
+    end
+    return false
+end
+
 local function GetDragHintText()
     if DragHelpers.GetDragHintText then
         return DragHelpers.GetDragHintText()
@@ -120,22 +131,22 @@ local function CreateResourceText(frame, unit)
     if unit == "player" or unit == "target" then
         frame.hpTextDragFrame = CreateFrame("Frame", nil, frame.nameOverlay)
         frame.hpTextDragFrame:SetFrameLevel(frame.nameOverlay:GetFrameLevel() + 1)
-        frame.hpTextDragFrame:SetSize(1, 1)
+        frame.hpTextDragFrame:SetSize(84, 18)
         if frame.hpTextDragFrame.SetHitRectInsets then
-            frame.hpTextDragFrame:SetHitRectInsets(-42, -42, -9, -9)
+            frame.hpTextDragFrame:SetHitRectInsets(0, 0, 0, 0)
         end
         frame.hpTextDragFrame:SetMovable(true)
         frame.hpTextDragFrame:EnableMouse(true)
         frame.hpTextDragFrame:RegisterForDrag("LeftButton")
 
         frame.hpTextDragFrame:SetScript("OnDragStart", function(self)
-            if CanStartFrameDrag(self) then
-                self:StartMoving()
-            end
+            local started = TryBeginFrameMoving(self, unit .. " hp text")
+            self.mmfDragInProgress = started or nil
         end)
 
         frame.hpTextDragFrame:SetScript("OnDragStop", function(self)
             if not TryStopFrameMoving(self) then
+                self.mmfDragInProgress = nil
                 return
             end
             local left = self:GetLeft()
@@ -145,6 +156,7 @@ local function CreateResourceText(frame, unit)
             local frameRight = frame:GetRight()
             local frameBottom = frame:GetBottom()
             if not left or not right or not bottom or not frameLeft or not frameRight or not frameBottom then
+                self.mmfDragInProgress = nil
                 return
             end
 
@@ -165,6 +177,7 @@ local function CreateResourceText(frame, unit)
                 x = x,
                 y = y,
             }
+            self.mmfDragInProgress = nil
         end)
 
         frame.hpTextDragFrame:SetScript("OnEnter", function()
@@ -192,9 +205,8 @@ local function CreateResourceText(frame, unit)
         frame.powerTextDragFrame:RegisterForDrag("LeftButton")
 
         frame.powerTextDragFrame:SetScript("OnDragStart", function(self)
-            if CanStartFrameDrag(self) then
+            if TryBeginFrameMoving(self, unit .. " power text") then
                 self.mmfDragInProgress = true
-                self:StartMoving()
             end
         end)
 

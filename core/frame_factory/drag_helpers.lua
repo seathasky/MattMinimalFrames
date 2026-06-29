@@ -43,8 +43,55 @@ local function IsTestModeShiftDragEnabled()
     return MattMinimalFramesDB and (MattMinimalFramesDB.layoutTestMode == true or MattMinimalFramesDB.auraTestMode == true)
 end
 
+local activeDragOwner = nil
+
+local function DebugEditModeDrag(message, frame)
+    local db = MattMinimalFramesDB or {}
+    if db.debugEditModeDrag ~= true and db.mmfDebugEditModeDrag ~= true then
+        return
+    end
+
+    local name = frame and frame.GetName and frame:GetName()
+    if not name or name == "" then
+        name = frame and frame.mmfDragOwnerName
+    end
+    if not name or name == "" then
+        name = "unnamed frame"
+    end
+    print("|cff00ff00Matt's Minimal Frames|r Edit Drag: " .. message .. " (" .. name .. ")")
+end
+
+local function TryClaimDragOwner(frame, ownerName)
+    if not frame then
+        return false
+    end
+    if activeDragOwner and activeDragOwner ~= frame then
+        DebugEditModeDrag("blocked while another owner is active", frame)
+        return false
+    end
+
+    activeDragOwner = frame
+    frame.mmfDragOwnerName = ownerName or frame.mmfDragOwnerName
+    frame.mmfExclusiveDragActive = true
+    DebugEditModeDrag("start", frame)
+    return true
+end
+
+local function ReleaseDragOwner(frame)
+    if activeDragOwner == frame then
+        DebugEditModeDrag("stop", frame)
+        activeDragOwner = nil
+    end
+    if frame then
+        frame.mmfExclusiveDragActive = nil
+    end
+end
+
 local function CanStartFrameDrag(frame)
     if InCombatLockdown() then
+        return false
+    end
+    if activeDragOwner and activeDragOwner ~= frame then
         return false
     end
     if IsEditModeDragEnabled() then
@@ -68,11 +115,30 @@ local function TryStopFrameMoving(frame)
     if not frame or not frame.IsMovable or not frame:IsMovable() then
         return false
     end
+    if activeDragOwner and activeDragOwner ~= frame then
+        return false
+    end
+    if activeDragOwner ~= frame and frame.mmfExclusiveDragActive ~= true then
+        return false
+    end
     if InCombatLockdown and InCombatLockdown() then
         print("|cff00ff00Matt's Minimal Frames|r: Frame movement blocked during combat.")
+        ReleaseDragOwner(frame)
         return false
     end
     frame:StopMovingOrSizing()
+    ReleaseDragOwner(frame)
+    return true
+end
+
+local function TryBeginFrameMoving(frame, ownerName)
+    if not CanStartFrameDrag(frame) then
+        return false
+    end
+    if not TryClaimDragOwner(frame, ownerName) then
+        return false
+    end
+    frame:StartMoving()
     return true
 end
 
@@ -82,5 +148,8 @@ _G.MMF_FrameFactoryDragHelpers = {
     IsTestModeShiftDragEnabled = IsTestModeShiftDragEnabled,
     CanStartFrameDrag = CanStartFrameDrag,
     GetDragHintText = GetDragHintText,
+    TryClaimDragOwner = TryClaimDragOwner,
+    ReleaseDragOwner = ReleaseDragOwner,
+    TryBeginFrameMoving = TryBeginFrameMoving,
     TryStopFrameMoving = TryStopFrameMoving,
 }

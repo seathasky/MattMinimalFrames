@@ -76,6 +76,7 @@ local ShowFrameResetPopup = ResetPopupUtils.ShowFrameResetPopup or noop
 local IsEditModeDragEnabled = DragHelpers.IsEditModeDragEnabled or function() return false end
 local CanStartFrameDrag = DragHelpers.CanStartFrameDrag or function() return false end
 local GetDragHintText = DragHelpers.GetDragHintText or function() return "Shift+Drag to move" end
+local TryBeginFrameMoving = DragHelpers.TryBeginFrameMoving
 local TryStopFrameMoving = DragHelpers.TryStopFrameMoving or function() return false end
 
 _G.MMF_FrameFactoryDragSetupDeps = {
@@ -85,6 +86,7 @@ _G.MMF_FrameFactoryDragSetupDeps = {
     IsEditModeDragEnabled = IsEditModeDragEnabled,
     CanStartFrameDrag = CanStartFrameDrag,
     GetDragHintText = GetDragHintText,
+    TryBeginFrameMoving = TryBeginFrameMoving,
     TryStopFrameMoving = TryStopFrameMoving,
     SaveFramePosition = SaveFramePosition,
     ShowFrameResetPopup = ShowFrameResetPopup,
@@ -96,6 +98,7 @@ _G.MMF_FrameFactoryPowerBarDeps = {
     cfg = cfg,
     GetStatusBarTexturePath = GetStatusBarTexturePath,
     CanStartFrameDrag = CanStartFrameDrag,
+    TryBeginFrameMoving = TryBeginFrameMoving,
     TryStopFrameMoving = TryStopFrameMoving,
     GetDragHintText = GetDragHintText,
 }

@@ -1,6 +1,7 @@
 local function CreateDragHandlers(frame, frameName)
     local deps = _G.MMF_FrameFactoryDragSetupDeps or {}
     local CanStartFrameDrag = deps.CanStartFrameDrag
+    local TryBeginFrameMoving = deps.TryBeginFrameMoving
     local TryStopFrameMoving = deps.TryStopFrameMoving
     local SaveFramePosition = deps.SaveFramePosition
     local ShowFrameResetPopup = deps.ShowFrameResetPopup
@@ -11,9 +12,16 @@ local function CreateDragHandlers(frame, frameName)
     local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
 
     frame:SetScript("OnDragStart", function(self)
-        if CanStartFrameDrag and CanStartFrameDrag(self) then
+        local started = false
+        if TryBeginFrameMoving then
+            started = TryBeginFrameMoving(self, frameName)
+        elseif CanStartFrameDrag and CanStartFrameDrag(self) then
             self.mmfDragInProgress = true
             self:StartMoving()
+            started = true
+        end
+        if started then
+            self.mmfDragInProgress = true
         end
     end)
 
