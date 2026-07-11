@@ -25,6 +25,49 @@ local function SaveCastBarPosition(frame, unit)
     end
 end
 
+local function RoundCoordinate(value)
+    if MMF_FrameFactoryPositioningUtils and MMF_FrameFactoryPositioningUtils.RoundCoordinate then
+        return MMF_FrameFactoryPositioningUtils.RoundCoordinate(value)
+    end
+    return value
+end
+
+local function GetFontStringHeight(fontString, fallback)
+    if not fontString then
+        return fallback or 0
+    end
+    local _, size = fontString:GetFont()
+    return tonumber(size) or tonumber(fallback) or 0
+end
+
+local function GetCastBarHeight(frame, scaleY)
+    local baseHeight = 8 * (tonumber(scaleY) or 1.0)
+    return math.max(
+        4,
+        baseHeight,
+        GetFontStringHeight(frame and frame.castBarText, 9) + 4,
+        GetFontStringHeight(frame and frame.castBarTime, 9) + 4
+    )
+end
+
+local function GetFrameHeight(frame)
+    return tonumber(frame and (frame.originalHeight or frame:GetHeight())) or 28
+end
+
+local function GetEmbeddedLegacyDefaultOffset(frame, castBarHeight)
+    local frameHeight = GetFrameHeight(frame)
+    return 0, RoundCoordinate((-frameHeight * 0.5) + 1 + (castBarHeight * 0.5))
+end
+
+local function IsLegacyEmbeddedDefault(frame, x, y, castBarHeight)
+    if x == nil or y == nil then
+        return false
+    end
+    local legacyX, legacyY = GetEmbeddedLegacyDefaultOffset(frame, castBarHeight)
+    return math.abs((tonumber(x) or 0) - (tonumber(legacyX) or 0)) < 0.5
+        and math.abs((tonumber(y) or 0) - (tonumber(legacyY) or 0)) < 0.5
+end
+
 local function ApplyCastBarPosition(frame, unit)
     if not frame or not frame.castBarFrame or not unit then
         return
@@ -50,21 +93,23 @@ local function ApplyCastBarPosition(frame, unit)
 
     local baseWidth = math.max(8, (frame.originalWidth or frame:GetWidth() or 0) - 2)
     local width = math.max(8, baseWidth * scaleX)
-    local height = math.max(4, 8 * scaleY)
+    local legacyHeight = math.max(4, 8 * scaleY)
+    local height = GetCastBarHeight(frame, scaleY)
     frame.castBarFrame:SetSize(width, height)
     frame.castBarFrame:ClearAllPoints()
 
     local dbPos = MattMinimalFramesDB and MattMinimalFramesDB.castBarPositions and MattMinimalFramesDB.castBarPositions[unit]
     local dbX = dbPos and tonumber(dbPos.x) or nil
     local dbY = dbPos and tonumber(dbPos.y) or nil
+    if IsLegacyEmbeddedDefault(frame, dbX, dbY, legacyHeight) then
+        MattMinimalFramesDB.castBarPositions[unit] = nil
+        dbX = nil
+        dbY = nil
+    end
     if dbX ~= nil and dbY ~= nil then
         frame.castBarFrame:SetPoint("CENTER", frame, "CENTER", dbX, dbY)
     else
-        if unit == "focus" then
-            frame.castBarFrame:SetPoint("TOP", frame, "BOTTOM", 0, -1)
-        else
-            frame.castBarFrame:SetPoint("BOTTOM", frame, "BOTTOM", 0, 1)
-        end
+        frame.castBarFrame:SetPoint("TOP", frame, "BOTTOM", 0, -1)
     end
 
     local timeWidth = 36
@@ -73,6 +118,9 @@ local function ApplyCastBarPosition(frame, unit)
     end
     if frame.castBarText then
         frame.castBarText:SetWidth(math.max(8, width - timeWidth - 8))
+    end
+    if MMF_RefreshCastBarTextLayer then
+        MMF_RefreshCastBarTextLayer(frame)
     end
     if MMF_SyncCastBarOffsetControlsForUnit then
         MMF_SyncCastBarOffsetControlsForUnit(unit)
@@ -89,19 +137,11 @@ local function GetCastBarDefaultOffsetForUnit(unit)
     end
 
     local ownerFrame = MMF_GetFrameForUnit and MMF_GetFrameForUnit(unit)
-    local frameHeight = (ownerFrame and (ownerFrame.originalHeight or ownerFrame:GetHeight())) or 28
-    local castBarHeight = (ownerFrame and ownerFrame.castBarFrame and ownerFrame.castBarFrame:GetHeight()) or 8
-    frameHeight = tonumber(frameHeight) or 28
-    castBarHeight = tonumber(castBarHeight) or 8
-
-    local y
-    if unit == "focus" then
-        y = (-frameHeight * 0.5) - 1 - (castBarHeight * 0.5)
-    else
-        y = (-frameHeight * 0.5) + 1 + (castBarHeight * 0.5)
-    end
-    local round = MMF_FrameFactoryPositioningUtils and MMF_FrameFactoryPositioningUtils.RoundCoordinate
-    return 0, (round and round(y)) or y or 0
+    local frameHeight = GetFrameHeight(ownerFrame)
+    local castBarHeight = (ownerFrame and ownerFrame.castBarFrame and ownerFrame.castBarFrame:GetHeight())
+        or GetCastBarHeight(ownerFrame, 1.0)
+    local y = (-frameHeight * 0.5) - 1 - (castBarHeight * 0.5)
+    return 0, RoundCoordinate(y or 0)
 end
 
 local function GetStoredCastBarOffsetForUnit(unit)
@@ -114,8 +154,7 @@ local function GetStoredCastBarOffsetForUnit(unit)
     if x == nil or y == nil then
         return nil, nil
     end
-    local round = MMF_FrameFactoryPositioningUtils and MMF_FrameFactoryPositioningUtils.RoundCoordinate
-    return (round and round(x)) or x or 0, (round and round(y)) or y or 0
+    return RoundCoordinate(x or 0), RoundCoordinate(y or 0)
 end
 
 local function GetCastBarOffsetForUnit(unit)
@@ -158,9 +197,8 @@ local function SetCastBarOffsetForUnit(unit, offsetX, offsetY)
     if not IsSupportedCastBarUnit(unit) then
         return
     end
-    local round = MMF_FrameFactoryPositioningUtils and MMF_FrameFactoryPositioningUtils.RoundCoordinate
-    local x = round and round(offsetX) or tonumber(offsetX)
-    local y = round and round(offsetY) or tonumber(offsetY)
+    local x = RoundCoordinate(tonumber(offsetX))
+    local y = RoundCoordinate(tonumber(offsetY))
     if x == nil or y == nil then
         return
     end

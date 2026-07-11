@@ -61,6 +61,71 @@ local function ApplyCastBarPosition(frame, unit)
     end
 end
 
+local function GetFontStringHeight(fontString, fallback)
+    if not fontString then
+        return fallback or 0
+    end
+    local _, size = fontString:GetFont()
+    size = tonumber(size) or tonumber(fallback) or 0
+    return size
+end
+
+local function ApplyCastBarTextReadability(fontString)
+    if not fontString then
+        return
+    end
+
+    local fontPath, fontSize = fontString:GetFont()
+    if fontPath and fontSize and fontString.SetFont then
+        pcall(fontString.SetFont, fontString, fontPath, fontSize, "OUTLINE")
+    end
+    fontString:SetTextColor(1, 1, 1, 1)
+    if fontString.SetShadowOffset then
+        fontString:SetShadowOffset(1, -1)
+    end
+    if fontString.SetShadowColor then
+        fontString:SetShadowColor(0, 0, 0, 1)
+    end
+end
+
+local function RefreshCastBarTextLayer(frame)
+    if not frame or not frame.castBarFrame or not frame.castBarTextOverlay then
+        return
+    end
+
+    local frameLevel = (frame.castBarFrame:GetFrameLevel() or 1)
+    if frame.castBar then
+        frame.castBar:SetFrameLevel(frameLevel + 1)
+    end
+
+    frame.castBarTextOverlay:ClearAllPoints()
+    frame.castBarTextOverlay:SetPoint("CENTER", frame.castBarFrame, "CENTER", 0, 0)
+    frame.castBarTextOverlay:SetSize(
+        math.max(1, frame.castBarFrame:GetWidth() or 1),
+        math.max(
+            frame.castBarFrame:GetHeight() or 1,
+            GetFontStringHeight(frame.castBarText, 9) + 4,
+            GetFontStringHeight(frame.castBarTime, 9) + 4
+        )
+    )
+    frame.castBarTextOverlay:SetFrameLevel(frameLevel + 20)
+    frame.castBarTextOverlay:EnableMouse(false)
+
+    if frame.castBarText then
+        frame.castBarText:SetDrawLayer("OVERLAY", 7)
+        frame.castBarText:SetAlpha(1)
+        ApplyCastBarTextReadability(frame.castBarText)
+    end
+    if frame.castBarTime then
+        frame.castBarTime:SetDrawLayer("OVERLAY", 7)
+        frame.castBarTime:SetAlpha(1)
+        ApplyCastBarTextReadability(frame.castBarTime)
+    end
+end
+
+_G.MMF_RefreshCastBarTextLayer = RefreshCastBarTextLayer
+_G.MMF_ApplyCastBarTextReadability = ApplyCastBarTextReadability
+
 local function CreateCastBar(frame, unit)
     local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
     local settingKey = (unit == "player" and "showPlayerCastBar")
@@ -90,6 +155,7 @@ local function CreateCastBar(frame, unit)
     frame.castBarBorder:SetColorTexture(0, 0, 0, 1)
 
     frame.castBar = CreateFrame("StatusBar", nil, frame.castBarFrame)
+    frame.castBar:SetFrameLevel(frame.castBarFrame:GetFrameLevel() + 1)
     frame.castBar:SetAllPoints(frame.castBarFrame)
     frame.castBar:SetMinMaxValues(0, 1)
     frame.castBar:SetValue(0)
@@ -98,7 +164,7 @@ local function CreateCastBar(frame, unit)
     frame.castBar:SetAlpha(1)
 
     frame.castBarTextOverlay = CreateFrame("Frame", nil, frame.castBarFrame)
-    frame.castBarTextOverlay:SetFrameLevel(frame.castBar:GetFrameLevel() + 2)
+    frame.castBarTextOverlay:SetFrameLevel(frame.castBarFrame:GetFrameLevel() + 20)
     frame.castBarTextOverlay:SetAllPoints(frame.castBarFrame)
     frame.castBarTextOverlay:EnableMouse(false)
 
@@ -108,8 +174,10 @@ local function CreateCastBar(frame, unit)
     else
         frame.castBarText:SetFont(cfg.FONT_PATH, 9, fontFlags)
     end
-    frame.castBarText:SetTextColor(0.9, 0.9, 0.9, 1)
+    frame.castBarText:SetTextColor(1, 1, 1, 1)
     frame.castBarText:SetWordWrap(false)
+    frame.castBarText:SetDrawLayer("OVERLAY", 7)
+    ApplyCastBarTextReadability(frame.castBarText)
 
     frame.castBarTime = frame.castBarTextOverlay:CreateFontString(nil, "OVERLAY")
     if MMF_SetFontSafe then
@@ -117,8 +185,10 @@ local function CreateCastBar(frame, unit)
     else
         frame.castBarTime:SetFont(cfg.FONT_PATH, 9, fontFlags)
     end
-    frame.castBarTime:SetTextColor(0.9, 0.9, 0.9, 1)
+    frame.castBarTime:SetTextColor(1, 1, 1, 1)
     frame.castBarTime:SetWordWrap(false)
+    frame.castBarTime:SetDrawLayer("OVERLAY", 7)
+    ApplyCastBarTextReadability(frame.castBarTime)
     frame.castBarTime:SetPoint("RIGHT", frame.castBarTextOverlay, "RIGHT", -3, 0)
     frame.castBarTime:SetJustifyH("RIGHT")
     frame.castBarTime:SetWidth(36)
@@ -128,6 +198,7 @@ local function CreateCastBar(frame, unit)
     frame.castBarText:SetJustifyH("LEFT")
 
     ApplyCastBarPosition(frame, unit)
+    RefreshCastBarTextLayer(frame)
 
     frame.castBarFrame:SetScript("OnDragStart", function(self)
         TryBeginFrameMoving(self, unit .. " castbar")
@@ -204,6 +275,7 @@ local function CreateCastBar(frame, unit)
         else
             SetCastTimeText(nil)
         end
+        RefreshCastBarTextLayer(frame)
         if Compat.IsTBC and startTimeMs and endTimeMs then
             frame.castInfo.startTimeMs = startTimeMs
             frame.castInfo.endTimeMs = endTimeMs

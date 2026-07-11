@@ -537,6 +537,11 @@ function MMF_ApplyGlobalFont()
                     MMF_ApplyGlobalTextShadow(frame.castBarTime)
                 end
             end
+            if frame.castBarFrame and MMF_ApplyCastBarPosition then
+                MMF_ApplyCastBarPosition(frame, unit)
+            elseif MMF_RefreshCastBarTextLayer and (frame.castBarText or frame.castBarTime) then
+                MMF_RefreshCastBarTextLayer(frame)
+            end
             if frame.moveHint then
                 SafeSetFont(frame.moveHint, fontPath, 10, fontFlags)
                 if MMF_ApplyGlobalTextShadow then

@@ -999,6 +999,12 @@ local function ApplyCastBarFontSizes(frame, unit)
             frame.mmfAppliedCastBarHPFontSize = nil
         end
     end
+
+    if frame.castBarFrame and MMF_ApplyCastBarPosition then
+        MMF_ApplyCastBarPosition(frame, unit)
+    elseif MMF_RefreshCastBarTextLayer then
+        MMF_RefreshCastBarTextLayer(frame)
+    end
 end
 
 local function GetNameTextWidthNoWrap(nameText)
@@ -1752,6 +1758,9 @@ local function UpdateCastBarForEditMode(frame, unit, unlockedEditMode, db)
             end
             if frame.castBarTime then
                 frame.castBarTime:SetText("1.8")
+            end
+            if MMF_RefreshCastBarTextLayer then
+                MMF_RefreshCastBarTextLayer(frame)
             end
             frame.castBarFrame:Show()
         end

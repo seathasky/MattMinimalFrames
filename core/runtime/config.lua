@@ -1387,7 +1387,7 @@ function MMF_UpdateFrameScale(unit)
         if MMF_ApplyCastBarPosition then
             MMF_ApplyCastBarPosition(frame, frame.unit)
         else
-            frame.castBarFrame:SetPoint("BOTTOM", frame, "BOTTOM", 0, 1)
+            frame.castBarFrame:SetPoint("TOP", frame, "BOTTOM", 0, -1)
         end
     end
     if frame.classIcon then
