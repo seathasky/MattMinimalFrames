@@ -23,6 +23,7 @@ local mmfDefaults = {
     combatFrameOutline = false,
     enableCombatFrameVisibility = false,
     hideBossFrames = false,
+    bossFrameBottomPadding = 0,
     hideTargetOfTargetFrame = false,
     hidePetFrame = false,
     hideFocusFrame = false,

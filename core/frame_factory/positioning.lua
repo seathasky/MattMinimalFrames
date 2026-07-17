@@ -10,6 +10,28 @@ local GetLiveCenterForUnit = PositioningUtils.GetLiveCenterForUnit
 local UpdateFramePositionControlsForUnit = PositioningUtils.UpdateFramePositionControlsForUnit
 local GetRelativeCenter = PositioningUtils.GetRelativeCenter
 
+local function GetBossFrameBottomPadding()
+    if not MattMinimalFramesDB then
+        return 0
+    end
+    local padding = tonumber(MattMinimalFramesDB.bossFrameBottomPadding)
+    if not padding then
+        return 0
+    end
+    if padding < 0 then
+        return 0
+    end
+    return math.floor((padding * 100) + 0.5) / 100
+end
+
+local function GetBossFrameIndex(unit)
+    if not type(unit) == "string" then
+        return nil
+    end
+    local index = tonumber(unit:match("^boss(%d)$"))
+    return index
+end
+
 local function ApplyFramePosition(frame, frameName, unit, defaultPoint, defaultRelPoint, defaultX, defaultY)
     if not frame then
         return
@@ -47,7 +69,15 @@ local function ApplyFramePosition(frame, frameName, unit, defaultPoint, defaultR
             if centerY == nil then
                 centerY = boss1DefaultY
             end
-            frame:SetPoint("CENTER", UIParent, "CENTER", centerX, centerY + (unitDefaultY - boss1DefaultY))
+
+            local padding = GetBossFrameBottomPadding()
+            local bossIndex = GetBossFrameIndex(unit)
+            local paddingOffset = 0
+            if padding > 0 and bossIndex and bossIndex > 1 then
+                paddingOffset = -(bossIndex - 1) * padding
+            end
+
+            frame:SetPoint("CENTER", UIParent, "CENTER", centerX, centerY + (unitDefaultY - boss1DefaultY) + paddingOffset)
             return
         end
 
