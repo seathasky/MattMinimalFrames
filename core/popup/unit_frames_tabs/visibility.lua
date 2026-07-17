@@ -3,6 +3,7 @@ function MMF_BuildUnitFramesVisibilitySection(ctx)
     local popup = ctx.popup
     local ACCENT_COLOR = ctx.accentColor
     local CreateMinimalCheckbox = ctx.createMinimalCheckbox
+    local CreateMinimalSlider = ctx.createMinimalSlider or MMF_CreateMinimalSlider
     local dropdownLists = ctx.dropdownLists
 
     local LEFT_COL_X = ctx.leftColX
@@ -21,6 +22,7 @@ function MMF_BuildUnitFramesVisibilitySection(ctx)
     local hideToTCheckboxY = -596
     local hidePetCheckboxY = -620
     local hideFocusCheckboxY = -644
+    local bossPaddingSliderY = -688
 
     local textVisibilityTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     textVisibilityTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
@@ -262,6 +264,9 @@ function MMF_BuildUnitFramesVisibilitySection(ctx)
         if MMF_UpdateCombatFrameVisibility then
             MMF_UpdateCombatFrameVisibility()
         end
+        if MMF_ApplyAllFramePositions then
+            MMF_ApplyAllFramePositions()
+        end
         if MMF_RequestAllFramesUpdate then
             MMF_RequestAllFramesUpdate()
         end
@@ -276,6 +281,10 @@ function MMF_BuildUnitFramesVisibilitySection(ctx)
     CreateMinimalCheckbox(unitFramesCol, "Hide Boss Frames", LEFT_COL_X, hideBossCheckboxY, "hideBossFrames", false, function()
         ApplyFrameVisibilityChanges()
     end)
+
+    CreateMinimalSlider(unitFramesCol, "Boss Bottom Padding", LEFT_COL_X, bossPaddingSliderY, LEFT_COL_WIDTH, "bossFrameBottomPadding", 0, 64, 1, 0, function()
+        ApplyFrameVisibilityChanges()
+    end, true)
 
     CreateMinimalCheckbox(unitFramesCol, "Hide Target of Target Frame", LEFT_COL_X, hideToTCheckboxY, "hideTargetOfTargetFrame", false, function()
         ApplyFrameVisibilityChanges()
