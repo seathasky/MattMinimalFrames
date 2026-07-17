@@ -1,5 +1,16 @@
 function MMF_BuildAurasPowerFocusAurasSection(ctx)
     local root = ctx.parent
+    local Compat = _G.MMF_Compat or {}
+    if Compat.HasFocusFrame == false then
+        local notice = root:CreateFontString(nil, "OVERLAY")
+        notice:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
+        notice:SetPoint("TOPLEFT", 12, -18)
+        notice:SetWidth(420)
+        notice:SetJustifyH("LEFT")
+        notice:SetTextColor(0.78, 0.82, 0.86)
+        notice:SetText("Focus units are not available in Classic Era, so focus-frame aura settings do not apply on this client.")
+        return
+    end
     local popup = ctx.popup
     local ACCENT_COLOR = ctx.accentColor
     local CreateMinimalCheckbox = ctx.createMinimalCheckbox

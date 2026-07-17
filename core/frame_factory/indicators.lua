@@ -261,7 +261,7 @@ local function ConfigurePlayerRestingTexture(frame)
         return
     end
 
-    local canUseFlipbook = (Compat and not Compat.IsTBC)
+    local canUseFlipbook = (Compat and Compat.IsRetail)
         and frame.restingTexture.SetAtlas
         and frame.restingTexture.CreateAnimationGroup
         and IsAnimatedRestingIconEnabled()

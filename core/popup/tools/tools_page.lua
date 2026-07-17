@@ -996,10 +996,21 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
 
     CreateMinimalCheckbox(rightCol, "UI Sounds", 12, -196, "uiSoundsEnabled", true, nil)
 
+    if MattMinimalFramesDB then
+        MattMinimalFramesDB.hideChangelogPopup = (MattMinimalFramesDB.changelogSeenVersion == "7.7.2")
+    end
+    CreateMinimalCheckbox(rightCol, "Hide Changelog Popup", 12, -220, "hideChangelogPopup", false,
+        function(checked)
+            if MattMinimalFramesDB then
+                MattMinimalFramesDB.hideChangelogPopup = checked
+                MattMinimalFramesDB.changelogSeenVersion = checked and "7.7.2" or nil
+            end
+        end
+    )
 
     local toolsResetScaleBtn = CreateFrame("Button", nil, rightCol, "BackdropTemplate")
     toolsResetScaleBtn:SetSize(176, 24)
-    toolsResetScaleBtn:SetPoint("TOPLEFT", 12, -220)
+    toolsResetScaleBtn:SetPoint("TOPLEFT", 12, -248)
     toolsResetScaleBtn:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -1026,7 +1037,7 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
 
     local toolsResetAllBtn = CreateFrame("Button", nil, rightCol, "BackdropTemplate")
     toolsResetAllBtn:SetSize(176, 24)
-    toolsResetAllBtn:SetPoint("TOPLEFT", 12, -248)
+    toolsResetAllBtn:SetPoint("TOPLEFT", 12, -276)
     toolsResetAllBtn:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -1056,24 +1067,24 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
 
     local infoDivider = rightCol:CreateTexture(nil, "ARTWORK")
     infoDivider:SetSize(176, 1)
-    infoDivider:SetPoint("TOPLEFT", 12, -280)
+    infoDivider:SetPoint("TOPLEFT", toolsResetAllBtn, "BOTTOMLEFT", 0, -8)
     infoDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
 
     local toolsInfoTitle = rightCol:CreateFontString(nil, "OVERLAY")
     toolsInfoTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    toolsInfoTitle:SetPoint("TOPLEFT", 12, -292)
+    toolsInfoTitle:SetPoint("TOPLEFT", infoDivider, "BOTTOMLEFT", 0, -10)
     toolsInfoTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
     toolsInfoTitle:SetText("INFO")
 
     local infoText = rightCol:CreateFontString(nil, "OVERLAY")
     infoText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    infoText:SetPoint("TOPLEFT", 12, -316)
+    infoText:SetPoint("TOPLEFT", toolsInfoTitle, "BOTTOMLEFT", 0, -8)
     infoText:SetWidth(176)
     infoText:SetJustifyH("LEFT")
-    infoText:SetSpacing(3)
+    infoText:SetSpacing(2)
     infoText:SetTextColor(0.6, 0.6, 0.6)
     local highlightColor = ACCENT_HEX_PREFIX
-    infoText:SetText("Hold " .. highlightColor .. "SHIFT|r + mouse drag to reposition frames outside of Edit Mode.\n\nType " .. highlightColor .. "/mmf|r to open this panel.\n\nChanges to some checkboxes may require a UI reload.")
+    infoText:SetText("Hold " .. highlightColor .. "SHIFT|r + mouse drag to reposition frames outside of Edit Mode.\nType " .. highlightColor .. "/mmf|r to open this panel.\nChanges to some checkboxes may require a UI reload.")
 
 end
 

@@ -76,6 +76,7 @@ function MMF_ResetPopupScaleAndTextToDefaults()
         MattMinimalFramesDB.showHPPercentText = d.showHPPercentText
         MattMinimalFramesDB.hpTextUseShortValue = d.hpTextUseShortValue
         MattMinimalFramesDB.showNameLevel = d.showNameLevel ~= false
+        MattMinimalFramesDB.showTargetClassification = d.showTargetClassification ~= false
         MattMinimalFramesDB.colorPlayerNameTextByClass = d.colorPlayerNameTextByClass == true
         MattMinimalFramesDB.colorNPCNameTextByReaction = d.colorNPCNameTextByReaction == true
         MattMinimalFramesDB.textFormatUnit = d.textFormatUnit or "player"
@@ -136,6 +137,9 @@ function MMF_ResetPopupScaleAndTextToDefaults()
         MattMinimalFramesDB.hpTextPositions = nil
         MattMinimalFramesDB.castBarPositions = nil
         MattMinimalFramesDB.powerBarSizeUnit = "player"
+        if MMF_ApplyPowerBarPositions then
+            MMF_ApplyPowerBarPositions()
+        end
         if MMF_UpdatePowerBarVisibility then
             MMF_UpdatePowerBarVisibility()
         end

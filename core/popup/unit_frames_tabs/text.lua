@@ -112,6 +112,11 @@ function MMF_BuildUnitFramesTextSection(ctx)
         return defaultValue == true
     end
 
+    local function GetSharedNameLevelToggle(defaultValue)
+        return GetTextFormatToggle("player", "ShowNameLevel", "showNameLevel", defaultValue)
+            or GetTextFormatToggle("target", "ShowNameLevel", "showNameLevel", defaultValue)
+    end
+
     local function ApplyTextFormatForUnit(unit)
         if unit == "boss" and MMF_UpdateUnitFrame and MMF_GetFrameForUnit then
             for i = 1, 5 do
@@ -172,7 +177,7 @@ function MMF_BuildUnitFramesTextSection(ctx)
         SetCheckboxVisualState(hpPercentCheckbox, GetTextFormatToggle(unit, "ShowHPPercentText", "showHPPercentText", false))
         SetCheckboxVisualState(nameClassCheckbox, GetTextFormatToggle(unit, "ColorPlayerNameTextByClass", "colorPlayerNameTextByClass", false))
         SetCheckboxVisualState(nameReactionCheckbox, GetTextFormatToggle(unit, "ColorNPCNameTextByReaction", "colorNPCNameTextByReaction", false))
-        SetCheckboxVisualState(nameLevelCheckbox, GetTextFormatToggle(unit, "ShowNameLevel", "showNameLevel", false))
+        SetCheckboxVisualState(nameLevelCheckbox, GetSharedNameLevelToggle(false))
     end
 
     local function RefreshHPTextFormatCheckboxStates()
@@ -386,35 +391,34 @@ function MMF_BuildUnitFramesTextSection(ctx)
     })
 
     nameLevelCheckbox = CreateMinimalCheckbox(unitFramesCol, "Name Text: Level (P/T)", LEFT_COL_X, -486, "__tempShowNameLevel", false, function(checked)
-        local unit = MattMinimalFramesDB.textFormatUnit or "player"
-        MattMinimalFramesDB[GetTextFormatKey(unit, "ShowNameLevel")] = checked and true or false
+        MattMinimalFramesDB.playerShowNameLevel = checked and true or false
+        MattMinimalFramesDB.targetShowNameLevel = checked and true or false
         MattMinimalFramesDB.__tempShowNameLevel = nil
-        ApplyTextFormatForUnit(unit)
+        ApplyTextFormatForUnit("player")
+        ApplyTextFormatForUnit("target")
     end, {
         isDefault = function()
-            local db = MattMinimalFramesDB or {}
             local defaults = MattMinimalFrames_Defaults or {}
-            local unit = db.textFormatUnit or "player"
-            local key = GetTextFormatKey(unit, "ShowNameLevel")
-            local defaultValue = defaults[key]
-            if defaultValue == nil then
-                defaultValue = defaults.showNameLevel
-            end
-            return GetTextFormatToggle(unit, "ShowNameLevel", "showNameLevel", defaultValue == true) == (defaultValue == true)
+            local playerDefault = defaults.playerShowNameLevel
+            local targetDefault = defaults.targetShowNameLevel
+            if playerDefault == nil then playerDefault = defaults.showNameLevel end
+            if targetDefault == nil then targetDefault = defaults.showNameLevel end
+            local defaultValue = playerDefault == true or targetDefault == true
+            return GetSharedNameLevelToggle(defaultValue) == defaultValue
         end,
         onReset = function()
             local db = MattMinimalFramesDB or {}
             local defaults = MattMinimalFrames_Defaults or {}
-            local unit = db.textFormatUnit or "player"
-            local key = GetTextFormatKey(unit, "ShowNameLevel")
-            local defaultValue = defaults[key]
-            if defaultValue == nil then
-                defaultValue = defaults.showNameLevel
-            end
-            db[key] = defaultValue == true
+            local playerDefault = defaults.playerShowNameLevel
+            local targetDefault = defaults.targetShowNameLevel
+            if playerDefault == nil then playerDefault = defaults.showNameLevel end
+            if targetDefault == nil then targetDefault = defaults.showNameLevel end
+            db.playerShowNameLevel = playerDefault == true
+            db.targetShowNameLevel = targetDefault == true
             db.__tempShowNameLevel = nil
             RefreshTextFormatCheckboxesFromDB()
-            ApplyTextFormatForUnit(unit)
+            ApplyTextFormatForUnit("player")
+            ApplyTextFormatForUnit("target")
         end,
     })
 

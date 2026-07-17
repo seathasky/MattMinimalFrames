@@ -15,9 +15,14 @@ end
 
 function MMF_CreateMinimalColorPicker(parent, config)
     local accent = (config and config.accentColor) or GetAccentColor()
-    local fontPath = (config and config.fontPath) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
+    local theme = (MMF_GetPopupTheme and MMF_GetPopupTheme()) or {}
+    local fontPath = (config and config.fontPath) or theme.font or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
     local width = (config and config.width) or 276
-    local rowHeight = math.max(18, (config and tonumber(config.height)) or 24)
+    local rowHeight = math.max(18, (config and tonumber(config.height)) or theme.rowHeight or 26)
+    local input = theme.input or { 0.025, 0.032, 0.042, 1 }
+    local borderColor = theme.border or { 0.145, 0.175, 0.205, 1 }
+    local textColor = theme.text or { 0.92, 0.94, 0.96, 1 }
+    local textMuted = theme.textMuted or { 0.62, 0.67, 0.72, 1 }
     local labelWidth = (config and config.labelWidth) or 120
     local buttonOffset = (config and config.buttonOffset) or (labelWidth + 4)
     local buttonWidth = (config and config.buttonWidth) or (width - buttonOffset)
@@ -126,13 +131,13 @@ function MMF_CreateMinimalColorPicker(parent, config)
     local label = container:CreateFontString(nil, "OVERLAY")
     label:SetFont(fontPath, 10, "")
     label:SetPoint("LEFT", 0, 0)
-    label:SetTextColor(0.8, 0.8, 0.8)
+    label:SetTextColor(textMuted[1], textMuted[2], textMuted[3])
     label:SetWidth(labelWidth)
     label:SetJustifyH("LEFT")
     label:SetText((config and config.label) or "")
 
     local hasReset = (config and type(config.onReset) == "function") and true or false
-    local resetWidth = hasReset and 52 or 0
+    local resetWidth = hasReset and (theme.resetWidth or 52) or 0
     local swatchWidth = hasReset and math.max(70, buttonWidth - resetWidth - 4) or buttonWidth
     local buttonHeight = math.max(16, rowHeight - 4)
 
@@ -144,8 +149,8 @@ function MMF_CreateMinimalColorPicker(parent, config)
         edgeFile = "Interface\\Buttons\\WHITE8x8",
         edgeSize = 1,
     })
-    swatchButton:SetBackdropColor(0.06, 0.06, 0.08, 1)
-    swatchButton:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+    swatchButton:SetBackdropColor(input[1], input[2], input[3], input[4] or 1)
+    swatchButton:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
 
     local swatch = swatchButton:CreateTexture(nil, "ARTWORK")
     swatch:SetSize(12, 12)
@@ -161,7 +166,7 @@ function MMF_CreateMinimalColorPicker(parent, config)
     swatchText:SetFont(fontPath, 10, "")
     swatchText:SetPoint("LEFT", swatch, "RIGHT", 6, 0)
     swatchText:SetPoint("RIGHT", swatchButton, "RIGHT", -6, 0)
-    swatchText:SetTextColor(0.92, 0.92, 0.92)
+    swatchText:SetTextColor(textColor[1], textColor[2], textColor[3])
     swatchText:SetJustifyH("LEFT")
     swatchText:SetText("Pick")
 
@@ -175,8 +180,8 @@ function MMF_CreateMinimalColorPicker(parent, config)
             edgeFile = "Interface\\Buttons\\WHITE8x8",
             edgeSize = 1,
         })
-        resetButton:SetBackdropColor(0.06, 0.06, 0.08, 1)
-        resetButton:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+        resetButton:SetBackdropColor(input[1], input[2], input[3], input[4] or 1)
+        resetButton:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
 
         local resetText = resetButton:CreateFontString(nil, "OVERLAY")
         resetText:SetFont(fontPath, 9, "")
@@ -238,7 +243,7 @@ function MMF_CreateMinimalColorPicker(parent, config)
         self:SetBackdropBorderColor(accent[1], accent[2], accent[3], 0.6)
     end)
     swatchButton:SetScript("OnLeave", function(self)
-        self:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+        self:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
     end)
     swatchButton:SetScript("OnClick", function()
         local r, g, b = 1, 1, 1
@@ -271,7 +276,7 @@ function MMF_CreateMinimalColorPicker(parent, config)
             end
         end)
         resetButton:SetScript("OnLeave", function(self)
-            self:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+            self:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
             if self.text then
                 self.text:SetTextColor(0.85, 0.85, 0.85)
             end

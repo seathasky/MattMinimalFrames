@@ -63,6 +63,14 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
         end
     end
 
+    local function RefreshTargetClassification()
+        if MMF_RequestUnitUpdate then
+            MMF_RequestUnitUpdate("target")
+        elseif MMF_TargetFrame and MMF_UpdateUnitFrame then
+            MMF_UpdateUnitFrame(MMF_TargetFrame)
+        end
+    end
+
     rightSection.frameOptionsDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     rightSection.frameOptionsDivider:SetSize(RIGHT_COL_WIDTH, 1)
     rightSection.frameOptionsDivider:SetPoint("TOPLEFT", RIGHT_COL_X, (-706 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET)
@@ -314,5 +322,9 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
 
     rightSection.targetDispelHighlightCheck = CreateMinimalCheckbox(unitFramesCol, "Target Dispel Highlight", RIGHT_COL_X, (-982 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showTargetDispelHighlight", true, function()
         RefreshDispelHighlight()
+    end)
+
+    rightSection.targetClassificationCheck = CreateMinimalCheckbox(unitFramesCol, "Target Classification", RIGHT_COL_X, (-1006 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showTargetClassification", true, function()
+        RefreshTargetClassification()
     end)
 end

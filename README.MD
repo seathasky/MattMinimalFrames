@@ -16,10 +16,11 @@ Works on:
 
 *   Retail (Midnight)
 *   TBC Anniversary
+*   Classic Era
 
 ## Highlights
 
-**Player, Target, ToT, Focus, and Pet frames.**
+**Player, Target, ToT, and Pet frames, plus Focus on clients that support focus units.**
 
 **Blizzard Raid / Party Frame appearance updates to complete the suite.**
 

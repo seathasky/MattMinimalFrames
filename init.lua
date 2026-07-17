@@ -28,6 +28,30 @@ local function NormalizeLegacyTextEffectsSetting(db)
     end
 end
 
+local function NormalizeLegacyHPTextPosition(db)
+    if _G.MMF_Startup_NormalizeLegacyHPTextPosition then
+        _G.MMF_Startup_NormalizeLegacyHPTextPosition(db)
+    end
+end
+
+local function NormalizeLegacyPowerBarDefaults(db)
+    if _G.MMF_Startup_NormalizeLegacyPowerBarDefaults then
+        _G.MMF_Startup_NormalizeLegacyPowerBarDefaults(db)
+        local profiles = MattMinimalFramesProfilesDB and MattMinimalFramesProfilesDB.profiles
+        if type(profiles) == "table" then
+            for _, profile in pairs(profiles) do
+                _G.MMF_Startup_NormalizeLegacyPowerBarDefaults(profile)
+            end
+        end
+    end
+end
+
+local function NormalizeLegacyTextSizes(db)
+    if _G.MMF_Startup_NormalizeLegacyTextSizes then
+        _G.MMF_Startup_NormalizeLegacyTextSizes(db)
+    end
+end
+
 local function Initialize()
     if MMF_Profiles_Initialize then
         MMF_Profiles_Initialize()
@@ -45,6 +69,9 @@ local function Initialize()
     end
     NormalizeLegacyPartyRaidFontSetting(MattMinimalFramesDB)
     NormalizeLegacyTextEffectsSetting(MattMinimalFramesDB)
+    NormalizeLegacyHPTextPosition(MattMinimalFramesDB)
+    NormalizeLegacyPowerBarDefaults(MattMinimalFramesDB)
+    NormalizeLegacyTextSizes(MattMinimalFramesDB)
     if MattMinimalFramesDB then
         -- Always reset preview-only aura test mode on UI load/reload.
         MattMinimalFramesDB.auraTestMode = false
@@ -170,6 +197,98 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
             MMF_UpdateBlizzardPartySelfVisibility()
         end
         ScheduleStartupStyleReapply()
+        if MMF_TryShowChangelog then
+            MMF_TryShowChangelog()
+        else
+            -- Inline fallback: show changelog if the module didn't load
+            if MattMinimalFramesDB and MattMinimalFramesDB.changelogSeenVersion ~= "7.7.2" then
+                local f = CreateFrame("Frame", "MMF_ChangelogPopup", UIParent)
+                f:SetSize(430, 220)
+                f:SetPoint("CENTER", UIParent, "CENTER", 0, 60)
+                f:SetFrameStrata("DIALOG")
+                f:SetFrameLevel(200)
+                f:SetMovable(true)
+                f:EnableMouse(true)
+                f:RegisterForDrag("LeftButton")
+                f:SetScript("OnDragStart", function(self) self:StartMoving() end)
+                f:SetScript("OnDragStop", function(self) self:StopMovingOrSizing() end)
+                local bg = f:CreateTexture(nil, "BACKGROUND")
+                bg:SetAllPoints()
+                bg:SetColorTexture(0.05, 0.06, 0.08, 0.97)
+                local titleBG = f:CreateTexture(nil, "BACKGROUND", nil, 1)
+                titleBG:SetPoint("TOPLEFT", 1, -1)
+                titleBG:SetPoint("TOPRIGHT", -1, -1)
+                titleBG:SetHeight(28)
+                titleBG:SetColorTexture(0.07, 0.09, 0.12, 1)
+                local ttl = f:CreateFontString(nil, "OVERLAY")
+                ttl:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
+                ttl:SetPoint("TOPLEFT", 12, -8)
+                ttl:SetTextColor(0.90, 0.72, 0.22, 1)
+                ttl:SetText("Matt's Minimal Frames  |cffffffff- v7.7.2|r")
+                local cb = CreateFrame("Button", nil, f)
+                cb:SetSize(24, 24)
+                cb:SetPoint("TOPRIGHT", -6, -3)
+                local ct = cb:CreateFontString(nil, "OVERLAY")
+                ct:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 13, "")
+                ct:SetAllPoints()
+                ct:SetJustifyH("CENTER")
+                ct:SetTextColor(0.5, 0.5, 0.5)
+                ct:SetText("X")
+                cb:SetScript("OnClick", function() f:Hide() end)
+                local div = f:CreateTexture(nil, "ARTWORK")
+                div:SetSize(410, 1)
+                div:SetPoint("TOPLEFT", 10, -30)
+                div:SetColorTexture(0.14, 0.16, 0.20, 1)
+                local lines = {
+                    "* Classic Era is now officially supported as its own addon build.",
+                    "* Mana bar now sits flush at the bottom of the player frame as a thin strip.",
+                    "* Health and mana values display inside the frame - HP right, mana left.",
+                    "* Cleaner defaults: smaller text, smarter positions, ERA EDITION branding.",
+                }
+                local y = -44
+                for _, line in ipairs(lines) do
+                    local t = f:CreateFontString(nil, "OVERLAY")
+                    t:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+                    t:SetPoint("TOPLEFT", 14, y)
+                    t:SetWidth(400)
+                    t:SetJustifyH("LEFT")
+                    t:SetTextColor(0.78, 0.80, 0.84)
+                    t:SetText(line)
+                    y = y - 26
+                end
+                local div2 = f:CreateTexture(nil, "ARTWORK")
+                div2:SetSize(410, 1)
+                div2:SetPoint("BOTTOMLEFT", 10, 34)
+                div2:SetColorTexture(0.14, 0.16, 0.20, 1)
+                local ck = CreateFrame("CheckButton", nil, f)
+                ck:SetSize(14, 14)
+                ck:SetPoint("BOTTOMLEFT", 12, 12)
+                local ckBG = ck:CreateTexture(nil, "BACKGROUND")
+                ckBG:SetAllPoints()
+                ckBG:SetColorTexture(0.1, 0.1, 0.12, 1)
+                local ckMark = ck:CreateFontString(nil, "OVERLAY")
+                ckMark:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
+                ckMark:SetAllPoints()
+                ckMark:SetJustifyH("CENTER")
+                ckMark:SetTextColor(0.9, 0.72, 0.22, 1)
+                ckMark:SetText("")
+                ck:SetScript("OnClick", function(self)
+                    local on = not self.on
+                    self.on = on
+                    ckMark:SetText(on and "+" or "")
+                    if on and MattMinimalFramesDB then
+                        MattMinimalFramesDB.changelogSeenVersion = "7.7.2"
+                        f:Hide()
+                    end
+                end)
+                local ckL = f:CreateFontString(nil, "OVERLAY")
+                ckL:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
+                ckL:SetPoint("LEFT", ck, "RIGHT", 6, 0)
+                ckL:SetTextColor(0.55, 0.57, 0.62)
+                ckL:SetText("Don't show this again")
+                f:Show()
+            end
+        end
         if reopenMainGUIAfterEditModeReset and MMF_ShowWelcomePopup then
             reopenMainGUIAfterEditModeReset = false
             MMF_ShowWelcomePopup(true)

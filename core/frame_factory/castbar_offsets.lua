@@ -45,13 +45,27 @@ local function GetCastBarHeight(frame, scaleY)
     return math.max(
         4,
         baseHeight,
-        GetFontStringHeight(frame and frame.castBarText, 9) + 4,
-        GetFontStringHeight(frame and frame.castBarTime, 9) + 4
+        GetFontStringHeight(frame and frame.castBarText, 9) + 2,
+        GetFontStringHeight(frame and frame.castBarTime, 9) + 2
     )
 end
 
 local function GetFrameHeight(frame)
     return tonumber(frame and (frame.originalHeight or frame:GetHeight())) or 28
+end
+
+local function GetDefaultCastBarOffset(frame, unit, castBarHeight)
+    local frameHeight = GetFrameHeight(frame)
+    local y = (-frameHeight * 0.5) - 1 - (castBarHeight * 0.5)
+
+    -- Player and target power bars sit below their owner frame. Keep the
+    -- default cast bar below the power-bar container instead of overlapping it.
+    if (unit == "player" or unit == "target") and frame and frame.powerBarFrame then
+        local powerBottomOffset = tonumber(MMF_Config and MMF_Config.POWER_BAR_VERTICAL_OFFSET) or -5
+        y = (-frameHeight * 0.5) + powerBottomOffset - 1 - (castBarHeight * 0.5)
+    end
+
+    return 0, RoundCoordinate(y)
 end
 
 local function GetEmbeddedLegacyDefaultOffset(frame, castBarHeight)
@@ -109,7 +123,8 @@ local function ApplyCastBarPosition(frame, unit)
     if dbX ~= nil and dbY ~= nil then
         frame.castBarFrame:SetPoint("CENTER", frame, "CENTER", dbX, dbY)
     else
-        frame.castBarFrame:SetPoint("TOP", frame, "BOTTOM", 0, -1)
+        local defaultX, defaultY = GetDefaultCastBarOffset(frame, unit, height)
+        frame.castBarFrame:SetPoint("CENTER", frame, "CENTER", defaultX, defaultY)
     end
 
     local timeWidth = 36
@@ -137,11 +152,9 @@ local function GetCastBarDefaultOffsetForUnit(unit)
     end
 
     local ownerFrame = MMF_GetFrameForUnit and MMF_GetFrameForUnit(unit)
-    local frameHeight = GetFrameHeight(ownerFrame)
     local castBarHeight = (ownerFrame and ownerFrame.castBarFrame and ownerFrame.castBarFrame:GetHeight())
         or GetCastBarHeight(ownerFrame, 1.0)
-    local y = (-frameHeight * 0.5) - 1 - (castBarHeight * 0.5)
-    return 0, RoundCoordinate(y or 0)
+    return GetDefaultCastBarOffset(ownerFrame, unit, castBarHeight)
 end
 
 local function GetStoredCastBarOffsetForUnit(unit)

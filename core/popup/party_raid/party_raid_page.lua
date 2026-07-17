@@ -516,7 +516,9 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
     modeWatcher:RegisterEvent("GROUP_ROSTER_UPDATE")
     modeWatcher:RegisterEvent("PLAYER_ENTERING_WORLD")
     modeWatcher:RegisterEvent("CVAR_UPDATE")
-    modeWatcher:RegisterEvent("EDIT_MODE_LAYOUTS_UPDATED")
+    if Compat and Compat.IsRetail then
+        pcall(modeWatcher.RegisterEvent, modeWatcher, "EDIT_MODE_LAYOUTS_UPDATED")
+    end
     modeWatcher:SetScript("OnEvent", function()
         UpdateNameControlsEnabledState()
     end)

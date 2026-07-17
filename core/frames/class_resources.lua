@@ -131,7 +131,7 @@ local CLASS_BAR_CONFIG = {
         classColor = {0.0, 0.44, 0.87},
         showLabel = "Show Maelstrom Bar",
         resourceLabel = "Maelstrom",
-        note = "Only active while Elemental specialization is selected.",
+        note = "Elemental tracks Maelstrom; Enhancement tracks Maelstrom Weapon stacks.",
     },
 }
 
@@ -160,8 +160,33 @@ end
 local function IsElementalSpec()
     if playerClass ~= "SHAMAN" then return false end
     local spec = Compat.GetSpecialization()
-    local elementalSpec = (_G.SPEC_SHAMAN_ELEMENTAL ~= nil) and _G.SPEC_SHAMAN_ELEMENTAL or 1
-    return SafeEq(spec, elementalSpec)
+    -- GetSpecialization returns the tab index (Elemental = 1), while some
+    -- clients/constants expose the specialization ID (Elemental = 262).
+    if SafeEq(spec, 1) or (_G.SPEC_SHAMAN_ELEMENTAL ~= nil and SafeEq(spec, _G.SPEC_SHAMAN_ELEMENTAL)) then
+        return true
+    end
+    if type(GetSpecializationInfo) == "function" and spec ~= nil then
+        local ok, specID = pcall(GetSpecializationInfo, spec)
+        if ok and SafeEq(specID, 262) then
+            return true
+        end
+    end
+    return false
+end
+
+local function IsEnhancementSpec()
+    if playerClass ~= "SHAMAN" then return false end
+    local spec = Compat.GetSpecialization()
+    if SafeEq(spec, 2) or (_G.SPEC_SHAMAN_ENHANCEMENT ~= nil and SafeEq(spec, _G.SPEC_SHAMAN_ENHANCEMENT)) then
+        return true
+    end
+    if type(GetSpecializationInfo) == "function" and spec ~= nil then
+        local ok, specID = pcall(GetSpecializationInfo, spec)
+        if ok and SafeEq(specID, 263) then
+            return true
+        end
+    end
+    return false
 end
 
 function MMF_GetCurrentClassBarConfig()
@@ -595,6 +620,22 @@ local function CreateMaelstromBar()
         BAR_LAYOUT_DEFAULTS.maelstromBar.maxRunes,
         0
     )
+    MMF_MaelstromBar.valueOverlay = CreateFrame("Frame", nil, MMF_MaelstromBar)
+    MMF_MaelstromBar.valueOverlay:SetAllPoints(MMF_MaelstromBar)
+    MMF_MaelstromBar.valueOverlay:SetFrameLevel(MMF_MaelstromBar:GetFrameLevel() + 10)
+    MMF_MaelstromBar.valueText = MMF_MaelstromBar.valueOverlay:CreateFontString(nil, "OVERLAY")
+    local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath())
+        or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
+    local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
+    if MMF_SetFontSafe then
+        MMF_SetFontSafe(MMF_MaelstromBar.valueText, fontPath, 10, fontFlags)
+    else
+        MMF_MaelstromBar.valueText:SetFont(fontPath, 10, fontFlags)
+    end
+    MMF_MaelstromBar.valueText:SetPoint("CENTER", MMF_MaelstromBar, "CENTER", 0, 0)
+    MMF_MaelstromBar.valueText:SetTextColor(1, 1, 1, 1)
+    MMF_MaelstromBar.valueText:SetDrawLayer("OVERLAY", 7)
+    MMF_MaelstromBar.valueText:Hide()
     _G.MMF_MaelstromBar = MMF_MaelstromBar
     return MMF_MaelstromBar
 end
@@ -916,6 +957,36 @@ end
 
 local function UpdateMaelstromBar()
     if not MMF_MaelstromBar or not MMF_MaelstromBar:IsShown() then return end
+
+    if IsEnhancementSpec() then
+        if MMF_MaelstromBar.valueText then
+            MMF_MaelstromBar.valueText:Hide()
+        end
+        local stacks = 0
+        local maelstromWeaponName = Compat.GetSpellName and Compat.GetSpellName(187880) or nil
+        local alternateAuraName = Compat.GetSpellName and Compat.GetSpellName(344179) or nil
+        local auras = Compat.GetUnitAuras and Compat.GetUnitAuras("player", "HELPFUL|PLAYER") or {}
+        for _, aura in ipairs(auras) do
+            if SafeEq(aura.spellId, 344179) or SafeEq(aura.spellId, 187880)
+                or (maelstromWeaponName and aura.name == maelstromWeaponName)
+                or (alternateAuraName and aura.name == alternateAuraName) then
+                stacks = (Compat.GetAuraCount and Compat.GetAuraCount(aura, "player")) or aura.applications or aura.count or 0
+                break
+            end
+        end
+
+        for i = 1, MMF_MaelstromBar.mmfMaxRunes or BAR_LAYOUT_DEFAULTS.maelstromBar.maxRunes do
+            local rune = MMF_MaelstromBar.runes[i]
+            if rune then
+                rune:SetMinMaxValues(0, 1)
+                rune:SetValue(SafeLe(i, stacks) and 1 or 0)
+                rune:SetAlpha(1)
+                rune:Show()
+            end
+        end
+        return
+    end
+
     if not IsElementalSpec() then return end
 
     local powerType = _G.ADDITIONAL_POWER_BAR_INDEX
@@ -929,6 +1000,13 @@ local function UpdateMaelstromBar()
     pcall(function()
         current = UnitPower("player", powerType) or 0
     end)
+    if MMF_MaelstromBar.valueText then
+        -- Passing the raw value directly avoids arithmetic/string conversion
+        -- on restricted power values while still allowing the UI widget to
+        -- render the current amount.
+        MMF_MaelstromBar.valueText:SetText(current)
+        MMF_MaelstromBar.valueText:Show()
+    end
 
     local maxRunes = MMF_MaelstromBar.mmfMaxRunes or BAR_LAYOUT_DEFAULTS.maelstromBar.maxRunes
     if maxRunes < 1 then
@@ -979,7 +1057,8 @@ local function ShouldShowResourceBar(prefix)
     elseif prefix == "essenceBar" then
         shouldShow = playerClass == "EVOKER" and MattMinimalFramesDB.showEssenceBar == true
     elseif prefix == "maelstromBar" then
-        shouldShow = playerClass == "SHAMAN" and MattMinimalFramesDB.showMaelstromBar ~= false and IsElementalSpec()
+        shouldShow = playerClass == "SHAMAN" and MattMinimalFramesDB.showMaelstromBar ~= false
+            and (IsElementalSpec() or IsEnhancementSpec())
     end
 
     if not shouldShow then
@@ -1251,17 +1330,21 @@ function MMF_InitializeClassResources()
         if MattMinimalFramesDB and MattMinimalFramesDB.showMaelstromBar ~= false then
             local frame = CreateMaelstromBar()
             ApplyLegacyScale(frame, "maelstromBar")
-            if IsElementalSpec() then
+            if IsElementalSpec() or IsEnhancementSpec() then
                 frame:Show()
             else
                 frame:Hide()
             end
             frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
             frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
+            frame:RegisterUnitEvent("UNIT_AURA", "player")
             frame:RegisterEvent("PLAYER_ENTERING_WORLD")
             frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
             frame:RegisterEvent("PLAYER_TALENT_UPDATE")
             frame:SetScript("OnEvent", function(_, event, unit)
+                if Compat and Compat.GetAccessibleUnitToken then
+                    unit = Compat.GetAccessibleUnitToken(unit)
+                end
                 if event == "PLAYER_SPECIALIZATION_CHANGED" or event == "PLAYER_ENTERING_WORLD" then
                     if MMF_RefreshClassResourceVisibility then
                         MMF_RefreshClassResourceVisibility()

@@ -13,6 +13,24 @@ local function CreatePowerBarContainer(frame, unit)
     frame.powerBar:SetMinMaxValues(0, 1)
     frame.powerBar:SetValue(1)
     frame.powerBarFG = frame.powerBar:GetStatusBarTexture()
+
+    -- Player casters can have both a display power (for example Insanity)
+    -- and mana.  The second bar shares this container and is only shown when
+    -- both pools are meaningful.
+    local Compat = _G.MMF_Compat
+    if unit == "player" and Compat and Compat.IsRetail then
+        frame.secondaryPowerBarBG = frame.powerBarFrame:CreateTexture(nil, "BACKGROUND")
+        frame.secondaryPowerBarBG:SetColorTexture(0, 0, 0, 0.25)
+
+        frame.secondaryPowerBar = CreateFrame("StatusBar", nil, frame.powerBarFrame)
+        frame.secondaryPowerBar:SetStatusBarTexture(GetStatusBarTexturePath())
+        frame.secondaryPowerBar:SetMinMaxValues(0, 1)
+        frame.secondaryPowerBar:SetValue(1)
+        frame.secondaryPowerBarFG = frame.secondaryPowerBar:GetStatusBarTexture()
+        frame.secondaryPowerBar:SetAlpha(0.5)
+        frame.secondaryPowerBar:Hide()
+        frame.secondaryPowerBarBG:Hide()
+    end
 end
 
 local function SetupPowerBar(frame, unit)
@@ -96,6 +114,15 @@ local function SetupPowerBar(frame, unit)
     frame.powerBar:SetWidth(defaultWidth)
     frame.powerBar:SetPoint("CENTER", frame.powerBarBorder, "CENTER", 0, 0)
     frame.powerBar:SetAlpha(0.5)
+
+    if frame.secondaryPowerBar then
+        frame.secondaryPowerBar:SetWidth(defaultWidth)
+        frame.secondaryPowerBar:SetHeight(defaultHeight)
+        frame.secondaryPowerBar:SetPoint("CENTER", frame.powerBarBorder, "CENTER", 0, 0)
+        frame.secondaryPowerBarBG:SetWidth(defaultWidth)
+        frame.secondaryPowerBarBG:SetHeight(defaultHeight)
+        frame.secondaryPowerBarBG:SetPoint("CENTER", frame.powerBarBorder, "CENTER", 0, 0)
+    end
 
     if MattMinimalFramesDB and MattMinimalFramesDB.powerBarPositions and MattMinimalFramesDB.powerBarPositions[unit] then
         local pos = MattMinimalFramesDB.powerBarPositions[unit]

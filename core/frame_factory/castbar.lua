@@ -270,13 +270,13 @@ local function CreateCastBar(frame, unit)
         else
             frame.castBarText:SetText("")
         end
-        if Compat.IsTBC then
+        if Compat.IsTBC or Compat.IsClassic then
             SetCastTimeText(GetSafeRemainingSeconds(endTimeMs))
         else
             SetCastTimeText(nil)
         end
         RefreshCastBarTextLayer(frame)
-        if Compat.IsTBC and startTimeMs and endTimeMs then
+        if (Compat.IsTBC or Compat.IsClassic) and startTimeMs and endTimeMs then
             frame.castInfo.startTimeMs = startTimeMs
             frame.castInfo.endTimeMs = endTimeMs
             local maxVal = (endTimeMs - startTimeMs) / 1000
@@ -322,7 +322,7 @@ local function CreateCastBar(frame, unit)
         return false
     end
 
-    if Compat.IsTBC then
+    if Compat.IsTBC or Compat.IsClassic then
         frame.castBarFrame:SetScript("OnUpdate", function(self, elapsed)
             local info = frame.castInfo
             if info.casting and info.startTimeMs and info.endTimeMs then
@@ -410,7 +410,7 @@ local function CreateCastBar(frame, unit)
     elseif unit == "focus" then
         eventFrame:RegisterEvent("PLAYER_FOCUS_CHANGED")
     end
-    if Compat.IsTBC then
+    if Compat.IsTBC or Compat.IsClassic then
         eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_DELAYED", unit)
         eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_UPDATE", unit)
     end
@@ -437,7 +437,7 @@ local function CreateCastBar(frame, unit)
                 ShowCastBar(name, notInterruptible, startTime, endTime)
             end
 
-        elseif Compat.IsTBC and event == "UNIT_SPELLCAST_DELAYED" then
+        elseif (Compat.IsTBC or Compat.IsClassic) and event == "UNIT_SPELLCAST_DELAYED" then
             if frame.castInfo.casting then
                 local name, _, _, startTime, endTime = UnitCastingInfo(unit)
                 if name and startTime and endTime then
@@ -446,7 +446,7 @@ local function CreateCastBar(frame, unit)
                 end
             end
 
-        elseif Compat.IsTBC and event == "UNIT_SPELLCAST_CHANNEL_UPDATE" then
+        elseif (Compat.IsTBC or Compat.IsClassic) and event == "UNIT_SPELLCAST_CHANNEL_UPDATE" then
             if frame.castInfo.channeling then
                 local name, _, _, startTime, endTime = UnitChannelInfo(unit)
                 if name and startTime and endTime then
@@ -487,6 +487,33 @@ local function CreateCastBar(frame, unit)
             end
         end
     end)
+
+    -- Classic Era can expose target cast state through UnitCastingInfo without
+    -- reliably delivering every target UNIT_SPELLCAST event. The cast bar is
+    -- hidden while idle, so poll from the always-active event frame to recover
+    -- missed starts and early stops.
+    if Compat.IsClassic and unit == "target" then
+        local castStatePollElapsed = 0
+        eventFrame:SetScript("OnUpdate", function(self, elapsed)
+            castStatePollElapsed = castStatePollElapsed + (tonumber(elapsed) or 0)
+            if castStatePollElapsed < 0.1 then
+                return
+            end
+            castStatePollElapsed = 0
+
+            if frame.castInfo.casting then
+                if not UnitCastingInfo(unit) then
+                    SyncCastBarFromUnitState()
+                end
+            elseif frame.castInfo.channeling then
+                if not UnitChannelInfo(unit) then
+                    SyncCastBarFromUnitState()
+                end
+            else
+                SyncCastBarFromUnitState()
+            end
+        end)
+    end
 end
 
 _G.MMF_FrameFactoryCastbar = {

@@ -1,5 +1,9 @@
 function MMF_CreatePopupFooter(popup, _popupWidth, accentColor, footerHeight)
     local ACCENT_COLOR = accentColor or { 0.6, 0.4, 0.9 }
+    local theme = (MMF_GetPopupTheme and MMF_GetPopupTheme()) or {}
+    local fontPath = theme.font or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
+    local windowColor = theme.window or { 0.025, 0.030, 0.038, 0.99 }
+    local textMuted = theme.textMuted or { 0.62, 0.67, 0.72, 1 }
     local DISCORD_URL = "https://discord.gg/9w6ZdaksDX"
     local height = footerHeight or 40
     -- Footer
@@ -10,7 +14,13 @@ function MMF_CreatePopupFooter(popup, _popupWidth, accentColor, footerHeight)
     
     local footerBg = footer:CreateTexture(nil, "BACKGROUND")
     footerBg:SetAllPoints()
-    footerBg:SetColorTexture(0.03, 0.03, 0.04, 1)
+    footerBg:SetColorTexture(windowColor[1], windowColor[2], windowColor[3], 1)
+
+    local footerDivider = footer:CreateTexture(nil, "BORDER")
+    footerDivider:SetPoint("TOPLEFT", 0, 0)
+    footerDivider:SetPoint("TOPRIGHT", 0, 0)
+    footerDivider:SetHeight(1)
+    footerDivider:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 0.35)
 
     local footerWallpaper = footer:CreateTexture(nil, "ARTWORK")
     footerWallpaper:SetPoint("TOPLEFT", 1, -1)
@@ -30,11 +40,11 @@ function MMF_CreatePopupFooter(popup, _popupWidth, accentColor, footerHeight)
 
     -- Version text (bottom-left)
     local versionText = footer:CreateFontString(nil, "OVERLAY")
-    versionText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
+    versionText:SetFont(fontPath, 10, "")
     versionText:SetPoint("LEFT", footer, "LEFT", 12, 0)
     versionText:SetJustifyH("LEFT")
     versionText:SetWordWrap(false)
-    versionText:SetTextColor(1.0, 0.86, 0.2)
+    versionText:SetTextColor(textMuted[1], textMuted[2], textMuted[3])
     versionText:SetText((MMF_GetPopupFooterVersionText and MMF_GetPopupFooterVersionText()) or "")
 
     local discordButton = CreateFrame("Button", nil, footer)
@@ -84,7 +94,7 @@ function MMF_CreatePopupFooter(popup, _popupWidth, accentColor, footerHeight)
     )
 
     local classNameText = classInfo:CreateFontString(nil, "OVERLAY")
-    classNameText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
+    classNameText:SetFont(fontPath, 10, "")
     classNameText:SetPoint("RIGHT", classIcon, "LEFT", -6, 0)
     classNameText:SetWidth(96)
     classNameText:SetJustifyH("RIGHT")

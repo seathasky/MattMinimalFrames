@@ -15,13 +15,16 @@ end
 
 function MMF_CreateSubTabBar(parent, config)
     local accent = (config and config.accentColor) or GetAccentColor()
+    local theme = (MMF_GetPopupTheme and MMF_GetPopupTheme()) or {}
     local tabs = (config and config.tabs) or {}
     local width = (config and config.width) or 560
     local height = (config and config.height) or 30
     local spacing = (config and config.spacing) or 10
     local minButtonWidth = (config and config.minButtonWidth) or 76
     local horizontalPadding = (config and config.horizontalPadding) or 18
-    local fontPath = (config and config.fontPath) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
+    local fontPath = (config and config.fontPath) or theme.font or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
+    local textColor = theme.text or { 0.92, 0.94, 0.96, 1 }
+    local textMuted = theme.textMuted or { 0.62, 0.67, 0.72, 1 }
     local fontSize = (config and config.fontSize) or 11
     local onSelect = config and config.onSelect
 
@@ -60,13 +63,13 @@ function MMF_CreateSubTabBar(parent, config)
     local function ApplyButtonState(button, isActive)
         button.isActive = isActive
         if isActive then
-            button.text:SetTextColor(1, 1, 1)
+            button.text:SetTextColor(textColor[1], textColor[2], textColor[3])
             button.plate:SetAlpha(0.45)
             button.glow:SetAlpha(0.08)
             button.underline:SetAlpha(1)
             button.underline:SetColorTexture(accent[1], accent[2], accent[3], 1)
         else
-            button.text:SetTextColor(0.62, 0.66, 0.7)
+            button.text:SetTextColor(textMuted[1], textMuted[2], textMuted[3])
             button.plate:SetAlpha(0.12)
             button.glow:SetAlpha(0)
             button.underline:SetAlpha(0)
@@ -130,7 +133,7 @@ function MMF_CreateSubTabBar(parent, config)
                 return
             end
             self.plate:SetAlpha(0.22)
-            self.text:SetTextColor(0.9, 0.94, 0.96)
+            self.text:SetTextColor(textColor[1], textColor[2], textColor[3])
             self.underline:SetAlpha(0.35)
             self.underline:SetColorTexture(accent[1], accent[2], accent[3], 0.8)
         end)
@@ -139,7 +142,7 @@ function MMF_CreateSubTabBar(parent, config)
                 return
             end
             self.plate:SetAlpha(0.12)
-            self.text:SetTextColor(0.62, 0.66, 0.7)
+            self.text:SetTextColor(textMuted[1], textMuted[2], textMuted[3])
             self.underline:SetAlpha(0)
         end)
         button:SetScript("OnClick", function()
@@ -150,6 +153,21 @@ function MMF_CreateSubTabBar(parent, config)
         end)
 
         buttons[index] = button
+    end
+
+    -- Keep long tab sets inside the card instead of letting the last tab clip
+    -- into the quick-guide column at smaller GUI scales.
+    local naturalWidth = math.max(0, cursorX - spacing)
+    if #buttons > 0 and naturalWidth > width then
+        local availableWidth = math.max(#buttons * 48, width - (spacing * (#buttons - 1)))
+        local buttonWidth = math.floor(availableWidth / #buttons)
+        local layoutX = 0
+        for _, button in ipairs(buttons) do
+            button:ClearAllPoints()
+            button:SetPoint("TOPLEFT", layoutX, 0)
+            button:SetWidth(buttonWidth)
+            layoutX = layoutX + buttonWidth + spacing
+        end
     end
 
     bar.buttons = buttons

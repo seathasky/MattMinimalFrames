@@ -6,11 +6,18 @@ function MMF_CreatePopupContentShell(popup, config)
     config = config or {}
     local popupLayout = config.popupLayout or {}
     local accentColor = config.accentColor or { 0.6, 0.4, 0.9 }
+    local theme = (MMF_GetPopupTheme and MMF_GetPopupTheme()) or {}
+    local fontPath = theme.font or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
+    local surface = theme.surface or { 0.045, 0.055, 0.068, 0.98 }
+    local surfaceRaised = theme.surfaceRaised or { 0.060, 0.075, 0.090, 0.98 }
+    local border = theme.border or { 0.145, 0.175, 0.205, 1 }
+    local text = theme.text or { 0.92, 0.94, 0.96, 1 }
+    local textMuted = theme.textMuted or { 0.62, 0.67, 0.72, 1 }
     local sidebarWallpaperAlpha = tonumber(config.sidebarWallpaperAlpha) or 0.10
     local setAspectCropTexCoords = config.setAspectCropTexCoords or MMF_SetAspectCropTexCoords
 
     local sidebarWidth = tonumber(config.sidebarWidth) or 180
-    local headerHeight = tonumber(config.headerHeight) or 68
+    local headerHeight = tonumber(config.headerHeight) or 72
     local scrollbarWidth = tonumber(config.scrollbarWidth) or 12
     local scrollbarGap = tonumber(config.scrollbarGap) or 4
 
@@ -36,8 +43,8 @@ function MMF_CreatePopupContentShell(popup, config)
         edgeFile = "Interface\\Buttons\\WHITE8x8",
         edgeSize = 1,
     })
-    sidebarBg:SetBackdropColor(0.05, 0.07, 0.09, 0.72)
-    sidebarBg:SetBackdropBorderColor(0.12, 0.16, 0.18, 1)
+    sidebarBg:SetBackdropColor(surface[1], surface[2], surface[3], 0.92)
+    sidebarBg:SetBackdropBorderColor(border[1], border[2], border[3], border[4] or 1)
 
     local sidebarWallpaper = sidebarBg:CreateTexture(nil, "ARTWORK")
     sidebarWallpaper:SetPoint("TOPLEFT", 1, -1)
@@ -62,7 +69,7 @@ function MMF_CreatePopupContentShell(popup, config)
     local sidebarBrand = CreateFrame("Frame", nil, tabBar)
     sidebarBrand:SetPoint("TOPLEFT", 0, 0)
     sidebarBrand:SetPoint("TOPRIGHT", 0, 0)
-    sidebarBrand:SetHeight(64)
+    sidebarBrand:SetHeight(68)
 
     local sidebarBrandGlow = sidebarBrand:CreateTexture(nil, "ARTWORK")
     sidebarBrandGlow:SetPoint("BOTTOMLEFT", 0, 0)
@@ -71,20 +78,20 @@ function MMF_CreatePopupContentShell(popup, config)
     sidebarBrandGlow:SetColorTexture(accentColor[1], accentColor[2], accentColor[3], 0.95)
 
     local sidebarBrandTitle = sidebarBrand:CreateFontString(nil, "OVERLAY")
-    sidebarBrandTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 20, "")
-    sidebarBrandTitle:SetPoint("TOPLEFT", 16, -16)
-    sidebarBrandTitle:SetTextColor(0.96, 0.97, 0.98)
+    sidebarBrandTitle:SetFont(fontPath, 18, "")
+    sidebarBrandTitle:SetPoint("TOPLEFT", 16, -14)
+    sidebarBrandTitle:SetTextColor(text[1], text[2], text[3])
     sidebarBrandTitle:SetText("SETTINGS")
 
     local sidebarBrandSub = sidebarBrand:CreateFontString(nil, "OVERLAY")
-    sidebarBrandSub:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
-    sidebarBrandSub:SetPoint("TOPLEFT", sidebarBrandTitle, "BOTTOMLEFT", 0, -4)
-    sidebarBrandSub:SetTextColor(accentColor[1], accentColor[2], accentColor[3])
-    sidebarBrandSub:SetText("")
+    sidebarBrandSub:SetFont(fontPath, 8, "")
+    sidebarBrandSub:SetPoint("TOPLEFT", sidebarBrandTitle, "BOTTOMLEFT", 0, -5)
+    sidebarBrandSub:SetTextColor(textMuted[1], textMuted[2], textMuted[3])
+    sidebarBrandSub:SetText("MATT'S MINIMAL FRAMES")
 
     local navButtonHost = CreateFrame("Frame", nil, tabBar)
-    navButtonHost:SetPoint("TOPLEFT", sidebarBrand, "BOTTOMLEFT", 0, -14)
-    navButtonHost:SetPoint("TOPRIGHT", sidebarBrand, "BOTTOMRIGHT", 0, -14)
+    navButtonHost:SetPoint("TOPLEFT", sidebarBrand, "BOTTOMLEFT", 0, -12)
+    navButtonHost:SetPoint("TOPRIGHT", sidebarBrand, "BOTTOMRIGHT", 0, -12)
     navButtonHost:SetPoint("BOTTOMLEFT", 0, 12)
     navButtonHost:SetPoint("BOTTOMRIGHT", 0, 12)
 
@@ -102,14 +109,14 @@ function MMF_CreatePopupContentShell(popup, config)
         edgeFile = "Interface\\Buttons\\WHITE8x8",
         edgeSize = 1,
     })
-    pageHeader:SetBackdropColor(0.05, 0.07, 0.09, 0.96)
-    pageHeader:SetBackdropBorderColor(0.12, 0.16, 0.18, 1)
+    pageHeader:SetBackdropColor(surfaceRaised[1], surfaceRaised[2], surfaceRaised[3], surfaceRaised[4] or 0.98)
+    pageHeader:SetBackdropBorderColor(border[1], border[2], border[3], border[4] or 1)
 
     local pageHeaderWallpaper = pageHeader:CreateTexture(nil, "ARTWORK")
     pageHeaderWallpaper:SetPoint("TOPLEFT", 1, -1)
     pageHeaderWallpaper:SetPoint("BOTTOMRIGHT", -1, 1)
     pageHeaderWallpaper:SetTexture("Interface\\AddOns\\MattMinimalFrames\\Images\\mw.png")
-    pageHeaderWallpaper:SetAlpha(0.12)
+    pageHeaderWallpaper:SetAlpha(0.08)
     if setAspectCropTexCoords then
         setAspectCropTexCoords(pageHeaderWallpaper, pageHeader, 16 / 9)
     end
@@ -131,15 +138,23 @@ function MMF_CreatePopupContentShell(popup, config)
     pageHeaderShade:SetHeight(22)
     pageHeaderShade:SetColorTexture(0.02, 0.03, 0.04, 0.10)
 
+    local pageHeaderKicker = pageHeader:CreateFontString(nil, "OVERLAY")
+    pageHeaderKicker:SetFont(fontPath, 8, "")
+    pageHeaderKicker:SetPoint("TOPLEFT", 16, -10)
+    pageHeaderKicker:SetTextColor(accentColor[1], accentColor[2], accentColor[3])
+    pageHeaderKicker:SetText("CONFIGURATION")
+
     local pageHeaderTitle = pageHeader:CreateFontString(nil, "OVERLAY")
-    pageHeaderTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 18, "")
-    pageHeaderTitle:SetPoint("TOPLEFT", 16, -14)
-    pageHeaderTitle:SetTextColor(0.98, 0.98, 0.98)
+    pageHeaderTitle:SetFont(fontPath, 17, "")
+    pageHeaderTitle:SetPoint("TOPLEFT", 16, -24)
+    pageHeaderTitle:SetTextColor(text[1], text[2], text[3])
 
     local pageHeaderSubtitle = pageHeader:CreateFontString(nil, "OVERLAY")
-    pageHeaderSubtitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    pageHeaderSubtitle:SetPoint("TOPLEFT", pageHeaderTitle, "BOTTOMLEFT", 0, -6)
-    pageHeaderSubtitle:SetTextColor(0.62, 0.67, 0.71)
+    pageHeaderSubtitle:SetFont(fontPath, 9, "")
+    pageHeaderSubtitle:SetPoint("TOPLEFT", pageHeaderTitle, "BOTTOMLEFT", 0, -5)
+    pageHeaderSubtitle:SetPoint("TOPRIGHT", pageHeader, "TOPRIGHT", -14, -46)
+    pageHeaderSubtitle:SetJustifyH("LEFT")
+    pageHeaderSubtitle:SetTextColor(textMuted[1], textMuted[2], textMuted[3])
 
     local pageScrollFrame = CreateFrame("ScrollFrame", nil, pageContainer)
     pageScrollFrame:SetPoint("TOPLEFT", pageHeader, "BOTTOMLEFT", 0, -8)
@@ -160,10 +175,10 @@ function MMF_CreatePopupContentShell(popup, config)
         edgeFile = "Interface\\Buttons\\WHITE8x8",
         edgeSize = 1,
     })
-    sharedScrollBar:SetBackdropColor(0.03, 0.03, 0.04, 1)
-    sharedScrollBar:SetBackdropBorderColor(0.15, 0.15, 0.18, 1)
+    sharedScrollBar:SetBackdropColor(theme.input and theme.input[1] or 0.025, theme.input and theme.input[2] or 0.032, theme.input and theme.input[3] or 0.042, 1)
+    sharedScrollBar:SetBackdropBorderColor(border[1], border[2], border[3], border[4] or 1)
     local sharedThumb = sharedScrollBar:CreateTexture(nil, "OVERLAY")
-    sharedThumb:SetSize(8, 24)
+    sharedThumb:SetSize(8, 28)
     sharedThumb:SetColorTexture(accentColor[1], accentColor[2], accentColor[3], 1)
     sharedScrollBar:SetThumbTexture(sharedThumb)
 

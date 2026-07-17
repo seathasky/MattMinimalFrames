@@ -577,6 +577,9 @@ if C_ClickBindings then
 end
 
 coreEventFrame:SetScript("OnEvent", function(_, event, unit)
+    if Compat and Compat.GetAccessibleUnitToken then
+        unit = Compat.GetAccessibleUnitToken(unit)
+    end
     local shouldFlushNow = false
     if ShouldSuspendForBlizzardEditMode() then
         return

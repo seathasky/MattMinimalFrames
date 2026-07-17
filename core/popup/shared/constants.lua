@@ -3,11 +3,11 @@ local Compat = _G.MMF_Compat or {}
 MMF_POPUP_LAYOUT = {
     TITLE_HEIGHT = 28,
     FOOTER_HEIGHT = 32,
-    TAB_HEIGHT = 24,
-    TAB_SPACING = 4,
-    CONTENT_SIDE_PADDING = 10,
-    CONTENT_TOP_OFFSET = -4,
-    PAGE_GAP = 4,
+    TAB_HEIGHT = 42,
+    TAB_SPACING = 6,
+    CONTENT_SIDE_PADDING = 12,
+    CONTENT_TOP_OFFSET = -8,
+    PAGE_GAP = 8,
     DEFAULT_CENTER_Y = 50,
     WIDTH_TBC = 840,
     WIDTH_RETAIL = 840,
@@ -20,6 +20,31 @@ MMF_POPUP_LAYOUT = {
     PAGE_CONTENT_HEIGHT_PROFILES = 680,
     PAGE_CONTENT_HEIGHT_TOOLS = 680,
 }
+
+-- One visual language for every popup module and every supported client.  Keep
+-- these values data-only so Classic clients do not depend on newer APIs.
+MMF_POPUP_THEME = {
+    font = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf",
+    window = { 0.025, 0.030, 0.038, 0.99 },
+    surface = { 0.045, 0.055, 0.068, 0.98 },
+    surfaceRaised = { 0.060, 0.075, 0.090, 0.98 },
+    surfaceHover = { 0.080, 0.100, 0.118, 1.00 },
+    input = { 0.025, 0.032, 0.042, 1.00 },
+    border = { 0.145, 0.175, 0.205, 1.00 },
+    borderStrong = { 0.220, 0.260, 0.300, 1.00 },
+    text = { 0.92, 0.94, 0.96, 1.00 },
+    textMuted = { 0.62, 0.67, 0.72, 1.00 },
+    textDisabled = { 0.40, 0.43, 0.47, 1.00 },
+    section = { 0.62, 0.92, 0.88, 1.00 },
+    danger = { 1.00, 0.38, 0.38, 1.00 },
+    controlHeight = 22,
+    rowHeight = 26,
+    resetWidth = 52,
+}
+
+function MMF_GetPopupTheme()
+    return MMF_POPUP_THEME or {}
+end
 
 MMF_POPUP_INACTIVE_FADE = {
     FOCUS_ALPHA = 1.0,
@@ -78,8 +103,9 @@ function MMF_GetPopupAccentColor()
 end
 
 function MMF_GetPopupSectionTitleColor()
-    -- Light turquoise for stronger section-title contrast.
-    return 0.62, 0.92, 0.88
+    local theme = MMF_GetPopupTheme()
+    local color = theme.section or { 0.62, 0.92, 0.88 }
+    return color[1], color[2], color[3]
 end
 
 function MMF_IsClassColorGUIEnabled()

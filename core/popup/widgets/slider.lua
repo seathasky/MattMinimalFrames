@@ -15,38 +15,45 @@ end
 
 function MMF_CreateMinimalSlider(parent, label, x, y, width, settingKey, minVal, maxVal, step, defaultVal, onChange, isInteger, resetConfig)
     local accent = GetAccentColor()
+    local theme = (MMF_GetPopupTheme and MMF_GetPopupTheme()) or {}
+    local fontPath = theme.font or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
+    local rowHeight = theme.rowHeight or 26
+    local controlHeight = theme.controlHeight or 22
+    local input = theme.input or { 0.025, 0.032, 0.042, 1 }
+    local borderColor = theme.border or { 0.145, 0.175, 0.205, 1 }
+    local labelColor = theme.textMuted or { 0.62, 0.67, 0.72, 1 }
     local isTBC = Compat.IsTBC
     local sliderLabel = tostring(label or "")
     local defaults = type(MattMinimalFrames_Defaults) == "table" and MattMinimalFrames_Defaults or nil
     local customReset = type(resetConfig) == "table" and resetConfig or nil
     local hasDefault = (type(settingKey) == "string" and defaults and defaults[settingKey] ~= nil)
         or (customReset and (type(customReset.onReset) == "function" or type(customReset.isDefault) == "function"))
-    local resetWidth = hasDefault and 52 or 0
-    local valueBoxWidth = 40
+    local resetWidth = hasDefault and (theme.resetWidth or 52) or 0
+    local valueBoxWidth = 42
 
     local container = CreateFrame("Frame", nil, parent)
-    container:SetSize(width, 24)
+    container:SetSize(width, rowHeight)
     container:SetPoint("TOPLEFT", x, y)
 
     local text = container:CreateFontString(nil, "OVERLAY")
-    text:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+    text:SetFont(fontPath, 10, "")
     text:SetPoint("LEFT", 0, 0)
-    text:SetTextColor(0.8, 0.8, 0.8)
+    text:SetTextColor(labelColor[1], labelColor[2], labelColor[3])
     text:SetText(sliderLabel)
     text:SetWidth(95)
     text:SetJustifyH("LEFT")
 
     local valueBg = CreateFrame("Frame", nil, container, "BackdropTemplate")
-    valueBg:SetSize(valueBoxWidth, 18)
+    valueBg:SetSize(valueBoxWidth, controlHeight)
     valueBg:SetPoint("RIGHT", 0, 0)
     valueBg:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8", edgeFile = "Interface\\Buttons\\WHITE8x8", edgeSize = 1 })
-    valueBg:SetBackdropColor(0.06, 0.06, 0.08, 1)
-    valueBg:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+    valueBg:SetBackdropColor(input[1], input[2], input[3], input[4] or 1)
+    valueBg:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
 
     local valueText = CreateFrame("EditBox", nil, valueBg)
     valueText:SetAllPoints(valueBg)
     valueText:SetAutoFocus(false)
-    valueText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
+    valueText:SetFont(fontPath, 11, "")
     valueText:SetJustifyH("CENTER")
     valueText:SetJustifyV("MIDDLE")
     valueText:SetTextColor(accent[1], accent[2], accent[3])
@@ -63,11 +70,14 @@ function MMF_CreateMinimalSlider(parent, label, x, y, width, settingKey, minVal,
 
     slider:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
     })
-    slider:SetBackdropColor(0.06, 0.06, 0.08, 1)
+    slider:SetBackdropColor(input[1], input[2], input[3], input[4] or 1)
+    slider:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], 0.72)
 
     local thumb = slider:CreateTexture(nil, "OVERLAY")
-    thumb:SetSize(8, 14)
+    thumb:SetSize(8, 16)
     thumb:SetColorTexture(accent[1], accent[2], accent[3], 1)
     slider:SetThumbTexture(thumb)
 
@@ -142,7 +152,7 @@ function MMF_CreateMinimalSlider(parent, label, x, y, width, settingKey, minVal,
         self:SetBackdropBorderColor(accent[1], accent[2], accent[3], 0.6)
     end)
     valueBg:SetScript("OnLeave", function(self)
-        self:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+        self:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
     end)
 
     local function commitText(input)
@@ -179,7 +189,19 @@ function MMF_CreateMinimalSlider(parent, label, x, y, width, settingKey, minVal,
         valueText:SetText(formatForDisplay(slider:GetValue()))
     end)
     valueText:SetScript("OnEditFocusLost", function()
+        valueBg:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
         valueText:SetText(formatForDisplay(slider:GetValue()))
+    end)
+    valueText:SetScript("OnEditFocusGained", function()
+        valueBg:SetBackdropBorderColor(accent[1], accent[2], accent[3], 0.9)
+        valueText:HighlightText()
+    end)
+
+    slider:SetScript("OnEnter", function(self)
+        self:SetBackdropBorderColor(accent[1], accent[2], accent[3], 0.65)
+    end)
+    slider:SetScript("OnLeave", function(self)
+        self:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], 0.72)
     end)
 
     slider:SetScript("OnValueChanged", function(self, value)
@@ -213,18 +235,18 @@ function MMF_CreateMinimalSlider(parent, label, x, y, width, settingKey, minVal,
     local resetButton
     if hasDefault then
         resetButton = CreateFrame("Button", nil, container, "BackdropTemplate")
-        resetButton:SetSize(resetWidth, 18)
+        resetButton:SetSize(resetWidth, controlHeight)
         resetButton:SetPoint("RIGHT", 0, 0)
         resetButton:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8x8",
             edgeFile = "Interface\\Buttons\\WHITE8x8",
             edgeSize = 1,
         })
-        resetButton:SetBackdropColor(0.06, 0.06, 0.08, 1)
-        resetButton:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+        resetButton:SetBackdropColor(input[1], input[2], input[3], input[4] or 1)
+        resetButton:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
 
         local resetText = resetButton:CreateFontString(nil, "OVERLAY")
-        resetText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+        resetText:SetFont(fontPath, 9, "")
         resetText:SetPoint("CENTER")
         resetText:SetTextColor(0.85, 0.85, 0.85)
         resetText:SetText("RESET")
@@ -237,7 +259,7 @@ function MMF_CreateMinimalSlider(parent, label, x, y, width, settingKey, minVal,
             end
         end)
         resetButton:SetScript("OnLeave", function(self)
-            self:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+            self:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
             if self.text then
                 self.text:SetTextColor(0.85, 0.85, 0.85)
             end

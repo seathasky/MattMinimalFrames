@@ -15,28 +15,40 @@ end
 
 function MMF_CreateMinimalCheckbox(parent, label, x, y, settingKey, defaultVal, onChange, resetConfig)
     local accent = GetAccentColor()
+    local theme = (MMF_GetPopupTheme and MMF_GetPopupTheme()) or {}
+    local fontPath = theme.font or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
+    local rowHeight = theme.rowHeight or 26
+    local controlHeight = theme.controlHeight or 22
+    local input = theme.input or { 0.025, 0.032, 0.042, 1 }
+    local borderColor = theme.border or { 0.145, 0.175, 0.205, 1 }
+    local textColor = theme.text or { 0.92, 0.94, 0.96, 1 }
     local defaults = type(MattMinimalFrames_Defaults) == "table" and MattMinimalFrames_Defaults or nil
     local customReset = type(resetConfig) == "table" and resetConfig or nil
     local hasDefault = (type(settingKey) == "string" and defaults and defaults[settingKey] ~= nil)
         or (customReset and (type(customReset.onReset) == "function" or type(customReset.isDefault) == "function"))
-    local resetWidth = hasDefault and 52 or 0
+    local resetWidth = hasDefault and (theme.resetWidth or 52) or 0
 
     local container = CreateFrame("Frame", nil, parent)
-    container:SetSize(hasDefault and 256 or 200, 20)
+    container:SetSize(hasDefault and 256 or 200, rowHeight)
     container:SetPoint("TOPLEFT", x, y)
 
+    local rowHighlight = container:CreateTexture(nil, "BACKGROUND")
+    rowHighlight:SetAllPoints()
+    rowHighlight:SetColorTexture(accent[1], accent[2], accent[3], 0.055)
+    rowHighlight:SetAlpha(0)
+
     local cb = CreateFrame("CheckButton", nil, container)
-    cb:SetSize(14, 14)
+    cb:SetSize(16, 16)
     cb:SetPoint("LEFT", 0, 0)
 
     local bg = cb:CreateTexture(nil, "BACKGROUND")
     bg:SetAllPoints()
-    bg:SetColorTexture(0.08, 0.08, 0.1, 1)
+    bg:SetColorTexture(input[1], input[2], input[3], input[4] or 1)
 
     local border = cb:CreateTexture(nil, "BORDER")
     border:SetPoint("TOPLEFT", -1, 1)
     border:SetPoint("BOTTOMRIGHT", 1, -1)
-    border:SetColorTexture(0.25, 0.25, 0.3, 1)
+    border:SetColorTexture(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
 
     local check = cb:CreateTexture(nil, "ARTWORK")
     check:SetSize(8, 8)
@@ -59,30 +71,30 @@ function MMF_CreateMinimalCheckbox(parent, label, x, y, settingKey, defaultVal, 
     end)
 
     local text = container:CreateFontString(nil, "OVERLAY")
-    text:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
-    text:SetPoint("LEFT", cb, "RIGHT", 6, 0)
-    text:SetTextColor(0.9, 0.9, 0.9)
+    text:SetFont(fontPath, 11, "")
+    text:SetPoint("LEFT", cb, "RIGHT", 8, 0)
+    text:SetTextColor(textColor[1], textColor[2], textColor[3])
     text:SetText(label)
     if hasDefault then
-        text:SetWidth(container:GetWidth() - (cb:GetWidth() + 6 + resetWidth + 8))
+        text:SetWidth(container:GetWidth() - (cb:GetWidth() + 8 + resetWidth + 8))
         text:SetJustifyH("LEFT")
     end
 
     local resetButton
     if hasDefault then
         resetButton = CreateFrame("Button", nil, container, "BackdropTemplate")
-        resetButton:SetSize(resetWidth, 18)
+        resetButton:SetSize(resetWidth, controlHeight)
         resetButton:SetPoint("RIGHT", 0, 0)
         resetButton:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8x8",
             edgeFile = "Interface\\Buttons\\WHITE8x8",
             edgeSize = 1,
         })
-        resetButton:SetBackdropColor(0.06, 0.06, 0.08, 1)
-        resetButton:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+        resetButton:SetBackdropColor(input[1], input[2], input[3], input[4] or 1)
+        resetButton:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
 
         local resetText = resetButton:CreateFontString(nil, "OVERLAY")
-        resetText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
+        resetText:SetFont(fontPath, 9, "")
         resetText:SetPoint("CENTER")
         resetText:SetTextColor(0.85, 0.85, 0.85)
         resetText:SetText("RESET")
@@ -119,6 +131,24 @@ function MMF_CreateMinimalCheckbox(parent, label, x, y, settingKey, defaultVal, 
     container.resetButton = resetButton
     container.RefreshResetVisibility = RefreshResetVisibility
 
+    -- Make the whole label row an obvious, forgiving click target while
+    -- leaving the reset action independent.
+    local labelButton = CreateFrame("Button", nil, container)
+    labelButton:SetPoint("TOPLEFT", 0, 0)
+    labelButton:SetPoint("BOTTOMRIGHT", hasDefault and -(resetWidth + 6) or 0, 0)
+    labelButton:SetScript("OnEnter", function()
+        rowHighlight:SetAlpha(1)
+        border:SetColorTexture(accent[1], accent[2], accent[3], 0.75)
+    end)
+    labelButton:SetScript("OnLeave", function()
+        rowHighlight:SetAlpha(0)
+        border:SetColorTexture(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
+    end)
+    labelButton:SetScript("OnClick", function()
+        cb:Click()
+    end)
+    container.labelButton = labelButton
+
     if resetButton then
         resetButton:SetScript("OnEnter", function(self)
             self:SetBackdropBorderColor(accent[1], accent[2], accent[3], 0.6)
@@ -127,7 +157,7 @@ function MMF_CreateMinimalCheckbox(parent, label, x, y, settingKey, defaultVal, 
             end
         end)
         resetButton:SetScript("OnLeave", function(self)
-            self:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+            self:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
             if self.text then
                 self.text:SetTextColor(0.85, 0.85, 0.85)
             end

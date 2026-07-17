@@ -224,6 +224,22 @@ function MMF.GetSpecialization()
     return nil
 end
 
+function MMF.GetAccessibleUnitToken(unit)
+    if issecretvalue and issecretvalue(unit) then
+        return nil
+    end
+    if canaccessvalue and not canaccessvalue(unit) then
+        return nil
+    end
+    if unit == nil then
+        return nil
+    end
+    if type(unit) ~= "string" or unit == "" then
+        return nil
+    end
+    return unit
+end
+
 --------------------------------------------------
 -- RANGE CHECK SPELL TABLES
 --------------------------------------------------
@@ -284,7 +300,10 @@ MMF.HarmSpells = MMF.IsClassicEra and MMF.HarmSpells_TBC or MMF.HarmSpells_Retai
 -- AURA API COMPATIBILITY
 --------------------------------------------------
 
-MMF.HasRetailAuraAPI = (C_UnitAuras ~= nil) and not MMF.IsTBC
+-- Classic Era also exposes parts of C_UnitAuras, but its AuraUtil callback
+-- shape is still the Classic one.  Treating API presence as a Retail signal
+-- sends Era through the packed-aura path and produces empty aura lists.
+MMF.HasRetailAuraAPI = MMF.IsRetail and (C_UnitAuras ~= nil)
 
 local function IsSecretValue(value)
     return issecretvalue and issecretvalue(value)
@@ -471,7 +490,9 @@ end
 --------------------------------------------------
 
 MMF.HasDeathKnight = MMF.IsRetail
-MMF.HasFocusFrame = true
+-- Vanilla Classic has no native focus unit. Do not expose controls or create a
+-- secure unit frame that can never acquire a unit on Era.
+MMF.HasFocusFrame = not MMF.IsClassic
 MMF.HasSpecialization = MMF.IsRetail
 
 --------------------------------------------------

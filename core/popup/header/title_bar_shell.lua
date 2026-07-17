@@ -5,6 +5,12 @@ function MMF_CreatePopupHeaderTitleBarShell(config)
     local popupWidth = config.popupWidth
     local popupLayout = config.popupLayout or {}
     local accentColor = config.accentColor or { 0.6, 0.4, 0.9 }
+    local theme = (MMF_GetPopupTheme and MMF_GetPopupTheme()) or {}
+    local fontPath = theme.font or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
+    local surfaceRaised = theme.surfaceRaised or { 0.060, 0.075, 0.090, 0.98 }
+    local input = theme.input or { 0.025, 0.032, 0.042, 1 }
+    local border = theme.border or { 0.145, 0.175, 0.205, 1 }
+    local textMuted = theme.textMuted or { 0.62, 0.67, 0.72, 1 }
     local titleWallpaperAlpha = config.titleWallpaperAlpha or 0.03
     local setAspectCropTexCoords = config.setAspectCropTexCoords or MMF_SetAspectCropTexCoords
     local headerBranding = config.headerBranding or {}
@@ -15,7 +21,7 @@ function MMF_CreatePopupHeaderTitleBarShell(config)
 
     local titleBg = titleBar:CreateTexture(nil, "BACKGROUND")
     titleBg:SetAllPoints()
-    titleBg:SetColorTexture(0.07, 0.09, 0.11, 1)
+    titleBg:SetColorTexture(surfaceRaised[1], surfaceRaised[2], surfaceRaised[3], 1)
 
     local titleWallpaper = titleBar:CreateTexture(nil, "ARTWORK")
     titleWallpaper:SetPoint("TOPLEFT", 1, -1)
@@ -40,12 +46,12 @@ function MMF_CreatePopupHeaderTitleBarShell(config)
     titleGlow:SetColorTexture(accentColor[1], accentColor[2], accentColor[3], 0.95)
 
     local title = titleBar:CreateFontString(nil, "OVERLAY")
-    title:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
+    title:SetFont(fontPath, 12, "")
     title:SetPoint("LEFT", 16, 1)
     title:SetText(headerBranding.titleText or "")
 
     local versionSuffix = titleBar:CreateFontString(nil, "OVERLAY")
-    versionSuffix:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 8, "")
+    versionSuffix:SetFont(fontPath, 8, "")
     versionSuffix:SetPoint("LEFT", title, "RIGHT", 4, 2)
     versionSuffix:SetText(headerBranding.suffixText or "")
     local suffixColor = headerBranding.suffixColor or { 0.6, 0.4, 0.9 }
@@ -63,20 +69,20 @@ function MMF_CreatePopupHeaderTitleBarShell(config)
         edgeFile = "Interface\\Buttons\\WHITE8x8",
         edgeSize = 1,
     })
-    closeX:SetBackdropColor(0.06, 0.08, 0.1, 0.96)
-    closeX:SetBackdropBorderColor(0.18, 0.22, 0.25, 1)
+    closeX:SetBackdropColor(input[1], input[2], input[3], input[4] or 1)
+    closeX:SetBackdropBorderColor(border[1], border[2], border[3], border[4] or 1)
     local closeText = closeX:CreateFontString(nil, "OVERLAY")
-    closeText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
+    closeText:SetFont(fontPath, 9, "")
     closeText:SetPoint("CENTER")
-    closeText:SetText("×")
-    closeText:SetTextColor(0.5, 0.5, 0.5)
+    closeText:SetText("X")
+    closeText:SetTextColor(textMuted[1], textMuted[2], textMuted[3])
     closeX:SetScript("OnEnter", function()
         closeX:SetBackdropBorderColor(accentColor[1], accentColor[2], accentColor[3], 0.8)
         closeText:SetTextColor(1, 0.3, 0.3)
     end)
     closeX:SetScript("OnLeave", function()
-        closeX:SetBackdropBorderColor(0.18, 0.22, 0.25, 1)
-        closeText:SetTextColor(0.5, 0.5, 0.5)
+        closeX:SetBackdropBorderColor(border[1], border[2], border[3], border[4] or 1)
+        closeText:SetTextColor(textMuted[1], textMuted[2], textMuted[3])
     end)
     closeX:SetScript("OnClick", function() popup:Hide() end)
 

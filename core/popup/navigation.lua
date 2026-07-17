@@ -11,6 +11,14 @@ function MMF_CreatePopupNavigationController(config)
     local pageScrollFrame = config.pageScrollFrame
     local sharedScrollBar = config.sharedScrollBar
     local accentColor = config.accentColor or { 0.6, 0.4, 0.9 }
+    local theme = (MMF_GetPopupTheme and MMF_GetPopupTheme()) or {}
+    local fontPath = theme.font or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
+    local surface = theme.surface or { 0.045, 0.055, 0.068, 0.98 }
+    local surfaceRaised = theme.surfaceRaised or { 0.060, 0.075, 0.090, 0.98 }
+    local surfaceHover = theme.surfaceHover or { 0.080, 0.100, 0.118, 1 }
+    local border = theme.border or { 0.145, 0.175, 0.205, 1 }
+    local text = theme.text or { 0.92, 0.94, 0.96, 1 }
+    local textMuted = theme.textMuted or { 0.62, 0.67, 0.72, 1 }
     local popupLayout = config.popupLayout or {}
     local sidebarWidth = config.sidebarWidth or 180
     local closableLists = config.closableLists or {}
@@ -24,7 +32,7 @@ function MMF_CreatePopupNavigationController(config)
 
     local function LayoutTabButtons()
         local tabSpacing = popupLayout.tabSpacing
-        local buttonHeight = 42
+        local buttonHeight = popupLayout.tabHeight or 42
         local tabY = 0
 
         for _, tabButton in ipairs(tabButtons) do
@@ -38,16 +46,16 @@ function MMF_CreatePopupNavigationController(config)
     local function SetTabButtonState(tabButton, isActive)
         tabButton.isActive = isActive
         if isActive then
-            tabButton:SetBackdropColor(0.06, 0.10, 0.12, 0.78)
-            tabButton:SetBackdropBorderColor(0.16, 0.22, 0.24, 1)
-            tabButton.text:SetTextColor(1, 1, 1)
-            tabButton.activeLine:SetAlpha(1)
-            tabButton.glow:SetAlpha(0.16)
+            tabButton:SetBackdropColor(surfaceRaised[1], surfaceRaised[2], surfaceRaised[3], 1)
+            tabButton:SetBackdropBorderColor(accentColor[1], accentColor[2], accentColor[3], 0.55)
+            tabButton.text:SetTextColor(text[1], text[2], text[3])
+            tabButton.activeLine:SetAlpha(0)
+            tabButton.glow:SetAlpha(0.10)
             tabButton.activeRail:SetAlpha(1)
         else
-            tabButton:SetBackdropColor(0.03, 0.04, 0.05, 0.70)
-            tabButton:SetBackdropBorderColor(0.12, 0.14, 0.16, 1)
-            tabButton.text:SetTextColor(0.68, 0.72, 0.76)
+            tabButton:SetBackdropColor(surface[1], surface[2], surface[3], 0.78)
+            tabButton:SetBackdropBorderColor(border[1], border[2], border[3], 0.72)
+            tabButton.text:SetTextColor(textMuted[1], textMuted[2], textMuted[3])
             tabButton.activeLine:SetAlpha(0)
             tabButton.glow:SetAlpha(0)
             tabButton.activeRail:SetAlpha(0)
@@ -60,6 +68,7 @@ function MMF_CreatePopupNavigationController(config)
             ["Auras / Power"] = "Aura behavior, power options, and related display settings.",
             ["Party / Raid"] = "Blizzard party and raid frame options.",
             ["TBC Features"] = "TBC-specific gameplay feature toggles.",
+            ["ERA Features"] = "Classic Era-specific gameplay feature toggles.",
             ["Current Class"] = "Class-specific resources and active spec customization.",
             ["Profiles"] = "Manage, copy, and delete settings profiles.",
             ["Tools"] = "Utility settings and addon-wide helper tools.",
@@ -107,8 +116,8 @@ function MMF_CreatePopupNavigationController(config)
             edgeFile = "Interface\\Buttons\\WHITE8x8",
             edgeSize = 1,
         })
-        tabButton:SetBackdropColor(0.04, 0.05, 0.06, 0.96)
-        tabButton:SetBackdropBorderColor(0.12, 0.14, 0.16, 1)
+        tabButton:SetBackdropColor(surface[1], surface[2], surface[3], 0.96)
+        tabButton:SetBackdropBorderColor(border[1], border[2], border[3], border[4] or 1)
 
         local tabGlow = tabButton:CreateTexture(nil, "BACKGROUND")
         tabGlow:SetPoint("TOPLEFT", -2, -2)
@@ -134,23 +143,26 @@ function MMF_CreatePopupNavigationController(config)
         tabButton.activeLine = tabActiveLine
 
         local tabButtonText = tabButton:CreateFontString(nil, "OVERLAY")
-        tabButtonText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
+        tabButtonText:SetFont(fontPath, 11, "")
         tabButtonText:SetPoint("LEFT", 16, 1)
+        tabButtonText:SetPoint("RIGHT", -12, 1)
         tabButtonText:SetJustifyH("LEFT")
         tabButtonText:SetText(def.label)
         tabButton.text = tabButtonText
 
         tabButton:SetScript("OnEnter", function(self)
             if not self.isActive then
+                self:SetBackdropColor(surfaceHover[1], surfaceHover[2], surfaceHover[3], surfaceHover[4] or 1)
                 self:SetBackdropBorderColor(accentColor[1], accentColor[2], accentColor[3], 0.4)
-                self.text:SetTextColor(0.9, 0.93, 0.95)
-                self.activeLine:SetAlpha(0.45)
+                self.text:SetTextColor(text[1], text[2], text[3])
+                self.activeLine:SetAlpha(0.35)
             end
         end)
         tabButton:SetScript("OnLeave", function(self)
             if not self.isActive then
-                self:SetBackdropBorderColor(0.12, 0.14, 0.16, 1)
-                self.text:SetTextColor(0.68, 0.72, 0.76)
+                self:SetBackdropColor(surface[1], surface[2], surface[3], 0.78)
+                self:SetBackdropBorderColor(border[1], border[2], border[3], 0.72)
+                self.text:SetTextColor(textMuted[1], textMuted[2], textMuted[3])
                 self.activeLine:SetAlpha(0)
             end
         end)

@@ -7,6 +7,7 @@ function MMF_BuildUnitFramesIconsSection(ctx)
     local NormalizeSelectionValue = ctx.normalizeSelectionValue
     local GetCurrentPlayerIconModeValue = ctx.getCurrentPlayerIconModeValue
     local GetCurrentTargetIconModeValue = ctx.getCurrentTargetIconModeValue
+    local Compat = _G.MMF_Compat or {}
 
     local RIGHT_COL_X = ctx.rightColX
     local RIGHT_COL_WIDTH = ctx.rightColWidth
@@ -562,11 +563,13 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         UpdateIconAnimationControlsEnabledState()
     end)
 
-    rightSection.animatedRestingIconCheck = CreateMinimalCheckbox(unitFramesCol, "Animated Resting Icon", RIGHT_COL_X, (-762 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "animatedRestingIcon", true, function(checked)
-        if MMF_UpdateAnimatedRestingIconSetting then
-            MMF_UpdateAnimatedRestingIconSetting(checked)
-        end
-    end)
+    if Compat.IsRetail then
+        rightSection.animatedRestingIconCheck = CreateMinimalCheckbox(unitFramesCol, "Animated Resting Icon", RIGHT_COL_X, (-762 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "animatedRestingIcon", true, function(checked)
+            if MMF_UpdateAnimatedRestingIconSetting then
+                MMF_UpdateAnimatedRestingIconSetting(checked)
+            end
+        end)
+    end
 
     rightSection.hideCombatIconCheck = CreateMinimalCheckbox(unitFramesCol, "Hide Combat Icon", RIGHT_COL_X, (-786 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "hideCombatIcon", false, function(checked)
         if MMF_UpdateHideCombatIconSetting then

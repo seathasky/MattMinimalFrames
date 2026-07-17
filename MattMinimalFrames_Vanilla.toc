@@ -1,10 +1,11 @@
-## Interface: 120007
+## Interface: 11508
 ## Title: Matt's Minimal Frames
 ## Author: Seathasky
 ## Version: 8.0.0
 ## X-Curse-Project-ID: 1362998
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
 ## SavedVariables: MattMinimalFramesDB, MattMinimalFramesProfilesDB, MattMinimalFramesGlobalDB
+## Notes: Minimal unit frames for Classic Era
 
 # Libraries
 Libs\LibStub\LibStub.lua
@@ -84,6 +85,7 @@ core/popup/unit_frames_tabs/overlays.lua
 # Popup: page builders
 core/popup/unit_frames/unit_frames_page.lua
 core/popup/party_raid/party_raid_page.lua
+core/popup/era/era_page.lua
 core/popup/tools/reset.lua
 core/popup/tools/tools_page.lua
 core/popup/profiles/profiles_page.lua
@@ -123,12 +125,12 @@ core/popup/popup.lua
 # Other feature modules
 core/modules/minimap.lua
 core/modules/changelog.lua
-core/frames/clique_support.lua
 
 # Entrypoint + runtime feature modules
 init.lua
 core/frames/range_check.lua
 core/frames/class_resources.lua
+core/frames/clique_support.lua
 
 # Optional Debug Modules
 # debug.lua

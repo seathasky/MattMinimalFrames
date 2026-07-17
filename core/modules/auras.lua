@@ -761,15 +761,47 @@ local function SetBlizzardAuraFrameVisible(frame, visible)
     end
 
     if visible then
-        frame:SetAlpha(1)
-        frame:SetScale(1)
-        frame:EnableMouse(true)
+        -- Do not overwrite Blizzard's normal alpha/scale just because MMF's
+        -- hide option is disabled. Era's aura layout owns these values, and
+        -- forcing scale 1 can leave the frame clipped beyond the screen edge.
+        if frame.mmfAuraVisibilitySuppressed then
+            frame:SetAlpha(frame.mmfAuraOriginalAlpha or 1)
+            frame:SetScale(frame.mmfAuraOriginalScale or 1)
+            frame:EnableMouse(frame.mmfAuraOriginalMouseEnabled ~= false)
+            frame.mmfAuraVisibilitySuppressed = nil
+        end
         frame:Show()
     else
+        if not frame.mmfAuraVisibilitySuppressed then
+            frame.mmfAuraOriginalAlpha = frame:GetAlpha()
+            frame.mmfAuraOriginalScale = frame:GetScale()
+            frame.mmfAuraOriginalMouseEnabled = frame:IsMouseEnabled()
+            frame.mmfAuraVisibilitySuppressed = true
+        end
         frame:SetAlpha(0)
         frame:SetScale(0.0001)
         frame:EnableMouse(false)
         frame:Show()
+    end
+end
+
+local function EnsureEraBlizzardAuraVisibilityHook(frame, dbKey)
+    -- Era's current Blizzard aura frames can change their own shown state after
+    -- MMF applies the checkbox setting. Reapply only on Era; Retail and TBC keep
+    -- their existing behavior.
+    if not Compat.IsClassic or not frame or frame.mmfEraVisibilityHooked then
+        return
+    end
+    if type(hooksecurefunc) ~= "function" or type(frame.UpdateShownState) ~= "function" then
+        return
+    end
+
+    local ok = pcall(hooksecurefunc, frame, "UpdateShownState", function(self)
+        local db = MattMinimalFramesDB or {}
+        SetBlizzardAuraFrameVisible(self, db[dbKey] ~= true)
+    end)
+    if ok then
+        frame.mmfEraVisibilityHooked = true
     end
 end
 
@@ -778,9 +810,39 @@ function MMF_UpdateBlizzardPlayerAuraVisibility()
     local hideBuffs = (db.hideBlizzardPlayerBuffs == true)
     local hideDebuffs = (db.hideBlizzardPlayerDebuffs == true)
 
+    EnsureEraBlizzardAuraVisibilityHook(_G.BuffFrame, "hideBlizzardPlayerBuffs")
+    EnsureEraBlizzardAuraVisibilityHook(_G.DebuffFrame, "hideBlizzardPlayerDebuffs")
+
     SetBlizzardAuraFrameVisible(_G.BuffFrame, not hideBuffs)
     SetBlizzardAuraFrameVisible(_G.TemporaryEnchantFrame, not hideBuffs)
     SetBlizzardAuraFrameVisible(_G.DebuffFrame, not hideDebuffs)
+
+    -- Showing an Era aura frame does not necessarily repopulate its buttons.
+    -- Blizzard normally does that from UpdateShownState, so refresh explicitly
+    -- when MMF's setting says the frame should be visible.
+    if Compat.IsClassic then
+        -- Era 1.15.x may use the legacy global refresh rather than exposing an
+        -- Update method on BuffFrame. This is the same population pass normally
+        -- reached by the first UNIT_AURA event after casting a buff.
+        if (not hideBuffs or not hideDebuffs) and type(_G.BuffFrame_Update) == "function" then
+            pcall(_G.BuffFrame_Update)
+        end
+        if not hideBuffs and _G.BuffFrame and type(_G.BuffFrame.Update) == "function" then
+            pcall(_G.BuffFrame.Update, _G.BuffFrame)
+            if type(_G.BuffFrame.UpdateGridLayout) == "function" then
+                pcall(_G.BuffFrame.UpdateGridLayout, _G.BuffFrame)
+            end
+        end
+        if not hideDebuffs and _G.DebuffFrame and type(_G.DebuffFrame.Update) == "function" then
+            pcall(_G.DebuffFrame.Update, _G.DebuffFrame)
+            if type(_G.DebuffFrame.UpdateGridLayout) == "function" then
+                pcall(_G.DebuffFrame.UpdateGridLayout, _G.DebuffFrame)
+            end
+        end
+        if not hideDebuffs and type(_G.DebuffFrame_Update) == "function" then
+            pcall(_G.DebuffFrame_Update)
+        end
+    end
 
     if type(BuffFrame_UpdateAllBuffAnchors) == "function" then
         pcall(BuffFrame_UpdateAllBuffAnchors)
@@ -1735,6 +1797,7 @@ end
 
 local pendingAuraResync = {}
 local pendingTargetRefreshBurst = false
+local pendingEraPlayerAuraRefreshBurst = false
 
 local function QueueTargetRefreshBurst()
     if pendingTargetRefreshBurst then
@@ -1761,6 +1824,37 @@ local function QueueTargetRefreshBurst()
         end
     end
 
+    C_Timer.After(0.02, RunPass)
+end
+
+local function QueueEraPlayerAuraRefreshBurst()
+    if not Compat.IsClassic or pendingEraPlayerAuraRefreshBurst then
+        return
+    end
+    if not C_Timer or type(C_Timer.After) ~= "function" then
+        return
+    end
+
+    pendingEraPlayerAuraRefreshBurst = true
+    local attempts = 0
+
+    local function RunPass()
+        attempts = attempts + 1
+        MMF_UpdateBlizzardPlayerAuraVisibility()
+        MMF_UpdatePlayerAuras()
+
+        if attempts < 6 then
+            -- Era finishes its aura/edit-mode positioning asynchronously. Give
+            -- later passes enough time to run after that layout has settled.
+            C_Timer.After(0.15 * attempts, RunPass)
+        else
+            pendingEraPlayerAuraRefreshBurst = false
+        end
+    end
+
+    -- PLAYER_ENTERING_WORLD can fire before Era's Blizzard aura frames have
+    -- completed their first population pass. Retry briefly so existing auras
+    -- appear without waiting for the next UNIT_AURA event.
     C_Timer.After(0.02, RunPass)
 end
 
@@ -1838,6 +1932,9 @@ auraEventFrame:SetScript("OnUpdate", function(self, elapsed)
     end
 end)
 auraEventFrame:SetScript("OnEvent", function(self, event, unit)
+    if Compat and Compat.GetAccessibleUnitToken then
+        unit = Compat.GetAccessibleUnitToken(unit)
+    end
     if ShouldSuspendForBlizzardEditMode() then
         return
     end
@@ -1847,6 +1944,7 @@ auraEventFrame:SetScript("OnEvent", function(self, event, unit)
         MMF_UpdateTargetAuras()
         MMF_UpdatePlayerAuras()
         MMF_UpdateFocusAuras()
+        QueueEraPlayerAuraRefreshBurst()
         if MMF_UpdateDispelHighlights then
             MMF_UpdateDispelHighlights()
         end

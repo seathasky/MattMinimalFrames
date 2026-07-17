@@ -77,8 +77,83 @@ local function NormalizeLegacyTextEffectsSetting(db)
     end
 end
 
+local function NormalizeLegacyHPTextPosition(db)
+    if type(db) ~= "table" then return end
+    if db.hpTextPositionMigrated then return end
+    db.hpTextPositionMigrated = true
+    -- Default Y shifted from -14.5 to 8 (inside the frame). Shift any saved positions by the same delta.
+    local delta = 22.5
+    local positions = db.hpTextPositions
+    if type(positions) == "table" then
+        for _, unit in ipairs({ "player", "target" }) do
+            local pos = positions[unit]
+            if type(pos) == "table" and type(pos.y) == "number" then
+                pos.y = pos.y + delta
+            end
+        end
+    end
+end
+
+local function NormalizeLegacyPowerBarDefaults(db)
+    if type(db) ~= "table" then return end
+    if not db.powerBarLayoutMigrated then
+        db.powerBarLayoutMigrated = true
+        db.showPlayerPowerBar = true
+        db.playerPowerBarWidth = 218
+        db.playerPowerBarHeight = 3
+        db.showPlayerPowerText = true
+        db.colorPlayerPowerTextByResource = true
+        -- Reset saved bar/text positions so they pick up the new attached-bottom defaults
+        if type(db.powerBarPositions) == "table" then
+            db.powerBarPositions["player"] = nil
+        end
+        if type(db.powerTextPositions) == "table" then
+            db.powerTextPositions["player"] = nil
+        end
+    end
+
+    if not db.targetPowerBarLayoutMigrated then
+        db.targetPowerBarLayoutMigrated = true
+        db.showTargetPowerBar = true
+        db.targetPowerBarWidth = 218
+        db.targetPowerBarHeight = 3
+        -- Reset the old short bar position so target uses the attached-bottom default.
+        if type(db.powerBarPositions) == "table" then
+            db.powerBarPositions["target"] = nil
+        end
+    end
+
+    if not db.targetPowerTextDefaultsMigrated then
+        db.targetPowerTextDefaultsMigrated = true
+        db.showTargetPowerText = true
+        db.colorTargetPowerTextByResource = true
+    end
+
+    if not db.targetPowerTextPositionMigrated then
+        db.targetPowerTextPositionMigrated = true
+        if type(db.powerTextPositions) == "table" then
+            db.powerTextPositions["target"] = nil
+        end
+        local targetScale = tonumber(db.targetPowerTextScale)
+        if targetScale == nil or math.abs(targetScale - 1.0) < 0.0001 then
+            db.targetPowerTextScale = 0.77
+        end
+    end
+end
+
 _G.MMF_Startup_ApplyDefaultsSafe = ApplyDefaultsSafe
 _G.MMF_Startup_NormalizeLegacyIconModes = NormalizeLegacyIconModes
 _G.MMF_Startup_NormalizeLegacyPartyRaidFontSetting = NormalizeLegacyPartyRaidFontSetting
 _G.MMF_Startup_NormalizeGUIScaleSetting = NormalizeGUIScaleSetting
 _G.MMF_Startup_NormalizeLegacyTextEffectsSetting = NormalizeLegacyTextEffectsSetting
+_G.MMF_Startup_NormalizeLegacyHPTextPosition = NormalizeLegacyHPTextPosition
+local function NormalizeLegacyTextSizes(db)
+    if type(db) ~= "table" then return end
+    if db.textSizeMigratedV1 then return end
+    db.textSizeMigratedV1 = true
+    db.hpTextSize = 10
+    db.playerPowerTextScale = 0.77
+end
+
+_G.MMF_Startup_NormalizeLegacyPowerBarDefaults = NormalizeLegacyPowerBarDefaults
+_G.MMF_Startup_NormalizeLegacyTextSizes = NormalizeLegacyTextSizes

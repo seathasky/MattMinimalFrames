@@ -1174,7 +1174,8 @@ function MMF_UpdateBlizzardSoloPartyFrameVisibility()
         pcall(_G.CompactPartyFrame.TryUpdate, _G.CompactPartyFrame)
     end
 
-    if _G.CompactPartyFrame and (not soloPartyVisibilityHookInstalled) and type(hooksecurefunc) == "function" then
+    if _G.CompactPartyFrame and (not soloPartyVisibilityHookInstalled) and type(hooksecurefunc) == "function"
+        and type(_G.CompactPartyFrame.UpdateVisibility) == "function" then
         hooksecurefunc(_G.CompactPartyFrame, "UpdateVisibility", function()
             ApplySoloPartyFrameOverrideFromDB()
         end)

@@ -45,12 +45,13 @@ end
 
 local function UpdateBlizzardPlayerCastBarVisibility()
     local shouldHide = MattMinimalFramesDB and MattMinimalFramesDB.hideBlizzardPlayerCastBar == true
-    local frames = {
+    local candidates = {
         _G.PlayerCastingBarFrame,
         _G.CastingBarFrame,
+        _G.PlayerFrame and _G.PlayerFrame.castBar or nil,
     }
 
-    for _, frame in ipairs(frames) do
+    for _, frame in pairs(candidates) do
         if frame then
             if not frame.mmfHideBlizzardCastBarHooked then
                 frame:HookScript("OnShow", function(self)

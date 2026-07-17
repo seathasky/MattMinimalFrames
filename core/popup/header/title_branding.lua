@@ -10,6 +10,14 @@ function MMF_GetPopupHeaderBranding(config)
         }
     end
 
+    if compat.IsClassic then
+        return {
+            titleText = "|cffffffffMatt's Minimal Frames ",
+            suffixText = "ERA EDITION",
+            suffixColor = { 0.9, 0.7, 0.2 },
+        }
+    end
+
     return {
         titleText = "|cffffffffMatt's Minimal Frames ",
         suffixText = "MIDNIGHT EDITION",

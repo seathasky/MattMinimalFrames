@@ -16,6 +16,7 @@ local UnitHealth = UnitHealth
 local UnitHealthPercent = UnitHealthPercent
 local UnitName = UnitName
 local UnitClass = UnitClass
+local UnitClassification = UnitClassification
 local UnitIsPlayer = UnitIsPlayer
 local UnitIsEnemy = UnitIsEnemy
 local UnitPowerType = UnitPowerType
@@ -93,6 +94,12 @@ local function ResolvePowerColor(unit, powerType, powerToken, db)
             ClampColorChannel(db[prefix .. "ManaBarColorB"], 1.0),
             ClampColorChannel(db[prefix .. "ManaBarColorA"], 1.0)
     end
+    -- WoW's stock Insanity purple is difficult to distinguish on very short
+    -- stacked bars. Keep overrides above authoritative, but use a vivid
+    -- magenta as the readable default.
+    if powerToken == "INSANITY" then
+        return 1.0, 0.0, 0.72, 1.0
+    end
     if powerColor then
         return powerColor.r or 1, powerColor.g or 1, powerColor.b or 1, 1
     end
@@ -120,6 +127,12 @@ local function ResolvePowerBGColor(unit, powerType, powerToken, db)
             ClampColorChannel(db[prefix .. "ManaBarBGColorG"], 0.0),
             ClampColorChannel(db[prefix .. "ManaBarBGColorB"], 0.0),
             ClampColorChannel(db[prefix .. "ManaBarBGColorA"], 0.25)
+    end
+
+    -- An empty Insanity bar should be neutral rather than looking partially
+    -- filled; only the status-bar value receives the neon magenta color.
+    if powerToken == "INSANITY" then
+        return 0, 0, 0, 0.25
     end
 
     return 0, 0, 0, 0.25
@@ -812,6 +825,27 @@ local function GetLevelSuffixForUnit(unit, db)
     return " - " .. tostring(level)
 end
 
+local TARGET_CLASSIFICATION_SUFFIXES = {
+    rare = " |cffffd100[R]|r",
+    rareelite = " |cffff8c00[R+]|r",
+    elite = " |cffc0c0c0[E]|r",
+    worldboss = " |cffff4040[Boss]|r",
+}
+
+local function GetClassificationSuffixForUnit(unit, db)
+    if unit ~= "target" or (db and db.showTargetClassification == false) then
+        return ""
+    end
+    if not UnitClassification or not UnitExists(unit) then
+        return ""
+    end
+    local ok, classification = pcall(UnitClassification, unit)
+    if not ok or type(classification) ~= "string" then
+        return ""
+    end
+    return TARGET_CLASSIFICATION_SUFFIXES[classification] or ""
+end
+
 local function BuildNameTextWithLeaderIcon(unit, displayName, db)
     if displayName == nil then
         return ""
@@ -822,7 +856,7 @@ local function BuildNameTextWithLeaderIcon(unit, displayName, db)
     if issecretvalue and issecretvalue(displayName) then
         return displayName
     end
-    local suffix = GetLevelSuffixForUnit(unit, db)
+    local suffix = GetLevelSuffixForUnit(unit, db) .. GetClassificationSuffixForUnit(unit, db)
     if not ShouldShowLeaderIconForUnit(unit, db) then
         return displayName .. suffix
     end
@@ -930,13 +964,25 @@ local function ApplyHPTextFontSize(frame, size)
     size = tonumber(size) or 13
     if size < 6 then size = 6 end
     local rounded = math.floor(size + 0.5)
-    if frame.mmfAppliedHPFontSize == rounded then
-        return
-    end
     local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or cfg.FONT_PATH
     local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
+    local currentPath, currentSize, currentFlags
+    if frame.hpText.GetFont then
+        currentPath, currentSize, currentFlags = frame.hpText:GetFont()
+    end
+    local currentRounded = tonumber(currentSize) and math.floor(tonumber(currentSize) + 0.5) or nil
+    if frame.mmfAppliedHPFontSize == rounded
+        and currentRounded == rounded
+        and currentPath == fontPath
+        and (currentFlags or "") == (fontFlags or "")
+    then
+        return
+    end
     if TryApplyFont(frame.hpText, fontPath, rounded, fontFlags) then
         frame.mmfAppliedHPFontSize = rounded
+        if MMF_ApplyGlobalTextShadow then
+            MMF_ApplyGlobalTextShadow(frame.hpText)
+        end
     else
         frame.mmfAppliedHPFontSize = nil
     end
@@ -1867,8 +1913,8 @@ local function UpdateUnitFrame(frame)
         and unit == "targettarget"
         and not auraTestPreviewTarget
         and unitExistsNow then
-        local safeMaxForReadyCheck = tonumber(maxHP) or 0
-        local safeHPForReadyCheck = tonumber(hp) or 0
+        local safeMaxForReadyCheck = SafeAccessibleNumber(maxHP, nil)
+        local safeHPForReadyCheck = SafeAccessibleNumber(hp, nil)
         local isDead = false
         if type(UnitIsDeadOrGhost) == "function" then
             local okDead, deadResult = pcall(UnitIsDeadOrGhost, unit)
@@ -1877,7 +1923,10 @@ local function UpdateUnitFrame(frame)
             local okDead, deadResult = pcall(UnitIsDead, unit)
             isDead = okDead and deadResult == true
         end
-        if not isDead and (safeMaxForReadyCheck <= 0 or safeHPForReadyCheck <= 0) then
+        if not isDead
+            and type(safeMaxForReadyCheck) == "number"
+            and type(safeHPForReadyCheck) == "number"
+            and (safeMaxForReadyCheck <= 0 or safeHPForReadyCheck <= 0) then
             isPendingTargetOfTargetHealth = true
         end
     end
@@ -2024,7 +2073,7 @@ local function UpdateUnitFrame(frame)
             r, g, b = gr, gg, gb
         end
     end
-    if Compat and Compat.IsTBC
+    if Compat and Compat.IsClassicEra
         and (not MattMinimalFramesDB or MattMinimalFramesDB.showTBCTargetTapColor ~= false)
         and unit == "target"
         and not UnitPlayerControlled(unit)
@@ -2041,34 +2090,21 @@ local function UpdateUnitFrame(frame)
     if frame.powerBar and (unit == "player" or unit == "target") then
         local powerType, powerToken = UnitPowerType(unit)
 
-        local useManaPowerType = false
-        if unit == "player" then
-            if IS_PLAYER_DRUID and IsCheckedFlag(db.showDruidManaPowerText) then
-                useManaPowerType = true
-                powerType = 0
-                powerToken = "MANA"
-            elseif IS_PLAYER_SHAMAN and Compat.HasSpecialization then
-                local spec = Compat.GetSpecialization()
-                if SafeEq(spec, 1) or SafeEq(spec, 2) then
-                    useManaPowerType = true
-                    powerType = 0
-                    powerToken = "MANA"
-                end
-            end
+        -- Shaman class resources are displayed by the dedicated Current Class
+        -- bar. Keep the standard player-frame power display mana-only so the
+        -- same resource is not shown twice.
+        if unit == "player" and Compat and Compat.IsRetail and IS_PLAYER_SHAMAN then
+            powerType = 0
+            powerToken = "MANA"
         end
 
         local maxPower, power
-        if useManaPowerType then
-            maxPower = UnitPowerMax(unit, 0)
-            power = UnitPower(unit, 0)
+        if powerType ~= nil then
+            maxPower = UnitPowerMax(unit, powerType)
+            power = UnitPower(unit, powerType)
         else
-            if powerType ~= nil then
-                maxPower = UnitPowerMax(unit, powerType)
-                power = UnitPower(unit, powerType)
-            else
-                maxPower = UnitPowerMax(unit)
-                power = UnitPower(unit)
-            end
+            maxPower = UnitPowerMax(unit)
+            power = UnitPower(unit)
         end
         if previewMode and not UnitExists(unit) then
             maxPower = 100
@@ -2080,10 +2116,18 @@ local function UpdateUnitFrame(frame)
         else
             showPowerBar = (db.showTargetPowerBar ~= false)
         end
-        local hasPower = false
-        pcall(function()
-            hasPower = (maxPower and maxPower > 0) and true or false
-        end)
+        -- Unknown/secret Retail values should remain visible; only hide when
+        -- the client gives us a readable maximum of zero (or no maximum).
+        local hasPower = true
+        if NotSecretValue(maxPower) then
+            hasPower = false
+            pcall(function()
+                hasPower = (maxPower and maxPower > 0) and true or false
+            end)
+        end
+        if unit == "target" and not hasPower then
+            showPowerBar = false
+        end
 
         if showPowerBar then
             local barMaxPower = maxPower or 1
@@ -2100,11 +2144,74 @@ local function UpdateUnitFrame(frame)
             if frame.powerBarBorder then frame.powerBarBorder:Show() end
             frame.powerBarBG:Show()
             frame.powerBar:Show()
+
+            local showSecondaryMana = false
+            local manaMax, mana = 0, 0
+            if Compat and Compat.IsRetail and unit == "player" and frame.secondaryPowerBar
+                and not SafeEq(powerType, 0) and powerToken ~= "MANA" then
+                manaMax = UnitPowerMax(unit, 0) or 0
+                mana = UnitPower(unit, 0) or 0
+                showSecondaryMana = NotSecretValue(manaMax) and manaMax > 0
+            end
+
+            local configuredHeight
+            local configuredWidth
+            if unit == "player" then
+                configuredHeight = db.playerPowerBarHeight or db.powerBarHeight or cfg.POWER_BAR_HEIGHT or 3
+                configuredWidth = db.playerPowerBarWidth or db.powerBarWidth or cfg.POWER_BAR_WIDTH or 218
+            else
+                configuredHeight = db.targetPowerBarHeight or db.powerBarHeight or cfg.POWER_BAR_HEIGHT or 3
+                configuredWidth = db.targetPowerBarWidth or db.powerBarWidth or cfg.POWER_BAR_WIDTH or 218
+            end
+            if showSecondaryMana then
+                local gap = 1
+                local dualContentHeight = (configuredHeight * 2) + gap
+
+                -- Preserve the user's configured bar height for both resources.
+                -- Splitting the default five pixels made each resource too thin
+                -- to read, so the player container grows only while dual power is
+                -- active.
+                frame.powerBarFrame:SetSize(configuredWidth + 2, dualContentHeight + 2)
+
+                frame.powerBar:ClearAllPoints()
+                frame.powerBar:SetPoint("TOP", frame.powerBarBorder, "TOP", 0, -1)
+                frame.powerBar:SetSize(configuredWidth, configuredHeight)
+                frame.powerBarBG:ClearAllPoints()
+                frame.powerBarBG:SetPoint("TOP", frame.powerBarBorder, "TOP", 0, -1)
+                frame.powerBarBG:SetSize(configuredWidth, configuredHeight)
+
+                frame.secondaryPowerBar:ClearAllPoints()
+                frame.secondaryPowerBar:SetPoint("BOTTOM", frame.powerBarBorder, "BOTTOM", 0, 1)
+                frame.secondaryPowerBar:SetSize(configuredWidth, configuredHeight)
+                frame.secondaryPowerBarBG:ClearAllPoints()
+                frame.secondaryPowerBarBG:SetPoint("BOTTOM", frame.powerBarBorder, "BOTTOM", 0, 1)
+                frame.secondaryPowerBarBG:SetSize(configuredWidth, configuredHeight)
+                frame.secondaryPowerBar:SetMinMaxValues(0, manaMax)
+                frame.secondaryPowerBar:SetValue(mana)
+                local mr, mg, mb, ma = ResolvePowerColor(unit, 0, "MANA", db)
+                frame.secondaryPowerBar:SetStatusBarColor(mr, mg, mb, ma or 1)
+                local mbr, mbg, mbb, mba = ResolvePowerBGColor(unit, 0, "MANA", db)
+                frame.secondaryPowerBarBG:SetColorTexture(mbr, mbg, mbb, mba)
+                frame.secondaryPowerBarBG:Show()
+                frame.secondaryPowerBar:Show()
+            elseif frame.secondaryPowerBar then
+                frame.powerBarFrame:SetSize(configuredWidth + 2, configuredHeight + 2)
+                frame.powerBar:ClearAllPoints()
+                frame.powerBar:SetPoint("CENTER", frame.powerBarBorder, "CENTER", 0, 0)
+                frame.powerBar:SetSize(configuredWidth, configuredHeight)
+                frame.powerBarBG:ClearAllPoints()
+                frame.powerBarBG:SetPoint("CENTER", frame.powerBarBorder, "CENTER", 0, 0)
+                frame.powerBarBG:SetSize(configuredWidth, configuredHeight)
+                frame.secondaryPowerBar:Hide()
+                frame.secondaryPowerBarBG:Hide()
+            end
         else
             if frame.powerBarFrame then frame.powerBarFrame:Hide() end
             if frame.powerBarBorder then frame.powerBarBorder:Hide() end
             frame.powerBarBG:Hide()
             frame.powerBar:Hide()
+            if frame.secondaryPowerBar then frame.secondaryPowerBar:Hide() end
+            if frame.secondaryPowerBarBG then frame.secondaryPowerBarBG:Hide() end
         end
 
         if frame.powerText then
@@ -2128,6 +2235,9 @@ local function UpdateUnitFrame(frame)
             if anchorPowerEnabled then
                 -- Anchor mode overrides normal power text visibility/position.
                 showPowerText = true
+            end
+            if unit == "target" and not hasPower then
+                showPowerText = false
             end
 
             if showPowerText then
@@ -2219,6 +2329,13 @@ function MMF_SetPowerBarSize(width, height, unit)
             frame.powerBar:SetWidth(width)
             frame.powerBar:SetHeight(height)
             frame.powerBarFG:SetHeight(height)
+            if frame.secondaryPowerBar then
+                frame.secondaryPowerBar:SetWidth(width)
+                frame.secondaryPowerBar:SetHeight(height)
+                frame.secondaryPowerBarBG:SetWidth(width)
+                frame.secondaryPowerBarBG:SetHeight(height)
+                frame.secondaryPowerBarFG:SetHeight(height)
+            end
         end
     end
 

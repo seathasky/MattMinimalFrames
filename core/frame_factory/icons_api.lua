@@ -151,6 +151,9 @@ local function InitializeIconEvents()
     iconEventFrame:RegisterUnitEvent("UNIT_PORTRAIT_UPDATE", "target")
     iconEventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
     iconEventFrame:SetScript("OnEvent", function(_, _, unit)
+        if Compat and Compat.GetAccessibleUnitToken then
+            unit = Compat.GetAccessibleUnitToken(unit)
+        end
         if (not unit or unit == "player") and GetPlayerFrameIconMode() ~= "off" then
             UpdatePlayerClassIconVisibility(GetPlayerFrameIconMode())
         end

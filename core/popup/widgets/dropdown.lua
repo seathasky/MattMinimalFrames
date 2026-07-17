@@ -15,7 +15,14 @@ end
 
 function MMF_CreateMinimalDropdown(parent, popup, config)
     local accent = (config and config.accentColor) or GetAccentColor()
-    local fontPath = (config and config.fontPath) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
+    local theme = (MMF_GetPopupTheme and MMF_GetPopupTheme()) or {}
+    local fontPath = (config and config.fontPath) or theme.font or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
+    local widgetRowHeight = theme.rowHeight or 26
+    local controlHeight = theme.controlHeight or 22
+    local input = theme.input or { 0.025, 0.032, 0.042, 1 }
+    local borderColor = theme.border or { 0.145, 0.175, 0.205, 1 }
+    local textColor = theme.text or { 0.92, 0.94, 0.96, 1 }
+    local textMuted = theme.textMuted or { 0.62, 0.67, 0.72, 1 }
     local width = (config and config.width) or 300
     local labelWidth = (config and config.labelWidth) or 95
     local fullButtonWidth = (config and config.buttonWidth) or (width - labelWidth - 9)
@@ -23,13 +30,13 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
     local settingKey = config and config.settingKey
     local hasDefault = type(settingKey) == "string" and defaults and defaults[settingKey] ~= nil
     local hasReset = hasDefault and (config and config.enableReset == true)
-    local resetWidth = hasReset and 52 or 0
+    local resetWidth = hasReset and (theme.resetWidth or 52) or 0
     local resetGap = hasReset and 4 or 0
     local buttonWidth = hasReset and math.max(70, fullButtonWidth - resetWidth - resetGap) or fullButtonWidth
     local buttonOffset = (config and config.buttonOffset) or (labelWidth + 9)
     local visibleRows = math.max(1, (config and config.visibleRows) or 8)
     local placeholderText = (config and config.placeholderText) or "Select..."
-    local rowHeight = 20
+    local rowHeight = 22
     local listPadding = 2
     local listFrameLevel = (config and config.listFrameLevel) or 1000
     local previewOptionFonts = (config and config.previewOptionFonts) == true
@@ -108,7 +115,9 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
                         end
                         if type(value) == "string" then
                             local normalizedValue = NormalizeString(value)
-                            if normalizedValue then
+                            local isUnsupportedFocus = Compat.HasFocusFrame == false
+                                and (normalizedValue == "focus" or normalizedValue == "focusCastBar")
+                            if normalizedValue and not isUnsupportedFocus then
                                 out[#out + 1] = { value = normalizedValue, label = normalizedLabel, fontPath = optionFontPath }
                             end
                         else
@@ -147,27 +156,27 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
     end
 
     local container = CreateFrame("Frame", nil, parent)
-    container:SetSize(width, 24)
+    container:SetSize(width, widgetRowHeight)
     container:SetPoint((config and config.anchor) or "TOPLEFT", (config and config.x) or 0, (config and config.y) or 0)
 
     local label = container:CreateFontString(nil, "OVERLAY")
     TrySetFont(label, fontPath, 10, "")
     label:SetPoint("LEFT", 0, 0)
-    label:SetTextColor(0.8, 0.8, 0.8)
+    label:SetTextColor(textMuted[1], textMuted[2], textMuted[3])
     label:SetWidth(labelWidth)
     label:SetJustifyH("LEFT")
     label:SetText(dropdownLabel)
 
     local button = CreateFrame("Button", nil, container, "BackdropTemplate")
-    button:SetSize(buttonWidth, 20)
+    button:SetSize(buttonWidth, controlHeight)
     button:SetPoint("LEFT", buttonOffset, 0)
     button:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",
         edgeSize = 1,
     })
-    button:SetBackdropColor(0.06, 0.06, 0.08, 1)
-    button:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+    button:SetBackdropColor(input[1], input[2], input[3], input[4] or 1)
+    button:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
     local buttonText = button:CreateFontString(nil, "OVERLAY")
     TrySetFont(buttonText, fontPath, 10, "")
     buttonText:SetPoint("LEFT", 6, 0)
@@ -177,7 +186,7 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
     local arrowText = button:CreateFontString(nil, "OVERLAY")
     TrySetFont(arrowText, fontPath, 9, "")
     arrowText:SetPoint("RIGHT", -6, 0)
-    arrowText:SetTextColor(0.92, 0.92, 0.92)
+    arrowText:SetTextColor(textColor[1], textColor[2], textColor[3])
     arrowText:SetText("v")
 
     if preserveWidgetFont then
@@ -191,25 +200,25 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
         arrowText:SetTextColor(1, 1, 1)
     end)
     button:SetScript("OnLeave", function(self)
-        self:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
-        arrowText:SetTextColor(0.92, 0.92, 0.92)
+        self:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
+        arrowText:SetTextColor(textColor[1], textColor[2], textColor[3])
     end)
 
     local resetButton
     if hasReset then
         resetButton = CreateFrame("Button", nil, container, "BackdropTemplate")
-        resetButton:SetSize(resetWidth, 20)
+        resetButton:SetSize(resetWidth, controlHeight)
         resetButton:SetPoint("LEFT", button, "RIGHT", resetGap, 0)
         resetButton:SetBackdrop({
             bgFile = "Interface\\Buttons\\WHITE8x8",
             edgeFile = "Interface\\Buttons\\WHITE8x8",
             edgeSize = 1,
         })
-        resetButton:SetBackdropColor(0.06, 0.06, 0.08, 1)
-        resetButton:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+        resetButton:SetBackdropColor(input[1], input[2], input[3], input[4] or 1)
+        resetButton:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
 
         local resetText = resetButton:CreateFontString(nil, "OVERLAY")
-        TrySetFont(resetText, fontPath, 10, "")
+        TrySetFont(resetText, fontPath, 9, "")
         resetText:SetPoint("CENTER")
         resetText:SetTextColor(0.85, 0.85, 0.85)
         resetText:SetText("RESET")
@@ -222,7 +231,7 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
             end
         end)
         resetButton:SetScript("OnLeave", function(self)
-            self:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+            self:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
             if self.text then
                 self.text:SetTextColor(0.85, 0.85, 0.85)
             end
@@ -238,12 +247,15 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
         edgeFile = "Interface\\Buttons\\WHITE8x8",
         edgeSize = 1,
     })
-    list:SetBackdropColor(0.06, 0.06, 0.08, 1)
-    list:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+    list:SetBackdropColor(input[1], input[2], input[3], input[4] or 1)
+    list:SetBackdropBorderColor(accent[1], accent[2], accent[3], 0.55)
     list:SetFrameStrata("DIALOG")
     list:SetFrameLevel(listFrameLevel)
     list:EnableMouseWheel(true)
     list:Hide()
+    list:SetScript("OnHide", function()
+        arrowText:SetText("v")
+    end)
 
     local scrollBar = CreateFrame("Slider", nil, list, "BackdropTemplate")
     scrollBar:SetPoint("TOPRIGHT", -2, -2)
@@ -258,8 +270,8 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
         edgeFile = "Interface\\Buttons\\WHITE8x8",
         edgeSize = 1,
     })
-    scrollBar:SetBackdropColor(0.03, 0.03, 0.04, 1)
-    scrollBar:SetBackdropBorderColor(0.15, 0.15, 0.18, 1)
+    scrollBar:SetBackdropColor(input[1], input[2], input[3], input[4] or 1)
+    scrollBar:SetBackdropBorderColor(borderColor[1], borderColor[2], borderColor[3], borderColor[4] or 1)
     local thumb = scrollBar:CreateTexture(nil, "OVERLAY")
     thumb:SetSize(8, 18)
     thumb:SetColorTexture(accent[1], accent[2], accent[3], 1)
@@ -279,7 +291,7 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
         local selectedOpt = GetOptionByValue(selectedValue)
         if selectedOpt then
             local selectedLabel = tostring(selectedOpt.label or "")
-            buttonText:SetTextColor(0.92, 0.92, 0.92)
+            buttonText:SetTextColor(textColor[1], textColor[2], textColor[3])
             if HasVisibleCharacters(selectedLabel) then
                 buttonText:SetText(EscapeDisplayText(selectedLabel))
             else
@@ -339,8 +351,13 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
                     row.text:SetTextColor(0.35, 0.35, 0.4)
                     row.bg:SetColorTexture(0, 0, 0, 0)
                 else
-                    row.text:SetTextColor(0.9, 0.9, 0.9)
-                    row.bg:SetColorTexture(0, 0, 0, 0)
+                    if option.value == selectedValue then
+                        row.text:SetTextColor(accent[1], accent[2], accent[3])
+                        row.bg:SetColorTexture(accent[1], accent[2], accent[3], 0.10)
+                    else
+                        row.text:SetTextColor(textColor[1], textColor[2], textColor[3])
+                        row.bg:SetColorTexture(0, 0, 0, 0)
+                    end
                 end
                 row:Show()
             else
@@ -355,6 +372,7 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
 
     function dropdown.Close()
         list:Hide()
+        arrowText:SetText("v")
         if list.clickCatcher then
             list.clickCatcher:Hide()
         end
@@ -441,7 +459,7 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
         TrySetFont(row.text, fontPath, 10, "")
         row.text:SetPoint("LEFT", 6, 0)
         row.text:SetJustifyH("LEFT")
-        row.text:SetTextColor(0.9, 0.9, 0.9)
+        row.text:SetTextColor(textColor[1], textColor[2], textColor[3])
         if preserveWidgetFont then
             row.text.mmfSkipGlobalFont = true
         end
@@ -458,8 +476,13 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
                 self.text:SetTextColor(0.35, 0.35, 0.4)
                 return
             end
-            self.bg:SetColorTexture(0, 0, 0, 0)
-            self.text:SetTextColor(0.9, 0.9, 0.9)
+            if self.option and self.option.value == selectedValue then
+                self.bg:SetColorTexture(accent[1], accent[2], accent[3], 0.10)
+                self.text:SetTextColor(accent[1], accent[2], accent[3])
+            else
+                self.bg:SetColorTexture(0, 0, 0, 0)
+                self.text:SetTextColor(textColor[1], textColor[2], textColor[3])
+            end
         end)
         row:SetScript("OnClick", function(self)
             SelectOption(self.option)
@@ -504,6 +527,7 @@ function MMF_CreateMinimalDropdown(parent, popup, config)
 
         RefreshRows()
         list:Show()
+        arrowText:SetText("^")
         if not list.clickCatcher then
             local anchor = listParent
             local catcher = CreateFrame("Button", nil, anchor)

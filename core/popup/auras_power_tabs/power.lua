@@ -96,8 +96,14 @@ function MMF_BuildAurasPowerPowerSection(ctx)
         if MattMinimalFramesDB.powerTextPositions then
             MattMinimalFramesDB.powerTextPositions[unit] = nil
         end
+        if MattMinimalFramesDB.powerBarPositions then
+            MattMinimalFramesDB.powerBarPositions[unit] = nil
+        end
         if MMF_ApplyPowerTextPositions then
             MMF_ApplyPowerTextPositions()
+        end
+        if MMF_ApplyPowerBarPositions then
+            MMF_ApplyPowerBarPositions()
         end
         RefreshPowerFrames()
     end
@@ -219,13 +225,13 @@ function MMF_BuildAurasPowerPowerSection(ctx)
     end)
     ShiftResetButtonLeft(playerPowerBarCheck, 56)
 
-    local playerPowerTextCheck = CreateMinimalCheckbox(root, "Power Text", RESOURCE_COL_X, -96, "showPlayerPowerText", false, function()
+    local playerPowerTextCheck = CreateMinimalCheckbox(root, "Power Text", RESOURCE_COL_X, -96, "showPlayerPowerText", true, function()
         RefreshPowerFrames()
         UpdatePowerTextDependencies()
     end)
     ShiftResetButtonLeft(playerPowerTextCheck, 56)
 
-    playerColorPowerTextCheck = CreateMinimalCheckbox(root, "Color Text by Resource", RESOURCE_COL_X, -120, "colorPlayerPowerTextByResource", false, function()
+    playerColorPowerTextCheck = CreateMinimalCheckbox(root, "Color Text by Resource", RESOURCE_COL_X, -120, "colorPlayerPowerTextByResource", true, function()
         RefreshPowerFrames()
     end)
     ShiftResetButtonLeft(playerColorPowerTextCheck, 36)
@@ -328,19 +334,19 @@ function MMF_BuildAurasPowerPowerSection(ctx)
         ResetPowerTextPosition("target")
     end)
 
-    CreateMinimalSlider(root, "Text Scale", RESOURCE_COL_X, playerTextScaleY, 200, "playerPowerTextScale", 0.5, 2.0, 0.05, 1.0, function()
+    CreateMinimalSlider(root, "Text Scale", RESOURCE_COL_X, playerTextScaleY, 200, "playerPowerTextScale", 0.5, 2.0, 0.05, 0.77, function()
         RefreshPowerFrames()
     end, false)
 
-    playerPowerWidthSlider = CreateMinimalSlider(root, "Power Bar Width", RESOURCE_COL_X, playerWidthY, 200, "playerPowerBarWidth", 30, 250, 1, 73, function(value)
+    playerPowerWidthSlider = CreateMinimalSlider(root, "Power Bar Width", RESOURCE_COL_X, playerWidthY, 200, "playerPowerBarWidth", 30, 250, 1, 218, function(value)
         if MMF_SetPowerBarSize then
-            MMF_SetPowerBarSize(value, MattMinimalFramesDB.playerPowerBarHeight or MattMinimalFramesDB.powerBarHeight or 5, "player")
+            MMF_SetPowerBarSize(value, MattMinimalFramesDB.playerPowerBarHeight or MattMinimalFramesDB.powerBarHeight or 3, "player")
         end
     end, true)
 
-    playerPowerHeightSlider = CreateMinimalSlider(root, "Power Bar Height", RESOURCE_COL_X, playerHeightY, 200, "playerPowerBarHeight", 3, 15, 1, 5, function(value)
+    playerPowerHeightSlider = CreateMinimalSlider(root, "Power Bar Height", RESOURCE_COL_X, playerHeightY, 200, "playerPowerBarHeight", 3, 15, 1, 3, function(value)
         if MMF_SetPowerBarSize then
-            MMF_SetPowerBarSize(MattMinimalFramesDB.playerPowerBarWidth or MattMinimalFramesDB.powerBarWidth or 73, value, "player")
+            MMF_SetPowerBarSize(MattMinimalFramesDB.playerPowerBarWidth or MattMinimalFramesDB.powerBarWidth or 218, value, "player")
         end
     end, true)
 
@@ -355,19 +361,19 @@ function MMF_BuildAurasPowerPowerSection(ctx)
     targetTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
     targetTitle:SetText("TARGET")
 
-    targetPowerBarCheck = CreateMinimalCheckbox(root, "Power Bar", RESOURCE_COL_X, targetPowerBarY, "showTargetPowerBar", false, function()
+    targetPowerBarCheck = CreateMinimalCheckbox(root, "Power Bar", RESOURCE_COL_X, targetPowerBarY, "showTargetPowerBar", true, function()
         RefreshPowerFrames()
         UpdatePowerBarSizeDependencies()
     end)
     ShiftResetButtonLeft(targetPowerBarCheck, 56)
 
-    local targetPowerTextCheck = CreateMinimalCheckbox(root, "Power Text", RESOURCE_COL_X, targetPowerTextY, "showTargetPowerText", false, function()
+    local targetPowerTextCheck = CreateMinimalCheckbox(root, "Power Text", RESOURCE_COL_X, targetPowerTextY, "showTargetPowerText", true, function()
         RefreshPowerFrames()
         UpdatePowerTextDependencies()
     end)
     ShiftResetButtonLeft(targetPowerTextCheck, 56)
 
-    targetColorPowerTextCheck = CreateMinimalCheckbox(root, "Color Text by Resource", RESOURCE_COL_X, targetColorTextY, "colorTargetPowerTextByResource", false, function()
+    targetColorPowerTextCheck = CreateMinimalCheckbox(root, "Color Text by Resource", RESOURCE_COL_X, targetColorTextY, "colorTargetPowerTextByResource", true, function()
         RefreshPowerFrames()
     end)
     ShiftResetButtonLeft(targetColorPowerTextCheck, 36)
@@ -418,19 +424,19 @@ function MMF_BuildAurasPowerPowerSection(ctx)
 
     UpdatePowerTextDependencies()
 
-    CreateMinimalSlider(root, "Text Scale", RESOURCE_COL_X, targetTextScaleY, 200, "targetPowerTextScale", 0.5, 2.0, 0.05, 1.0, function()
+    CreateMinimalSlider(root, "Text Scale", RESOURCE_COL_X, targetTextScaleY, 200, "targetPowerTextScale", 0.5, 2.0, 0.05, 0.77, function()
         RefreshPowerFrames()
     end, false)
 
-    targetPowerWidthSlider = CreateMinimalSlider(root, "Power Bar Width", RESOURCE_COL_X, targetWidthY, 200, "targetPowerBarWidth", 30, 250, 1, 73, function(value)
+    targetPowerWidthSlider = CreateMinimalSlider(root, "Power Bar Width", RESOURCE_COL_X, targetWidthY, 200, "targetPowerBarWidth", 30, 250, 1, 218, function(value)
         if MMF_SetPowerBarSize then
-            MMF_SetPowerBarSize(value, MattMinimalFramesDB.targetPowerBarHeight or MattMinimalFramesDB.powerBarHeight or 5, "target")
+            MMF_SetPowerBarSize(value, MattMinimalFramesDB.targetPowerBarHeight or MattMinimalFramesDB.powerBarHeight or 3, "target")
         end
     end, true)
 
-    targetPowerHeightSlider = CreateMinimalSlider(root, "Power Bar Height", RESOURCE_COL_X, targetHeightY, 200, "targetPowerBarHeight", 3, 15, 1, 5, function(value)
+    targetPowerHeightSlider = CreateMinimalSlider(root, "Power Bar Height", RESOURCE_COL_X, targetHeightY, 200, "targetPowerBarHeight", 3, 15, 1, 3, function(value)
         if MMF_SetPowerBarSize then
-            MMF_SetPowerBarSize(MattMinimalFramesDB.targetPowerBarWidth or MattMinimalFramesDB.powerBarWidth or 73, value, "target")
+            MMF_SetPowerBarSize(MattMinimalFramesDB.targetPowerBarWidth or MattMinimalFramesDB.powerBarWidth or 218, value, "target")
         end
     end, true)
 
@@ -465,7 +471,7 @@ function MMF_BuildAurasPowerPowerSection(ctx)
         local resourceOptions = {}
         local validTokens = {}
         for _, option in ipairs(resourceOptionsRaw) do
-            if Compat.IsTBC and not option.tbcValid then
+            if Compat.IsClassicEra and not option.tbcValid then
                 resourceOptions[#resourceOptions + 1] = {
                     value = option.value,
                     label = option.label .. " (N/A)",
@@ -504,7 +510,7 @@ function MMF_BuildAurasPowerPowerSection(ctx)
                 FOCUS = { 1.0, 0.5, 0.25 },
                 RUNIC_POWER = { 0.0, 0.82, 1.0 },
                 LUNAR_POWER = { 0.3, 0.52, 0.9 },
-                INSANITY = { 0.5, 0.25, 0.9 },
+                INSANITY = { 1.0, 0.0, 0.72 },
                 MAELSTROM = { 0.0, 0.5, 1.0 },
                 FURY = { 0.76, 0.36, 1.0 },
                 PAIN = { 1.0, 0.61, 0.0 },

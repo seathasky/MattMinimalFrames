@@ -50,6 +50,7 @@ function MMF_ApplyActiveProfileLive()
         ApplyFor(_G.MMF_PlayerFrame, "player")
         ApplyFor(_G.MMF_TargetFrame, "target")
     end
+    MMF_ApplyPowerBarPositions = ApplyPowerBarPositions
 
     ApplyFramePositions()
     if MMF_ApplyAllFrameScales then MMF_ApplyAllFrameScales() end
@@ -59,10 +60,10 @@ function MMF_ApplyActiveProfileLive()
     if MMF_ApplyHealthFillDirections then MMF_ApplyHealthFillDirections() end
 
     if MMF_SetPowerBarSize then
-        local playerPowerW = MattMinimalFramesDB.playerPowerBarWidth or MattMinimalFramesDB.powerBarWidth or 73
-        local playerPowerH = MattMinimalFramesDB.playerPowerBarHeight or MattMinimalFramesDB.powerBarHeight or 5
-        local targetPowerW = MattMinimalFramesDB.targetPowerBarWidth or MattMinimalFramesDB.powerBarWidth or 73
-        local targetPowerH = MattMinimalFramesDB.targetPowerBarHeight or MattMinimalFramesDB.powerBarHeight or 5
+        local playerPowerW = MattMinimalFramesDB.playerPowerBarWidth or MattMinimalFramesDB.powerBarWidth or 218
+        local playerPowerH = MattMinimalFramesDB.playerPowerBarHeight or MattMinimalFramesDB.powerBarHeight or 3
+        local targetPowerW = MattMinimalFramesDB.targetPowerBarWidth or MattMinimalFramesDB.powerBarWidth or 218
+        local targetPowerH = MattMinimalFramesDB.targetPowerBarHeight or MattMinimalFramesDB.powerBarHeight or 3
         MMF_SetPowerBarSize(playerPowerW, playerPowerH, "player")
         MMF_SetPowerBarSize(targetPowerW, targetPowerH, "target")
     end

@@ -1,14 +1,8 @@
 local function GetDefaultPowerTextAnchor(frame, unit)
     if unit == "player" then
-        if frame.powerBarFrame then
-            return "TOP", frame.powerBarFrame, "BOTTOM", 0, -2
-        end
-        return "BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 0
+        return "BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 8
     elseif unit == "target" then
-        if frame.powerBarFrame then
-            return "TOP", frame.powerBarFrame, "BOTTOM", 0, -2
-        end
-        return "BOTTOMLEFT", frame, "BOTTOMLEFT", 0, 0
+        return "BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0, 8
     elseif unit == "targettarget" or unit == "pet" then
         return "BOTTOM", frame, "BOTTOM", 0, 0
     end
@@ -47,9 +41,21 @@ local function ApplyPowerTextPosition(frame, unit)
         end
 
         frame.powerText:ClearAllPoints()
-        frame.powerText:SetPoint("CENTER", frame.powerTextDragFrame, "CENTER", 0, 0)
-        if frame.powerText.SetJustifyH then
-            frame.powerText:SetJustifyH("CENTER")
+        if unit == "player" then
+            frame.powerText:SetPoint("BOTTOMLEFT", frame.powerTextDragFrame, "BOTTOMLEFT", 0, 0)
+            if frame.powerText.SetJustifyH then
+                frame.powerText:SetJustifyH("LEFT")
+            end
+        elseif unit == "target" then
+            frame.powerText:SetPoint("BOTTOMRIGHT", frame.powerTextDragFrame, "BOTTOMRIGHT", 0, 0)
+            if frame.powerText.SetJustifyH then
+                frame.powerText:SetJustifyH("RIGHT")
+            end
+        else
+            frame.powerText:SetPoint("CENTER", frame.powerTextDragFrame, "CENTER", 0, 0)
+            if frame.powerText.SetJustifyH then
+                frame.powerText:SetJustifyH("CENTER")
+            end
         end
         return
     end
@@ -66,11 +72,12 @@ local function GetDefaultHPTextAnchor(frame, unit)
     local hpY = MMF_GetHPTextYOffset and MMF_GetHPTextYOffset(unit) or 0
 
     if unit == "player" then
-        return "BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0 + hpX, -14.5 + hpY
+        return "BOTTOMRIGHT", frame, "BOTTOMRIGHT", 0 + hpX, 8 + hpY
     elseif unit == "target" then
-        return "BOTTOMLEFT", frame, "BOTTOMLEFT", 2 + hpX, -14.5 + hpY
-    elseif unit == "targettarget"
-        or unit == "pet"
+        return "BOTTOMLEFT", frame, "BOTTOMLEFT", 2 + hpX, 8 + hpY
+    elseif unit == "targettarget" then
+        return "BOTTOMLEFT", frame, "BOTTOMLEFT", 2 + hpX, 8 + hpY
+    elseif unit == "pet"
         or unit == "focus"
         or unit == "boss1"
         or unit == "boss2"
@@ -88,8 +95,9 @@ local function GetHPTextAttachPoint(unit)
         return "BOTTOMRIGHT"
     elseif unit == "target" then
         return "BOTTOMLEFT"
-    elseif unit == "targettarget"
-        or unit == "pet"
+    elseif unit == "targettarget" then
+        return "BOTTOMLEFT"
+    elseif unit == "pet"
         or unit == "focus"
         or unit == "boss1"
         or unit == "boss2"

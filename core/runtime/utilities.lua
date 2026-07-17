@@ -172,6 +172,10 @@ function MMF_ApplyStatusBarTexture()
             if frame.powerBar then
                 frame.powerBar:SetStatusBarTexture(texturePath)
             end
+            if frame.secondaryPowerBar then
+                frame.secondaryPowerBar:SetStatusBarTexture(texturePath)
+                frame.secondaryPowerBarFG = frame.secondaryPowerBar:GetStatusBarTexture()
+            end
             if frame.myHealPrediction then
                 frame.myHealPrediction:SetStatusBarTexture(texturePath)
             end

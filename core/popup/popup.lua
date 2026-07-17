@@ -43,6 +43,7 @@ function MMF_ShowWelcomePopup(forceShow)
         MMF_EnsurePopupInactiveFadeDB()
     end
     local ACCENT_COLOR = (MMF_GetPopupAccentColor and MMF_GetPopupAccentColor()) or { 0.6, 0.4, 0.9 }
+    local POPUP_THEME = (MMF_GetPopupTheme and MMF_GetPopupTheme()) or {}
     local ACCENT_HEX_PREFIX = (MMF_RGBToHexPrefix and MMF_RGBToHexPrefix(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3])) or "|cff9966e6"
 
     -- If popup already exists, just show it and return
@@ -114,8 +115,10 @@ function MMF_ShowWelcomePopup(forceShow)
         edgeFile = "Interface\\Buttons\\WHITE8x8",
         edgeSize = 1,
     })
-    popup:SetBackdropColor(0.04, 0.04, 0.05, 0.98)
-    popup:SetBackdropBorderColor(0.1, 0.1, 0.12, 1)
+    local windowColor = POPUP_THEME.window or { 0.025, 0.030, 0.038, 0.99 }
+    local windowBorder = POPUP_THEME.borderStrong or { 0.22, 0.26, 0.30, 1 }
+    popup:SetBackdropColor(windowColor[1], windowColor[2], windowColor[3], windowColor[4] or 0.99)
+    popup:SetBackdropBorderColor(windowBorder[1], windowBorder[2], windowBorder[3], windowBorder[4] or 1)
     popup:SetMovable(true)
     local canSystemResize = (type(popup.SetResizable) == "function")
         and (type(popup.StartSizing) == "function")
@@ -187,6 +190,7 @@ function MMF_ShowWelcomePopup(forceShow)
     local leftCol = MMF_CreatePopupPageFrame(pageScrollFrame, POPUP_LAYOUT.aurasPowerContentHeight)
     local partyRaidCol = MMF_CreatePopupPageFrame(pageScrollFrame, POPUP_LAYOUT.partyRaidContentHeight)
     local tbcCol = MMF_CreatePopupPageFrame(pageScrollFrame, POPUP_LAYOUT.toolsContentHeight)
+    local eraCol = MMF_CreatePopupPageFrame(pageScrollFrame, POPUP_LAYOUT.toolsContentHeight)
     local unitFramesCol = MMF_CreatePopupPageFrame(pageScrollFrame, POPUP_LAYOUT.unitFramesContentHeight)
     local middleCol = MMF_CreatePopupPageFrame(pageScrollFrame, POPUP_LAYOUT.currentClassContentHeight)
     local rightCol = MMF_CreatePopupPageFrame(pageScrollFrame, POPUP_LAYOUT.toolsContentHeight)
@@ -256,6 +260,7 @@ function MMF_ShowWelcomePopup(forceShow)
         leftCol,
         partyRaidCol,
         tbcCol,
+        eraCol,
         middleCol,
         rightCol,
         profilesCol,
@@ -285,6 +290,23 @@ function MMF_ShowWelcomePopup(forceShow)
             { label = "Auras / Power" },
             { label = "Party / Raid" },
             { label = "TBC Features" },
+            { label = "Profiles" },
+            { label = "Tools" },
+        }
+    elseif Compat.IsClassic then
+        tabPages = {
+            unitFramesCol,
+            leftCol,
+            partyRaidCol,
+            eraCol,
+            profilesCol,
+            rightCol,
+        }
+        tabDefs = {
+            { label = "Unit Frames" },
+            { label = "Auras / Power" },
+            { label = "Party / Raid" },
+            { label = "ERA Features" },
             { label = "Profiles" },
             { label = "Tools" },
         }
@@ -410,9 +432,13 @@ function MMF_ShowWelcomePopup(forceShow)
     MMF_CreatePartyRaidPage(partyRaidCol, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider)
     if Compat.IsTBC and MMF_CreateTBCPage then
         MMF_CreateTBCPage(tbcCol, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider)
+    elseif Compat.IsClassic and MMF_CreateERAPage then
+        MMF_CreateERAPage(eraCol, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider)
     end
 
-    MMF_CreateCurrentClassSection(middleCol, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider, UpdatePlayerIconModeButtonText, GetCurrentPlayerIconModeValue)
+    if Compat.IsRetail then
+        MMF_CreateCurrentClassSection(middleCol, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider, UpdatePlayerIconModeButtonText, GetCurrentPlayerIconModeValue)
+    end
 
     MMF_CreateToolsPage(rightCol, ACCENT_COLOR, ACCENT_HEX_PREFIX, CreateMinimalCheckbox, IsUISoundsEnabled)
 

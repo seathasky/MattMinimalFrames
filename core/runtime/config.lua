@@ -1,8 +1,8 @@
 MMF_Config = {
-    POWER_BAR_WIDTH = 73,
-    POWER_BAR_HEIGHT = 5,
-    POWER_BAR_VERTICAL_OFFSET = -24,
-    POWER_BAR_HORIZONTAL_OFFSET = 1,
+    POWER_BAR_WIDTH = 218,
+    POWER_BAR_HEIGHT = 3,
+    POWER_BAR_VERTICAL_OFFSET = -5,
+    POWER_BAR_HORIZONTAL_OFFSET = 0,
     AURA_ICON_SPACING = 2,
     MAX_AURA_ICONS = 16,
     AURA_ROW_ICONS = 4,
@@ -47,6 +47,14 @@ MMF_Config = {
         { value = "blue", label = "Blue", r = 0.20, g = 0.45, b = 0.95 },
     },
 }
+
+if _G.MMF_Compat and _G.MMF_Compat.HasFocusFrame == false then
+    for index = #MMF_Config.FRAME_DEFINITIONS, 1, -1 do
+        if MMF_Config.FRAME_DEFINITIONS[index].unit == "focus" then
+            table.remove(MMF_Config.FRAME_DEFINITIONS, index)
+        end
+    end
+end
 
 local LSM = LibStub and LibStub("LibSharedMedia-3.0", true)
 local STATUSBAR = LSM and LSM.MediaType and LSM.MediaType.STATUSBAR or "statusbar"
@@ -866,9 +874,10 @@ function MMF_ResetSecureAttributes(frame)
     end
     frame:SetAttribute("type1", targetUsesModifier and "none" or nil)
     frame:SetAttribute("type2", menuUsesModifier and "none" or nil)
-    frame:SetAttribute("alt-type2", "focus")
-    frame:SetAttribute("shift-alt-type2", "macro")
-    frame:SetAttribute("shift-alt-macrotext2", "/clearfocus")
+    local hasFocusFrame = not (_G.MMF_Compat and _G.MMF_Compat.HasFocusFrame == false)
+    frame:SetAttribute("alt-type2", hasFocusFrame and "focus" or nil)
+    frame:SetAttribute("shift-alt-type2", hasFocusFrame and "macro" or nil)
+    frame:SetAttribute("shift-alt-macrotext2", hasFocusFrame and "/clearfocus" or nil)
 end
 
 function MMF_GetAuraIconSize()
@@ -991,6 +1000,13 @@ function MMF_GetColorNPCNameTextByReaction(unit)
 end
 
 function MMF_GetShowNameLevel(unit)
+    if unit == "player" or unit == "target" then
+        -- This is one shared P/T option. Treat either legacy per-unit value as
+        -- enabled so existing profiles that only saved the player flag also
+        -- show the target level immediately.
+        return GetPerUnitTextFormatToggle("player", "ShowNameLevel", "showNameLevel", false)
+            or GetPerUnitTextFormatToggle("target", "ShowNameLevel", "showNameLevel", false)
+    end
     return GetPerUnitTextFormatToggle(unit, "ShowNameLevel", "showNameLevel", false)
 end
 
