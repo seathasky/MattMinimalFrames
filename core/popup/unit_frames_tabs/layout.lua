@@ -103,6 +103,32 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
         scaleYSliders[opt.value]:Hide()
     end
 
+    local bossBottomPaddingSlider = CreateMinimalSlider(
+        unitFramesCol,
+        "Boss Bottom Padding",
+        LEFT_COL_X,
+        -112,
+        LEFT_COL_WIDTH,
+        "bossFrameBottomPadding",
+        0,
+        64,
+        1,
+        0,
+        function()
+            if MMF_UpdateCombatFrameVisibility then
+                MMF_UpdateCombatFrameVisibility()
+            end
+            if MMF_ApplyAllFramePositions then
+                MMF_ApplyAllFramePositions()
+            end
+            if MMF_RequestAllFramesUpdate then
+                MMF_RequestAllFramesUpdate()
+            end
+        end,
+        true
+    )
+    bossBottomPaddingSlider:Hide()
+
     local function UpdateVisibleScaleSliders()
         local current = MattMinimalFramesDB.frameScaleUnit
         for _, opt in ipairs(scaleUnitOptions) do
@@ -110,6 +136,7 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
             scaleXSliders[opt.value]:SetShown(show)
             scaleYSliders[opt.value]:SetShown(show)
         end
+        bossBottomPaddingSlider:SetShown(current == "boss")
     end
 
     local scaleUnitDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
@@ -139,7 +166,7 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
         unitFramesCol,
         "Health Fill Top to Bottom",
         LEFT_COL_X,
-        -136,
+        -156,
         "healthFillTopToBottom",
         false,
         function()
@@ -154,12 +181,12 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
 
     local positionDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
     positionDivider:SetSize(LEFT_COL_WIDTH, 1)
-    positionDivider:SetPoint("TOPLEFT", LEFT_COL_X, -160)
+    positionDivider:SetPoint("TOPLEFT", LEFT_COL_X, -192)
     positionDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
 
     local framePositionTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
     framePositionTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    framePositionTitle:SetPoint("TOPLEFT", LEFT_COL_X, -176)
+    framePositionTitle:SetPoint("TOPLEFT", LEFT_COL_X, -208)
     framePositionTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
     framePositionTitle:SetText("FRAME POSITION (CENTER)")
 
@@ -223,7 +250,7 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
             unitFramesCol,
             "Center X",
             LEFT_COL_X,
-            -228,
+            -260,
             LEFT_COL_WIDTH,
             xKey,
             -1200,
@@ -257,7 +284,7 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
             unitFramesCol,
             "Center Y",
             LEFT_COL_X,
-            -252,
+            -284,
             LEFT_COL_WIDTH,
             yKey,
             -1200,
@@ -300,7 +327,7 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
         accentColor = ACCENT_COLOR,
         settingKey = "framePositionUnit",
         x = LEFT_COL_X,
-        y = -204,
+        y = -236,
         width = LEFT_COL_WIDTH,
         labelWidth = LEFT_LABEL_WIDTH,
         buttonOffset = LEFT_BUTTON_OFFSET,
@@ -321,7 +348,7 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
 
     local positionHelp = unitFramesCol:CreateFontString(nil, "OVERLAY")
     positionHelp:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    positionHelp:SetPoint("TOPLEFT", LEFT_COL_X, -278)
+    positionHelp:SetPoint("TOPLEFT", LEFT_COL_X, -310)
     positionHelp:SetTextColor(0.68, 0.74, 0.8)
     positionHelp:SetText("Dragging frames in Edit Mode updates these values live.")
 
@@ -334,4 +361,3 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
         MMF_SyncFramePositionControlsForUnit("boss")
     end
 end
-
