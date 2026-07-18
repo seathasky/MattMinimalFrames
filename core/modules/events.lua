@@ -243,6 +243,32 @@ local function SetUnitWatchState(frame, enabled)
     end
 end
 
+-- Patches mouse over fix here
+local function ApplyTextMouseState(frame, locked)
+    if not frame then
+        return
+    end
+
+    if frame.nameOverlay then
+        frame.nameOverlay:EnableMouse(false)
+    end
+
+    local enableTextHandles = not locked
+    if frame.hpTextDragFrame then
+        frame.hpTextDragFrame:EnableMouse(enableTextHandles)
+    end
+    if frame.powerTextDragFrame then
+        frame.powerTextDragFrame:EnableMouse(enableTextHandles)
+    end
+
+    if locked and GameTooltip then
+        local ownsPowerHandle = frame.powerTextDragFrame and GameTooltip:IsOwned(frame.powerTextDragFrame)
+        if ownsHPHandle or ownsPowerHandle then
+            GameTooltip:Hide()
+        end
+    end
+end
+
 local function ApplyFrameLockState(locked)
     local revealHiddenFrames = IsEditModeActive() or IsLayoutPreviewModeActive()
     for _, frm in ipairs(MMF_GetAllFrames()) do
@@ -252,6 +278,7 @@ local function ApplyFrameLockState(locked)
             frm:EnableMouse(true)
             frm:RegisterForDrag("LeftButton")
             frm:RegisterForClicks("AnyUp")
+            ApplyTextMouseState(frm, locked)
             if frm.titleText then
                 frm.titleText:SetShown(not locked)
             end

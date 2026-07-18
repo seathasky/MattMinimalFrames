@@ -499,10 +499,10 @@ function MMF_BuildUnitFramesOffsetsSection(ctx)
     local hpYSliders = {}
     for _, opt in ipairs(hpUnitOptions) do
         local prefix = GetPopupUnitPrefix(opt.value)
-        hpXSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "HP X Offset", LEFT_COL_X, -692 + LEFT_LOWER_Y_OFFSET, LEFT_COL_WIDTH, prefix .. "HPTextXOffset", -60, 60, 1, 0, function()
+        hpXSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "HP X Offset", LEFT_COL_X, -692 + LEFT_LOWER_Y_OFFSET, LEFT_COL_WIDTH, prefix .. "HPTextXOffset", -500, 500, 1, 0, function()
             if MMF_UpdateFrameTextOffsets then MMF_UpdateFrameTextOffsets() end
         end, true)
-        hpYSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "HP Y Offset", LEFT_COL_X, -718 + LEFT_LOWER_Y_OFFSET, LEFT_COL_WIDTH, prefix .. "HPTextYOffset", -60, 60, 1, 0, function()
+        hpYSliders[opt.value] = CreateMinimalSlider(unitFramesCol, "HP Y Offset", LEFT_COL_X, -718 + LEFT_LOWER_Y_OFFSET, LEFT_COL_WIDTH, prefix .. "HPTextYOffset", -500, 500, 1, 0, function()
             if MMF_UpdateFrameTextOffsets then MMF_UpdateFrameTextOffsets() end
         end, true)
         hpXSliders[opt.value]:Hide()
