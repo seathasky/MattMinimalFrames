@@ -10,6 +10,10 @@ _[Click here for Hi-Res Screenshot](https://i.imgur.com/dEG92xw.jpeg)_
 
 ![image](https://i.imgur.com/dEG92xw.jpeg)
 
+**The screenshot above also features two of my other addons:**
+- **Matt's Action Bar Fonts:** https://www.curseforge.com/wow/addons/matts-action-bar-fonts
+- **Matt's Minimal DPS:** https://www.curseforge.com/wow/addons/matts-minimal-dps
+
 ***
 
 Works on:
@@ -50,6 +54,6 @@ Works on:
 
 [![Join my Discord](https://discord.com/api/guilds/1472536200655929530/widget.png?style=banner2)](https://discord.gg/9w6ZdaksDX)
 
+## Installation
 
-## Installation  
-👉 **[Install via CurseForge](https://www.curseforge.com/wow/addons/mattminimalframes)** 
+👉 **[Install via CurseForge](https://www.curseforge.com/wow/addons/mattminimalframes)**
