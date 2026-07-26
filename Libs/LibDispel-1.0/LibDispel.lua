@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibDispel-1.0", 27
+local MAJOR, MINOR = "LibDispel-1.0", 28
 assert(LibStub, MAJOR.." requires LibStub")
 
 local lib = LibStub:NewLibrary(MAJOR, MINOR)
@@ -221,7 +221,7 @@ do
 
 	if Retail or TBC then
 		frame:RegisterEvent('LEARNED_SPELL_IN_SKILL_LINE')
-	else
+	elseif not Classic then
 		frame:RegisterEvent('LEARNED_SPELL_IN_TAB')
 	end
 

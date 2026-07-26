@@ -354,6 +354,10 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
             MMF_RefreshBlizzardPartyRaidNameFonts()
         end
     end)
+    if outlineCheck and hideRemainingHealthCheck then
+        outlineCheck:ClearAllPoints()
+        outlineCheck:SetPoint("TOPLEFT", hideRemainingHealthCheck, "BOTTOMLEFT", -32, -4)
+    end
 
     partyFontSizeSlider = CreateMinimalSlider(page, "Party Font Size", 12, -210, 240, "partyNameFontSize", 8, 20, 1, 16, function()
         if MMF_UpdateBlizzardPartyRaidNameFonts then
@@ -363,6 +367,10 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
             MMF_RefreshBlizzardPartyRaidNameFonts()
         end
     end, true)
+    if partyFontSizeSlider and outlineCheck then
+        partyFontSizeSlider:ClearAllPoints()
+        partyFontSizeSlider:SetPoint("TOPLEFT", outlineCheck, "BOTTOMLEFT", 0, 0)
+    end
 
     raidFontSizeSlider = CreateMinimalSlider(page, "Raid Font Size", 12, -236, 240, "raidNameFontSize", 8, 20, 1, 14, function()
         if MMF_UpdateBlizzardPartyRaidNameFonts then
@@ -372,18 +380,30 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
             MMF_RefreshBlizzardPartyRaidNameFonts()
         end
     end, true)
+    if raidFontSizeSlider and partyFontSizeSlider then
+        raidFontSizeSlider:ClearAllPoints()
+        raidFontSizeSlider:SetPoint("TOPLEFT", partyFontSizeSlider, "BOTTOMLEFT", 0, 0)
+    end
 
     partyNameTruncateSlider = CreateMinimalSlider(page, "Party Name Truncate (0 = Off)", 12, -262, 240, "partyNameTruncateLength", 0, 24, 1, 0, function()
         if MMF_ApplyPartyRaidNameTruncationPreview then
             MMF_ApplyPartyRaidNameTruncationPreview()
         end
     end, true)
+    if partyNameTruncateSlider and raidFontSizeSlider then
+        partyNameTruncateSlider:ClearAllPoints()
+        partyNameTruncateSlider:SetPoint("TOPLEFT", raidFontSizeSlider, "BOTTOMLEFT", 0, 0)
+    end
 
     raidNameTruncateSlider = CreateMinimalSlider(page, "Raid Name Truncate (0 = Off)", 12, -288, 240, "raidNameTruncateLength", 0, 24, 1, 0, function()
         if MMF_ApplyRaidNameTruncationPreview then
             MMF_ApplyRaidNameTruncationPreview()
         end
     end, true)
+    if raidNameTruncateSlider and partyNameTruncateSlider then
+        raidNameTruncateSlider:ClearAllPoints()
+        raidNameTruncateSlider:SetPoint("TOPLEFT", partyNameTruncateSlider, "BOTTOMLEFT", 0, 0)
+    end
 
     local function ApplyPartyRaidTruncateNow()
         if MMF_UpdateBlizzardPartyRaidNameFonts then
@@ -418,7 +438,7 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
 
     local hint = page:CreateFontString(nil, "OVERLAY")
     hint:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
-    hint:SetPoint("TOPLEFT", 12, -318)
+    hint:SetPoint("TOPLEFT", raidNameTruncateSlider, "BOTTOMLEFT", 0, -4)
     hint:SetWidth(420)
     hint:SetJustifyH("LEFT")
     hint:SetTextColor(0.58, 0.63, 0.67)
@@ -476,28 +496,32 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
 
     local labelDivider = page:CreateTexture(nil, "ARTWORK")
     labelDivider:SetSize(240, 1)
-    labelDivider:SetPoint("TOPLEFT", 12, -338)
+    labelDivider:SetPoint("TOPLEFT", hint, "BOTTOMLEFT", 0, -10)
     labelDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
 
     local labelsTitle = page:CreateFontString(nil, "OVERLAY")
     labelsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    labelsTitle:SetPoint("TOPLEFT", 12, -350)
+    labelsTitle:SetPoint("TOPLEFT", labelDivider, "BOTTOMLEFT", 0, -11)
     labelsTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
     labelsTitle:SetText("LABELS / STATE")
 
-    CreateMinimalCheckbox(page, "Hide Party Label", 12, -370, "hidePartyFrameLabel", false, function()
+    local hidePartyLabelCheck = CreateMinimalCheckbox(page, "Hide Party Label", 12, -370, "hidePartyFrameLabel", false, function()
         if MMF_UpdateBlizzardPartyRaidLabels then
             MMF_UpdateBlizzardPartyRaidLabels()
         end
     end)
+    hidePartyLabelCheck:ClearAllPoints()
+    hidePartyLabelCheck:SetPoint("TOPLEFT", labelsTitle, "BOTTOMLEFT", 0, -4)
 
-    CreateMinimalCheckbox(page, "Hide Raid Group Labels", 12, -394, "hideRaidGroupLabels", false, function()
+    local hideRaidGroupLabelsCheck = CreateMinimalCheckbox(page, "Hide Raid Group Labels", 12, -394, "hideRaidGroupLabels", false, function()
         if MMF_UpdateBlizzardPartyRaidLabels then
             MMF_UpdateBlizzardPartyRaidLabels()
         end
     end)
+    hideRaidGroupLabelsCheck:ClearAllPoints()
+    hideRaidGroupLabelsCheck:SetPoint("TOPLEFT", hidePartyLabelCheck, "BOTTOMLEFT", 0, 0)
 
-    CreateMinimalCheckbox(page, "Show Solo Party Frame", 12, -418, "showSoloPartyFrame", false, function()
+    local showSoloPartyFrameCheck = CreateMinimalCheckbox(page, "Show Solo Party Frame", 12, -418, "showSoloPartyFrame", false, function()
         if MMF_UpdateBlizzardSoloPartyFrameVisibility then
             MMF_UpdateBlizzardSoloPartyFrameVisibility()
         end
@@ -505,12 +529,16 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
             StaticPopup_Show("MMF_RELOADUI")
         end
     end)
+    showSoloPartyFrameCheck:ClearAllPoints()
+    showSoloPartyFrameCheck:SetPoint("TOPLEFT", hideRaidGroupLabelsCheck, "BOTTOMLEFT", 0, 0)
 
-    CreateMinimalCheckbox(page, "Hide Self In Party", 12, -442, "hidePlayerInPartyFrame", false, function()
+    local hideSelfInPartyCheck = CreateMinimalCheckbox(page, "Hide Self In Party", 12, -442, "hidePlayerInPartyFrame", false, function()
         if MMF_UpdateBlizzardPartySelfVisibility then
             MMF_UpdateBlizzardPartySelfVisibility()
         end
     end)
+    hideSelfInPartyCheck:ClearAllPoints()
+    hideSelfInPartyCheck:SetPoint("TOPLEFT", showSoloPartyFrameCheck, "BOTTOMLEFT", 0, 0)
 
     local modeWatcher = CreateFrame("Frame", nil, page)
     modeWatcher:RegisterEvent("GROUP_ROSTER_UPDATE")
