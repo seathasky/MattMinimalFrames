@@ -1,7 +1,7 @@
 ## Interface: 11508
 ## Title: Matt's Minimal Frames
 ## Author: Seathasky
-## Version: 8.0.1-hotfix
+## Version: 8.1.0
 ## X-Curse-Project-ID: 1362998
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
 ## SavedVariables: MattMinimalFramesDB, MattMinimalFramesProfilesDB, MattMinimalFramesGlobalDB
@@ -124,7 +124,6 @@ core/popup/popup.lua
 
 # Other feature modules
 core/modules/minimap.lua
-core/modules/changelog.lua
 
 # Entrypoint + runtime feature modules
 init.lua

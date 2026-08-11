@@ -7,7 +7,6 @@ function MMF_ResetPopupScaleAndTextToDefaults()
         -- Focus aura defaults (so Tools reset also resets Focus Auras settings)
         MattMinimalFramesDB.showFocusBuffs = d.showFocusBuffs
         MattMinimalFramesDB.showFocusDebuffs = d.showFocusDebuffs
-        MattMinimalFramesDB.focusUseBlizzardAuraAnchoring = d.focusUseBlizzardAuraAnchoring
         MattMinimalFramesDB.focusAuraOffsetType = d.focusAuraOffsetType
         MattMinimalFramesDB.focusAuraAppearanceType = d.focusAuraAppearanceType
         MattMinimalFramesDB.focusBuffXOffset = d.focusBuffXOffset

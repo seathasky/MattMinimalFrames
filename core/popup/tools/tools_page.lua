@@ -996,21 +996,9 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
 
     CreateMinimalCheckbox(rightCol, "UI Sounds", 12, -196, "uiSoundsEnabled", true, nil)
 
-    if MattMinimalFramesDB then
-        MattMinimalFramesDB.hideChangelogPopup = (MattMinimalFramesDB.changelogSeenVersion == "7.7.2")
-    end
-    CreateMinimalCheckbox(rightCol, "Hide Changelog Popup", 12, -220, "hideChangelogPopup", false,
-        function(checked)
-            if MattMinimalFramesDB then
-                MattMinimalFramesDB.hideChangelogPopup = checked
-                MattMinimalFramesDB.changelogSeenVersion = checked and "7.7.2" or nil
-            end
-        end
-    )
-
     local toolsResetScaleBtn = CreateFrame("Button", nil, rightCol, "BackdropTemplate")
     toolsResetScaleBtn:SetSize(176, 24)
-    toolsResetScaleBtn:SetPoint("TOPLEFT", 12, -248)
+    toolsResetScaleBtn:SetPoint("TOPLEFT", 12, -220)
     toolsResetScaleBtn:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",

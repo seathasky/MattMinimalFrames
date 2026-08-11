@@ -8,6 +8,10 @@ local GetUnitAuras = Compat.GetUnitAuras
 local SetAuraCooldown = Compat.SetAuraCooldown
 local GetAuraCount = Compat.GetAuraCount
 local HasRetailAuraAPI = Compat.HasRetailAuraAPI
+local UsesRestrictedAuraAPI = HasRetailAuraAPI and (
+    (type(GetBuildOption) == "function" and GetBuildOption("RestrictedAuraAPI") == true)
+    or (C_Secrets and type(C_Secrets.HasSecretRestrictions) == "function" and C_Secrets.HasSecretRestrictions())
+)
 
 local issecretvalue = issecretvalue
 
@@ -75,25 +79,6 @@ local function SetOmniCCAuraTimer(cooldownFrame, auraData)
     end
 end
 
-local function ShouldUseBlizzardAuraAnchoring(unitToken)
-    local db = MattMinimalFramesDB or {}
-    if unitToken == "player" then
-        if db.playerUseBlizzardAuraAnchoring ~= nil then
-            return db.playerUseBlizzardAuraAnchoring == true
-        end
-    elseif unitToken == "focus" then
-        if db.focusUseBlizzardAuraAnchoring ~= nil then
-            return db.focusUseBlizzardAuraAnchoring == true
-        end
-    else
-        if db.targetUseBlizzardAuraAnchoring ~= nil then
-            return db.targetUseBlizzardAuraAnchoring == true
-        end
-    end
-    -- Backward compatibility for profiles saved before split player/target toggles.
-    return db.useBlizzardAuraAnchoring == true
-end
-
 local function ClearAuraFrameState(auraFrame)
     if not auraFrame then
         return
@@ -120,7 +105,15 @@ local function ClearAuraFrameState(auraFrame)
 end
 
 local function ClearAuraContainer(container)
-    if not container or not container.auras then
+    if not container then
+        return
+    end
+    -- Restricted retail aura containers own their state in Blizzard's secure
+    -- environment. AddOn Lua must never inspect or clear their aura buttons.
+    if container.mmfSecureAuraContainer then
+        return
+    end
+    if not container.auras then
         return
     end
 
@@ -210,46 +203,20 @@ end
 
 local function GetAuraDirectionValue(isDebuff, unitToken)
     local db = MattMinimalFramesDB or {}
-    local forceDebuffsDown = isDebuff and ShouldUseBlizzardAuraAnchoring(unitToken)
-
-    local function NormalizeDebuffGrowthDown(direction)
-        if direction == "left_up" then
-            return "left_down"
-        elseif direction == "right_up" then
-            return "right_down"
-        elseif direction == "up_left" then
-            return "down_left"
-        elseif direction == "up_right" then
-            return "down_right"
-        end
-        return direction
-    end
 
     if unitToken == "player" then
         if isDebuff then
-            local value = NormalizeAuraDirection(db.playerDebuffAuraDirection, "left_up")
-            if forceDebuffsDown then
-                value = NormalizeDebuffGrowthDown(value)
-            end
-            return value
+            return NormalizeAuraDirection(db.playerDebuffAuraDirection, "left_up")
         end
         return NormalizeAuraDirection(db.playerBuffAuraDirection, "right_down")
     elseif unitToken == "focus" then
         if isDebuff then
-            local value = NormalizeAuraDirection(db.focusDebuffAuraDirection, "right_up")
-            if forceDebuffsDown then
-                value = NormalizeDebuffGrowthDown(value)
-            end
-            return value
+            return NormalizeAuraDirection(db.focusDebuffAuraDirection, "right_up")
         end
         return NormalizeAuraDirection(db.focusBuffAuraDirection, "left_down")
     end
     if isDebuff then
-        local value = NormalizeAuraDirection(db.debuffAuraDirection, "right_up")
-        if forceDebuffsDown then
-            value = NormalizeDebuffGrowthDown(value)
-        end
-        return value
+        return NormalizeAuraDirection(db.debuffAuraDirection, "right_up")
     end
     return NormalizeAuraDirection(db.buffAuraDirection, "left_down")
 end
@@ -268,18 +235,6 @@ local function GetAuraDirectionConfig(directionValue)
         horizontalSign = hSign,
         verticalSign = vSign,
     }
-end
-
-local function HasVisibleAuras(container)
-    if not container or not container.auras then
-        return false
-    end
-    for _, aura in ipairs(container.auras) do
-        if aura and aura.IsShown and aura:IsShown() then
-            return true
-        end
-    end
-    return false
 end
 
 local function ApplyAuraContainerPosition(container, isDebuff, x, y)
@@ -335,23 +290,6 @@ local function ApplyAuraContainerPosition(container, isDebuff, x, y)
         else
             anchorPoint = "TOPRIGHT"
             relativePoint = "BOTTOMRIGHT"
-        end
-    end
-
-    if isDebuff and ShouldUseBlizzardAuraAnchoring(unitToken) then
-        local db = MattMinimalFramesDB or {}
-        local showBuffsKey = (unitToken == "player") and "showPlayerBuffs"
-            or (unitToken == "focus") and "showFocusBuffs"
-            or "showBuffs"
-        local buffsEnabled = (db[showBuffsKey] ~= false)
-        local buffContainer = ownerFrame and ownerFrame.BuffContainer
-        if buffsEnabled and buffContainer and buffContainer.IsShown and buffContainer:IsShown() and HasVisibleAuras(buffContainer) then
-            relativeTo = buffContainer
-            relativePoint = (unitToken == "player") and "BOTTOMRIGHT" or "BOTTOMLEFT"
-            -- Debuff offsets are stored for the legacy frame anchor.
-            -- When attaching below buffs, translate to local offsets from the buff edge.
-            offsetX = offsetX - defaultX
-            offsetY = offsetY - defaultY - AURA_ICON_SPACING
         end
     end
 
@@ -426,41 +364,11 @@ local function StartAuraContainerDrag(container)
     local db = MattMinimalFramesDB or {}
     local startX = tonumber(db[xKey]) or defaultX
     local startY = tonumber(db[yKey]) or defaultY
-    local unitToken = (container and container.mmfAuraUnit) or "target"
     local scale = UIParent and UIParent.GetEffectiveScale and UIParent:GetEffectiveScale() or 1
     if scale <= 0 then
         scale = 1
     end
     local cursorX, cursorY = GetCursorPosition()
-
-    local groupDrag = false
-    local groupBuffContainer = nil
-    local groupDebuffContainer = nil
-    local groupBuffXKey = nil
-    local groupBuffYKey = nil
-    local groupBuffStartX = nil
-    local groupBuffStartY = nil
-    local groupDebuffXKey = nil
-    local groupDebuffYKey = nil
-    local groupDebuffDefaultX = nil
-    local groupDebuffDefaultY = nil
-
-    if ShouldUseBlizzardAuraAnchoring(unitToken) then
-        local ownerFrame = container and container.mmfAuraOwnerFrame
-        if ownerFrame and ownerFrame.BuffContainer and ownerFrame.DebuffContainer then
-            groupDrag = true
-            groupBuffContainer = ownerFrame.BuffContainer
-            groupDebuffContainer = ownerFrame.DebuffContainer
-
-            local buffDefaultX, buffDefaultY
-            groupBuffXKey, groupBuffYKey, buffDefaultX, buffDefaultY = GetAuraOffsetKeysForContainer(groupBuffContainer, false)
-            groupBuffStartX = tonumber(db[groupBuffXKey]) or buffDefaultX
-            groupBuffStartY = tonumber(db[groupBuffYKey]) or buffDefaultY
-
-            groupDebuffXKey, groupDebuffYKey, groupDebuffDefaultX, groupDebuffDefaultY =
-                GetAuraOffsetKeysForContainer(groupDebuffContainer, true)
-        end
-    end
 
     container.mmfAuraDragState = {
         xKey = xKey,
@@ -469,17 +377,6 @@ local function StartAuraContainerDrag(container)
         startOffsetY = startY,
         startCursorX = (cursorX or 0) / scale,
         startCursorY = (cursorY or 0) / scale,
-        groupDrag = groupDrag,
-        groupBuffContainer = groupBuffContainer,
-        groupDebuffContainer = groupDebuffContainer,
-        groupBuffXKey = groupBuffXKey,
-        groupBuffYKey = groupBuffYKey,
-        groupBuffStartOffsetX = groupBuffStartX,
-        groupBuffStartOffsetY = groupBuffStartY,
-        groupDebuffXKey = groupDebuffXKey,
-        groupDebuffYKey = groupDebuffYKey,
-        groupDebuffDefaultX = groupDebuffDefaultX,
-        groupDebuffDefaultY = groupDebuffDefaultY,
     }
     container.mmfAuraDragging = true
     container:SetScript("OnUpdate", function(self)
@@ -494,20 +391,6 @@ local function StartAuraContainerDrag(container)
         local cx, cy = GetCursorPosition()
         local dx = ((cx or 0) / s) - state.startCursorX
         local dy = ((cy or 0) / s) - state.startCursorY
-
-        if state.groupDrag and state.groupBuffContainer and state.groupDebuffContainer then
-            local newBuffX = math.floor((state.groupBuffStartOffsetX + dx) + 0.5)
-            local newBuffY = math.floor((state.groupBuffStartOffsetY + dy) + 0.5)
-            MattMinimalFramesDB[state.groupBuffXKey] = newBuffX
-            MattMinimalFramesDB[state.groupBuffYKey] = newBuffY
-
-            ApplyAuraContainerPosition(state.groupBuffContainer, false, newBuffX, newBuffY)
-
-            local currentDebuffX = tonumber(MattMinimalFramesDB[state.groupDebuffXKey]) or state.groupDebuffDefaultX
-            local currentDebuffY = tonumber(MattMinimalFramesDB[state.groupDebuffYKey]) or state.groupDebuffDefaultY
-            ApplyAuraContainerPosition(state.groupDebuffContainer, true, currentDebuffX, currentDebuffY)
-            return
-        end
 
         local newX = math.floor((state.startOffsetX + dx) + 0.5)
         local newY = math.floor((state.startOffsetY + dy) + 0.5)
@@ -899,6 +782,9 @@ local function SetAuraTestPreviewFrameState(enabled)
 end
 
 local function GetActiveAuraCount(container)
+    if container and container.mmfSecureAuraContainer then
+        return 0
+    end
     if not container or not container.auras then
         return 0
     end
@@ -930,7 +816,95 @@ local function GetAuraOffsetsForUnit(unit, isDebuff)
     return MMF_GetBuffXOffset(), MMF_GetBuffYOffset()
 end
 
+local function ConfigureSecureAuraContainer(container, isDebuff)
+    if not container or not container.mmfSecureAuraContainer then
+        return
+    end
+
+    local unitToken = container.mmfAuraUnit or "target"
+    local iconSize = GetAuraIconSizeForType(isDebuff, unitToken)
+    local perRow = GetAuraIconsPerRow(isDebuff, unitToken)
+    local rows = GetAuraRows(isDebuff, unitToken)
+    local visibleLimit = GetVisibleAuraLimit(isDebuff, unitToken)
+    local lineSize = (iconSize * perRow) + (AURA_ICON_SPACING * math.max(0, perRow - 1))
+    local direction = GetAuraDirectionConfig(GetAuraDirectionValue(isDebuff, unitToken))
+    local groupKey = container.mmfAuraGroupKey
+    local filter
+
+    -- CustomAuraContainer layout dimensions control placement, but pooled aura
+    -- buttons retain their creation size unless they are explicitly resized.
+    -- Existing buttons are accessible while aura secrecy is inactive; buttons
+    -- allocated later also read the current configured size in their initializer.
+    local aurasAreSecret = C_Secrets
+        and type(C_Secrets.ShouldAurasBeSecret) == "function"
+        and C_Secrets.ShouldAurasBeSecret()
+    if container.mmfAppliedIconSize ~= iconSize and not aurasAreSecret then
+        local frameCount = container:GetAuraGroupFrameCount(groupKey)
+        for frameIndex = 1, frameCount do
+            local auraButton = container:GetAuraGroupFrame(groupKey, frameIndex)
+            if auraButton then
+                auraButton:SetSize(iconSize, iconSize)
+            end
+        end
+        container.mmfAppliedIconSize = iconSize
+    end
+
+    if isDebuff then
+        local db = MattMinimalFramesDB or {}
+        filter = (unitToken == "target" and db.onlyShowPlayerDebuffsOnTarget == true)
+            and "HARMFUL|PLAYER"
+            or "HARMFUL"
+    else
+        filter = "HELPFUL"
+    end
+
+    container:SetAuraGroupFilterString(groupKey, filter)
+    container:SetAuraGroupMaxFrameCount(groupKey, visibleLimit)
+    local groupLayoutSignature = table.concat({
+        tostring(AURA_ICON_SPACING),
+        tostring(iconSize),
+    }, ":")
+    if container.mmfAuraGroupLayoutSignature ~= groupLayoutSignature then
+        container:SetAuraGroupLayout(groupKey, {
+            elementSpacing = AURA_ICON_SPACING,
+            lineSpacing = AURA_ICON_SPACING,
+            elementWidth = iconSize,
+            elementHeight = iconSize,
+        })
+        container.mmfAuraGroupLayoutSignature = groupLayoutSignature
+    end
+
+    local horizontalDirection = direction.horizontalSign < 0
+        and AnchorUtil.FlowDirection.Left
+        or AnchorUtil.FlowDirection.Right
+    local verticalDirection = direction.verticalSign > 0
+        and AnchorUtil.FlowDirection.Up
+        or AnchorUtil.FlowDirection.Down
+    local layoutAxis = direction.primary == "vertical"
+        and AnchorUtil.FlowLayoutAxis.Vertical
+        or AnchorUtil.FlowLayoutAxis.Horizontal
+    local maximumLineSize = lineSize
+    if direction.primary == "vertical" then
+        maximumLineSize = (iconSize * rows) + (AURA_ICON_SPACING * math.max(0, rows - 1))
+    end
+    local anchorPoint
+    if unitToken == "player" then
+        anchorPoint = isDebuff and "TOPRIGHT" or "TOPLEFT"
+    else
+        anchorPoint = isDebuff and "TOPLEFT" or "TOPRIGHT"
+    end
+
+    container:SetFlowLayoutAxis(layoutAxis)
+    container:SetFlowLayoutAnchorPoint(anchorPoint)
+    container:SetFlowLayoutGrowthDirection(horizontalDirection, verticalDirection)
+    container:SetFlowLayoutMaximumLineSize(math.max(1, maximumLineSize))
+end
+
 local function LayoutAuraContainer(container, isDebuff, size, activeCount)
+    if container and container.mmfSecureAuraContainer then
+        ConfigureSecureAuraContainer(container, isDebuff)
+        return
+    end
     if not container or not container.auras then
         return
     end
@@ -1006,12 +980,9 @@ local function LayoutAuraContainer(container, isDebuff, size, activeCount)
             (step * effectiveRows) - AURA_ICON_SPACING
         )
     else
-        local useBlizzardAnchoring = ShouldUseBlizzardAuraAnchoring(unitToken)
-        -- Legacy mode keeps the old minimum visual footprint for buffs.
-        -- Blizzard-style anchoring uses active aura rows/cols so debuffs can flow dynamically below buffs.
-        local baselineRows = useBlizzardAnchoring and effectiveRows or math.min(rows, 3)
+        local baselineRows = math.min(rows, 3)
         local buffRows = math.max(effectiveRows, baselineRows)
-        local buffCols = useBlizzardAnchoring and effectiveCols or perRow
+        local buffCols = perRow
         container:SetSize(
             (step * buffCols) - AURA_ICON_SPACING,
             (step * buffRows) - AURA_ICON_SPACING
@@ -1051,6 +1022,26 @@ function MMF_UpdateAuraTextScale(scale)
     local fontSize = math.max(6, math.floor(10 * scale))
     
     local function updateContainer(container)
+        if container and container.mmfSecureAuraContainer then
+            local aurasAreSecret = C_Secrets
+                and type(C_Secrets.ShouldAurasBeSecret) == "function"
+                and C_Secrets.ShouldAurasBeSecret()
+            if aurasAreSecret then
+                return
+            end
+            local groupKey = container.mmfAuraGroupKey
+            local frameCount = container:GetAuraGroupFrameCount(groupKey)
+            for frameIndex = 1, frameCount do
+                local auraButton = container:GetAuraGroupFrame(groupKey, frameIndex)
+                if auraButton then
+                    local countText = auraButton:GetApplicationCount()
+                    if countText then
+                        countText:SetFont(STANDARD_TEXT_FONT, fontSize, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
+                    end
+                end
+            end
+            return
+        end
         if container and container.auras then
             for _, aura in ipairs(container.auras) do
                 if aura.count then
@@ -1063,14 +1054,20 @@ function MMF_UpdateAuraTextScale(scale)
     if MMF_TargetFrame then
         updateContainer(MMF_TargetFrame.BuffContainer)
         updateContainer(MMF_TargetFrame.DebuffContainer)
+        updateContainer(MMF_TargetFrame.BuffPreviewContainer)
+        updateContainer(MMF_TargetFrame.DebuffPreviewContainer)
     end
     if MMF_PlayerFrame then
         updateContainer(MMF_PlayerFrame.BuffContainer)
         updateContainer(MMF_PlayerFrame.DebuffContainer)
+        updateContainer(MMF_PlayerFrame.BuffPreviewContainer)
+        updateContainer(MMF_PlayerFrame.DebuffPreviewContainer)
     end
     if MMF_FocusFrame then
         updateContainer(MMF_FocusFrame.BuffContainer)
         updateContainer(MMF_FocusFrame.DebuffContainer)
+        updateContainer(MMF_FocusFrame.BuffPreviewContainer)
+        updateContainer(MMF_FocusFrame.DebuffPreviewContainer)
     end
 end
 
@@ -1080,6 +1077,31 @@ function MMF_UpdateTimerTextScale(scale)
     local fontSize = math.max(8, math.floor(12 * scale))
     
     local function updateContainer(container)
+        if container and container.mmfSecureAuraContainer then
+            local aurasAreSecret = C_Secrets
+                and type(C_Secrets.ShouldAurasBeSecret) == "function"
+                and C_Secrets.ShouldAurasBeSecret()
+            if aurasAreSecret then
+                return
+            end
+            local groupKey = container.mmfAuraGroupKey
+            local frameCount = container:GetAuraGroupFrameCount(groupKey)
+            for frameIndex = 1, frameCount do
+                local auraButton = container:GetAuraGroupFrame(groupKey, frameIndex)
+                if auraButton then
+                    local cooldown = auraButton:GetDurationCooldown()
+                    if cooldown then
+                        local regions = { cooldown:GetRegions() }
+                        for _, region in ipairs(regions) do
+                            if region and region.SetFont then
+                                region:SetFont(STANDARD_TEXT_FONT, fontSize, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
+                            end
+                        end
+                    end
+                end
+            end
+            return
+        end
         if container and container.auras then
             for _, aura in ipairs(container.auras) do
                 if aura.timerText then
@@ -1092,14 +1114,20 @@ function MMF_UpdateTimerTextScale(scale)
     if MMF_TargetFrame then
         updateContainer(MMF_TargetFrame.BuffContainer)
         updateContainer(MMF_TargetFrame.DebuffContainer)
+        updateContainer(MMF_TargetFrame.BuffPreviewContainer)
+        updateContainer(MMF_TargetFrame.DebuffPreviewContainer)
     end
     if MMF_PlayerFrame then
         updateContainer(MMF_PlayerFrame.BuffContainer)
         updateContainer(MMF_PlayerFrame.DebuffContainer)
+        updateContainer(MMF_PlayerFrame.BuffPreviewContainer)
+        updateContainer(MMF_PlayerFrame.DebuffPreviewContainer)
     end
     if MMF_FocusFrame then
         updateContainer(MMF_FocusFrame.BuffContainer)
         updateContainer(MMF_FocusFrame.DebuffContainer)
+        updateContainer(MMF_FocusFrame.BuffPreviewContainer)
+        updateContainer(MMF_FocusFrame.DebuffPreviewContainer)
     end
 end
 
@@ -1305,8 +1333,71 @@ end
 -- CONTAINER SETUP
 --------------------------------------------------
 
-local function CreateAuraContainer(parent, isDebuff, unitToken)
+local function CreateAuraContainer(parent, isDebuff, unitToken, forcePreviewContainer)
     local iconSize = GetAuraIconSizeForType(isDebuff, unitToken)
+
+    if UsesRestrictedAuraAPI and not forcePreviewContainer then
+        local function InitializeAuraButton(auraButton)
+            local currentIconSize = GetAuraIconSizeForType(isDebuff, unitToken)
+            auraButton:SetSize(currentIconSize, currentIconSize)
+            auraButton:SetTooltipAnchorPoint("ANCHOR_RIGHT")
+
+            local icon = auraButton:CreateTexture(nil, "ARTWORK")
+            icon:SetAllPoints()
+            icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+            auraButton:SetIcon(icon)
+
+            local cooldown = CreateFrame("Cooldown", nil, auraButton, "CooldownFrameTemplate")
+            cooldown:SetAllPoints(icon)
+            cooldown:SetDrawEdge(false)
+            cooldown:SetHideCountdownNumbers(false)
+            local timerFontSize = math.max(8, math.floor(12 * MMF_GetTimerTextScale()))
+            local cooldownRegions = { cooldown:GetRegions() }
+            for _, region in ipairs(cooldownRegions) do
+                if region and region.SetFont then
+                    region:SetFont(STANDARD_TEXT_FONT, timerFontSize, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
+                end
+            end
+            auraButton:SetDurationCooldown(cooldown)
+
+            local count = auraButton:CreateFontString(nil, "OVERLAY")
+            count:SetPoint("BOTTOMRIGHT", auraButton, "BOTTOMRIGHT", -1, 1)
+            local scale = MMF_GetAuraTextScale()
+            count:SetFont(STANDARD_TEXT_FONT, math.max(6, math.floor(10 * scale)), (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
+            auraButton:SetApplicationCount(count)
+
+            if isDebuff then
+                local border = auraButton:CreateTexture(nil, "OVERLAY")
+                border:SetTexture("Interface\\Buttons\\UI-Debuff-Border")
+                border:SetPoint("TOPLEFT", auraButton, "TOPLEFT", -AURA_DEBUFF_BORDER_OUTSET, AURA_DEBUFF_BORDER_OUTSET)
+                border:SetPoint("BOTTOMRIGHT", auraButton, "BOTTOMRIGHT", AURA_DEBUFF_BORDER_OUTSET, -AURA_DEBUFF_BORDER_OUTSET)
+            end
+        end
+
+        local container = CreateFrame("AuraContainer", nil, parent, "CustomAuraContainerTemplate")
+        container.mmfSecureAuraContainer = true
+        container.mmfAuraUnit = unitToken
+        container.mmfAuraOwnerFrame = parent
+        container.mmfAuraIsDebuff = isDebuff
+        container.mmfAuraGroupKey = isDebuff and "Debuffs" or "Buffs"
+        container:SetUnit(unitToken)
+        container:AddAuraGroup(container.mmfAuraGroupKey, isDebuff and "HARMFUL" or "HELPFUL", {
+            maxFrameCount = GetVisibleAuraLimit(isDebuff, unitToken),
+            initializeFrame = InitializeAuraButton,
+            layout = {
+                elementSpacing = AURA_ICON_SPACING,
+                lineSpacing = AURA_ICON_SPACING,
+                elementWidth = iconSize,
+                elementHeight = iconSize,
+            },
+        })
+        ConfigureSecureAuraContainer(container, isDebuff)
+        container:SetEnabled(true)
+
+        local x, y = GetAuraOffsetsForUnit(unitToken, isDebuff)
+        ApplyAuraContainerPosition(container, isDebuff, x, y)
+        return container
+    end
 
     local container = CreateFrame("Frame", nil, parent)
     container.mmfAuraUnit = unitToken
@@ -1397,6 +1488,14 @@ function MMF_SetupTargetAuras()
         if not MMF_TargetFrame.DebuffContainer then
             MMF_TargetFrame.DebuffContainer = CreateAuraContainer(MMF_TargetFrame, true, "target")
         end
+        if UsesRestrictedAuraAPI and not MMF_TargetFrame.BuffPreviewContainer then
+            MMF_TargetFrame.BuffPreviewContainer = CreateAuraContainer(MMF_TargetFrame, false, "target", true)
+            MMF_TargetFrame.BuffPreviewContainer:Hide()
+        end
+        if UsesRestrictedAuraAPI and not MMF_TargetFrame.DebuffPreviewContainer then
+            MMF_TargetFrame.DebuffPreviewContainer = CreateAuraContainer(MMF_TargetFrame, true, "target", true)
+            MMF_TargetFrame.DebuffPreviewContainer:Hide()
+        end
     end
     if MMF_PlayerFrame then
         if not MMF_PlayerFrame.BuffContainer then
@@ -1405,6 +1504,14 @@ function MMF_SetupTargetAuras()
         if not MMF_PlayerFrame.DebuffContainer then
             MMF_PlayerFrame.DebuffContainer = CreateAuraContainer(MMF_PlayerFrame, true, "player")
         end
+        if UsesRestrictedAuraAPI and not MMF_PlayerFrame.BuffPreviewContainer then
+            MMF_PlayerFrame.BuffPreviewContainer = CreateAuraContainer(MMF_PlayerFrame, false, "player", true)
+            MMF_PlayerFrame.BuffPreviewContainer:Hide()
+        end
+        if UsesRestrictedAuraAPI and not MMF_PlayerFrame.DebuffPreviewContainer then
+            MMF_PlayerFrame.DebuffPreviewContainer = CreateAuraContainer(MMF_PlayerFrame, true, "player", true)
+            MMF_PlayerFrame.DebuffPreviewContainer:Hide()
+        end
     end
     if MMF_FocusFrame then
         if not MMF_FocusFrame.BuffContainer then
@@ -1412,6 +1519,14 @@ function MMF_SetupTargetAuras()
         end
         if not MMF_FocusFrame.DebuffContainer then
             MMF_FocusFrame.DebuffContainer = CreateAuraContainer(MMF_FocusFrame, true, "focus")
+        end
+        if UsesRestrictedAuraAPI and not MMF_FocusFrame.BuffPreviewContainer then
+            MMF_FocusFrame.BuffPreviewContainer = CreateAuraContainer(MMF_FocusFrame, false, "focus", true)
+            MMF_FocusFrame.BuffPreviewContainer:Hide()
+        end
+        if UsesRestrictedAuraAPI and not MMF_FocusFrame.DebuffPreviewContainer then
+            MMF_FocusFrame.DebuffPreviewContainer = CreateAuraContainer(MMF_FocusFrame, true, "focus", true)
+            MMF_FocusFrame.DebuffPreviewContainer:Hide()
         end
     end
 end
@@ -1501,10 +1616,14 @@ local function UpdateFakeAuraIcon(auraFrame, index, isDebuff)
     auraFrame.count:Show()
 
     if auraFrame.cooldown then
-        auraFrame.cooldown:Hide()
+        auraFrame.cooldown:SetHideCountdownNumbers(false)
+        auraFrame.cooldown:SetCooldown(GetTime(), 75 + ((index % 3) * 15))
+        auraFrame.cooldown:Show()
     end
-    if auraFrame.timerText then
-        auraFrame.timerText:Hide()
+    if auraFrame.timerText and auraFrame.timerText.SetFont then
+        local timerScale = MMF_GetTimerTextScale()
+        auraFrame.timerText:SetFont(STANDARD_TEXT_FONT, math.max(8, math.floor(12 * timerScale)), (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
+        auraFrame.timerText:Show()
     end
 
     if auraFrame.border then
@@ -1653,6 +1772,86 @@ local function UpdateUnitAuras(unit)
         or (unit == "focus") and "showFocusDebuffs"
         or "showDebuffs"
 
+    if UsesRestrictedAuraAPI then
+        local buffContainer = frame.BuffContainer
+        local debuffContainer = frame.DebuffContainer
+        local buffPreview = frame.BuffPreviewContainer
+        local debuffPreview = frame.DebuffPreviewContainer
+
+        if IsAuraFakePreviewEnabled() and buffPreview and debuffPreview then
+            buffContainer:SetEnabled(false)
+            debuffContainer:SetEnabled(false)
+            buffContainer:Hide()
+            debuffContainer:Hide()
+
+            if unit == "target" then
+                SetAuraTestPreviewFrameState(true)
+            end
+
+            local forcePlayerPreview = unit == "player"
+            local showBuffs = forcePlayerPreview or db[showBuffsKey] ~= false
+            local showDebuffs = forcePlayerPreview or db[showDebuffsKey] ~= false
+
+            if showBuffs then
+                buffPreview:Show()
+                PopulateFakeAuras(buffPreview, false)
+                LayoutAuraContainer(buffPreview, false, nil, math.min(16, GetVisibleAuraLimit(false, unit)))
+                UpdateAuraContainerLabel(buffPreview, showLabels)
+            else
+                ClearAuraContainer(buffPreview)
+                buffPreview:Hide()
+                UpdateAuraContainerLabel(buffPreview, false)
+            end
+
+            if showDebuffs then
+                debuffPreview:Show()
+                PopulateFakeAuras(debuffPreview, true)
+                LayoutAuraContainer(debuffPreview, true, nil, math.min(16, GetVisibleAuraLimit(true, unit)))
+                UpdateAuraContainerLabel(debuffPreview, showLabels)
+            else
+                ClearAuraContainer(debuffPreview)
+                debuffPreview:Hide()
+                UpdateAuraContainerLabel(debuffPreview, false)
+            end
+
+            local buffX, buffY = GetAuraOffsetsForUnit(unit, false)
+            local debuffX, debuffY = GetAuraOffsetsForUnit(unit, true)
+            ApplyAuraContainerPosition(buffPreview, false, buffX, buffY)
+            ApplyAuraContainerPosition(debuffPreview, true, debuffX, debuffY)
+            return
+        end
+
+        if buffPreview then
+            ClearAuraContainer(buffPreview)
+            buffPreview:Hide()
+            UpdateAuraContainerLabel(buffPreview, false)
+        end
+        if debuffPreview then
+            ClearAuraContainer(debuffPreview)
+            debuffPreview:Hide()
+            UpdateAuraContainerLabel(debuffPreview, false)
+        end
+        if unit == "target" then
+            SetAuraTestPreviewFrameState(false)
+        end
+
+        ConfigureSecureAuraContainer(buffContainer, false)
+        ConfigureSecureAuraContainer(debuffContainer, true)
+
+        local showBuffs = db[showBuffsKey] ~= false
+        local showDebuffs = db[showDebuffsKey] ~= false
+        buffContainer:SetEnabled(showBuffs)
+        debuffContainer:SetEnabled(showDebuffs)
+        buffContainer:SetShown(showBuffs)
+        debuffContainer:SetShown(showDebuffs)
+
+        local buffX, buffY = GetAuraOffsetsForUnit(unit, false)
+        local debuffX, debuffY = GetAuraOffsetsForUnit(unit, true)
+        ApplyAuraContainerPosition(buffContainer, false, buffX, buffY)
+        ApplyAuraContainerPosition(debuffContainer, true, debuffX, debuffY)
+        return
+    end
+
     if IsAuraFakePreviewEnabled() then
         local forcePlayerPreview = (unit == "player")
         if unit == "target" then
@@ -1800,6 +1999,9 @@ local pendingTargetRefreshBurst = false
 local pendingEraPlayerAuraRefreshBurst = false
 
 local function QueueTargetRefreshBurst()
+    if UsesRestrictedAuraAPI then
+        return
+    end
     if pendingTargetRefreshBurst then
         return
     end
@@ -1859,6 +2061,9 @@ local function QueueEraPlayerAuraRefreshBurst()
 end
 
 local function QueueAuraResync(unit)
+    if UsesRestrictedAuraAPI then
+        return
+    end
     if not C_Timer or type(C_Timer.After) ~= "function" then
         return
     end
@@ -1911,7 +2116,7 @@ auraEventFrame:SetScript("OnUpdate", function(self, elapsed)
     end
     self.mmfAuraPollElapsed = 0
 
-    if not HasRetailAuraAPI then
+    if not HasRetailAuraAPI or UsesRestrictedAuraAPI then
         return
     end
     if not ((type(InCombatLockdown) == "function") and InCombatLockdown()) then
@@ -1936,6 +2141,12 @@ auraEventFrame:SetScript("OnEvent", function(self, event, unit)
         unit = Compat.GetAccessibleUnitToken(unit)
     end
     if ShouldSuspendForBlizzardEditMode() then
+        return
+    end
+    -- Blizzard's restricted Retail AuraContainer owns UNIT_AURA processing.
+    -- Running MMF's legacy refresh path as well causes full reassignments and
+    -- restarts cooldown visuals, which presents as blinking aura icons.
+    if UsesRestrictedAuraAPI and event == "UNIT_AURA" then
         return
     end
     if event == "PLAYER_ENTERING_WORLD" then
@@ -1993,6 +2204,14 @@ auraEventFrame:SetScript("OnEvent", function(self, event, unit)
             ClearAuraContainer(MMF_TargetFrame.DebuffContainer)
         end
         MMF_UpdateTargetAuras()
+        if UsesRestrictedAuraAPI and MMF_TargetFrame then
+            if MMF_TargetFrame.BuffContainer and MMF_TargetFrame.BuffContainer:IsEnabled() then
+                MMF_TargetFrame.BuffContainer:UpdateAllAuras()
+            end
+            if MMF_TargetFrame.DebuffContainer and MMF_TargetFrame.DebuffContainer:IsEnabled() then
+                MMF_TargetFrame.DebuffContainer:UpdateAllAuras()
+            end
+        end
         MMF_UpdatePlayerAuras()
         MMF_UpdateFocusAuras()
         QueueTargetRefreshBurst()
@@ -2008,6 +2227,14 @@ auraEventFrame:SetScript("OnEvent", function(self, event, unit)
             ClearAuraContainer(MMF_FocusFrame.DebuffContainer)
         end
         MMF_UpdateFocusAuras()
+        if UsesRestrictedAuraAPI and MMF_FocusFrame then
+            if MMF_FocusFrame.BuffContainer and MMF_FocusFrame.BuffContainer:IsEnabled() then
+                MMF_FocusFrame.BuffContainer:UpdateAllAuras()
+            end
+            if MMF_FocusFrame.DebuffContainer and MMF_FocusFrame.DebuffContainer:IsEnabled() then
+                MMF_FocusFrame.DebuffContainer:UpdateAllAuras()
+            end
+        end
         QueueAuraResync("focus")
         if MMF_UpdateDispelHighlights then
             MMF_UpdateDispelHighlights()

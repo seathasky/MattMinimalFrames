@@ -36,103 +36,20 @@ function MMF_BuildAurasPowerTargetAurasSection(ctx)
         reset:SetPoint("LEFT", text, "RIGHT", 8, 0)
     end
 
-    local function RefreshAuraAnchoring()
-        if MMF_UpdateAuraLayout then
-            MMF_UpdateAuraLayout()
-        else
-            if MMF_UpdateTargetAuras then
-                MMF_UpdateTargetAuras()
-            end
-            if MMF_UpdatePlayerAuras then
-                MMF_UpdatePlayerAuras()
-            end
-        end
-    end
-
-    local function SetAnchorCheckboxEnabled(container, enabled)
-        if not container then return end
-        container:SetAlpha(enabled and 1 or 0.45)
-        if container.labelText then
-            container.labelText:SetAlpha(enabled and 1 or 0.7)
-        end
-        if container.checkbox then
-            container.checkbox:SetEnabled(enabled)
-            container.checkbox:EnableMouse(enabled)
-            container.checkbox:SetAlpha(enabled and 1 or 0.55)
-            if container.checkbox.check then
-                container.checkbox.check:SetAlpha(enabled and 1 or 0.35)
-            end
-        end
-        if container.resetButton then
-            container.resetButton:SetEnabled(enabled)
-            container.resetButton:EnableMouse(enabled)
-            container.resetButton:SetAlpha(enabled and 1 or 0.45)
-        end
-    end
-
-    local RefreshBlizzardAnchorState = function() end
-
     local buffsCheckbox = CreateMinimalCheckbox(root, "Buffs", AURA_COL_X, BUFF_TOGGLE_Y, "showBuffs", true, function()
-        RefreshBlizzardAnchorState()
         if MMF_UpdateTargetAuras then
             MMF_UpdateTargetAuras()
         end
     end)
 
     local debuffsCheckbox = CreateMinimalCheckbox(root, "Debuffs", AURA_COL_X, DEBUFF_TOGGLE_Y, "showDebuffs", true, function()
-        RefreshBlizzardAnchorState()
         if MMF_UpdateTargetAuras then
             MMF_UpdateTargetAuras()
         end
     end)
 
-    local blizzardAnchorCheckbox = CreateMinimalCheckbox(root, "Blizzard Anchor", AURA_COL_X + 136, BUFF_TOGGLE_Y, "targetUseBlizzardAuraAnchoring", false, function()
-        RefreshAuraAnchoring()
-    end)
-
     ApplyCompactCheckboxLayout(buffsCheckbox, 36)
     ApplyCompactCheckboxLayout(debuffsCheckbox, 46)
-    ApplyCompactCheckboxLayout(blizzardAnchorCheckbox, 92)
-
-    local blizzardAnchorHint = root:CreateFontString(nil, "OVERLAY")
-    blizzardAnchorHint:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
-    if blizzardAnchorCheckbox and blizzardAnchorCheckbox.labelText then
-        blizzardAnchorHint:SetPoint("TOPLEFT", blizzardAnchorCheckbox.labelText, "BOTTOMLEFT", 0, -2)
-    else
-        blizzardAnchorHint:SetPoint("TOPLEFT", blizzardAnchorCheckbox, "BOTTOMLEFT", 20, -2)
-    end
-    blizzardAnchorHint:SetWidth(170)
-    blizzardAnchorHint:SetJustifyH("LEFT")
-    blizzardAnchorHint:SetTextColor(0.72, 0.72, 0.76)
-    blizzardAnchorHint:SetText("Buff/Debuffs must be enabled")
-    blizzardAnchorHint:Hide()
-
-    RefreshBlizzardAnchorState = function()
-        local buffsEnabled = buffsCheckbox and buffsCheckbox.checkbox and buffsCheckbox.checkbox:GetChecked() == true
-        local debuffsEnabled = debuffsCheckbox and debuffsCheckbox.checkbox and debuffsCheckbox.checkbox:GetChecked() == true
-        local allowAnchor = buffsEnabled and debuffsEnabled
-
-        SetAnchorCheckboxEnabled(blizzardAnchorCheckbox, allowAnchor)
-        if blizzardAnchorHint then
-            blizzardAnchorHint:SetShown(not allowAnchor)
-        end
-        if not allowAnchor and blizzardAnchorCheckbox and blizzardAnchorCheckbox.checkbox and blizzardAnchorCheckbox.checkbox:GetChecked() then
-            blizzardAnchorCheckbox.checkbox:SetChecked(false)
-            if blizzardAnchorCheckbox.checkbox.check then
-                blizzardAnchorCheckbox.checkbox.check:SetShown(false)
-            end
-            if type(MattMinimalFramesDB) ~= "table" then
-                MattMinimalFramesDB = {}
-            end
-            MattMinimalFramesDB.targetUseBlizzardAuraAnchoring = false
-            if blizzardAnchorCheckbox.RefreshResetVisibility then
-                blizzardAnchorCheckbox:RefreshResetVisibility()
-            end
-            RefreshAuraAnchoring()
-        end
-    end
-
-    RefreshBlizzardAnchorState()
 
     local auraTypeOptions = {
         { value = "buff", label = "Target Buffs" },

@@ -1,22 +1,21 @@
-local CHANGELOG_VERSION = "8.0.0"
-local POPUP_WIDTH = 600
+local CHANGELOG_VERSION = "8.0.0-Beta"
+local POPUP_WIDTH = 560
 local POPUP_MIN_HEIGHT = 440
 local POPUP_MAX_HEIGHT = 650
 local CONTENT_WIDTH = POPUP_WIDTH - 30
 
 local CHANGES = {
-"|cffffd166*  Classic Era is now officially supported as its own addon build.|r",
-"|cff72bce8*|r  Reworked the settings window with cleaner spacing, alignment, sizing, grouping, and visual hierarchy.",
-"|cff72bce8*|r  Improved sidebar navigation, page headers, scrollbars, sub-tabs, and active/hover feedback.",
-"|cff72bce8*|r  Standardized checkboxes, sliders, dropdowns, color controls, reset buttons, and editable value fields.",
-"|cff72bce8*|r  Added larger checkbox click targets, clearer input focus, selected dropdown highlighting, and tab overflow handling.",
-"|cff72bce8*|r  Restored the Target of Target and Focus HP text outline, draw order, and configured text shadow.",
-"|cff72bce8*|r  Shared UI updates now remain consistent across Retail, TBC, and Classic Era builds.",
-"|cff72bce8*|r  Fixed the Shaman class bar: Elemental tracks Maelstrom with a value, and Enhancement tracks Maelstrom Weapon stacks.",
-"|cff72bce8*|r  Mana bar now sits flush at the bottom of the player frame as a thin strip.",
-"|cff72bce8*|r  Health and mana values display inside the frame - HP right, mana left.",
-"|cff72bce8*|r  Cleaner defaults for the cast bar, power bar, power text, text sizing, and frame positioning.",
-"|cffff6666*  NOTE: This build may reset your profile due to the number of layout and settings changes. Use at your own risk.|r",
+    "|cffffd166*  Classic Era is now officially supported as its own addon build.|r",
+    "|cff72bce8*|r  Reworked the settings window with cleaner spacing, alignment, sizing, grouping, and visual hierarchy.",
+    "|cff72bce8*|r  Improved sidebar navigation, page headers, scrollbars, sub-tabs, and active/hover feedback.",
+    "|cff72bce8*|r  Standardized checkboxes, sliders, dropdowns, color controls, reset buttons, and editable value fields.",
+    "|cff72bce8*|r  Added larger checkbox click targets, clearer input focus, selected dropdown highlighting, and tab overflow handling.",
+    "|cff72bce8*|r  Restored the Target of Target and Focus HP text outline, draw order, and configured text shadow.",
+    "|cff72bce8*|r  Shared UI updates now remain consistent across Retail, TBC, and Classic Era builds.",
+    "|cff72bce8*|r  Fixed the Shaman class bar: Elemental tracks Maelstrom with a value, and Enhancement tracks Maelstrom Weapon stacks.",
+    "|cff72bce8*|r  Mana bar now sits flush at the bottom of the player frame as a thin strip.",
+    "|cff72bce8*|r  Health and mana values display inside the frame - HP right, mana left.",
+    "|cff72bce8*|r  Cleaner defaults: smaller text, smarter positions, ERA EDITION branding.",
 }
 
 local function CreateChangelogFrame()
