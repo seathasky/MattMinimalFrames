@@ -444,11 +444,26 @@ local function UpdateDispelHighlight(frame, db)
     end
 
     if Compat and Compat.IsRetail and C_UnitAuras and C_UnitAuras.GetAuraDataByIndex and C_UnitAuras.GetAuraDispelTypeColor and C_CurveUtil and Enum and Enum.LuaCurveType then
-        -- Retail path: use C_UnitAuras.GetAuraDispelTypeColor with a color curve.
-        local bestAura = C_UnitAuras.GetAuraDataByIndex(unit, 1, "HARMFUL|RAID")
+        -- In 12.1, direct aura queries are forbidden to tainted callers while the
+        -- requested aura is secret.  Ask the non-secret predicate before touching
+        -- either the aura data or its instance-based dispel color.
+        local auraFilter = "HARMFUL|RAID"
+        if C_Secrets and C_Secrets.ShouldUnitAuraIndexBeSecret
+            and C_Secrets.ShouldUnitAuraIndexBeSecret(unit, 1, auraFilter) then
+            frame.dispelHighlight:Hide()
+            return
+        end
+
+        local bestAura = C_UnitAuras.GetAuraDataByIndex(unit, 1, auraFilter)
         local bestAuraInstanceID = bestAura and bestAura.auraInstanceID or nil
 
         if bestAuraInstanceID then
+            if C_Secrets and C_Secrets.ShouldUnitAuraInstanceBeSecret
+                and C_Secrets.ShouldUnitAuraInstanceBeSecret(unit, bestAuraInstanceID) then
+                frame.dispelHighlight:Hide()
+                return
+            end
+
             local curve = EnsureDispelColorCurve(frame)
             local color = C_UnitAuras.GetAuraDispelTypeColor(unit, bestAuraInstanceID, curve)
             if color then
@@ -902,7 +917,7 @@ local function GetNameTextColor(unit, db)
     local isPlayerUnit = unitExists and UnitIsPlayer and UnitIsPlayer(unit)
     if usePlayerClassColor and isPlayerUnit and UnitClass and RAID_CLASS_COLORS then
         local _, classToken = UnitClass(unit)
-        local classColor = classToken and RAID_CLASS_COLORS[classToken]
+        local classColor = NotSecretValue(classToken) and classToken and RAID_CLASS_COLORS[classToken]
         if classColor then
             return classColor.r or 1, classColor.g or 1, classColor.b or 1
         end

@@ -1,3 +1,7 @@
+local function IsNonSecretValue(value)
+    return not issecretvalue or not issecretvalue(value)
+end
+
 local function GetPlayerFrameIconMode()
     local mode = MattMinimalFramesDB and MattMinimalFramesDB.playerFrameIconMode or nil
     if mode == "sharedmedia" and MattMinimalFramesDB and MattMinimalFramesDB.playerFrameIconMediaType == "jiberish" then
@@ -312,7 +316,7 @@ local function ApplyTargetFrameIconMode(frame, mode)
         local mediaKey = (MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconStyle) or (MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconMediaKey)
         local mediaType = (mode == "jiberish" and "jiberish") or (MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconMediaType) or "jiberish"
         local _, classToken = UnitClass("target")
-        if ApplySharedMediaIconTexture(icon, mediaKey, mediaType, classToken) then
+        if IsNonSecretValue(classToken) and ApplySharedMediaIconTexture(icon, mediaKey, mediaType, classToken) then
             return
         end
         icon:Hide()
@@ -321,7 +325,7 @@ local function ApplyTargetFrameIconMode(frame, mode)
 
     if UnitIsPlayer("target") then
         local _, classFile = UnitClass("target")
-        local coords = classFile and CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[classFile]
+        local coords = IsNonSecretValue(classFile) and classFile and CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[classFile]
         if coords then
             icon:SetTexture("Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES")
             ApplyClassCoords(icon, coords)

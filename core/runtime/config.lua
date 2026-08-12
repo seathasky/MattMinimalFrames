@@ -793,7 +793,7 @@ function MMF_GetUnitColor(unit)
             end
         end
         local _, class = UnitClass(unit)
-        if class then
+        if class and IsNonSecretValue(class) then
             local colors = RAID_CLASS_COLORS[class]
             if colors then
                 return colors.r, colors.g, colors.b
@@ -824,7 +824,7 @@ function MMF_GetUnitColor(unit)
             return 0.2, 0.8, 0.2
         end
     end
-    
+
     return 1, 1, 1
 end
 
