@@ -17,9 +17,9 @@ local function GetStatusBarTexturePath()
     return cfg.TEXTURE_PATH
 end
 
-local function CanStartFrameDrag(frame)
+local function CanStartFrameDrag(frame, allowTextMoveMode)
     if DragHelpers.CanStartFrameDrag then
-        return DragHelpers.CanStartFrameDrag(frame)
+        return DragHelpers.CanStartFrameDrag(frame, allowTextMoveMode)
     end
     return false
 end
@@ -38,11 +38,11 @@ local function TryStopFrameMoving(frame)
     return false
 end
 
-local function TryBeginFrameMoving(frame, ownerName)
+local function TryBeginFrameMoving(frame, ownerName, allowTextMoveMode)
     if DragHelpers.TryBeginFrameMoving then
-        return DragHelpers.TryBeginFrameMoving(frame, ownerName)
+        return DragHelpers.TryBeginFrameMoving(frame, ownerName, allowTextMoveMode)
     end
-    if CanStartFrameDrag(frame) then
+    if CanStartFrameDrag(frame, allowTextMoveMode) then
         frame:StartMoving()
         return true
     end
@@ -88,6 +88,48 @@ local function ApplyCastBarTextReadability(fontString)
     end
 end
 
+local function ApplyCastBarTextPositions(frame, unit)
+    if not frame or not frame.castBarTextOverlay then
+        return
+    end
+
+    local overlay = frame.castBarTextOverlay
+    local width = math.max(8, overlay:GetWidth() or 8)
+    local height = math.max(16, overlay:GetHeight() or 16)
+    local spellWidth = math.max(8, width - 44)
+    local positions = MattMinimalFramesDB and MattMinimalFramesDB.castBarTextPositions and MattMinimalFramesDB.castBarTextPositions[unit]
+
+    local function ApplyText(text, handle, key, defaultX, textWidth, justify)
+        if not text or not handle then
+            return
+        end
+        if handle.mmfDragInProgress then
+            return
+        end
+        local saved = positions and positions[key]
+        local hasCustomPosition = type(saved) == "table" and type(saved.x) == "number" and type(saved.y) == "number"
+        handle:SetSize(textWidth, height)
+        handle:ClearAllPoints()
+        handle:SetPoint("CENTER", overlay, "CENTER", hasCustomPosition and saved.x or defaultX, hasCustomPosition and saved.y or 0)
+        text:ClearAllPoints()
+        text:SetPoint("CENTER", handle, "CENTER", 0, 0)
+        text:SetWidth(textWidth)
+        text:SetJustifyH(justify)
+    end
+
+    ApplyText(frame.castBarText, frame.castBarTextDragFrame, "spell", (-width * 0.5) + 3 + (spellWidth * 0.5), spellWidth, "LEFT")
+    ApplyText(frame.castBarTime, frame.castBarTimeDragFrame, "time", (width * 0.5) - 21, 36, "RIGHT")
+end
+
+_G.MMF_ApplyCastBarTextPositions = function()
+    if not MMF_GetAllFrames then
+        return
+    end
+    for _, frame in ipairs(MMF_GetAllFrames()) do
+        ApplyCastBarTextPositions(frame, frame.unit)
+    end
+end
+
 local function RefreshCastBarTextLayer(frame)
     if not frame or not frame.castBarFrame or not frame.castBarTextOverlay then
         return
@@ -121,6 +163,7 @@ local function RefreshCastBarTextLayer(frame)
         frame.castBarTime:SetAlpha(1)
         ApplyCastBarTextReadability(frame.castBarTime)
     end
+    ApplyCastBarTextPositions(frame, frame.unit)
 end
 
 _G.MMF_RefreshCastBarTextLayer = RefreshCastBarTextLayer
@@ -189,13 +232,51 @@ local function CreateCastBar(frame, unit)
     frame.castBarTime:SetWordWrap(false)
     frame.castBarTime:SetDrawLayer("OVERLAY", 7)
     ApplyCastBarTextReadability(frame.castBarTime)
-    frame.castBarTime:SetPoint("RIGHT", frame.castBarTextOverlay, "RIGHT", -3, 0)
-    frame.castBarTime:SetJustifyH("RIGHT")
-    frame.castBarTime:SetWidth(36)
 
-    frame.castBarText:SetPoint("LEFT", frame.castBarTextOverlay, "LEFT", 3, 0)
-    frame.castBarText:SetPoint("RIGHT", frame.castBarTime, "LEFT", -4, 0)
-    frame.castBarText:SetJustifyH("LEFT")
+    local function CreateTextDragHandle(key, label)
+        local handle = CreateFrame("Frame", nil, frame.castBarTextOverlay)
+        handle:SetFrameLevel(frame.castBarTextOverlay:GetFrameLevel() + 1)
+        handle:SetMovable(true)
+        handle:EnableMouse(false)
+        handle:RegisterForDrag("LeftButton")
+        handle:SetScript("OnDragStart", function(self)
+            self.mmfDragInProgress = TryBeginFrameMoving(self, unit .. " " .. label, true) or nil
+        end)
+        handle:SetScript("OnDragStop", function(self)
+            if not TryStopFrameMoving(self) then
+                self.mmfDragInProgress = nil
+                return
+            end
+            local x, y = self:GetCenter()
+            local overlayX, overlayY = frame.castBarTextOverlay:GetCenter()
+            if not x or not y or not overlayX or not overlayY then
+                self.mmfDragInProgress = nil
+                return
+            end
+            MattMinimalFramesDB = MattMinimalFramesDB or {}
+            MattMinimalFramesDB.castBarTextPositions = MattMinimalFramesDB.castBarTextPositions or {}
+            MattMinimalFramesDB.castBarTextPositions[unit] = MattMinimalFramesDB.castBarTextPositions[unit] or {}
+            MattMinimalFramesDB.castBarTextPositions[unit][key] = { x = x - overlayX, y = y - overlayY }
+            self.mmfDragInProgress = nil
+            ApplyCastBarTextPositions(frame, unit)
+            if MMF_RefreshEditModeTextPositionList then
+                MMF_RefreshEditModeTextPositionList()
+            end
+        end)
+        handle:SetScript("OnEnter", function()
+            GameTooltip_SetDefaultAnchor(GameTooltip, UIParent)
+            GameTooltip:SetText(label, 1, 1, 1)
+            GameTooltip:AddLine(GetDragHintText(), 0.5, 0.5, 0.5)
+            GameTooltip:Show()
+        end)
+        handle:SetScript("OnLeave", function()
+            GameTooltip:Hide()
+        end)
+        return handle
+    end
+
+    frame.castBarTextDragFrame = CreateTextDragHandle("spell", "Cast Spell Text")
+    frame.castBarTimeDragFrame = CreateTextDragHandle("time", "Cast Time Text")
 
     ApplyCastBarPosition(frame, unit)
     RefreshCastBarTextLayer(frame)

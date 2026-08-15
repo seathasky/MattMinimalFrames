@@ -87,8 +87,11 @@ local function ReleaseDragOwner(frame)
     end
 end
 
-local function CanStartFrameDrag(frame)
+local function CanStartFrameDrag(frame, allowTextMoveMode)
     if InCombatLockdown() then
+        return false
+    end
+    if MattMinimalFramesDB and MattMinimalFramesDB.enableTextDragInEditMode == true and not allowTextMoveMode then
         return false
     end
     if activeDragOwner and activeDragOwner ~= frame then
@@ -131,8 +134,8 @@ local function TryStopFrameMoving(frame)
     return true
 end
 
-local function TryBeginFrameMoving(frame, ownerName)
-    if not CanStartFrameDrag(frame) then
+local function TryBeginFrameMoving(frame, ownerName, allowTextMoveMode)
+    if not CanStartFrameDrag(frame, allowTextMoveMode) then
         return false
     end
     if not TryClaimDragOwner(frame, ownerName) then

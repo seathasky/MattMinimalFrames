@@ -1177,7 +1177,9 @@ local function ApplyFrameTextOffsets(frame)
     local hpX = MMF_GetHPTextXOffset(unit)
     local hpY = MMF_GetHPTextYOffset(unit)
 
-    if frame.nameText then
+    if frame.nameText and MMF_ApplyNameTextPosition then
+        MMF_ApplyNameTextPosition(frame, unit)
+    elseif frame.nameText then
         local positions = {
             player = { point = "LEFT", relPoint = "TOPLEFT", x = 2, y = 0, justify = "LEFT" },
             target = { point = "RIGHT", relPoint = "TOPRIGHT", x = -2, y = 0, justify = "RIGHT" },

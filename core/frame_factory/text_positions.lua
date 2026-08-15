@@ -27,13 +27,14 @@ local function ApplyPowerTextPosition(frame, unit)
         return
     end
 
-    if frame.powerTextDragFrame and (unit == "player" or unit == "target") then
+    if frame.powerTextDragFrame then
         if frame.powerTextDragFrame.mmfDragInProgress then
             return
         end
         frame.powerTextDragFrame:ClearAllPoints()
         local pos = MattMinimalFramesDB and MattMinimalFramesDB.powerTextPositions and MattMinimalFramesDB.powerTextPositions[unit]
-        if pos and pos.x and pos.y then
+        local hasCustomPosition = type(pos) == "table" and type(pos.x) == "number" and type(pos.y) == "number"
+        if hasCustomPosition then
             frame.powerTextDragFrame:SetPoint("CENTER", frame, "CENTER", pos.x, pos.y)
         else
             local point, relFrame, relPoint, x, y = GetDefaultPowerTextAnchor(frame, unit)
@@ -51,8 +52,14 @@ local function ApplyPowerTextPosition(frame, unit)
             if frame.powerText.SetJustifyH then
                 frame.powerText:SetJustifyH("RIGHT")
             end
-        else
+        elseif hasCustomPosition then
             frame.powerText:SetPoint("CENTER", frame.powerTextDragFrame, "CENTER", 0, 0)
+            if frame.powerText.SetJustifyH then
+                frame.powerText:SetJustifyH("CENTER")
+            end
+        else
+            local point, relFrame, relPoint, x, y = GetDefaultPowerTextAnchor(frame, unit)
+            frame.powerText:SetPoint(point, relFrame, relPoint, x, y)
             if frame.powerText.SetJustifyH then
                 frame.powerText:SetJustifyH("CENTER")
             end
@@ -170,7 +177,7 @@ local function ApplyHPTextPosition(frame, unit)
         return
     end
 
-    if frame.hpTextDragFrame and (unit == "player" or unit == "target") then
+    if frame.hpTextDragFrame then
         if frame.hpTextDragFrame.mmfDragInProgress then
             return
         end
@@ -202,6 +209,14 @@ local function ApplyPowerTextPositions()
 
     ApplyFor(_G.MMF_PlayerFrame, "player")
     ApplyFor(_G.MMF_TargetFrame, "target")
+    ApplyFor(_G.MMF_TargetOfTargetFrame, "targettarget")
+    ApplyFor(_G.MMF_PetFrame, "pet")
+    ApplyFor(_G.MMF_FocusFrame, "focus")
+    ApplyFor(_G.MMF_Boss1Frame, "boss1")
+    ApplyFor(_G.MMF_Boss2Frame, "boss2")
+    ApplyFor(_G.MMF_Boss3Frame, "boss3")
+    ApplyFor(_G.MMF_Boss4Frame, "boss4")
+    ApplyFor(_G.MMF_Boss5Frame, "boss5")
 end
 
 local function ApplyHPTextPositions()

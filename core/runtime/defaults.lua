@@ -2,6 +2,7 @@ local mmfDefaults = {
     dbVersion = 2,
     locked = false,
     unlockFramesEditMode = false,
+    enableTextDragInEditMode = false,
     layoutTestMode = false,
     showPlayerPowerBar = true,
     showPlayerClassIcon = false,

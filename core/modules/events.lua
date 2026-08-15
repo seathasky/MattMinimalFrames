@@ -105,6 +105,9 @@ local function EnsurePetActionBarEditBackdrop(frame)
         end
         local editMode = MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
         local testModeShiftDrag = IsAnyTestModeActive() and IsShiftKeyDown()
+        if MattMinimalFramesDB and MattMinimalFramesDB.enableTextDragInEditMode == true then
+            return
+        end
         if not editMode and not testModeShiftDrag then
             return
         end
@@ -253,18 +256,35 @@ local function ApplyTextMouseState(frame, locked)
         frame.nameOverlay:EnableMouse(false)
     end
 
-    local enableTextHandles = not locked
+    local enableTextHandles = IsEditModeActive()
+        and MattMinimalFramesDB
+        and MattMinimalFramesDB.enableTextDragInEditMode == true
+    if frame.nameTextDragFrame then
+        frame.nameTextDragFrame:EnableMouse(enableTextHandles)
+    end
+    if frame.castBarTextOverlay then
+        frame.castBarTextOverlay:EnableMouse(enableTextHandles)
+    end
+    if frame.castBarTextDragFrame then
+        frame.castBarTextDragFrame:EnableMouse(enableTextHandles)
+    end
+    if frame.castBarTimeDragFrame then
+        frame.castBarTimeDragFrame:EnableMouse(enableTextHandles)
+    end
     if frame.hpTextDragFrame then
-        local playerHPTextLocked = IsEditModeActive() and frame.unit == "player"
-        frame.hpTextDragFrame:EnableMouse(enableTextHandles and not playerHPTextLocked)
+        frame.hpTextDragFrame:EnableMouse(enableTextHandles)
     end
     if frame.powerTextDragFrame then
         frame.powerTextDragFrame:EnableMouse(enableTextHandles)
     end
 
-    if locked and GameTooltip then
+    if not enableTextHandles and GameTooltip then
+        local ownsNameHandle = frame.nameTextDragFrame and GameTooltip:IsOwned(frame.nameTextDragFrame)
+        local ownsCastTextHandle = frame.castBarTextDragFrame and GameTooltip:IsOwned(frame.castBarTextDragFrame)
+        local ownsCastTimeHandle = frame.castBarTimeDragFrame and GameTooltip:IsOwned(frame.castBarTimeDragFrame)
+        local ownsHPHandle = frame.hpTextDragFrame and GameTooltip:IsOwned(frame.hpTextDragFrame)
         local ownsPowerHandle = frame.powerTextDragFrame and GameTooltip:IsOwned(frame.powerTextDragFrame)
-        if ownsHPHandle or ownsPowerHandle then
+        if ownsNameHandle or ownsCastTextHandle or ownsCastTimeHandle or ownsHPHandle or ownsPowerHandle then
             GameTooltip:Hide()
         end
     end
@@ -342,6 +362,7 @@ function MMF_SetEditMode(enabled)
     end
 
     MattMinimalFramesDB.unlockFramesEditMode = isEnabled
+    MattMinimalFramesDB.enableTextDragInEditMode = false
     ApplyEditModeAlignmentGrid(isEnabled)
     MMF_UpdatePetActionBarEditMode()
     MMF_RefreshFrameLockState()

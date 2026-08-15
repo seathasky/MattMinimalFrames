@@ -315,6 +315,9 @@ local function CanStartAuraContainerDrag(container)
         return false
     end
     local db = MattMinimalFramesDB or {}
+    if db.enableTextDragInEditMode == true then
+        return false
+    end
     if db.unlockFramesEditMode == true then
         return true
     end

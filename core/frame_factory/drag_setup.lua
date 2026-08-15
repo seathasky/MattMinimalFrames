@@ -77,6 +77,17 @@ local function CreateDragHandlers(frame, frameName)
     frame.moveHint:SetPoint("BOTTOM", frame, "TOP", 0, 2)
     frame.moveHint:Hide()
 
+    frame.editModeFrameLabel = frame:CreateFontString(nil, "OVERLAY")
+    if SetFontSafe then
+        SetFontSafe(frame.editModeFrameLabel, cfg.FONT_PATH, 9, fontFlags)
+    else
+        frame.editModeFrameLabel:SetFont(cfg.FONT_PATH, 9, fontFlags)
+    end
+    frame.editModeFrameLabel:SetText(frameLabel)
+    frame.editModeFrameLabel:SetPoint("BOTTOM", frame, "TOP", 0, 2)
+    frame.editModeFrameLabel:SetTextColor(0.7, 0.7, 0.7)
+    frame.editModeFrameLabel:Hide()
+
     frame.moveSubtext = frame:CreateFontString(nil, "OVERLAY")
     if SetFontSafe then
         SetFontSafe(frame.moveSubtext, cfg.FONT_PATH, 9, fontFlags)

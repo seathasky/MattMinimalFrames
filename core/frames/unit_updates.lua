@@ -1865,13 +1865,18 @@ local function UpdateUnitFrame(frame)
     local previewMode = (unlockedEditMode or layoutTestMode)
     local auraTestPreviewTarget = (unit == "target" and db.auraTestMode == true and not UnitExists(unit))
 
+    if frame.editModeFrameLabel then
+        frame.editModeFrameLabel:SetText(frame.frameLabel or unit)
+        frame.editModeFrameLabel:SetShown(previewMode and not UnitExists(unit))
+    end
+
     if hideNameText then
         frame.nameText:SetText("")
         frame.nameText:Hide()
         ApplyNameTextFontSize(frame, MMF_GetNameTextSize and MMF_GetNameTextSize(unit) or tonumber(db.nameTextSize) or 12)
     elseif not UnitExists(unit) then
         if previewMode then
-            frame.nameText:SetText((frame.frameLabel and (frame.frameLabel .. " (Edit)")) or (unit .. " (Edit)"))
+            frame.nameText:SetText(frame.mmfLastKnownName or "Name")
         elseif auraTestPreviewTarget then
             frame.nameText:SetText("Target (Preview)")
         else
@@ -1882,6 +1887,9 @@ local function UpdateUnitFrame(frame)
     else
         frame.nameText:Show()
         local unitName = UnitName(unit)
+        if type(unitName) == "string" and unitName ~= "" then
+            frame.mmfLastKnownName = unitName
+        end
         local displayName = GetDisplayUnitName(unit, unitName)
         local displayNameWithLeaderIcon = BuildNameTextWithLeaderIcon(unit, displayName, db)
         local nameTextWidth = SafeGetNameTextMaxWidth(frame)
