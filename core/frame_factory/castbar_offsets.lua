@@ -41,13 +41,15 @@ local function GetFontStringHeight(fontString, fallback)
 end
 
 local function GetCastBarHeight(frame, scaleY)
-    local baseHeight = 8 * (tonumber(scaleY) or 1.0)
-    return math.max(
-        4,
-        baseHeight,
+    local scale = tonumber(scaleY) or 1.0
+    local baseHeight = 8 * scale
+    -- Scale the text-derived floor too, otherwise the font size alone caps
+    -- how small the bar can get and Scale Y below 1.0 has no visible effect.
+    local textFloor = math.max(
         GetFontStringHeight(frame and frame.castBarText, 9) + 2,
         GetFontStringHeight(frame and frame.castBarTime, 9) + 2
-    )
+    ) * scale
+    return math.max(4, baseHeight, textFloor)
 end
 
 local function GetFrameHeight(frame)
@@ -84,6 +86,11 @@ end
 
 local function ApplyCastBarPosition(frame, unit)
     if not frame or not frame.castBarFrame or not unit then
+        return
+    end
+    -- Skip while the user is actively dragging the cast bar; re-anchoring here
+    -- fights StartMoving() every frame and makes the drag feel jittery/snappy.
+    if frame.castBarFrame.mmfExclusiveDragActive then
         return
     end
 

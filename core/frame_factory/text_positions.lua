@@ -171,6 +171,9 @@ local function ApplyHPTextPosition(frame, unit)
     end
 
     if frame.hpTextDragFrame and (unit == "player" or unit == "target") then
+        if frame.hpTextDragFrame.mmfDragInProgress then
+            return
+        end
         frame.hpTextDragFrame:ClearAllPoints()
         local attach = GetHPTextAttachPoint(unit)
         local edgeX, edgeY = GetStoredHPTextEdgePosition(frame, unit)

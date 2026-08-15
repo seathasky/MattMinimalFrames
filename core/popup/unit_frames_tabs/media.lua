@@ -260,7 +260,7 @@ function MMF_BuildUnitFramesMediaSection(ctx)
     local frameColorAlphaY = styleUnitY - 26
     local frameColorDividerUnderPetY = frameColorAlphaY - 28
     local frameColorsStartY = frameColorDividerUnderPetY - 22
-    local frameColorsRowSpacing = 36
+    local frameColorsRowSpacing = 30
     local healthBGAlphaY = frameColorsStartY - frameColorsRowSpacing
     local frameColorsDividerUnderHealthBGAlphaY = healthBGAlphaY - 30
     local healthBorderY = frameColorsDividerUnderHealthBGAlphaY - 12

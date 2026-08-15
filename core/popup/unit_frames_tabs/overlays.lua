@@ -327,4 +327,10 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
     rightSection.targetClassificationCheck = CreateMinimalCheckbox(unitFramesCol, "Target Classification", RIGHT_COL_X, (-1006 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showTargetClassification", true, function()
         RefreshTargetClassification()
     end)
+
+    rightSection.targetClassificationHint = unitFramesCol:CreateFontString(nil, "OVERLAY")
+    rightSection.targetClassificationHint:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
+    rightSection.targetClassificationHint:SetPoint("TOPLEFT", rightSection.targetClassificationCheck.labelText, "BOTTOMLEFT", 0, -2)
+    rightSection.targetClassificationHint:SetTextColor(0.6, 0.6, 0.65)
+    rightSection.targetClassificationHint:SetText("(Rare, Elite, etc)")
 end

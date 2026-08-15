@@ -255,7 +255,8 @@ local function ApplyTextMouseState(frame, locked)
 
     local enableTextHandles = not locked
     if frame.hpTextDragFrame then
-        frame.hpTextDragFrame:EnableMouse(enableTextHandles)
+        local playerHPTextLocked = IsEditModeActive() and frame.unit == "player"
+        frame.hpTextDragFrame:EnableMouse(enableTextHandles and not playerHPTextLocked)
     end
     if frame.powerTextDragFrame then
         frame.powerTextDragFrame:EnableMouse(enableTextHandles)

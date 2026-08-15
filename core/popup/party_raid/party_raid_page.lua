@@ -15,7 +15,7 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
     subtextLead:SetWidth(420)
     subtextLead:SetJustifyH("LEFT")
     subtextLead:SetWordWrap(true)
-    subtextLead:SetTextColor(0.86, 0.90, 0.96)
+    subtextLead:SetTextColor(0.35, 0.90, 0.50)
     subtextLead:SetText("Enhances Blizzard party/raid frame fonts ONLY!")
 
     local subtext = page:CreateFontString(nil, "OVERLAY")
@@ -25,7 +25,6 @@ function MMF_CreatePartyRaidPage(page, accentColor, createMinimalCheckbox, creat
     subtext:SetJustifyH("LEFT")
     subtext:SetWordWrap(true)
     subtext:SetTextColor(0.78, 0.82, 0.88)
-    subtext:SetText("|cffff9a9aFor full standalone party/raid frames,|r\n|cffff9a9ause something like |r|cffc9a0ffDander's Frames|r|cffff9a9a instead.|r")
 
     local divider = page:CreateTexture(nil, "ARTWORK")
     divider:SetSize(240, 1)

@@ -148,6 +148,9 @@ local function CreateResourceText(frame, unit)
         frame.hpTextDragFrame:RegisterForDrag("LeftButton")
 
         frame.hpTextDragFrame:SetScript("OnDragStart", function(self)
+            if unit == "player" and MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true then
+                return
+            end
             local started = TryBeginFrameMoving(self, unit .. " hp text")
             self.mmfDragInProgress = started or nil
         end)
