@@ -806,11 +806,11 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
 
     -- Minimap icon checkbox (uses LibDBIcon's minimap.hide structure)
     local showMinimapContainer = CreateFrame("Frame", nil, rightCol)
-    showMinimapContainer:SetSize(200, 20)
+    showMinimapContainer:SetSize(256, 26)
     showMinimapContainer:SetPoint("TOPLEFT", 12, -56)
     
     local showMinimapCB = CreateFrame("CheckButton", nil, showMinimapContainer)
-    showMinimapCB:SetSize(14, 14)
+    showMinimapCB:SetSize(16, 16)
     showMinimapCB:SetPoint("LEFT", 0, 0)
     
     local mmBg = showMinimapCB:CreateTexture(nil, "BACKGROUND")
@@ -842,8 +842,8 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
     end)
     
     local mmText = showMinimapContainer:CreateFontString(nil, "OVERLAY")
-    mmText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    mmText:SetPoint("LEFT", showMinimapCB, "RIGHT", 6, 0)
+    mmText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
+    mmText:SetPoint("LEFT", showMinimapCB, "RIGHT", 8, 0)
     mmText:SetTextColor(0.85, 0.85, 0.85)
     mmText:SetText("Show Minimap Icon")
 
@@ -866,11 +866,11 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
     end
 
     local popupFadeContainer = CreateFrame("Frame", nil, rightCol)
-    popupFadeContainer:SetSize(256, 20)
+    popupFadeContainer:SetSize(256, 26)
     popupFadeContainer:SetPoint("TOPLEFT", 12, -104)
 
     local popupFadeCB = CreateFrame("CheckButton", nil, popupFadeContainer)
-    popupFadeCB:SetSize(14, 14)
+    popupFadeCB:SetSize(16, 16)
     popupFadeCB:SetPoint("LEFT", 0, 0)
 
     local popupFadeBg = popupFadeCB:CreateTexture(nil, "BACKGROUND")
@@ -890,7 +890,7 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
 
     local popupFadeText = popupFadeContainer:CreateFontString(nil, "OVERLAY")
     popupFadeText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
-    popupFadeText:SetPoint("LEFT", popupFadeCB, "RIGHT", 6, 0)
+    popupFadeText:SetPoint("LEFT", popupFadeCB, "RIGHT", 8, 0)
     popupFadeText:SetTextColor(0.9, 0.9, 0.9)
     popupFadeText:SetText("Popup Inactive Fade")
 
@@ -905,11 +905,21 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
     popupFadeAlphaSlider:SetMinMaxValues(0.05, 0.95)
     popupFadeAlphaSlider:SetValueStep(0.05)
     popupFadeAlphaSlider:SetObeyStepOnDrag(true)
-    popupFadeAlphaSlider:SetBackdrop({ bgFile = "Interface\\Buttons\\WHITE8x8" })
+    popupFadeAlphaSlider:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Buttons\\WHITE8x8",
+        edgeSize = 1,
+    })
     popupFadeAlphaSlider:SetBackdropColor(0.06, 0.06, 0.08, 1)
+    popupFadeAlphaSlider:SetBackdropBorderColor(0.25, 0.25, 0.3, 1)
+
+    local popupFadeAlphaFill = popupFadeAlphaSlider:CreateTexture(nil, "ARTWORK")
+    popupFadeAlphaFill:SetHeight(8)
+    popupFadeAlphaFill:SetPoint("LEFT", popupFadeAlphaSlider, "LEFT", 0, 0)
+    popupFadeAlphaFill:SetColorTexture(ACCENT_COLOR[1] * 0.5, ACCENT_COLOR[2] * 0.5, ACCENT_COLOR[3] * 0.6, 0.8)
 
     local popupFadeAlphaThumb = popupFadeAlphaSlider:CreateTexture(nil, "OVERLAY")
-    popupFadeAlphaThumb:SetSize(6, 12)
+    popupFadeAlphaThumb:SetSize(8, 16)
     popupFadeAlphaThumb:SetColorTexture(ACCENT_COLOR[1], ACCENT_COLOR[2], ACCENT_COLOR[3], 1)
     popupFadeAlphaSlider:SetThumbTexture(popupFadeAlphaThumb)
 
@@ -998,7 +1008,7 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
 
     local toolsResetScaleBtn = CreateFrame("Button", nil, rightCol, "BackdropTemplate")
     toolsResetScaleBtn:SetSize(176, 24)
-    toolsResetScaleBtn:SetPoint("TOPLEFT", 12, -220)
+    toolsResetScaleBtn:SetPoint("TOPLEFT", 12, -228)
     toolsResetScaleBtn:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -1025,7 +1035,7 @@ function MMF_CreateToolsPage(rightCol, accentColor, accentHexPrefix, createMinim
 
     local toolsResetAllBtn = CreateFrame("Button", nil, rightCol, "BackdropTemplate")
     toolsResetAllBtn:SetSize(176, 24)
-    toolsResetAllBtn:SetPoint("TOPLEFT", 12, -276)
+    toolsResetAllBtn:SetPoint("TOPLEFT", 12, -260)
     toolsResetAllBtn:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",

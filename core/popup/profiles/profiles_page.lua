@@ -60,14 +60,34 @@ function MMF_CreateProfilesPage(popup, parent, accentColor)
     local activeProfileLabel = parent:CreateFontString(nil, "OVERLAY")
     activeProfileLabel:SetFont(fontPath, 10, "")
     activeProfileLabel:SetPoint("TOPLEFT", 12, -60)
-    activeProfileLabel:SetTextColor(0.8, 0.8, 0.8)
+    activeProfileLabel:SetTextColor(0.9, 0.9, 0.9)
     activeProfileLabel:SetText("Active Profile")
 
     local activeProfileValue = parent:CreateFontString(nil, "OVERLAY")
-    activeProfileValue:SetFont(fontPath, 10, "")
+    activeProfileValue:SetFont(fontPath, 10, "THICKOUTLINE")
     activeProfileValue:SetPoint("LEFT", activeProfileLabel, "RIGHT", 10, 0)
-    activeProfileValue:SetTextColor(accentColor[1], accentColor[2], accentColor[3])
+    activeProfileValue:SetTextColor(0.6, 0.9, 0.6)
     activeProfileValue:SetText("")
+
+    local function CreateProfileSectionBackdrop(topOffset, height)
+        local section = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+        section:SetFrameStrata(parent:GetFrameStrata())
+        section:SetFrameLevel((parent:GetFrameLevel() or 0) + 1)
+        section:SetSize(300, height)
+        section:SetPoint("TOPLEFT", 12, topOffset)
+        section:EnableMouse(false)
+        section:SetBackdrop({
+            bgFile = "Interface\\Buttons\\WHITE8x8",
+            edgeFile = "Interface\\Buttons\\WHITE8x8",
+            edgeSize = 1,
+        })
+        section:SetBackdropColor(0.025, 0.032, 0.042, 0.45)
+        section:SetBackdropBorderColor(0.12, 0.15, 0.18, 0.8)
+        return section
+    end
+
+    local createSectionBackdrop = CreateProfileSectionBackdrop(-76, 106)
+    local deleteSectionBackdrop = CreateProfileSectionBackdrop(-188, 92)
 
     local profileFeedback = parent:CreateFontString(nil, "OVERLAY")
     profileFeedback:SetFont(fontPath, 10, "")
@@ -114,17 +134,24 @@ function MMF_CreateProfilesPage(popup, parent, accentColor)
             end
         end,
     })
+    if profileDropdown.container and profileDropdown.container.labelText then
+        local label = profileDropdown.container.labelText
+        label:ClearAllPoints()
+        label:SetPoint("LEFT", 4, 0)
+        label:SetFont(fontPath, 10, "THICKOUTLINE")
+        label:SetTextColor(1, 1, 1)
+    end
 
     local createProfileLabel = parent:CreateFontString(nil, "OVERLAY")
-    createProfileLabel:SetFont(fontPath, 10, "")
+    createProfileLabel:SetFont(fontPath, 9, "THICKOUTLINE")
     createProfileLabel:SetPoint("TOPLEFT", 12, -118)
-    createProfileLabel:SetTextColor(0.8, 0.8, 0.8)
+    createProfileLabel:SetTextColor(1, 1, 1)
     createProfileLabel:SetText("New Profile")
     createProfileLabel:SetWidth(72)
     createProfileLabel:SetJustifyH("LEFT")
 
     local createProfileInputBG = CreateFrame("Frame", nil, parent, "BackdropTemplate")
-    createProfileInputBG:SetSize(220, 20)
+    createProfileInputBG:SetSize(220, 22)
     createProfileInputBG:SetPoint("TOPLEFT", 76, -116)
     createProfileInputBG:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
@@ -204,10 +231,10 @@ function MMF_CreateProfilesPage(popup, parent, accentColor)
         copyProfileBtnText:SetTextColor(0.8, 0.8, 0.8)
     end)
 
-    local deleteSectionTitle = parent:CreateFontString(nil, "OVERLAY")
+    local deleteSectionTitle = deleteSectionBackdrop:CreateFontString(nil, "OVERLAY")
     deleteSectionTitle:SetFont(fontPath, 10, "")
-    deleteSectionTitle:SetPoint("TOPLEFT", 12, -194)
-    deleteSectionTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
+    deleteSectionTitle:SetPoint("TOPLEFT", 4, -8)
+    deleteSectionTitle:SetTextColor(1, 0.35, 0.35)
     deleteSectionTitle:SetText("DELETE / RESET")
 
     deleteDropdown = MMF_CreateMinimalDropdown(parent, popup, {
@@ -235,10 +262,17 @@ function MMF_CreateProfilesPage(popup, parent, accentColor)
             deleteTargetName = value
         end,
     })
+    if deleteDropdown.container and deleteDropdown.container.labelText then
+        local label = deleteDropdown.container.labelText
+        label:ClearAllPoints()
+        label:SetPoint("LEFT", 4, 0)
+        label:SetFont(fontPath, 10, "THICKOUTLINE")
+        label:SetTextColor(1, 1, 1)
+    end
 
     local deleteProfileBtn = CreateFrame("Button", nil, parent, "BackdropTemplate")
-    deleteProfileBtn:SetSize(120, 22)
-    deleteProfileBtn:SetPoint("TOPLEFT", 64, -240)
+    deleteProfileBtn:SetSize(108, 22)
+    deleteProfileBtn:SetPoint("TOPLEFT", 76, -240)
     deleteProfileBtn:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",
@@ -261,8 +295,8 @@ function MMF_CreateProfilesPage(popup, parent, accentColor)
     end)
 
     local resetActiveProfileBtn = CreateFrame("Button", nil, parent, "BackdropTemplate")
-    resetActiveProfileBtn:SetSize(120, 22)
-    resetActiveProfileBtn:SetPoint("TOPLEFT", 192, -240)
+    resetActiveProfileBtn:SetSize(108, 22)
+    resetActiveProfileBtn:SetPoint("TOPLEFT", 188, -240)
     resetActiveProfileBtn:SetBackdrop({
         bgFile = "Interface\\Buttons\\WHITE8x8",
         edgeFile = "Interface\\Buttons\\WHITE8x8",

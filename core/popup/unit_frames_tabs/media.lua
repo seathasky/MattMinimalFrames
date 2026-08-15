@@ -644,7 +644,11 @@ function MMF_BuildUnitFramesMediaSection(ctx)
         end
 
         if rightSection.healthBGAlphaSlider and rightSection.healthBGAlphaSlider.MMFSetValueSilently then
-            local _, _, _, bgAlpha = (MMF_GetHealthBarBGStyle and MMF_GetHealthBarBGStyle(selectedUnit))
+            local bgAlpha
+            if MMF_GetHealthBarBGStyle then
+                local _, _, _, resolvedAlpha = MMF_GetHealthBarBGStyle(selectedUnit)
+                bgAlpha = resolvedAlpha
+            end
             if bgAlpha == nil then
                 bgAlpha = GetStyleValue("HealthBarBGAlpha", "healthBarBGAlpha", 0.65, ClampColorChannel)
             end
@@ -662,7 +666,11 @@ function MMF_BuildUnitFramesMediaSection(ctx)
         end
 
         if rightSection.borderWidthSlider and rightSection.borderWidthSlider.MMFSetValueSilently then
-            local _, _, _, _, borderSize = (MMF_GetHealthBarBorderStyle and MMF_GetHealthBarBorderStyle(selectedUnit))
+            local borderSize
+            if MMF_GetHealthBarBorderStyle then
+                local _, _, _, _, resolvedSize = MMF_GetHealthBarBorderStyle(selectedUnit)
+                borderSize = resolvedSize
+            end
             if borderSize == nil then
                 borderSize = math.floor(GetStyleValue("HealthBarBorderSize", "healthBarBorderSize", 1) + 0.5)
             end
@@ -673,7 +681,11 @@ function MMF_BuildUnitFramesMediaSection(ctx)
         end
 
         if rightSection.borderAlphaSlider and rightSection.borderAlphaSlider.MMFSetValueSilently then
-            local _, _, _, borderAlpha = (MMF_GetHealthBarBorderStyle and MMF_GetHealthBarBorderStyle(selectedUnit))
+            local borderAlpha
+            if MMF_GetHealthBarBorderStyle then
+                local _, _, _, resolvedAlpha = MMF_GetHealthBarBorderStyle(selectedUnit)
+                borderAlpha = resolvedAlpha
+            end
             if borderAlpha == nil then
                 borderAlpha = GetStyleValue("HealthBarBorderAlpha", "healthBarBorderAlpha", 1.0, ClampColorChannel)
             end
