@@ -1343,6 +1343,13 @@ function MMF_GetFrameScaleY(unit)
 end
 
 function MMF_UpdateFrameScale(unit)
+    if unit == "petHappinessIcon" then
+        if MMF_ApplyPetFrameHappinessPosition then
+            MMF_ApplyPetFrameHappinessPosition()
+        end
+        return
+    end
+
     if unit == "playerCastBar" or unit == "targetCastBar" or unit == "focusCastBar" then
         local ownerUnit = (unit == "playerCastBar" and "player")
             or (unit == "targetCastBar" and "target")
@@ -1446,7 +1453,7 @@ function MMF_UpdateFrameScale(unit)
 end
 
 function MMF_ApplyAllFrameScales()
-    local units = {"player", "target", "targettarget", "focus", "pet", "boss", "playerCastBar", "targetCastBar", "focusCastBar"}
+    local units = {"player", "target", "targettarget", "focus", "pet", "boss", "playerCastBar", "targetCastBar", "focusCastBar", "petHappinessIcon"}
     for _, unit in ipairs(units) do
         MMF_UpdateFrameScale(unit)
     end

@@ -214,6 +214,10 @@ function MMF_ResetPopupScaleAndTextToDefaults()
         MattMinimalFramesDB.focusFrameScaleY = d.focusFrameScaleY
         MattMinimalFramesDB.petFrameScaleX = d.petFrameScaleX
         MattMinimalFramesDB.petFrameScaleY = d.petFrameScaleY
+        MattMinimalFramesDB.petFrameHappinessScale = d.petFrameHappinessScale or 0.75
+        MattMinimalFramesDB.petFrameHappinessPosition = nil
+        MattMinimalFramesDB.petHappinessFrameCenterX = d.petHappinessFrameCenterX or -37
+        MattMinimalFramesDB.petHappinessFrameCenterY = d.petHappinessFrameCenterY or 0
         MattMinimalFramesDB.bossFrameScaleX = d.bossFrameScaleX or 1.0
         MattMinimalFramesDB.bossFrameScaleY = d.bossFrameScaleY or 1.0
         -- Cast bar scales (all supported cast bars)
@@ -236,5 +240,8 @@ function MMF_ResetPopupScaleAndTextToDefaults()
             width = (MMF_GetPopupLayout and MMF_GetPopupLayout().width) or 920,
             height = (MMF_GetPopupLayout and MMF_GetPopupLayout().height) or 748,
         }
+        if MMF_ApplyPetFrameHappinessPosition then
+            MMF_ApplyPetFrameHappinessPosition()
+        end
         StaticPopup_Show("MMF_RELOADUI")
 end

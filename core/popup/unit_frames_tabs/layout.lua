@@ -18,6 +18,7 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
         if unit == "playerCastBar" then return "playerCastBar" end
         if unit == "targetCastBar" then return "targetCastBar" end
         if unit == "focusCastBar" then return "focusCastBar" end
+        if unit == "petHappinessIcon" then return "petFrameHappiness" end
         return unit
     end
 
@@ -32,6 +33,10 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
         { value = "targetCastBar", label = "Target Cast Bar" },
         { value = "focusCastBar", label = "Focus Cast Bar" },
     }
+    local compat = _G.MMF_Compat
+    if compat and compat.IsClassicEra then
+        table.insert(scaleUnitOptions, 5, { value = "petHappinessIcon", label = "Pet Happiness" })
+    end
     MattMinimalFramesDB.frameScaleUnit = MattMinimalFramesDB.frameScaleUnit or "player"
 
     local function EnsureScaleUnitSelection()
@@ -63,17 +68,34 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
     local scaleYSliders = {}
     for _, opt in ipairs(scaleUnitOptions) do
         local prefix = GetPopupUnitPrefix(opt.value)
+        local scaleXKey = prefix .. "FrameScaleX"
+        local scaleYKey = prefix .. "FrameScaleY"
+        local scaleXDefault = 1.0
+        local scaleYDefault = 1.0
+        local scaleXLabel = "Scale X"
+        local scaleYLabel = "Scale Y"
+        local scaleXMax = FRAME_SCALE_X_MAX
+        local scaleYMax = FRAME_SCALE_Y_MAX
+        if opt.value == "petHappinessIcon" then
+            scaleXKey = "petFrameHappinessScale"
+            scaleYKey = "petFrameHappinessScale"
+            scaleXDefault = tonumber(MattMinimalFrames_Defaults and MattMinimalFrames_Defaults.petFrameHappinessScale) or 1.0
+            scaleYDefault = scaleXDefault
+            scaleXLabel = "Scale"
+            scaleXMax = 10.0
+            scaleYMax = 10.0
+        end
         scaleXSliders[opt.value] = CreateMinimalSlider(
             unitFramesCol,
-            "Scale X",
+            scaleXLabel,
             LEFT_COL_X,
             -64,
             LEFT_COL_WIDTH,
-            prefix .. "FrameScaleX",
+            scaleXKey,
             FRAME_SCALE_X_MIN,
-            FRAME_SCALE_X_MAX,
+            scaleXMax,
             0.05,
-            1.0,
+            scaleXDefault,
             function()
                 if MMF_UpdateFrameScale then
                     MMF_UpdateFrameScale(opt.value)
@@ -83,15 +105,15 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
         )
         scaleYSliders[opt.value] = CreateMinimalSlider(
             unitFramesCol,
-            "Scale Y",
+            scaleYLabel,
             LEFT_COL_X,
             -88,
             LEFT_COL_WIDTH,
-            prefix .. "FrameScaleY",
+            scaleYKey,
             FRAME_SCALE_Y_MIN,
-            FRAME_SCALE_Y_MAX,
+            scaleYMax,
             0.05,
-            1.0,
+            scaleYDefault,
             function()
                 if MMF_UpdateFrameScale then
                     MMF_UpdateFrameScale(opt.value)
@@ -134,7 +156,7 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
         for _, opt in ipairs(scaleUnitOptions) do
             local show = (opt.value == current)
             scaleXSliders[opt.value]:SetShown(show)
-            scaleYSliders[opt.value]:SetShown(show)
+            scaleYSliders[opt.value]:SetShown(show and opt.value ~= "petHappinessIcon")
         end
         bossBottomPaddingSlider:SetShown(current == "boss")
     end
@@ -198,6 +220,9 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
         { value = "focus", label = "Focus" },
         { value = "boss", label = "Boss Group" },
     }
+    if compat and compat.IsClassicEra then
+        table.insert(positionUnitOptions, 5, { value = "petHappiness", label = "Pet Happiness" })
+    end
 
     MattMinimalFramesDB.framePositionUnit = MattMinimalFramesDB.framePositionUnit or "player"
     local function EnsurePositionUnitSelection()
@@ -215,6 +240,16 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
     EnsurePositionUnitSelection()
 
     local function GetFrameCenterDefault(unit, axis)
+        if unit == "petHappiness" then
+            local defaultX, defaultY = 0, 0
+            if MMF_GetPetFrameHappinessDefaultCenterOffset then
+                defaultX, defaultY = MMF_GetPetFrameHappinessDefaultCenterOffset()
+            end
+            if axis == "x" then
+                return tonumber(defaultX) or 0
+            end
+            return tonumber(defaultY) or 0
+        end
         local lookupUnit = (unit == "boss") and "boss1" or unit
         local def = MMF_GetFrameDefinition and MMF_GetFrameDefinition(lookupUnit)
         if not def then
@@ -243,6 +278,19 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
         local prefix = GetPopupUnitPrefix(opt.value)
         local xKey = prefix .. "FrameCenterX"
         local yKey = prefix .. "FrameCenterY"
+        if opt.value == "petHappiness" then
+            xKey = "petHappinessFrameCenterX"
+            yKey = "petHappinessFrameCenterY"
+            local saved = MattMinimalFramesDB and MattMinimalFramesDB.petFrameHappinessPosition
+            if type(saved) == "table" then
+                if MattMinimalFramesDB[xKey] == nil and tonumber(saved.x) ~= nil then
+                    defaultX = tonumber(saved.x)
+                end
+                if MattMinimalFramesDB[yKey] == nil and tonumber(saved.y) ~= nil then
+                    defaultY = tonumber(saved.y)
+                end
+            end
+        end
         local defaultX = GetFrameCenterDefault(opt.value, "x")
         local defaultY = GetFrameCenterDefault(opt.value, "y")
 
@@ -258,7 +306,16 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
             1,
             defaultX,
             function()
-                if MMF_ApplyFrameCenterPositionForUnit then
+                if opt.value == "petHappiness" then
+                    if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
+                    MattMinimalFramesDB.petFrameHappinessPosition = {
+                        x = tonumber(MattMinimalFramesDB.petHappinessFrameCenterX) or defaultX,
+                        y = tonumber(MattMinimalFramesDB.petHappinessFrameCenterY) or defaultY,
+                    }
+                    if MMF_ApplyPetFrameHappinessPosition then
+                        MMF_ApplyPetFrameHappinessPosition()
+                    end
+                elseif MMF_ApplyFrameCenterPositionForUnit then
                     MMF_ApplyFrameCenterPositionForUnit(opt.value, "x")
                 end
             end,
@@ -266,7 +323,15 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
             {
                 onReset = function()
                     MattMinimalFramesDB[xKey] = defaultX
-                    if MMF_ApplyFrameCenterPositionForUnit then
+                    if opt.value == "petHappiness" then
+                        MattMinimalFramesDB.petFrameHappinessPosition = {
+                            x = defaultX,
+                            y = tonumber(MattMinimalFramesDB[yKey]) or defaultY,
+                        }
+                        if MMF_ApplyPetFrameHappinessPosition then
+                            MMF_ApplyPetFrameHappinessPosition()
+                        end
+                    elseif MMF_ApplyFrameCenterPositionForUnit then
                         MMF_ApplyFrameCenterPositionForUnit(opt.value, "x")
                     end
                 end,
@@ -292,7 +357,16 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
             1,
             defaultY,
             function()
-                if MMF_ApplyFrameCenterPositionForUnit then
+                if opt.value == "petHappiness" then
+                    if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
+                    MattMinimalFramesDB.petFrameHappinessPosition = {
+                        x = tonumber(MattMinimalFramesDB.petHappinessFrameCenterX) or defaultX,
+                        y = tonumber(MattMinimalFramesDB.petHappinessFrameCenterY) or defaultY,
+                    }
+                    if MMF_ApplyPetFrameHappinessPosition then
+                        MMF_ApplyPetFrameHappinessPosition()
+                    end
+                elseif MMF_ApplyFrameCenterPositionForUnit then
                     MMF_ApplyFrameCenterPositionForUnit(opt.value, "y")
                 end
             end,
@@ -300,7 +374,15 @@ function MMF_BuildUnitFramesLayoutSection(ctx)
             {
                 onReset = function()
                     MattMinimalFramesDB[yKey] = defaultY
-                    if MMF_ApplyFrameCenterPositionForUnit then
+                    if opt.value == "petHappiness" then
+                        MattMinimalFramesDB.petFrameHappinessPosition = {
+                            x = tonumber(MattMinimalFramesDB[xKey]) or defaultX,
+                            y = defaultY,
+                        }
+                        if MMF_ApplyPetFrameHappinessPosition then
+                            MMF_ApplyPetFrameHappinessPosition()
+                        end
+                    elseif MMF_ApplyFrameCenterPositionForUnit then
                         MMF_ApplyFrameCenterPositionForUnit(opt.value, "y")
                     end
                 end,

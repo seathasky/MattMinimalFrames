@@ -264,6 +264,9 @@ local PROFILE_LAYOUT_KEYS = {
     "powerTextPositions",
     "hpTextPositions",
     "castBarPositions",
+    "petFrameHappinessPosition",
+    "petHappinessFrameCenterX",
+    "petHappinessFrameCenterY",
     "popupPosition",
 }
 

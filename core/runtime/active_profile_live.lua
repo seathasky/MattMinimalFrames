@@ -130,6 +130,7 @@ function MMF_ApplyActiveProfileLive()
     if MMF_RefreshClassResourceVisibility then MMF_RefreshClassResourceVisibility() end
     if MMF_ApplyGlobalFont then MMF_ApplyGlobalFont() end
     if MMF_ApplyPetActionBarPosition then MMF_ApplyPetActionBarPosition() end
+    if MMF_ApplyPetFrameHappinessPosition then MMF_ApplyPetFrameHappinessPosition() end
 
     if MMF_ToggleMinimapButton then
         local hidden = MattMinimalFramesDB.minimap and MattMinimalFramesDB.minimap.hide

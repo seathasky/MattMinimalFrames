@@ -48,6 +48,201 @@ local function GetPetActionBarFrame()
     return _G.PetActionBarFrame or _G.PetActionBar
 end
 
+local PET_HAPPINESS_TEX_COORDS = {
+    [1] = { 0.375, 0.5625, 0.0, 0.359375 },
+    [2] = { 0.1875, 0.375, 0.0, 0.359375 },
+    [3] = { 0.0, 0.1875, 0.0, 0.359375 },
+}
+local PET_HAPPINESS_BASE_SIZE = 18
+local PET_HAPPINESS_TEX_INSET = 0.145
+
+local function GetInsetTexCoord(coords)
+    if type(coords) ~= "table" then
+        return 0.0, 0.1875, 0.0, 0.359375
+    end
+    local left, right, top, bottom = coords[1], coords[2], coords[3], coords[4]
+    local xInset = (right - left) * PET_HAPPINESS_TEX_INSET
+    local yInset = (bottom - top) * PET_HAPPINESS_TEX_INSET
+    return left + xInset, right - xInset, top + yInset, bottom - yInset
+end
+
+local function SupportsPetFrameHappinessIcon()
+    return Compat and Compat.IsClassicEra == true and type(rawget(_G, "GetPetHappiness")) == "function"
+end
+
+local function GetPetFrameHappinessScale()
+    local scale = tonumber(MattMinimalFramesDB and MattMinimalFramesDB.petFrameHappinessScale) or 1.0
+    if scale < 0.5 then
+        scale = 0.5
+    elseif scale > 10.0 then
+        scale = 10.0
+    end
+    return scale
+end
+
+local function GetPetFrameHappinessDefaultOffset()
+    return -37, 0
+end
+
+local function SavePetFrameHappinessPosition(frame)
+    if not frame or not frame.petHappinessDragFrame then
+        return
+    end
+    if not MattMinimalFramesDB then
+        MattMinimalFramesDB = {}
+    end
+
+    local iconCenterX, iconCenterY = frame.petHappinessDragFrame:GetCenter()
+    local frameCenterX, frameCenterY = frame:GetCenter()
+    if not iconCenterX or not iconCenterY or not frameCenterX or not frameCenterY then
+        return
+    end
+
+    MattMinimalFramesDB.petFrameHappinessPosition = {
+        x = iconCenterX - frameCenterX,
+        y = iconCenterY - frameCenterY,
+    }
+    MattMinimalFramesDB.petHappinessFrameCenterX = MattMinimalFramesDB.petFrameHappinessPosition.x
+    MattMinimalFramesDB.petHappinessFrameCenterY = MattMinimalFramesDB.petFrameHappinessPosition.y
+end
+
+local function ApplyPetFrameHappinessPosition(frame)
+    if not frame or not frame.petHappinessDragFrame then
+        return
+    end
+
+    local dragFrame = frame.petHappinessDragFrame
+    local posX = tonumber(MattMinimalFramesDB and MattMinimalFramesDB.petHappinessFrameCenterX)
+    local posY = tonumber(MattMinimalFramesDB and MattMinimalFramesDB.petHappinessFrameCenterY)
+    local pos = MattMinimalFramesDB and MattMinimalFramesDB.petFrameHappinessPosition
+    dragFrame:ClearAllPoints()
+    if posX ~= nil and posY ~= nil then
+        dragFrame:SetPoint("CENTER", frame, "CENTER", posX, posY)
+    elseif type(pos) == "table" and pos.x ~= nil and pos.y ~= nil then
+        dragFrame:SetPoint("CENTER", frame, "CENTER", pos.x, pos.y)
+    else
+        local defaultX, defaultY = GetPetFrameHappinessDefaultOffset()
+        dragFrame:SetPoint("CENTER", frame, "CENTER", defaultX, defaultY)
+    end
+end
+
+local function EnsurePetFrameHappinessIcon()
+    if not SupportsPetFrameHappinessIcon() then
+        return nil
+    end
+
+    local frame = _G.MMF_PetFrame
+    if not frame then
+        return nil
+    end
+
+    if frame.petHappinessDragFrame and frame.petHappinessIcon then
+        return frame.petHappinessDragFrame
+    end
+
+    local dragFrame = CreateFrame("Frame", nil, frame)
+    dragFrame:SetSize(PET_HAPPINESS_BASE_SIZE, PET_HAPPINESS_BASE_SIZE)
+    dragFrame:SetMovable(true)
+    dragFrame:EnableMouse(false)
+    dragFrame:RegisterForDrag("LeftButton")
+    dragFrame:SetFrameStrata(frame:GetFrameStrata() or "MEDIUM")
+    dragFrame:SetFrameLevel((frame:GetFrameLevel() or 0) + 40)
+
+    local icon = dragFrame:CreateTexture(nil, "ARTWORK")
+    icon:SetAllPoints()
+    icon:SetTexture("Interface\\PetPaperDollFrame\\UI-PetHappiness")
+    do
+        local left, right, top, bottom = GetInsetTexCoord(PET_HAPPINESS_TEX_COORDS[3])
+        icon:SetTexCoord(left, right, top, bottom)
+    end
+
+    local border = dragFrame:CreateTexture(nil, "BORDER")
+    border:SetPoint("TOPLEFT", dragFrame, "TOPLEFT", -1, 1)
+    border:SetPoint("BOTTOMRIGHT", dragFrame, "BOTTOMRIGHT", 1, -1)
+    border:SetColorTexture(0, 0, 0, 1)
+
+    dragFrame:SetScript("OnDragStart", function(self)
+        if InCombatLockdown and InCombatLockdown() then
+            return
+        end
+        if not (MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true) then
+            return
+        end
+        if MattMinimalFramesDB and MattMinimalFramesDB.enableTextDragInEditMode == true then
+            return
+        end
+
+        local dragHelpers = _G.MMF_FrameFactoryDragHelpers or {}
+        if dragHelpers.TryClaimDragOwner and not dragHelpers.TryClaimDragOwner(frame, "pet happiness icon") then
+            return
+        end
+        self:StartMoving()
+        self.mmfDragInProgress = true
+    end)
+
+    dragFrame:SetScript("OnDragStop", function(self)
+        if not self.mmfDragInProgress then
+            return
+        end
+        self:StopMovingOrSizing()
+        local dragHelpers = _G.MMF_FrameFactoryDragHelpers or {}
+        if dragHelpers.ReleaseDragOwner then
+            dragHelpers.ReleaseDragOwner(frame)
+        end
+        SavePetFrameHappinessPosition(frame)
+        self.mmfDragInProgress = nil
+    end)
+
+    frame.petHappinessIcon = icon
+    frame.petHappinessBorder = border
+    frame.petHappinessDragFrame = dragFrame
+    ApplyPetFrameHappinessPosition(frame)
+    return dragFrame
+end
+
+local function UpdatePetFrameHappinessIcon(forceVisibleInEditMode)
+    if not SupportsPetFrameHappinessIcon() then
+        return
+    end
+
+    local frame = _G.MMF_PetFrame
+    if not frame then
+        return
+    end
+
+    local dragFrame = EnsurePetFrameHappinessIcon()
+    local icon = frame.petHappinessIcon
+    if not dragFrame or not icon then
+        return
+    end
+
+    local hasPet = type(UnitExists) == "function" and UnitExists("pet")
+    local getPetHappiness = rawget(_G, "GetPetHappiness")
+    local happiness = getPetHappiness and getPetHappiness() or nil
+    local coords = PET_HAPPINESS_TEX_COORDS[happiness]
+    if coords then
+        local left, right, top, bottom = GetInsetTexCoord(coords)
+        icon:SetTexCoord(left, right, top, bottom)
+    else
+        local left, right, top, bottom = GetInsetTexCoord(PET_HAPPINESS_TEX_COORDS[3])
+        icon:SetTexCoord(left, right, top, bottom)
+    end
+
+    local editMode = MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
+    local shouldShow = hasPet and coords ~= nil
+    if forceVisibleInEditMode and editMode then
+        shouldShow = true
+    end
+    local scale = GetPetFrameHappinessScale()
+    local size = math.max(8, math.floor((PET_HAPPINESS_BASE_SIZE * scale) + 0.5))
+    dragFrame:SetScale(1)
+    dragFrame:SetSize(size, size)
+    dragFrame:SetShown(shouldShow)
+
+    local canDrag = editMode and not (MattMinimalFramesDB and MattMinimalFramesDB.enableTextDragInEditMode == true)
+    dragFrame:EnableMouse(canDrag)
+end
+
 local function SavePetActionBarPosition(frame)
     if not frame then
         return
@@ -187,19 +382,22 @@ local function EnsurePetActionBarMover()
     end)
 
     EnsurePetActionBarEditBackdrop(frame)
+    EnsurePetFrameHappinessIcon()
     frame.mmfMoverHooked = true
 end
 
 function MMF_UpdatePetActionBarEditMode()
     local frame = GetPetActionBarFrame()
+    local editMode = MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
     if not frame then
+        UpdatePetFrameHappinessIcon(editMode)
         return
     end
     EnsurePetActionBarMover()
     ApplyPetActionBarSavedPosition()
     frame:SetMovable(true)
     local backdrop = frame.mmfEditDragBackdrop
-    local editMode = MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
+    UpdatePetFrameHappinessIcon(editMode)
     if editMode then
         if not (InCombatLockdown and InCombatLockdown()) then
             pcall(frame.Show, frame)
@@ -221,6 +419,21 @@ end
 function MMF_ApplyPetActionBarPosition()
     EnsurePetActionBarMover()
     ApplyPetActionBarSavedPosition()
+    UpdatePetFrameHappinessIcon(false)
+end
+
+function MMF_ApplyPetFrameHappinessPosition()
+    local frame = _G.MMF_PetFrame
+    if not frame then
+        return
+    end
+    EnsurePetFrameHappinessIcon()
+    ApplyPetFrameHappinessPosition(frame)
+    UpdatePetFrameHappinessIcon(MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true)
+end
+
+function MMF_GetPetFrameHappinessDefaultCenterOffset()
+    return GetPetFrameHappinessDefaultOffset()
 end
 
 --------------------------------------------------
@@ -596,6 +809,9 @@ coreEventFrame:RegisterEvent("UNIT_DISPLAYPOWER")
 coreEventFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
 coreEventFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
 coreEventFrame:RegisterEvent("UNIT_PET")
+SafeRegisterEvent(coreEventFrame, "UNIT_HAPPINESS")
+SafeRegisterEvent(coreEventFrame, "PET_UI_UPDATE")
+SafeRegisterEvent(coreEventFrame, "PET_BAR_UPDATE")
 coreEventFrame:RegisterEvent("UNIT_TARGET")
 coreEventFrame:RegisterEvent("UNIT_HEAL_PREDICTION")
 coreEventFrame:RegisterEvent("UNIT_ABSORB_AMOUNT_CHANGED")
@@ -659,6 +875,7 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
         elseif MMF_PlayerFrame and MMF_PlayerFrame.restingTexture then
             MMF_PlayerFrame.restingTexture:SetShown(IsResting())
         end
+        UpdatePetFrameHappinessIcon(false)
         if event == "PLAYER_ENTERING_WORLD" then
             RequestAllUpdates()
         end
@@ -698,6 +915,14 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
 
     elseif event == "UNIT_PET" then
         RequestFrameUpdate(MMF_PetFrame)
+        if unit == nil or unit == "player" then
+            UpdatePetFrameHappinessIcon(false)
+        end
+
+    elseif event == "UNIT_HAPPINESS" or event == "PET_UI_UPDATE" or event == "PET_BAR_UPDATE" then
+        if unit == nil or unit == "pet" then
+            UpdatePetFrameHappinessIcon(false)
+        end
 
     elseif event == "UNIT_TARGET" then
         if unit == "target" then
