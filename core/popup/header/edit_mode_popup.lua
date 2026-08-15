@@ -343,6 +343,14 @@ function MMF_EnsurePopupEditModePopup(config)
                 positions[entry.unit] = nil
             end
         end
+        local anchorType = entry.store == "nameTextPositions" and "NameText"
+            or entry.store == "hpTextPositions" and "HPText"
+            or entry.store == "powerTextPositions" and "PowerText"
+        if anchorType then
+            local prefix = (MMF_GetTextFormatUnitPrefix and MMF_GetTextFormatUnitPrefix(entry.unit)) or entry.unit
+            MattMinimalFramesDB[prefix .. anchorType .. "AnchorEnabled"] = nil
+            MattMinimalFramesDB[prefix .. anchorType .. "AnchorPoint"] = nil
+        end
         if entry.apply then
             entry.apply()
         end
