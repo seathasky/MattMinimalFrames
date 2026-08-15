@@ -769,6 +769,12 @@ local function IsAutoResizeNameTextEnabled()
 end
 
 local function GetDisplayUnitName(unit, unitName)
+    -- Retail may mark UnitName results as secret while the target is changing.
+    -- Secret strings can be passed directly to FontString:SetText, but cannot
+    -- be inspected, compared, measured, or truncated by addon Lua.
+    if not NotSecretValue(unitName) then
+        return unitName
+    end
     if not unitName then
         return ""
     end
@@ -862,14 +868,17 @@ local function GetClassificationSuffixForUnit(unit, db)
 end
 
 local function BuildNameTextWithLeaderIcon(unit, displayName, db)
+    -- Keep secret names opaque and let SetText consume them directly.  This
+    -- check must precede even nil/string comparisons, which are not permitted
+    -- for a secret value in tainted execution.
+    if not NotSecretValue(displayName) then
+        return displayName
+    end
     if displayName == nil then
         return ""
     end
     if type(displayName) ~= "string" then
         return ""
-    end
-    if issecretvalue and issecretvalue(displayName) then
-        return displayName
     end
     local suffix = GetLevelSuffixForUnit(unit, db) .. GetClassificationSuffixForUnit(unit, db)
     if not ShouldShowLeaderIconForUnit(unit, db) then
@@ -1102,6 +1111,12 @@ local function ApplyAutoResizeNameText(frame, unit, displayName)
     local maxWidth = SafeGetNameTextMaxWidth(frame)
 
     ApplyNameTextFontSize(frame, baseSize, 1)
+
+    -- Measuring text ultimately derived from a secret name is forbidden.
+    -- Leave it at the configured base size until UnitName is accessible again.
+    if not NotSecretValue(displayName) then
+        return
+    end
 
     local hasDisplayName = false
     if displayName then
@@ -1887,7 +1902,9 @@ local function UpdateUnitFrame(frame)
     else
         frame.nameText:Show()
         local unitName = UnitName(unit)
-        if type(unitName) == "string" and unitName ~= "" then
+        -- Never compare or retain secret target names.  They are transient,
+        -- opaque values and caching one would also break edit-mode previews.
+        if NotSecretValue(unitName) and type(unitName) == "string" and unitName ~= "" then
             frame.mmfLastKnownName = unitName
         end
         local displayName = GetDisplayUnitName(unit, unitName)
@@ -1895,7 +1912,7 @@ local function UpdateUnitFrame(frame)
         local nameTextWidth = SafeGetNameTextMaxWidth(frame)
         local useAnchorNamePosition = (MMF_IsNameTextAnchorEnabled and MMF_IsNameTextAnchorEnabled(unit)) or false
         if unit == "targettarget" then
-            frame.nameText:SetText(displayNameWithLeaderIcon or "")
+            frame.nameText:SetText(displayNameWithLeaderIcon)
             if useAnchorNamePosition then
                 frame.nameText:SetWidth(0)
             else
