@@ -196,20 +196,6 @@ function MMF_ShowWelcomePopup(forceShow)
     local rightCol = MMF_CreatePopupPageFrame(pageScrollFrame, POPUP_LAYOUT.toolsContentHeight)
     local profilesCol = MMF_CreatePopupPageFrame(pageScrollFrame, POPUP_LAYOUT.profilesContentHeight)
 
-    local castBarColorList
-    local unitTextureList
-    local unitFontList
-    local playerBarColorList
-    local targetBarColorList
-    local totBarColorList
-    local playerIconModeList
-    local targetIconModeList
-    local scaleUnitList
-    local frameTextUnitList
-    local nameTextUnitList
-    local hpTextUnitList
-    local hideNameTextUnitList
-    local hideHPTextUnitList
     local auraTypeList
     local buffAuraDirectionList
     local debuffAuraDirectionList
@@ -279,7 +265,6 @@ function MMF_ShowWelcomePopup(forceShow)
     if Compat.IsTBC then
         tabPages = {
             unitFramesCol,
-            leftCol,
             partyRaidCol,
             tbcCol,
             profilesCol,
@@ -287,7 +272,6 @@ function MMF_ShowWelcomePopup(forceShow)
         }
         tabDefs = {
             { label = "Unit Frames" },
-            { label = "Auras / Power" },
             { label = "Party / Raid" },
             { label = "TBC Features" },
             { label = "Profiles" },
@@ -296,7 +280,6 @@ function MMF_ShowWelcomePopup(forceShow)
     elseif Compat.IsClassic then
         tabPages = {
             unitFramesCol,
-            leftCol,
             partyRaidCol,
             eraCol,
             profilesCol,
@@ -304,7 +287,6 @@ function MMF_ShowWelcomePopup(forceShow)
         }
         tabDefs = {
             { label = "Unit Frames" },
-            { label = "Auras / Power" },
             { label = "Party / Raid" },
             { label = "ERA Features" },
             { label = "Profiles" },
@@ -313,7 +295,6 @@ function MMF_ShowWelcomePopup(forceShow)
     else
         tabPages = {
             unitFramesCol,
-            leftCol,
             partyRaidCol,
             middleCol,
             profilesCol,
@@ -321,7 +302,6 @@ function MMF_ShowWelcomePopup(forceShow)
         }
         tabDefs = {
             { label = "Unit Frames" },
-            { label = "Auras / Power" },
             { label = "Party / Raid" },
             { label = "Current Class" },
             { label = "Profiles" },
@@ -367,67 +347,6 @@ function MMF_ShowWelcomePopup(forceShow)
 
     ---------------------------------------------------
     unitFramesState = MMF_CreateUnitFramesSection(unitFramesCol, popup, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider, GetCurrentPlayerIconModeValue, GetCurrentTargetIconModeValue, CreateSubTabBar, UpdateSharedScrollBounds)
-    castBarColorList = unitFramesState.castBarColorList
-    castBarOffsetUnitList = unitFramesState.castBarOffsetUnitList
-    unitTextureList = unitFramesState.unitTextureList
-    unitFontList = unitFramesState.unitFontList
-    playerBarColorList = unitFramesState.playerBarColorList
-    targetBarColorList = unitFramesState.targetBarColorList
-    totBarColorList = unitFramesState.totBarColorList
-    playerIconModeList = unitFramesState.playerIconModeList
-    targetIconModeList = unitFramesState.targetIconModeList
-    scaleUnitList = unitFramesState.scaleUnitList
-    frameTextUnitList = unitFramesState.frameTextUnitList
-    nameTextUnitList = unitFramesState.nameTextUnitList
-    hpTextUnitList = unitFramesState.hpTextUnitList
-    hideNameTextUnitList = unitFramesState.hideNameTextUnitList
-    hideHPTextUnitList = unitFramesState.hideHPTextUnitList
-    if unitFramesState.UpdatePlayerIconModeButtonText then
-        UpdatePlayerIconModeButtonText = unitFramesState.UpdatePlayerIconModeButtonText
-    end
-    RegisterClosableList(castBarColorList)
-    RegisterClosableList(castBarOffsetUnitList)
-    RegisterClosableList(unitTextureList)
-    RegisterClosableList(unitFontList)
-    RegisterClosableList(playerBarColorList)
-    RegisterClosableList(targetBarColorList)
-    RegisterClosableList(totBarColorList)
-    RegisterClosableList(playerIconModeList)
-    RegisterClosableList(targetIconModeList)
-    RegisterClosableList(scaleUnitList)
-    RegisterClosableList(frameTextUnitList)
-    RegisterClosableList(nameTextUnitList)
-    RegisterClosableList(hpTextUnitList)
-    RegisterClosableList(hideNameTextUnitList)
-    RegisterClosableList(hideHPTextUnitList)
-
-    local aurasState = MMF_CreateAurasPowerSection(leftCol, popup, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider, UpdateSharedScrollBounds)
-    if type(aurasState) == "table" then
-        auraTypeList = aurasState.auraTypeList
-        buffAuraDirectionList = aurasState.buffAuraDirectionList
-        debuffAuraDirectionList = aurasState.debuffAuraDirectionList
-        auraAppearanceTypeList = aurasState.auraAppearanceTypeList
-        playerAuraTypeList = aurasState.playerAuraTypeList
-        playerBuffAuraDirectionList = aurasState.playerBuffAuraDirectionList
-        playerDebuffAuraDirectionList = aurasState.playerDebuffAuraDirectionList
-        playerAuraAppearanceTypeList = aurasState.playerAuraAppearanceTypeList
-        focusAuraTypeList = aurasState.focusAuraTypeList
-        focusBuffAuraDirectionList = aurasState.focusBuffAuraDirectionList
-        focusDebuffAuraDirectionList = aurasState.focusDebuffAuraDirectionList
-        focusAuraAppearanceTypeList = aurasState.focusAuraAppearanceTypeList
-    end
-    RegisterClosableList(auraTypeList)
-    RegisterClosableList(buffAuraDirectionList)
-    RegisterClosableList(debuffAuraDirectionList)
-    RegisterClosableList(auraAppearanceTypeList)
-    RegisterClosableList(playerAuraTypeList)
-    RegisterClosableList(playerBuffAuraDirectionList)
-    RegisterClosableList(playerDebuffAuraDirectionList)
-    RegisterClosableList(playerAuraAppearanceTypeList)
-    RegisterClosableList(focusAuraTypeList)
-    RegisterClosableList(focusBuffAuraDirectionList)
-    RegisterClosableList(focusDebuffAuraDirectionList)
-    RegisterClosableList(focusAuraAppearanceTypeList)
 
     MMF_CreatePartyRaidPage(partyRaidCol, ACCENT_COLOR, CreateMinimalCheckbox, CreateMinimalSlider)
     if Compat.IsTBC and MMF_CreateTBCPage then

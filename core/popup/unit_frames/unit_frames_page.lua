@@ -2,6 +2,10 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
     local ACCENT_COLOR = accentColor or { 0.6, 0.4, 0.9 }
     local CreateSubTabBar = createSubTabBar or MMF_CreateSubTabBar
     local RequestScrollRefresh = requestScrollRefresh or function() end
+    local theme = (MMF_GetPopupTheme and MMF_GetPopupTheme()) or {}
+    local pageBorder = theme.borderStrong or { 0.22, 0.26, 0.30, 1 }
+    local pageSurface = theme.surface or { 0.045, 0.055, 0.068, 1 }
+    local subtleBorder = theme.border or { 0.145, 0.175, 0.205, 1 }
 
     local sectionCard = CreateFrame("Frame", nil, unitFramesCol, "BackdropTemplate")
     sectionCard:SetPoint("TOPLEFT", 12, -60)
@@ -11,10 +15,29 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
         edgeSize = 1,
     })
     sectionCard:SetBackdropColor(0.03, 0.05, 0.07, 0.98)
-    sectionCard:SetBackdropBorderColor(0.12, 0.16, 0.18, 1)
+    sectionCard:SetBackdropBorderColor(pageBorder[1], pageBorder[2], pageBorder[3], pageBorder[4] or 1)
+
+    -- Draw the page perimeter one pixel inside the frame. Backdrop edges that
+    -- sit directly on a clipped boundary can lose the rightmost pixel at some
+    -- UI scales, making an otherwise complete border look one-sided.
+    local function CreatePageBorderEdge(pointA, relativePointA, xA, yA, pointB, relativePointB, xB, yB)
+        local edge = sectionCard:CreateTexture(nil, "BORDER", nil, 7)
+        edge:SetPoint(pointA, sectionCard, relativePointA, xA, yA)
+        edge:SetPoint(pointB, sectionCard, relativePointB, xB, yB)
+        edge:SetColorTexture(pageBorder[1], pageBorder[2], pageBorder[3], pageBorder[4] or 1)
+        return edge
+    end
+    local pageBorderTop = CreatePageBorderEdge("TOPLEFT", "TOPLEFT", 1, -1, "TOPRIGHT", "TOPRIGHT", -1, -1)
+    pageBorderTop:SetHeight(1)
+    local pageBorderBottom = CreatePageBorderEdge("BOTTOMLEFT", "BOTTOMLEFT", 1, 1, "BOTTOMRIGHT", "BOTTOMRIGHT", -1, 1)
+    pageBorderBottom:SetHeight(1)
+    local pageBorderLeft = CreatePageBorderEdge("TOPLEFT", "TOPLEFT", 1, -1, "BOTTOMLEFT", "BOTTOMLEFT", 1, 1)
+    pageBorderLeft:SetWidth(1)
+    local pageBorderRight = CreatePageBorderEdge("TOPRIGHT", "TOPRIGHT", -1, -1, "BOTTOMRIGHT", "BOTTOMRIGHT", -1, 1)
+    pageBorderRight:SetWidth(1)
 
     local sectionCardTitle = sectionCard:CreateFontString(nil, "OVERLAY")
-    sectionCardTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 14, "")
+    sectionCardTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", MMF_UNIT_FRAMES_SECTION_TITLE_SIZE or 16, "")
     sectionCardTitle:SetPoint("TOPLEFT", 18, -16)
     sectionCardTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
 
@@ -28,31 +51,6 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
     sectionDivider:SetPoint("TOPRIGHT", -18, -52)
     sectionDivider:SetHeight(1)
     sectionDivider:SetColorTexture(0.14, 0.18, 0.2, 1)
-
-    local quickGuide = CreateFrame("Frame", nil, sectionCard, "BackdropTemplate")
-    quickGuide:SetPoint("TOPRIGHT", -18, -62)
-    quickGuide:SetSize(184, 128)
-    quickGuide:SetBackdrop({
-        bgFile = "Interface\\Buttons\\WHITE8x8",
-        edgeFile = "Interface\\Buttons\\WHITE8x8",
-        edgeSize = 1,
-    })
-    quickGuide:SetBackdropColor(0.05, 0.08, 0.11, 0.82)
-    quickGuide:SetBackdropBorderColor(0.14, 0.18, 0.2, 1)
-
-    local quickGuideTitle = quickGuide:CreateFontString(nil, "OVERLAY")
-    quickGuideTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
-    quickGuideTitle:SetPoint("TOPLEFT", 12, -10)
-    quickGuideTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
-    quickGuideTitle:SetText("Quick Guide")
-
-    local quickGuideBody = quickGuide:CreateFontString(nil, "OVERLAY")
-    quickGuideBody:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
-    quickGuideBody:SetPoint("TOPLEFT", quickGuideTitle, "BOTTOMLEFT", 0, -8)
-    quickGuideBody:SetPoint("TOPRIGHT", -12, -30)
-    quickGuideBody:SetJustifyH("LEFT")
-    quickGuideBody:SetJustifyV("TOP")
-    quickGuideBody:SetTextColor(0.78, 0.90, 0.96)
 
     local sectionViewport = CreateFrame("Frame", nil, sectionCard)
     sectionViewport:SetPoint("TOPLEFT", 18, -62)
@@ -72,16 +70,22 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
 
     local sectionRoots = {}
 
+    local UNIT_PAGE_WIDTH = 740
+    local compat = _G.MMF_Compat or {}
+    local _, playerClass = UnitClass("player")
+    local needsTBCComboSpace = compat.IsTBC and (playerClass == "ROGUE" or playerClass == "DRUID")
+    local playerPageHeight = needsTBCComboSpace and 1834
+        or (playerClass == "DRUID" and 1706)
+        or 1678
+
     local sectionDefs = {
-        { label = "Layout", subtitle = "Scale and precise frame placement controls.", x = 0, y = 8, width = 560, height = 354, guide = "Use this page to change size and position.\nPick a frame in the dropdown, then adjust Scale X / Scale Y or Center X / Center Y." },
-        { label = "Text", subtitle = "Font sizes, truncation, HP text format, and name behavior.", x = 0, y = 98, width = 288, height = 430, maskTop = 12, guide = "Use this page to change how text looks.\nYou can adjust name text, health text, and text behavior." },
-        { label = "Visibility", subtitle = "Choose when text and specific unit frames are shown.", x = 0, y = 410, width = 288, height = 300, guide = "Use this page to show or hide text and extra frames.\nGreat for player/target-only layouts." },
-        { label = "Offsets", subtitle = "Adjust text positions for each supported unit.", x = 0, y = 544, width = 288, height = 520, guide = "Use this page to move text positions.\nGreat for fine-tuning alignment after sizing and text changes." },
-        { label = "Cast Bars", subtitle = "Cast bar settings and offsets.", x = 300, y = 112, width = 288, height = 300, guide = "Use this page to enable cast bars.\nAdjust cast bar colors and frame-relative offsets." },
-        { label = "OOC", subtitle = "Out-of-combat visibility and fade rules.", x = 300, y = 258, width = 288, height = 310, guide = "Use this page to control how frames look out of combat.\nYou can fade frames when they are less important." },
-        { label = "Appearance", subtitle = "Textures, fonts, and frame colors.", x = 588, y = 6, width = 316, height = 760, guide = "Use this page to style your frames.\nChange textures, fonts, and colors to match your UI." },
-        { label = "Icons", subtitle = "Icon positions, sizes, and target markers.", x = 588, y = 236, width = 300, height = 460, guide = "Use this page for class/target icon options.\nUse the bottom options to enable indicators and indicator animations." },
-        { label = "Overlays", subtitle = "Heal prediction and absorb overlay settings.", x = 588, y = 512, width = 300, height = 360, guide = "Use this page for heal and absorb overlay visuals.\nSet how strong or subtle those effects should be." },
+        { unit = "player", label = "Player", subtitle = "Configure every setting that belongs to your player frame.", x = 0, y = 0, width = UNIT_PAGE_WIDTH, height = playerPageHeight },
+        { unit = "target", label = "Target", subtitle = "Configure every setting that belongs to your target frame.", x = 0, y = 0, width = UNIT_PAGE_WIDTH, height = 1688 },
+        { unit = "targettarget", label = "Target of Target", subtitle = "Configure every setting that belongs to the target-of-target frame.", x = 0, y = 0, width = UNIT_PAGE_WIDTH, height = 668 },
+        { unit = "pet", label = "Pet", subtitle = "Configure every setting that belongs to your pet frame.", x = 0, y = 0, width = UNIT_PAGE_WIDTH, height = 668 },
+        { unit = "focus", label = "Focus", subtitle = "Configure every setting that belongs to your focus frame.", x = 0, y = 0, width = UNIT_PAGE_WIDTH, height = 1202 },
+        { unit = "boss", label = "Boss", subtitle = "Configure every setting that belongs to the boss-frame group.", x = 0, y = 0, width = UNIT_PAGE_WIDTH, height = 696 },
+        { unit = "more", label = "More Settings", subtitle = "Shared presentation, indicators, overlays, and compatibility controls.", x = 0, y = 0, width = UNIT_PAGE_WIDTH, height = 1108 },
     }
 
     local activeSectionIndex = tonumber(MattMinimalFramesDB.unitFramesSubTab) or 1
@@ -89,24 +93,13 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
         activeSectionIndex = 1
     end
 
-    -- Compute a fixed card size from the largest section so every sub-tab
-    -- renders inside the same box - no resize flash when switching tabs.
-    local fixedCardW, fixedCardH = 360, 0
-    for _, def in ipairs(sectionDefs) do
-        local w = math.max(360, (def.width or 0) + 36)
-        local h = (def.height or 0) + 82
-        if w > fixedCardW then fixedCardW = w end
-        if h > fixedCardH then fixedCardH = h end
-    end
-    local fixedPageH = fixedCardH + 100   -- card height + header / padding
-
-    sectionCard:SetSize(fixedCardW, fixedCardH)
-    unitFramesCol:SetHeight(fixedPageH)
+    sectionCard:SetSize(UNIT_PAGE_WIDTH + 36, 642)
+    unitFramesCol:SetHeight(742)
 
     for index, def in ipairs(sectionDefs) do
         local sectionRoot = CreateFrame("Frame", nil, sectionViewport)
         sectionRoot:SetPoint("TOPLEFT", sectionViewport, "TOPLEFT", -def.x, def.y)
-        sectionRoot:SetSize(840, 760)
+        sectionRoot:SetSize(def.width or UNIT_PAGE_WIDTH, math.max(760, def.height or 0))
         sectionRoot:Hide()
         sectionRoots[index] = sectionRoot
     end
@@ -123,7 +116,8 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
         end
         sectionCardTitle:SetText(section.label or "")
         sectionCardSubtitle:SetText(section.subtitle or "")
-        quickGuideBody:SetText(section.guide or "")
+        sectionCard:SetSize(math.max(360, (section.width or 0) + 36), (section.height or 0) + 82)
+        unitFramesCol:SetHeight((section.height or 0) + 182)
         sectionViewport:SetSize(section.width, section.height)
         for sectionIndex = 1, #sectionDefs do
             local root = sectionRoots[sectionIndex]
@@ -153,11 +147,37 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
         RequestScrollRefresh()
     end
 
-    local unitFramesSubTabs = CreateSubTabBar and CreateSubTabBar(unitFramesCol, {
+    -- Keep unit navigation attached to the viewport instead of the scroll
+    -- child. The opaque host prevents settings content from showing through
+    -- while it scrolls underneath the pinned navigation.
+    local stickyParent = unitFramesCol:GetParent() or unitFramesCol
+    local stickyTabHost = CreateFrame("Frame", nil, stickyParent)
+    stickyTabHost:SetPoint("TOPLEFT", stickyParent, "TOPLEFT", 0, 0)
+    stickyTabHost:SetPoint("TOPRIGHT", stickyParent, "TOPRIGHT", 0, 0)
+    stickyTabHost:SetHeight(52)
+    stickyTabHost:SetFrameLevel(math.max((stickyParent:GetFrameLevel() or 0) + 40, (unitFramesCol:GetFrameLevel() or 0) + 40))
+
+    local stickyBackground = stickyTabHost:CreateTexture(nil, "BACKGROUND")
+    stickyBackground:SetAllPoints()
+    stickyBackground:SetColorTexture(pageSurface[1], pageSurface[2], pageSurface[3], 1)
+
+    local stickyTopBorder = stickyTabHost:CreateTexture(nil, "ARTWORK")
+    stickyTopBorder:SetPoint("TOPLEFT", 0, 0)
+    stickyTopBorder:SetPoint("TOPRIGHT", 0, 0)
+    stickyTopBorder:SetHeight(1)
+    stickyTopBorder:SetColorTexture(subtleBorder[1], subtleBorder[2], subtleBorder[3], subtleBorder[4] or 1)
+
+    local stickyBottomBorder = stickyTabHost:CreateTexture(nil, "ARTWORK")
+    stickyBottomBorder:SetPoint("BOTTOMLEFT", 0, 0)
+    stickyBottomBorder:SetPoint("BOTTOMRIGHT", 0, 0)
+    stickyBottomBorder:SetHeight(1)
+    stickyBottomBorder:SetColorTexture(subtleBorder[1], subtleBorder[2], subtleBorder[3], subtleBorder[4] or 1)
+
+    local unitFramesSubTabs = CreateSubTabBar and CreateSubTabBar(stickyTabHost, {
         accentColor = ACCENT_COLOR,
         x = 12,
         y = -22,
-        width = 640,
+        width = UNIT_PAGE_WIDTH,
         height = 28,
         spacing = 6,
         minButtonWidth = 58,
@@ -170,9 +190,17 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
         end,
     }) or nil
 
+    local function RefreshStickyTabVisibility()
+        stickyTabHost:SetShown(unitFramesCol:IsShown())
+    end
+    unitFramesCol:HookScript("OnShow", RefreshStickyTabVisibility)
+    unitFramesCol:HookScript("OnHide", RefreshStickyTabVisibility)
+    RefreshStickyTabVisibility()
+
     return {
         contentRoot = sectionRoots[1],
         sectionRoots = sectionRoots,
+        stickyTabHost = stickyTabHost,
         SetSectionChangeHandler = function(handler)
             sectionChangeHandler = handler
         end,
@@ -203,74 +231,11 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
     local ACCENT_COLOR = accentColor or { 0.6, 0.4, 0.9 }
     local CreateMinimalCheckbox = createMinimalCheckbox or MMF_CreateMinimalCheckbox
     local CreateMinimalSlider = createMinimalSlider or MMF_CreateMinimalSlider
-    local GetCurrentPlayerIconModeValue = getCurrentPlayerIconModeValue or function() return "off" end
-    local GetCurrentTargetIconModeValue = getCurrentTargetIconModeValue or function() return "off" end
 
     local dropdownLists = {}
-    local UpdatePlayerIconModeButtonTextImpl = function() end
-    local function UpdatePlayerIconModeButtonText()
-        UpdatePlayerIconModeButtonTextImpl()
-    end
-    local rightSection = {}
-
     local headerState = MMF_SetupUnitFramesHeader(unitFramesCol, ACCENT_COLOR, createSubTabBar, requestScrollRefresh)
     local sectionRoots = (headerState and headerState.sectionRoots) or {}
     local fallbackRoot = (headerState and headerState.contentRoot) or unitFramesCol
-
-    local LEFT_COL_X = 12
-    local LEFT_COL_WIDTH = 276
-    local LEFT_LABEL_WIDTH = 74
-    local LEFT_BUTTON_OFFSET = 78
-    local LEFT_BUTTON_WIDTH = LEFT_COL_WIDTH - LEFT_BUTTON_OFFSET
-
-    local MIDDLE_COL_X = 312
-    local MIDDLE_COL_WIDTH = 276
-    local MIDDLE_LABEL_WIDTH = 95
-    local MIDDLE_BUTTON_OFFSET = 104
-    local MIDDLE_BUTTON_WIDTH = MIDDLE_COL_WIDTH - MIDDLE_BUTTON_OFFSET
-
-    local RIGHT_COL_X = 612
-    local RIGHT_COL_WIDTH = 276
-    local RIGHT_LABEL_WIDTH = 95
-    local RIGHT_BUTTON_OFFSET = 104
-    local RIGHT_BUTTON_WIDTH = RIGHT_COL_WIDTH - RIGHT_BUTTON_OFFSET
-    local RIGHT_STYLE_LABEL_WIDTH = 56
-    local RIGHT_STYLE_BUTTON_OFFSET = 58
-    local RIGHT_STYLE_BUTTON_WIDTH = RIGHT_COL_WIDTH - RIGHT_STYLE_BUTTON_OFFSET
-    local PLAYER_BAR_LABEL_WIDTH = 120
-    local PLAYER_BAR_BUTTON_OFFSET = 124
-    local PLAYER_BAR_BUTTON_WIDTH = RIGHT_COL_WIDTH - PLAYER_BAR_BUTTON_OFFSET
-    local ICON_RESET_BUTTON_GAP = 8
-    local ICON_RESET_BUTTON_WIDTH = math.floor((RIGHT_COL_WIDTH - ICON_RESET_BUTTON_GAP) / 2)
-    local RIGHT_COL_Y_OFFSET = 24
-    local RIGHT_STACK_Y_OFFSET = RIGHT_COL_Y_OFFSET + 252
-    local RIGHT_FRAME_OPTIONS_Y_SHIFT = 76
-    local LEFT_LOWER_Y_OFFSET = -134
-
-    local function NormalizeSelectionValue(value, fallback)
-        if type(value) ~= "string" then
-            return fallback
-        end
-        local trimmed = value:match("^%s*(.-)%s*$")
-        if not trimmed or trimmed == "" then
-            return fallback
-        end
-        return trimmed
-    end
-
-    local function RefreshPredictionVisuals()
-        if MMF_RequestAllFramesUpdate then
-            MMF_RequestAllFramesUpdate()
-            return
-        end
-        if MMF_GetAllFrames and MMF_UpdateUnitFrame then
-            for _, frame in ipairs(MMF_GetAllFrames()) do
-                if frame then
-                    MMF_UpdateUnitFrame(frame)
-                end
-            end
-        end
-    end
 
     local function BuildSection(index, builder, config)
         if type(builder) ~= "function" then
@@ -289,160 +254,103 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
         end
     end
 
-    local sectionBuilders = {
-        [1] = {
-            builder = MMF_BuildUnitFramesLayoutSection,
-            config = {
-                popup = popup,
-                accentColor = ACCENT_COLOR,
+    local function NormalizeSelectionValue(value, fallback)
+        if type(value) ~= "string" then return fallback end
+        local trimmed = value:match("^%s*(.-)%s*$")
+        return trimmed ~= "" and trimmed or fallback
+    end
+
+    local function RefreshPredictionVisuals()
+        if MMF_RequestAllFramesUpdate then
+            MMF_RequestAllFramesUpdate()
+        end
+    end
+
+    -- One safety-net page for controls that have not been moved yet.  It has
+    -- no nested navigation and uses the original controls, keys, and callbacks.
+    local function BuildLegacyFallback(ctx)
+        local parent = ctx.parent
+        local X, WIDTH, LABEL, OFFSET = 12, 346, 92, 98
+        local function CreateGroup(y, height, tone)
+            local group = CreateFrame("Frame", nil, parent)
+            group:SetPoint("TOPLEFT", parent, "TOPLEFT", 0, y)
+            group:SetSize(740, height)
+            if MMF_CreateUnitFramesSectionCard then
+                MMF_CreateUnitFramesSectionCard(group, 4, 0, 732, height, tone or "shared")
+            end
+            return group
+        end
+        local function Common(group)
+            return {
+                parent = group, popup = popup, accentColor = ACCENT_COLOR,
                 createMinimalCheckbox = CreateMinimalCheckbox,
                 createMinimalSlider = CreateMinimalSlider,
-                dropdownLists = dropdownLists,
-                sectionWidth = 560,
-                sectionHeight = 322,
-                leftColX = LEFT_COL_X,
-                leftColWidth = 336,
-                leftLabelWidth = 88,
-                leftButtonOffset = 96,
-                leftButtonWidth = 240,
-            },
-        },
-        [2] = {
-            builder = MMF_BuildUnitFramesTextSection,
-            config = {
-                popup = popup,
-                accentColor = ACCENT_COLOR,
-                createMinimalCheckbox = CreateMinimalCheckbox,
-                createMinimalSlider = CreateMinimalSlider,
-                dropdownLists = dropdownLists,
-                refreshPredictionVisuals = RefreshPredictionVisuals,
-                leftColX = LEFT_COL_X,
-                leftColWidth = LEFT_COL_WIDTH,
-                leftLabelWidth = LEFT_LABEL_WIDTH,
-                leftButtonOffset = LEFT_BUTTON_OFFSET,
-                leftButtonWidth = LEFT_BUTTON_WIDTH,
-            },
-        },
-        [3] = {
-            builder = MMF_BuildUnitFramesVisibilitySection,
-            config = {
-                popup = popup,
-                accentColor = ACCENT_COLOR,
-                createMinimalCheckbox = CreateMinimalCheckbox,
-                dropdownLists = dropdownLists,
-                leftColX = LEFT_COL_X,
-                leftColWidth = LEFT_COL_WIDTH,
-                leftLabelWidth = LEFT_LABEL_WIDTH,
-                leftButtonOffset = LEFT_BUTTON_OFFSET,
-                leftButtonWidth = LEFT_BUTTON_WIDTH,
-            },
-        },
-        [4] = {
-            builder = MMF_BuildUnitFramesOffsetsSection,
-            config = {
-                popup = popup,
-                accentColor = ACCENT_COLOR,
-                createMinimalSlider = CreateMinimalSlider,
-                dropdownLists = dropdownLists,
-                leftColX = LEFT_COL_X,
-                leftColWidth = LEFT_COL_WIDTH,
-                leftLabelWidth = LEFT_LABEL_WIDTH,
-                leftButtonOffset = LEFT_BUTTON_OFFSET,
-                leftButtonWidth = LEFT_BUTTON_WIDTH,
-                leftLowerYOffset = LEFT_LOWER_Y_OFFSET,
-            },
-        },
-        [5] = {
-            builder = MMF_BuildUnitFramesCastBarsSection,
-            config = {
-                popup = popup,
-                accentColor = ACCENT_COLOR,
-                createMinimalCheckbox = CreateMinimalCheckbox,
                 createMinimalColorPicker = MMF_CreateMinimalColorPicker,
                 dropdownLists = dropdownLists,
-                middleColX = MIDDLE_COL_X,
-                middleColWidth = MIDDLE_COL_WIDTH,
-                middleLabelWidth = MIDDLE_LABEL_WIDTH,
-                middleButtonOffset = MIDDLE_BUTTON_OFFSET,
-                middleButtonWidth = MIDDLE_BUTTON_WIDTH,
-                rightColYOffset = RIGHT_COL_Y_OFFSET,
-            },
-        },
-        [6] = {
-            builder = MMF_BuildUnitFramesOOCSection,
+            }
+        end
+
+        local castBars = Common(CreateGroup(0, 84, "cast"))
+        MMF_BuildUnitFramesSharedCastBarSection(castBars)
+
+        local ooc = Common(CreateGroup(-92, 188, "visibility"))
+        ooc.middleColX, ooc.middleColWidth, ooc.rightColYOffset = X, WIDTH, 288
+        ooc.rightColX, ooc.rightColWidth, ooc.standardLayout = 382, WIDTH, true
+        MMF_BuildUnitFramesOOCSection(ooc)
+
+        -- Only shared texture/font presentation belongs here.  Unit-specific
+        -- colors and borders now live on their owner pages.
+        local appearance = Common(CreateGroup(-288, 156, "shared"))
+        appearance.rightSection, appearance.normalizeSelectionValue = {}, NormalizeSelectionValue
+        appearance.rightColX, appearance.rightColWidth, appearance.rightStackYOffset = X, WIDTH, 288
+        appearance.rightStyleLabelWidth, appearance.rightStyleButtonOffset, appearance.rightStyleButtonWidth = 56, 58, WIDTH - 58
+        appearance.playerBarLabelWidth, appearance.playerBarButtonOffset, appearance.playerBarButtonWidth = 120, 124, WIDTH - 124
+        appearance.sharedRightColX = 382
+        appearance.sharedLabelWidth, appearance.sharedButtonOffset, appearance.sharedButtonWidth = 92, 98, WIDTH - 98
+        appearance.sharedOnly = true
+        MMF_BuildUnitFramesMediaSection(appearance)
+
+        local icons = Common(CreateGroup(-452, 252, "icon"))
+        icons.rightSection, icons.normalizeSelectionValue = {}, NormalizeSelectionValue
+        icons.getCurrentPlayerIconModeValue = getCurrentPlayerIconModeValue or function() return "off" end
+        icons.getCurrentTargetIconModeValue = getCurrentTargetIconModeValue or function() return "off" end
+        icons.setUpdatePlayerIconModeButtonText = function() end
+        icons.rightColX, icons.rightColWidth, icons.rightStackYOffset = X, WIDTH, 518
+        icons.rightLabelWidth, icons.rightButtonOffset, icons.rightButtonWidth = LABEL, OFFSET, WIDTH - OFFSET
+        icons.rightFrameOptionsYShift, icons.iconResetButtonGap = 76, 8
+        icons.iconResetButtonWidth = math.floor((WIDTH - icons.iconResetButtonGap) / 2)
+        icons.fixedUnit = "shared"
+        MMF_BuildUnitFramesIconsSection(icons)
+
+        local overlays = Common(CreateGroup(-712, 396, "overlay"))
+        overlays.rightSection = {}
+        overlays.rightColX, overlays.rightColWidth, overlays.rightStackYOffset = X, WIDTH, 794
+        overlays.rightFrameOptionsYShift = 76
+        overlays.onPredictionChanged = RefreshPredictionVisuals
+        overlays.standardLayout = true
+        MMF_BuildUnitFramesOverlaysSection(overlays)
+    end
+
+    -- The unit tab itself is the sole selector.  Legacy category builders
+    -- remain available as modules for Phase 6, but are never instantiated here.
+    local unitPageUnits = { "player", "target", "targettarget", "pet", "focus", "boss" }
+    local sectionBuilders = {}
+    for index, unit in ipairs(unitPageUnits) do
+        sectionBuilders[index] = {
+            builder = MMF_BuildUnitFramesUnitPageCore,
             config = {
+                popup = popup,
+                unit = unit,
                 accentColor = ACCENT_COLOR,
                 createMinimalCheckbox = CreateMinimalCheckbox,
                 createMinimalSlider = CreateMinimalSlider,
-                middleColX = MIDDLE_COL_X,
-                middleColWidth = MIDDLE_COL_WIDTH,
-                rightColYOffset = RIGHT_COL_Y_OFFSET,
-            },
-        },
-        [7] = {
-            builder = MMF_BuildUnitFramesMediaSection,
-            config = {
-                popup = popup,
-                accentColor = ACCENT_COLOR,
                 dropdownLists = dropdownLists,
-                rightSection = rightSection,
-                normalizeSelectionValue = NormalizeSelectionValue,
-                rightColX = RIGHT_COL_X,
-                rightColWidth = RIGHT_COL_WIDTH,
-                rightStackYOffset = RIGHT_STACK_Y_OFFSET,
-                rightStyleLabelWidth = RIGHT_STYLE_LABEL_WIDTH,
-                rightStyleButtonOffset = RIGHT_STYLE_BUTTON_OFFSET,
-                rightStyleButtonWidth = RIGHT_STYLE_BUTTON_WIDTH,
-                playerBarLabelWidth = PLAYER_BAR_LABEL_WIDTH,
-                playerBarButtonOffset = PLAYER_BAR_BUTTON_OFFSET,
-                playerBarButtonWidth = PLAYER_BAR_BUTTON_WIDTH,
+                getCurrentPlayerIconModeValue = getCurrentPlayerIconModeValue,
+                getCurrentTargetIconModeValue = getCurrentTargetIconModeValue,
             },
-        },
-        [8] = {
-            builder = MMF_BuildUnitFramesIconsSection,
-            config = {
-                popup = popup,
-                accentColor = ACCENT_COLOR,
-                dropdownLists = dropdownLists,
-                rightSection = rightSection,
-                normalizeSelectionValue = NormalizeSelectionValue,
-                getCurrentPlayerIconModeValue = GetCurrentPlayerIconModeValue,
-                getCurrentTargetIconModeValue = GetCurrentTargetIconModeValue,
-                createMinimalSlider = CreateMinimalSlider,
-                createMinimalCheckbox = CreateMinimalCheckbox,
-                setUpdatePlayerIconModeButtonText = function(callback)
-                    if type(callback) == "function" then
-                        UpdatePlayerIconModeButtonTextImpl = callback
-                    end
-                end,
-                rightColX = RIGHT_COL_X,
-                rightColWidth = RIGHT_COL_WIDTH,
-                rightLabelWidth = RIGHT_LABEL_WIDTH,
-                rightButtonOffset = RIGHT_BUTTON_OFFSET,
-                rightButtonWidth = RIGHT_BUTTON_WIDTH,
-                rightStackYOffset = RIGHT_STACK_Y_OFFSET,
-                rightFrameOptionsYShift = RIGHT_FRAME_OPTIONS_Y_SHIFT,
-                iconResetButtonWidth = ICON_RESET_BUTTON_WIDTH,
-                iconResetButtonGap = ICON_RESET_BUTTON_GAP,
-            },
-        },
-        [9] = {
-            builder = MMF_BuildUnitFramesOverlaysSection,
-            config = {
-                accentColor = ACCENT_COLOR,
-                createMinimalCheckbox = CreateMinimalCheckbox,
-                createMinimalColorPicker = MMF_CreateMinimalColorPicker,
-                rightSection = rightSection,
-                rightColX = RIGHT_COL_X,
-                rightColWidth = RIGHT_COL_WIDTH,
-                rightStackYOffset = RIGHT_STACK_Y_OFFSET,
-                rightFrameOptionsYShift = RIGHT_FRAME_OPTIONS_Y_SHIFT,
-                onPredictionChanged = function()
-                    RefreshPredictionVisuals()
-                end,
-            },
-        },
-    }
+        }
+    end
+    sectionBuilders[7] = { builder = BuildLegacyFallback, config = {} }
 
     local builtSections = {}
     local function EnsureSectionBuilt(index)
@@ -473,30 +381,10 @@ function MMF_CreateUnitFramesSection(unitFramesCol, popup, accentColor, createMi
             for _, listFrame in pairs(dropdownLists) do
                 HideDropdownList(listFrame)
             end
-            if rightSection.overlayHintTooltip then
-                rightSection.overlayHintTooltip:Hide()
-            end
         end)
     end
 
     return {
-        castBarColorList = dropdownLists.castBarColorList,
-        castBarOffsetUnitList = dropdownLists.castBarOffsetUnitList,
-        unitTextureList = dropdownLists.unitTextureList,
-        unitFontList = dropdownLists.unitFontList,
-        playerBarColorList = dropdownLists.playerBarColorList,
-        targetBarColorList = dropdownLists.targetBarColorList,
-        totBarColorList = dropdownLists.totBarColorList,
-        playerIconModeList = dropdownLists.playerIconModeList,
-        targetIconModeList = dropdownLists.targetIconModeList,
-        scaleUnitList = dropdownLists.scaleUnitList,
-        framePositionUnitList = dropdownLists.framePositionUnitList,
-        frameTextUnitList = dropdownLists.frameTextUnitList,
-        nameTextUnitList = dropdownLists.nameTextUnitList,
-        hpTextUnitList = dropdownLists.hpTextUnitList,
-        hideNameTextUnitList = dropdownLists.hideNameTextUnitList,
-        hideHPTextUnitList = dropdownLists.hideHPTextUnitList,
-        UpdatePlayerIconModeButtonText = UpdatePlayerIconModeButtonText,
         ApplyInitialSection = headerState and headerState.ApplyInitialSection,
     }
 end

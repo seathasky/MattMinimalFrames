@@ -18,6 +18,14 @@ function MMF_BuildUnitFramesIconsSection(ctx)
     local RIGHT_FRAME_OPTIONS_Y_SHIFT = ctx.rightFrameOptionsYShift
     local ICON_RESET_BUTTON_WIDTH = ctx.iconResetButtonWidth
     local ICON_RESET_BUTTON_GAP = ctx.iconResetButtonGap
+    local fixedUnit = ctx.fixedUnit
+    local showPlayer = fixedUnit == nil or fixedUnit == "player"
+    local showTarget = fixedUnit == nil or fixedUnit == "target"
+    local showShared = fixedUnit == nil or fixedUnit == "shared"
+    local sharedYAdjust = fixedUnit == "shared" and 206 or 0
+    local placementX = (fixedUnit == "player" or fixedUnit == "target") and (RIGHT_COL_X + 370) or RIGHT_COL_X
+
+    MattMinimalFramesDB = MattMinimalFramesDB or {}
 
     local function SetCheckboxEnabled(checkboxContainer, enabled)
         if not checkboxContainer then
@@ -38,16 +46,20 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         end
     end
 
-    rightSection.styleDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
-    rightSection.styleDivider:SetSize(RIGHT_COL_WIDTH, 1)
-    rightSection.styleDivider:SetPoint("TOPLEFT", RIGHT_COL_X, (-430 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET)
-    rightSection.styleDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
-
     rightSection.frameOptionsTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
-    rightSection.frameOptionsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    rightSection.frameOptionsTitle:SetPoint("TOPLEFT", RIGHT_COL_X, (-442 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET)
-    rightSection.frameOptionsTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
-    rightSection.frameOptionsTitle:SetText("FRAME OPTIONS")
+    rightSection.frameOptionsTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", MMF_UNIT_FRAMES_SECTION_TITLE_SIZE or 16, "")
+    rightSection.frameOptionsTitle:SetPoint("TOPLEFT", RIGHT_COL_X,
+        fixedUnit and -12 or ((-442 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET))
+    MMF_ApplyUnitFramesHeadingColor(rightSection.frameOptionsTitle, "icon")
+    rightSection.frameOptionsTitle:SetText(fixedUnit == "player" and "PLAYER ICON" or fixedUnit == "target" and "TARGET ICON" or "SHARED INDICATORS")
+
+    if fixedUnit == "player" or fixedUnit == "target" then
+        rightSection.iconPlacementTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
+        rightSection.iconPlacementTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", MMF_UNIT_FRAMES_SECTION_TITLE_SIZE or 16, "")
+        rightSection.iconPlacementTitle:SetPoint("TOPLEFT", placementX, -12)
+        MMF_ApplyUnitFramesHeadingColor(rightSection.iconPlacementTitle, "icon")
+        rightSection.iconPlacementTitle:SetText(fixedUnit == "player" and "PLAYER ICON PLACEMENT" or "TARGET ICON PLACEMENT")
+    end
 
     local function BuildJiberishStyleValue(styleKey)
         return string.format("jiberishstyle:%s", tostring(styleKey or ""))
@@ -159,11 +171,12 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         return mode
     end
 
+    if showPlayer then
     rightSection.playerIconModeDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         settingKey = "playerFrameIconMode",
         x = RIGHT_COL_X,
-        y = (-458 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET,
+        y = fixedUnit and -42 or ((-458 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET),
         width = RIGHT_COL_WIDTH,
         labelWidth = RIGHT_LABEL_WIDTH,
         buttonOffset = RIGHT_BUTTON_OFFSET,
@@ -221,12 +234,14 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         end)
     end
     rightSection.playerIconModeDropdown.SetSelectedValue(GetCurrentPlayerIconDropdownValue())
+    end
 
+    if showTarget then
     rightSection.targetIconModeDropdown = MMF_CreateMinimalDropdown(unitFramesCol, popup, {
         accentColor = ACCENT_COLOR,
         settingKey = "targetFrameIconMode",
         x = RIGHT_COL_X,
-        y = (-482 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET,
+        y = fixedUnit and -42 or ((-482 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET),
         width = RIGHT_COL_WIDTH,
         labelWidth = RIGHT_LABEL_WIDTH,
         buttonOffset = RIGHT_BUTTON_OFFSET,
@@ -273,6 +288,7 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         end,
     })
     dropdownLists.targetIconModeList = rightSection.targetIconModeDropdown.list
+    end
 
     local function RefreshAnimatedPortraitLabel(animatedLabel)
         local function UpdateDropdown(dropdown)
@@ -402,7 +418,8 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         end
     end
 
-    rightSection.playerIconXSlider = CreateMinimalSlider(unitFramesCol, "Player Icon X", RIGHT_COL_X, (-506 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "playerFrameIconXOffset", -200, 200, 1, 0, function(value)
+    if showPlayer then
+    rightSection.playerIconXSlider = CreateMinimalSlider(unitFramesCol, "Icon X Offset", placementX, fixedUnit and -42 or ((-506 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET), RIGHT_COL_WIDTH, "playerFrameIconXOffset", -200, 200, 1, 0, function(value)
         MattMinimalFramesDB.playerFrameIconXOffset = NormalizeIconOffset(value)
         if MMF_UpdateFrameIconPlacement then
             MMF_UpdateFrameIconPlacement("player")
@@ -410,7 +427,7 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         RefreshIconResetButtons()
     end, true)
 
-    rightSection.playerIconYSlider = CreateMinimalSlider(unitFramesCol, "Player Icon Y", RIGHT_COL_X, (-530 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "playerFrameIconYOffset", -200, 200, 1, 0, function(value)
+    rightSection.playerIconYSlider = CreateMinimalSlider(unitFramesCol, "Icon Y Offset", placementX, fixedUnit and -70 or ((-530 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET), RIGHT_COL_WIDTH, "playerFrameIconYOffset", -200, 200, 1, 0, function(value)
         MattMinimalFramesDB.playerFrameIconYOffset = NormalizeIconOffset(value)
         if MMF_UpdateFrameIconPlacement then
             MMF_UpdateFrameIconPlacement("player")
@@ -418,7 +435,15 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         RefreshIconResetButtons()
     end, true)
 
-    rightSection.targetIconXSlider = CreateMinimalSlider(unitFramesCol, "Target Icon X", RIGHT_COL_X, (-554 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "targetFrameIconXOffset", -200, 200, 1, 0, function(value)
+    rightSection.playerIconScaleSlider = CreateMinimalSlider(unitFramesCol, "Icon Size", placementX, fixedUnit and -98 or ((-554 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET), RIGHT_COL_WIDTH, "playerFrameIconScale", 0.5, 3.0, 0.05, 1.0, function(value)
+        MattMinimalFramesDB.playerFrameIconScale = NormalizeIconScale(value)
+        if MMF_UpdateFrameIconPlacement then MMF_UpdateFrameIconPlacement("player") end
+        RefreshIconResetButtons()
+    end, false)
+    end
+
+    if showTarget then
+    rightSection.targetIconXSlider = CreateMinimalSlider(unitFramesCol, "Icon X Offset", placementX, fixedUnit and -42 or ((-506 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET), RIGHT_COL_WIDTH, "targetFrameIconXOffset", -200, 200, 1, 0, function(value)
         MattMinimalFramesDB.targetFrameIconXOffset = NormalizeIconOffset(value)
         if MMF_UpdateFrameIconPlacement then
             MMF_UpdateFrameIconPlacement("target")
@@ -426,7 +451,7 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         RefreshIconResetButtons()
     end, true)
 
-    rightSection.targetIconYSlider = CreateMinimalSlider(unitFramesCol, "Target Icon Y", RIGHT_COL_X, (-578 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "targetFrameIconYOffset", -200, 200, 1, 0, function(value)
+    rightSection.targetIconYSlider = CreateMinimalSlider(unitFramesCol, "Icon Y Offset", placementX, fixedUnit and -70 or ((-530 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET), RIGHT_COL_WIDTH, "targetFrameIconYOffset", -200, 200, 1, 0, function(value)
         MattMinimalFramesDB.targetFrameIconYOffset = NormalizeIconOffset(value)
         if MMF_UpdateFrameIconPlacement then
             MMF_UpdateFrameIconPlacement("target")
@@ -434,21 +459,14 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         RefreshIconResetButtons()
     end, true)
 
-    rightSection.playerIconScaleSlider = CreateMinimalSlider(unitFramesCol, "Player Icon Size", RIGHT_COL_X, (-602 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "playerFrameIconScale", 0.5, 3.0, 0.05, 1.0, function(value)
-        MattMinimalFramesDB.playerFrameIconScale = NormalizeIconScale(value)
-        if MMF_UpdateFrameIconPlacement then
-            MMF_UpdateFrameIconPlacement("player")
-        end
-        RefreshIconResetButtons()
-    end, false)
-
-    rightSection.targetIconScaleSlider = CreateMinimalSlider(unitFramesCol, "Target Icon Size", RIGHT_COL_X, (-626 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, RIGHT_COL_WIDTH, "targetFrameIconScale", 0.5, 3.0, 0.05, 1.0, function(value)
+    rightSection.targetIconScaleSlider = CreateMinimalSlider(unitFramesCol, "Icon Size", placementX, fixedUnit and -98 or ((-554 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET), RIGHT_COL_WIDTH, "targetFrameIconScale", 0.5, 3.0, 0.05, 1.0, function(value)
         MattMinimalFramesDB.targetFrameIconScale = NormalizeIconScale(value)
         if MMF_UpdateFrameIconPlacement then
             MMF_UpdateFrameIconPlacement("target")
         end
         RefreshIconResetButtons()
     end, false)
+    end
 
     local function CreateIconResetButton(label, x, y, onClick)
         local button = CreateFrame("Button", nil, unitFramesCol, "BackdropTemplate")
@@ -482,7 +500,8 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         return button
     end
 
-    rightSection.resetPlayerIconButton = CreateIconResetButton("Reset Player Icon", RIGHT_COL_X, (-656 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, function()
+    if showPlayer then
+    rightSection.resetPlayerIconButton = CreateIconResetButton("Reset Icon", fixedUnit and RIGHT_COL_X or placementX, fixedUnit and -76 or ((-586 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET), function()
         MattMinimalFramesDB.playerFrameIconXOffset = NormalizeIconOffset(defaults.playerFrameIconXOffset)
         MattMinimalFramesDB.playerFrameIconYOffset = NormalizeIconOffset(defaults.playerFrameIconYOffset)
         MattMinimalFramesDB.playerFrameIconScale = NormalizeIconScale(defaults.playerFrameIconScale)
@@ -494,8 +513,10 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         end
         RefreshIconResetButtons()
     end)
+    end
 
-    rightSection.resetTargetIconButton = CreateIconResetButton("Reset Target Icon", RIGHT_COL_X + ICON_RESET_BUTTON_WIDTH + ICON_RESET_BUTTON_GAP, (-656 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, function()
+    if showTarget then
+    rightSection.resetTargetIconButton = CreateIconResetButton("Reset Icon", fixedUnit and RIGHT_COL_X or placementX, fixedUnit and -76 or ((-586 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET), function()
         MattMinimalFramesDB.targetFrameIconXOffset = NormalizeIconOffset(defaults.targetFrameIconXOffset)
         MattMinimalFramesDB.targetFrameIconYOffset = NormalizeIconOffset(defaults.targetFrameIconYOffset)
         MattMinimalFramesDB.targetFrameIconScale = NormalizeIconScale(defaults.targetFrameIconScale)
@@ -507,10 +528,12 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         end
         RefreshIconResetButtons()
     end)
+    end
 
     RefreshIconResetButtons()
 
-    rightSection.targetMarkersCheck = CreateMinimalCheckbox(unitFramesCol, "Target Markers", RIGHT_COL_X, (-690 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showTargetMarkers", false, function(checked)
+    if showShared then
+    rightSection.targetMarkersCheck = CreateMinimalCheckbox(unitFramesCol, "Target Markers", RIGHT_COL_X, fixedUnit == "shared" and -42 or ((-690 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET + sharedYAdjust), "showTargetMarkers", false, function(checked)
         if MMF_UpdateTargetMarkerVisibility then
             MMF_UpdateTargetMarkerVisibility(checked)
         end
@@ -543,7 +566,7 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         end
     end
 
-    rightSection.leaderIconsCheck = CreateMinimalCheckbox(unitFramesCol, "Leader Icon On Names", RIGHT_COL_X, (-714 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showLeaderIcons", false, function()
+    rightSection.leaderIconsCheck = CreateMinimalCheckbox(unitFramesCol, "Leader Icon On Names", RIGHT_COL_X, fixedUnit == "shared" and -70 or ((-714 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET + sharedYAdjust), "showLeaderIcons", false, function()
         RequestLeaderIconNameRefresh()
     end)
 
@@ -554,7 +577,7 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         SetCheckboxEnabled(rightSection.animatedCombatIconCheck, not hideCombat)
     end
 
-    rightSection.hideRestingIconCheck = CreateMinimalCheckbox(unitFramesCol, "Hide Resting Icon", RIGHT_COL_X, (-738 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "hideRestingIcon", false, function(checked)
+    rightSection.hideRestingIconCheck = CreateMinimalCheckbox(unitFramesCol, "Hide Resting Icon", RIGHT_COL_X, fixedUnit == "shared" and -98 or ((-738 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET + sharedYAdjust), "hideRestingIcon", false, function(checked)
         if MMF_UpdateHideRestingIconSetting then
             MMF_UpdateHideRestingIconSetting(checked)
         elseif MMF_UpdatePlayerRestingIndicator then
@@ -564,14 +587,14 @@ function MMF_BuildUnitFramesIconsSection(ctx)
     end)
 
     if Compat.IsRetail then
-        rightSection.animatedRestingIconCheck = CreateMinimalCheckbox(unitFramesCol, "Animated Resting Icon", RIGHT_COL_X, (-762 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "animatedRestingIcon", true, function(checked)
+        rightSection.animatedRestingIconCheck = CreateMinimalCheckbox(unitFramesCol, "Animated Resting Icon", RIGHT_COL_X, fixedUnit == "shared" and -126 or ((-762 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET + sharedYAdjust), "animatedRestingIcon", true, function(checked)
             if MMF_UpdateAnimatedRestingIconSetting then
                 MMF_UpdateAnimatedRestingIconSetting(checked)
             end
         end)
     end
 
-    rightSection.hideCombatIconCheck = CreateMinimalCheckbox(unitFramesCol, "Hide Combat Icon", RIGHT_COL_X, (-786 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "hideCombatIcon", false, function(checked)
+    rightSection.hideCombatIconCheck = CreateMinimalCheckbox(unitFramesCol, "Hide Combat Icon", RIGHT_COL_X, fixedUnit == "shared" and -154 or ((-786 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET + sharedYAdjust), "hideCombatIcon", false, function(checked)
         if MMF_UpdateHideCombatIconSetting then
             MMF_UpdateHideCombatIconSetting(checked)
         elseif MMF_UpdatePlayerCombatIndicator then
@@ -580,18 +603,19 @@ function MMF_BuildUnitFramesIconsSection(ctx)
         UpdateIconAnimationControlsEnabledState()
     end)
 
-    rightSection.animatedCombatIconCheck = CreateMinimalCheckbox(unitFramesCol, "Animated Combat Icon", RIGHT_COL_X, (-810 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "animatedCombatIcon", true, function(checked)
+    rightSection.animatedCombatIconCheck = CreateMinimalCheckbox(unitFramesCol, "Animated Combat Icon", RIGHT_COL_X, fixedUnit == "shared" and -182 or ((-810 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET + sharedYAdjust), "animatedCombatIcon", true, function(checked)
         if MMF_UpdateAnimatedCombatIconSetting then
             MMF_UpdateAnimatedCombatIconSetting(checked)
         end
     end)
 
-    rightSection.combatFrameOutlineCheck = CreateMinimalCheckbox(unitFramesCol, "Combat Frame Outline", RIGHT_COL_X, (-834 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "combatFrameOutline", false, function(checked)
+    rightSection.combatFrameOutlineCheck = CreateMinimalCheckbox(unitFramesCol, "Combat Frame Outline", RIGHT_COL_X, fixedUnit == "shared" and -210 or ((-834 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET + sharedYAdjust), "combatFrameOutline", false, function(checked)
         if MMF_UpdateCombatFrameOutlineSetting then
             MMF_UpdateCombatFrameOutlineSetting(checked)
         end
     end)
 
     UpdateIconAnimationControlsEnabledState()
+    end
 end
 

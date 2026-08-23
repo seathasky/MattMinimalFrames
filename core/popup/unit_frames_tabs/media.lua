@@ -17,16 +17,20 @@ function MMF_BuildUnitFramesMediaSection(ctx)
     local PLAYER_BAR_LABEL_WIDTH = ctx.playerBarLabelWidth
     local PLAYER_BAR_BUTTON_OFFSET = ctx.playerBarButtonOffset
     local PLAYER_BAR_BUTTON_WIDTH = ctx.playerBarButtonWidth
+    local sharedRightColX = ctx.sharedRightColX or RIGHT_COL_X
+    local sharedLabelWidth = ctx.sharedLabelWidth or RIGHT_STYLE_LABEL_WIDTH
+    local sharedButtonOffset = ctx.sharedButtonOffset or RIGHT_STYLE_BUTTON_OFFSET
+    local sharedButtonWidth = ctx.sharedButtonWidth or RIGHT_STYLE_BUTTON_WIDTH
 
     rightSection.styleTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
-    rightSection.styleTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
+    rightSection.styleTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", MMF_UNIT_FRAMES_SECTION_TITLE_SIZE or 16, "")
     rightSection.styleTitle:SetPoint("TOPLEFT", RIGHT_COL_X, -288 + RIGHT_STACK_Y_OFFSET)
-    rightSection.styleTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
-    rightSection.styleTitle:SetText("STYLE")
+    MMF_ApplyUnitFramesHeadingColor(rightSection.styleTitle, "appearance")
+    rightSection.styleTitle:SetText("GLOBAL APPEARANCE")
 
     rightSection.styleSubtext = unitFramesCol:CreateFontString(nil, "OVERLAY")
     rightSection.styleSubtext:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    rightSection.styleSubtext:SetPoint("TOPLEFT", RIGHT_COL_X, -308 + RIGHT_STACK_Y_OFFSET)
+    rightSection.styleSubtext:SetPoint("TOPLEFT", RIGHT_COL_X, -310 + RIGHT_STACK_Y_OFFSET)
     rightSection.styleSubtext:SetTextColor(0.65, 0.65, 0.7)
     rightSection.styleSubtext:SetText("Textures, fonts, and frame colors")
 
@@ -178,12 +182,12 @@ function MMF_BuildUnitFramesMediaSection(ctx)
         fontPath = STANDARD_TEXT_FONT or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf",
         preserveWidgetFont = true,
         previewOptionFonts = true,
-        x = RIGHT_COL_X,
-        y = -402 + RIGHT_STACK_Y_OFFSET,
+        x = ctx.sharedOnly and sharedRightColX or RIGHT_COL_X,
+        y = ctx.sharedOnly and (-332 + RIGHT_STACK_Y_OFFSET) or (-402 + RIGHT_STACK_Y_OFFSET),
         width = RIGHT_COL_WIDTH,
-        labelWidth = RIGHT_STYLE_LABEL_WIDTH,
-        buttonOffset = RIGHT_STYLE_BUTTON_OFFSET,
-        buttonWidth = RIGHT_STYLE_BUTTON_WIDTH,
+        labelWidth = ctx.sharedOnly and sharedLabelWidth or RIGHT_STYLE_LABEL_WIDTH,
+        buttonOffset = ctx.sharedOnly and sharedButtonOffset or RIGHT_STYLE_BUTTON_OFFSET,
+        buttonWidth = ctx.sharedOnly and sharedButtonWidth or RIGHT_STYLE_BUTTON_WIDTH,
         visibleRows = 9,
         label = "Global Font",
         options = BuildFontDropdownOptions(),
@@ -206,7 +210,7 @@ function MMF_BuildUnitFramesMediaSection(ctx)
     })
     dropdownLists.unitFontList = rightSection.unitFontDropdown.list
 
-    rightSection.unitTextOutlineCheckbox = CreateMinimalCheckbox(unitFramesCol, "Text Outline", RIGHT_COL_X, -440 + RIGHT_STACK_Y_OFFSET, "useTextOutline", true, function()
+    rightSection.unitTextOutlineCheckbox = CreateMinimalCheckbox(unitFramesCol, "Text Outline", ctx.sharedOnly and sharedRightColX or RIGHT_COL_X, ctx.sharedOnly and (-370 + RIGHT_STACK_Y_OFFSET) or (-440 + RIGHT_STACK_Y_OFFSET), "useTextOutline", true, function()
         if MMF_ApplyGlobalFont then
             MMF_ApplyGlobalFont()
         end
@@ -215,7 +219,7 @@ function MMF_BuildUnitFramesMediaSection(ctx)
         end
     end)
 
-    rightSection.unitTextShadowCheckbox = CreateMinimalCheckbox(unitFramesCol, "Text Shadow", RIGHT_COL_X, -464 + RIGHT_STACK_Y_OFFSET, "useTextShadow", true, function()
+    rightSection.unitTextShadowCheckbox = CreateMinimalCheckbox(unitFramesCol, "Text Shadow", ctx.sharedOnly and sharedRightColX or RIGHT_COL_X, ctx.sharedOnly and (-398 + RIGHT_STACK_Y_OFFSET) or (-464 + RIGHT_STACK_Y_OFFSET), "useTextShadow", true, function()
         if MMF_ApplyGlobalFont then
             MMF_ApplyGlobalFont()
         end
@@ -223,6 +227,17 @@ function MMF_BuildUnitFramesMediaSection(ctx)
             MMF_RequestAllFramesUpdate()
         end
     end)
+
+    -- More Settings owns global presentation.  Per-unit colors and frame
+    -- style are rendered on the corresponding unit page instead.
+    if ctx.sharedOnly then
+        CreateMinimalCheckbox(unitFramesCol, "Health Color By Percent", RIGHT_COL_X, -402 + RIGHT_STACK_Y_OFFSET, "useHealthGradientColor", false, function()
+            if MMF_RequestAllFramesUpdate then
+                MMF_RequestAllFramesUpdate()
+            end
+        end)
+        return
+    end
 
     local function ClampColorChannel(value, fallback)
         local n = tonumber(value)

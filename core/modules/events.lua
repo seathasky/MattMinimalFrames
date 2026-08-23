@@ -48,6 +48,88 @@ local function GetPetActionBarFrame()
     return _G.PetActionBarFrame or _G.PetActionBar
 end
 
+local PET_ACTION_BAR_ROWS = 2
+local PET_ACTION_BAR_COLUMNS = 5
+local PET_ACTION_BAR_BUTTON_SPACING = 2
+
+local function HideClassicPetActionBarArtwork(frame)
+    if not (Compat and Compat.IsClassicEra == true) or not frame then
+        return
+    end
+
+    if type(frame.SetBackgroundArtShown) == "function" then
+        frame:SetBackgroundArtShown(false)
+    elseif type(frame.BackgroundArtTextures) == "table" then
+        for _, texture in ipairs(frame.BackgroundArtTextures) do
+            texture:Hide()
+        end
+    end
+
+    if not frame.mmfBackgroundArtHideHooked then
+        frame:HookScript("OnShow", function(self)
+            if type(self.SetBackgroundArtShown) == "function" then
+                self:SetBackgroundArtShown(false)
+            elseif type(self.BackgroundArtTextures) == "table" then
+                for _, texture in ipairs(self.BackgroundArtTextures) do
+                    texture:Hide()
+                end
+            end
+        end)
+        frame.mmfBackgroundArtHideHooked = true
+    end
+end
+
+local function ApplyPetActionBarDefaultLayout(frame)
+    if not frame or (InCombatLockdown and InCombatLockdown()) then
+        return
+    end
+
+    -- Retail (and newer Classic action bars) provide Blizzard's grid layout.
+    if type(frame.UpdateGridLayout) == "function" then
+        frame.numRows = PET_ACTION_BAR_ROWS
+        frame.isHorizontal = true
+        frame:UpdateGridLayout()
+        HideClassicPetActionBarArtwork(frame)
+        return
+    end
+
+    -- TBC Anniversary and Classic Era use the legacy PetActionBarFrame and
+    -- globally named buttons, so reproduce Retail's five-by-two grid directly.
+    local buttons = {}
+    for index = 1, PET_ACTION_BAR_ROWS * PET_ACTION_BAR_COLUMNS do
+        local button = _G["PetActionButton" .. index]
+        if not button then
+            return
+        end
+        buttons[index] = button
+    end
+
+    local buttonWidth = buttons[1]:GetWidth()
+    local buttonHeight = buttons[1]:GetHeight()
+    if not buttonWidth or buttonWidth <= 0 or not buttonHeight or buttonHeight <= 0 then
+        return
+    end
+
+    for index, button in ipairs(buttons) do
+        local column = (index - 1) % PET_ACTION_BAR_COLUMNS
+        local row = math.floor((index - 1) / PET_ACTION_BAR_COLUMNS)
+        button:ClearAllPoints()
+        button:SetPoint(
+            "TOPLEFT",
+            frame,
+            "TOPLEFT",
+            column * (buttonWidth + PET_ACTION_BAR_BUTTON_SPACING),
+            -row * (buttonHeight + PET_ACTION_BAR_BUTTON_SPACING)
+        )
+    end
+
+    frame:SetSize(
+        (PET_ACTION_BAR_COLUMNS * buttonWidth) + ((PET_ACTION_BAR_COLUMNS - 1) * PET_ACTION_BAR_BUTTON_SPACING),
+        (PET_ACTION_BAR_ROWS * buttonHeight) + ((PET_ACTION_BAR_ROWS - 1) * PET_ACTION_BAR_BUTTON_SPACING)
+    )
+    HideClassicPetActionBarArtwork(frame)
+end
+
 local PET_HAPPINESS_TEX_COORDS = {
     [1] = { 0.375, 0.5625, 0.0, 0.359375 },
     [2] = { 0.1875, 0.375, 0.0, 0.359375 },
@@ -342,7 +424,12 @@ end
 
 local function EnsurePetActionBarMover()
     local frame = GetPetActionBarFrame()
-    if not frame or frame.mmfMoverHooked then
+    if not frame then
+        return
+    end
+
+    ApplyPetActionBarDefaultLayout(frame)
+    if frame.mmfMoverHooked then
         return
     end
 

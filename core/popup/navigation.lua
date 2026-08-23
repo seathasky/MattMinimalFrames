@@ -65,7 +65,6 @@ function MMF_CreatePopupNavigationController(config)
     local function SetActiveTab(tabIndex)
         local subtitleByLabel = {
             ["Unit Frames"] = "Frame sizing, text, visibility, style, and cast bar controls.",
-            ["Auras / Power"] = "Aura behavior, power options, and related display settings.",
             ["Party / Raid"] = "Blizzard party and raid frame options.",
             ["TBC Features"] = "TBC-specific gameplay feature toggles.",
             ["ERA Features"] = "Classic Era-specific gameplay feature toggles.",

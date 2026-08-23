@@ -9,8 +9,10 @@ MMF_POPUP_LAYOUT = {
     CONTENT_TOP_OFFSET = -8,
     PAGE_GAP = 8,
     DEFAULT_CENTER_Y = 50,
-    WIDTH_TBC = 840,
-    WIDTH_RETAIL = 840,
+    -- A wider working area keeps the two-column unit editors readable and
+    -- leaves room for the unit tabs without squeezing their labels.
+    WIDTH_TBC = 1020,
+    WIDTH_RETAIL = 1020,
     HEIGHT_TBC = 580,
     HEIGHT_RETAIL = 580,
     PAGE_CONTENT_HEIGHT_UNIT_FRAMES = 460,

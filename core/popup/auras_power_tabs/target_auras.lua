@@ -6,18 +6,26 @@ function MMF_BuildAurasPowerTargetAurasSection(ctx)
     local CreateMinimalSlider = ctx.createMinimalSlider
     local AURA_COL_X = ctx.auraColX
     local AURA_COL_WIDTH = ctx.auraColWidth
+    local AURA_RIGHT_COL_X = ctx.auraRightColX or AURA_COL_X
+    local AURA_RIGHT_COL_WIDTH = ctx.auraRightColWidth or AURA_COL_WIDTH
     local isTBCComboClass = ctx.isTBCComboClass
     local dropdownLists = ctx.dropdownLists or {}
 
     local aurasTitle = root:CreateFontString(nil, "OVERLAY")
-    aurasTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
+    aurasTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", MMF_UNIT_FRAMES_SECTION_TITLE_SIZE or 16, "")
     aurasTitle:SetPoint("TOPLEFT", AURA_COL_X, -12)
-    aurasTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
+    MMF_ApplyUnitFramesHeadingColor(aurasTitle, "aura")
     aurasTitle:SetText("TARGET AURA POSITION")
 
-    local BUFF_TOGGLE_Y = -32
-    local DEBUFF_TOGGLE_Y = -56
-    local AURA_TYPE_Y = -84
+    local directionTitle = root:CreateFontString(nil, "OVERLAY")
+    directionTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", MMF_UNIT_FRAMES_SECTION_TITLE_SIZE or 16, "")
+    directionTitle:SetPoint("TOPLEFT", AURA_RIGHT_COL_X, -12)
+    MMF_ApplyUnitFramesHeadingColor(directionTitle, "aura")
+    directionTitle:SetText("TARGET AURA DIRECTION")
+
+    local BUFF_TOGGLE_Y = -42
+    local DEBUFF_TOGGLE_Y = -70
+    local AURA_TYPE_Y = -98
 
     local function ApplyCompactCheckboxLayout(checkboxControl, textWidth)
         if not checkboxControl or not checkboxControl.resetButton or not checkboxControl.checkbox or not checkboxControl.labelText then
@@ -127,12 +135,12 @@ function MMF_BuildAurasPowerTargetAurasSection(ctx)
     local buffDirectionDropdown = MMF_CreateMinimalDropdown(root, popup, {
         accentColor = ACCENT_COLOR,
         settingKey = "buffAuraDirection",
-        x = AURA_COL_X,
-        y = -164,
-        width = AURA_COL_WIDTH,
+        x = AURA_RIGHT_COL_X,
+        y = -42,
+        width = AURA_RIGHT_COL_WIDTH,
         labelWidth = 90,
         buttonOffset = 94,
-        buttonWidth = AURA_COL_WIDTH - 94,
+        buttonWidth = AURA_RIGHT_COL_WIDTH - 94,
         visibleRows = #auraDirectionOptions,
         label = "Buff Direction",
         options = auraDirectionOptions,
@@ -150,12 +158,12 @@ function MMF_BuildAurasPowerTargetAurasSection(ctx)
     local debuffDirectionDropdown = MMF_CreateMinimalDropdown(root, popup, {
         accentColor = ACCENT_COLOR,
         settingKey = "debuffAuraDirection",
-        x = AURA_COL_X,
-        y = -192,
-        width = AURA_COL_WIDTH,
+        x = AURA_RIGHT_COL_X,
+        y = -70,
+        width = AURA_RIGHT_COL_WIDTH,
         labelWidth = 90,
         buttonOffset = 94,
-        buttonWidth = AURA_COL_WIDTH - 94,
+        buttonWidth = AURA_RIGHT_COL_WIDTH - 94,
         visibleRows = #auraDirectionOptions,
         label = "Debuff Direction",
         options = auraDirectionOptions,
@@ -172,8 +180,8 @@ function MMF_BuildAurasPowerTargetAurasSection(ctx)
 
     local directionHelpText = root:CreateFontString(nil, "OVERLAY")
     directionHelpText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
-    directionHelpText:SetPoint("TOPLEFT", AURA_COL_X, -222)
-    directionHelpText:SetWidth(AURA_COL_WIDTH)
+    directionHelpText:SetPoint("TOPLEFT", AURA_RIGHT_COL_X, -100)
+    directionHelpText:SetWidth(AURA_RIGHT_COL_WIDTH)
     directionHelpText:SetJustifyH("LEFT")
     directionHelpText:SetWordWrap(true)
     directionHelpText:SetTextColor(0.6, 0.66, 0.7)
@@ -186,7 +194,7 @@ function MMF_BuildAurasPowerTargetAurasSection(ctx)
         return "buffXOffset", "buffYOffset", -2, -6
     end
 
-    local auraXSlider = CreateMinimalSlider(root, "X Offset", AURA_COL_X, -108, AURA_COL_WIDTH, "__tempAuraOffsetX", -200, 200, 1, -2, function(value)
+    local auraXSlider = CreateMinimalSlider(root, "X Offset", AURA_COL_X, -126, AURA_COL_WIDTH, "__tempAuraOffsetX", -200, 200, 1, -2, function(value)
         local xKey, yKey = GetAuraOffsetKeys()
         MattMinimalFramesDB[xKey] = value
         if xKey == "debuffXOffset" then
@@ -201,7 +209,7 @@ function MMF_BuildAurasPowerTargetAurasSection(ctx)
         RefreshPositionResetButtons()
     end, true)
 
-    local auraYSlider = CreateMinimalSlider(root, "Y Offset", AURA_COL_X, -132, AURA_COL_WIDTH, "__tempAuraOffsetY", -200, 200, 1, -6, function(value)
+    local auraYSlider = CreateMinimalSlider(root, "Y Offset", AURA_COL_X, -154, AURA_COL_WIDTH, "__tempAuraOffsetY", -200, 200, 1, -6, function(value)
         local xKey, yKey = GetAuraOffsetKeys()
         MattMinimalFramesDB[yKey] = value
         if yKey == "debuffYOffset" then
@@ -303,7 +311,7 @@ function MMF_BuildAurasPowerTargetAurasSection(ctx)
     end
 
     local resetGap = 8
-    local resetButtonWidth = math.floor((AURA_COL_WIDTH - resetGap) / 2)
+    local resetButtonWidth = math.floor((AURA_RIGHT_COL_WIDTH - resetGap) / 2)
     local resetButtonHeight = 22
     local function CreateAuraResetButton(x, y, label, onClick)
         local button = CreateFrame("Button", nil, root, "BackdropTemplate")
@@ -342,23 +350,18 @@ function MMF_BuildAurasPowerTargetAurasSection(ctx)
         return button
     end
 
-    buffPositionResetButton = CreateAuraResetButton(AURA_COL_X, -250, "Reset Buff Position", function()
+    buffPositionResetButton = CreateAuraResetButton(AURA_RIGHT_COL_X, -128, "Reset Buff Position", function()
         ResetAuraPosition("buff")
     end)
-    debuffPositionResetButton = CreateAuraResetButton(AURA_COL_X + resetButtonWidth + resetGap, -250, "Reset Debuff Position", function()
+    debuffPositionResetButton = CreateAuraResetButton(AURA_RIGHT_COL_X + resetButtonWidth + resetGap, -128, "Reset Debuff Position", function()
         ResetAuraPosition("debuff")
     end)
     RefreshPositionResetButtons()
 
-    local divider1 = root:CreateTexture(nil, "ARTWORK")
-    divider1:SetSize(AURA_COL_WIDTH, 1)
-    divider1:SetPoint("TOPLEFT", AURA_COL_X, -286)
-    divider1:SetColorTexture(0.12, 0.12, 0.15, 1)
-
     local auraTitle = root:CreateFontString(nil, "OVERLAY")
-    auraTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    auraTitle:SetPoint("TOPLEFT", AURA_COL_X, -298)
-    auraTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
+    auraTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", MMF_UNIT_FRAMES_SECTION_TITLE_SIZE or 16, "")
+    auraTitle:SetPoint("TOPLEFT", AURA_COL_X, -198)
+    MMF_ApplyUnitFramesHeadingColor(auraTitle, "aura")
     auraTitle:SetText("TARGET AURA APPEARANCE")
 
     local appearanceTypeOptions = {
@@ -375,7 +378,7 @@ function MMF_BuildAurasPowerTargetAurasSection(ctx)
         accentColor = ACCENT_COLOR,
         settingKey = "auraAppearanceType",
         x = AURA_COL_X,
-        y = -322,
+        y = -228,
         width = AURA_COL_WIDTH,
         labelWidth = 112,
         buttonOffset = 116,
@@ -413,7 +416,7 @@ function MMF_BuildAurasPowerTargetAurasSection(ctx)
     local auraIconsPerRowSlider
     local auraRowsSlider
 
-    auraIconSizeSlider = CreateMinimalSlider(root, "Icon Size", AURA_COL_X, -346, AURA_COL_WIDTH, "__tempAuraAppearanceIconSize", 12, 40, 1, 18, function(value)
+    auraIconSizeSlider = CreateMinimalSlider(root, "Icon Size", AURA_COL_X, -256, AURA_COL_WIDTH, "__tempAuraAppearanceIconSize", 12, 40, 1, 18, function(value)
         local sizeKey = GetAuraAppearanceKeys()
         MattMinimalFramesDB[sizeKey] = math.floor((tonumber(value) or 18) + 0.5)
         if MMF_UpdateAuraLayout then
@@ -441,7 +444,7 @@ function MMF_BuildAurasPowerTargetAurasSection(ctx)
         end,
     })
 
-    auraIconsPerRowSlider = CreateMinimalSlider(root, "Icons Per Row", AURA_COL_X, -370, AURA_COL_WIDTH, "__tempAuraAppearancePerRow", 1, 16, 1, 4, function(value)
+    auraIconsPerRowSlider = CreateMinimalSlider(root, "Icons Per Row", AURA_COL_X, -284, AURA_COL_WIDTH, "__tempAuraAppearancePerRow", 1, 16, 1, 4, function(value)
         local _, perRowKey = GetAuraAppearanceKeys()
         MattMinimalFramesDB[perRowKey] = math.floor((tonumber(value) or 4) + 0.5)
         if MMF_UpdateAuraLayout then
@@ -469,7 +472,7 @@ function MMF_BuildAurasPowerTargetAurasSection(ctx)
         end,
     })
 
-    auraRowsSlider = CreateMinimalSlider(root, "Rows", AURA_COL_X, -394, AURA_COL_WIDTH, "__tempAuraAppearanceRows", 1, 16, 1, 3, function(value)
+    auraRowsSlider = CreateMinimalSlider(root, "Rows", AURA_COL_X, -312, AURA_COL_WIDTH, "__tempAuraAppearanceRows", 1, 16, 1, 3, function(value)
         local _, _, rowsKey = GetAuraAppearanceKeys()
         MattMinimalFramesDB[rowsKey] = math.floor((tonumber(value) or 3) + 0.5)
         if MMF_UpdateAuraLayout then
@@ -514,33 +517,25 @@ function MMF_BuildAurasPowerTargetAurasSection(ctx)
     end
     SyncAuraAppearanceSliders()
 
-    CreateMinimalSlider(root, "Stack Text", AURA_COL_X, -418, AURA_COL_WIDTH, "auraTextScale", 0.5, 2.0, 0.1, 1.0, function(value)
-        if MMF_UpdateAuraTextScale then
-            MMF_UpdateAuraTextScale(value)
-        end
-    end, false)
+    if ctx.showSharedTextScale ~= false then
+        CreateMinimalSlider(root, "Stack Text", AURA_COL_X, -418, AURA_COL_WIDTH, "auraTextScale", 0.5, 2.0, 0.1, 1.0, function(value)
+            if MMF_UpdateAuraTextScale then
+                MMF_UpdateAuraTextScale(value)
+            end
+        end, false)
 
-    CreateMinimalSlider(root, "Timer Text", AURA_COL_X, -438, AURA_COL_WIDTH, "timerTextScale", 0.5, 2.0, 0.1, 1.0, function(value)
-        if MMF_UpdateTimerTextScale then
-            MMF_UpdateTimerTextScale(value)
-        end
-    end, false)
+        CreateMinimalSlider(root, "Timer Text", AURA_COL_X, -438, AURA_COL_WIDTH, "timerTextScale", 0.5, 2.0, 0.1, 1.0, function(value)
+            if MMF_UpdateTimerTextScale then
+                MMF_UpdateTimerTextScale(value)
+            end
+        end, false)
+    end
 
-    local divider4 = root:CreateTexture(nil, "ARTWORK")
-    divider4:SetSize(AURA_COL_WIDTH, 1)
-    divider4:SetPoint("TOPLEFT", AURA_COL_X, -470)
-    divider4:SetColorTexture(0.12, 0.12, 0.15, 1)
-
-    if isTBCComboClass then
-        local comboDivider = root:CreateTexture(nil, "ARTWORK")
-        comboDivider:SetSize(AURA_COL_WIDTH, 1)
-        comboDivider:SetPoint("TOPLEFT", AURA_COL_X, -576)
-        comboDivider:SetColorTexture(0.12, 0.12, 0.15, 1)
-
+    if isTBCComboClass and ctx.showComboPointBar ~= false then
         local comboTitle = root:CreateFontString(nil, "OVERLAY")
-        comboTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
+        comboTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", MMF_UNIT_FRAMES_SECTION_TITLE_SIZE or 16, "")
         comboTitle:SetPoint("TOPLEFT", AURA_COL_X, -588)
-        comboTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
+        MMF_ApplyUnitFramesHeadingColor(comboTitle, "aura")
         comboTitle:SetText("COMBO POINTS")
 
         CreateMinimalCheckbox(root, "Enable Combo Point Bar", AURA_COL_X, -608, "showComboPointBar", true, function(checked)

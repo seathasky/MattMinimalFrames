@@ -30,31 +30,6 @@ local function MMF_SetupAurasPowerHeader(leftCol, accentColor, requestScrollRefr
     sectionDivider:SetHeight(1)
     sectionDivider:SetColorTexture(0.14, 0.18, 0.2, 1)
 
-    local quickGuide = CreateFrame("Frame", nil, sectionCard, "BackdropTemplate")
-    quickGuide:SetPoint("TOPRIGHT", -18, -62)
-    quickGuide:SetSize(184, 128)
-    quickGuide:SetBackdrop({
-        bgFile = "Interface\\Buttons\\WHITE8x8",
-        edgeFile = "Interface\\Buttons\\WHITE8x8",
-        edgeSize = 1,
-    })
-    quickGuide:SetBackdropColor(0.05, 0.08, 0.11, 0.82)
-    quickGuide:SetBackdropBorderColor(0.14, 0.18, 0.2, 1)
-
-    local quickGuideTitle = quickGuide:CreateFontString(nil, "OVERLAY")
-    quickGuideTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
-    quickGuideTitle:SetPoint("TOPLEFT", 12, -10)
-    quickGuideTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
-    quickGuideTitle:SetText("Quick Guide")
-
-    local quickGuideBody = quickGuide:CreateFontString(nil, "OVERLAY")
-    quickGuideBody:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, "")
-    quickGuideBody:SetPoint("TOPLEFT", quickGuideTitle, "BOTTOMLEFT", 0, -8)
-    quickGuideBody:SetPoint("TOPRIGHT", -12, -30)
-    quickGuideBody:SetJustifyH("LEFT")
-    quickGuideBody:SetJustifyV("TOP")
-    quickGuideBody:SetTextColor(0.78, 0.90, 0.96)
-
     local sectionViewport = CreateFrame("Frame", nil, sectionCard)
     sectionViewport:SetPoint("TOPLEFT", 18, -62)
     sectionViewport:SetClipsChildren(true)
@@ -103,17 +78,6 @@ local function MMF_SetupAurasPowerHeader(leftCol, accentColor, requestScrollRefr
 
         sectionTitle:SetText(section.label or "")
         sectionSubtitle:SetText(section.subtitle or "")
-        quickGuideBody:SetText(section.guide or "")
-        -- On the Power page, place the quick guide lower so it sits below the Resource Colors panel.
-        quickGuide:ClearAllPoints()
-        if index == 1 then
-            quickGuide:SetSize(220, 92)
-            quickGuide:SetPoint("TOPRIGHT", -18, -285)
-        else
-            quickGuide:SetSize(184, 128)
-            quickGuide:SetPoint("TOPRIGHT", -18, -62)
-        end
-        quickGuide:SetShown(true)
         sectionViewport:SetSize(FIXED_VIEWPORT_W, FIXED_VIEWPORT_H)
         for sectionIndex = 1, #sectionDefs do
             local root = sectionRoots[sectionIndex]

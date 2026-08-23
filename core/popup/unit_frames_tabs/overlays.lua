@@ -10,6 +10,11 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
     local RIGHT_COL_WIDTH = ctx.rightColWidth
     local RIGHT_STACK_Y_OFFSET = ctx.rightStackYOffset
     local RIGHT_FRAME_OPTIONS_Y_SHIFT = ctx.rightFrameOptionsYShift
+    local standardLayout = ctx.standardLayout == true
+
+    local function SectionY(standardY, legacyY)
+        return standardLayout and standardY or legacyY
+    end
 
     local function ClampColorChannel(value, fallback)
         local n = tonumber(value)
@@ -71,18 +76,13 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
         end
     end
 
-    rightSection.frameOptionsDivider = unitFramesCol:CreateTexture(nil, "ARTWORK")
-    rightSection.frameOptionsDivider:SetSize(RIGHT_COL_WIDTH, 1)
-    rightSection.frameOptionsDivider:SetPoint("TOPLEFT", RIGHT_COL_X, (-706 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET)
-    rightSection.frameOptionsDivider:SetColorTexture(0.42, 0.42, 0.46, 1)
-
     rightSection.healOverlaysTitle = unitFramesCol:CreateFontString(nil, "OVERLAY")
-    rightSection.healOverlaysTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 12, "")
-    rightSection.healOverlaysTitle:SetPoint("TOPLEFT", RIGHT_COL_X, (-718 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET)
-    rightSection.healOverlaysTitle:SetTextColor(MMF_GetPopupSectionTitleColor())
-    rightSection.healOverlaysTitle:SetText("HEAL OVERLAYS")
+    rightSection.healOverlaysTitle:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", MMF_UNIT_FRAMES_SECTION_TITLE_SIZE or 16, "")
+    rightSection.healOverlaysTitle:SetPoint("TOPLEFT", RIGHT_COL_X, SectionY(-12, (-718 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET))
+    MMF_ApplyUnitFramesHeadingColor(rightSection.healOverlaysTitle, "overlay")
+    rightSection.healOverlaysTitle:SetText("HEALING OVERLAYS")
 
-    rightSection.healPredictionCheck = CreateMinimalCheckbox(unitFramesCol, "Heal Prediction", RIGHT_COL_X, (-742 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showHealPrediction", true, function()
+    rightSection.healPredictionCheck = CreateMinimalCheckbox(unitFramesCol, "Heal Prediction", RIGHT_COL_X, SectionY(-42, (-742 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET), "showHealPrediction", true, function()
         OnPredictionChanged()
     end)
 
@@ -184,14 +184,14 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
         52
     )
 
-    rightSection.overhealPredictionCheck = CreateMinimalCheckbox(unitFramesCol, "Overheal", RIGHT_COL_X, (-766 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showOverhealPrediction", false, function()
+    rightSection.overhealPredictionCheck = CreateMinimalCheckbox(unitFramesCol, "Overheal", RIGHT_COL_X, SectionY(-70, (-766 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET), "showOverhealPrediction", false, function()
         if rightSection.containOverhealCheck then
             SetCheckboxEnabled(rightSection.containOverhealCheck, MattMinimalFramesDB and MattMinimalFramesDB.showOverhealPrediction == true)
         end
         OnPredictionChanged()
     end)
 
-    rightSection.containOverhealCheck = CreateMinimalCheckbox(unitFramesCol, "Contain Overheal In Frame", RIGHT_COL_X, (-790 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "containOverhealWithinFrame", false, function()
+    rightSection.containOverhealCheck = CreateMinimalCheckbox(unitFramesCol, "Contain Overheal In Frame", RIGHT_COL_X, SectionY(-98, (-790 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET), "containOverhealWithinFrame", false, function()
         OnPredictionChanged()
     end)
 
@@ -199,7 +199,7 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
         rightSection.healPredictionColorPicker = CreateMinimalColorPicker(unitFramesCol, {
             accentColor = ACCENT_COLOR,
             x = RIGHT_COL_X,
-            y = (-814 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET,
+            y = SectionY(-126, (-814 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET),
             width = RIGHT_COL_WIDTH,
             height = 16,
             labelWidth = 96,
@@ -236,15 +236,15 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
         })
     end
 
-    rightSection.absorbBarCheck = CreateMinimalCheckbox(unitFramesCol, "Absorb Bar", RIGHT_COL_X, (-838 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showAbsorbBar", true, function()
+    rightSection.absorbBarCheck = CreateMinimalCheckbox(unitFramesCol, "Absorb Bar", RIGHT_COL_X, SectionY(-154, (-838 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET), "showAbsorbBar", true, function()
         OnPredictionChanged()
     end)
 
-    rightSection.healAbsorbBarCheck = CreateMinimalCheckbox(unitFramesCol, "Heal Absorb Bar", RIGHT_COL_X, (-862 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showHealAbsorbBar", true, function()
+    rightSection.healAbsorbBarCheck = CreateMinimalCheckbox(unitFramesCol, "Heal Absorb Bar", RIGHT_COL_X, SectionY(-182, (-862 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET), "showHealAbsorbBar", true, function()
         OnPredictionChanged()
     end)
 
-    rightSection.solidAbsorbCheck = CreateMinimalCheckbox(unitFramesCol, "Solid Absorb Color", RIGHT_COL_X, (-886 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "useSolidAbsorbBar", false, function()
+    rightSection.solidAbsorbCheck = CreateMinimalCheckbox(unitFramesCol, "Solid Absorb Color", RIGHT_COL_X, SectionY(-210, (-886 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET), "useSolidAbsorbBar", false, function()
         OnPredictionChanged()
     end)
 
@@ -252,7 +252,7 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
         rightSection.absorbBarColorPicker = CreateMinimalColorPicker(unitFramesCol, {
             accentColor = ACCENT_COLOR,
             x = RIGHT_COL_X,
-            y = (-910 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET,
+            y = SectionY(-238, (-910 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET),
             width = RIGHT_COL_WIDTH,
             height = 16,
             labelWidth = 96,
@@ -311,20 +311,20 @@ function MMF_BuildUnitFramesOverlaysSection(ctx)
 
     local Compat = _G.MMF_Compat or {}
     if not Compat.IsTBC then
-        rightSection.pvpIndicatorCheck = CreateMinimalCheckbox(unitFramesCol, "PvP Indicator", RIGHT_COL_X, (-934 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showPVPFlagIndicator", false, function()
+        rightSection.pvpIndicatorCheck = CreateMinimalCheckbox(unitFramesCol, "PvP Indicator", RIGHT_COL_X, SectionY(-266, (-934 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET), "showPVPFlagIndicator", false, function()
             RefreshPVPIndicator()
         end)
     end
 
-    rightSection.playerDispelHighlightCheck = CreateMinimalCheckbox(unitFramesCol, "Player Dispel Highlight", RIGHT_COL_X, (-958 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showPlayerDispelHighlight", true, function()
+    rightSection.playerDispelHighlightCheck = CreateMinimalCheckbox(unitFramesCol, "Player Dispel Highlight", RIGHT_COL_X, SectionY(-294, (-958 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET), "showPlayerDispelHighlight", true, function()
         RefreshDispelHighlight()
     end)
 
-    rightSection.targetDispelHighlightCheck = CreateMinimalCheckbox(unitFramesCol, "Target Dispel Highlight", RIGHT_COL_X, (-982 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showTargetDispelHighlight", true, function()
+    rightSection.targetDispelHighlightCheck = CreateMinimalCheckbox(unitFramesCol, "Target Dispel Highlight", RIGHT_COL_X, SectionY(-322, (-982 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET), "showTargetDispelHighlight", true, function()
         RefreshDispelHighlight()
     end)
 
-    rightSection.targetClassificationCheck = CreateMinimalCheckbox(unitFramesCol, "Target Classification", RIGHT_COL_X, (-1006 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET, "showTargetClassification", true, function()
+    rightSection.targetClassificationCheck = CreateMinimalCheckbox(unitFramesCol, "Target Classification", RIGHT_COL_X, SectionY(-350, (-1006 - RIGHT_FRAME_OPTIONS_Y_SHIFT) + RIGHT_STACK_Y_OFFSET), "showTargetClassification", true, function()
         RefreshTargetClassification()
     end)
 
