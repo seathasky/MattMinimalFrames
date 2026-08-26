@@ -89,6 +89,9 @@ local function ClearAuraFrameState(auraFrame)
     auraFrame.auraFilter = nil
     auraFrame.auraUnit = nil
     auraFrame.auraInstanceID = nil
+    auraFrame.isTemporaryEnchant = nil
+    auraFrame.temporaryEnchantIndex = nil
+    auraFrame.inventorySlot = nil
 
     if auraFrame.count then
         auraFrame.count:Hide()
@@ -703,13 +706,8 @@ function MMF_UpdateBlizzardPlayerAuraVisibility()
     SetBlizzardAuraFrameVisible(_G.TemporaryEnchantFrame, not hideBuffs)
     SetBlizzardAuraFrameVisible(_G.DebuffFrame, not hideDebuffs)
 
-    -- Showing an Era aura frame does not necessarily repopulate its buttons.
-    -- Blizzard normally does that from UpdateShownState, so refresh explicitly
-    -- when MMF's setting says the frame should be visible.
     if Compat.IsClassic then
-        -- Era 1.15.x may use the legacy global refresh rather than exposing an
-        -- Update method on BuffFrame. This is the same population pass normally
-        -- reached by the first UNIT_AURA event after casting a buff.
+
         if (not hideBuffs or not hideDebuffs) and type(_G.BuffFrame_Update) == "function" then
             pcall(_G.BuffFrame_Update)
         end
@@ -834,10 +832,7 @@ local function ConfigureSecureAuraContainer(container, isDebuff)
     local groupKey = container.mmfAuraGroupKey
     local filter
 
-    -- CustomAuraContainer layout dimensions control placement, but pooled aura
-    -- buttons retain their creation size unless they are explicitly resized.
-    -- Existing buttons are accessible while aura secrecy is inactive; buttons
-    -- allocated later also read the current configured size in their initializer.
+
     local aurasAreSecret = C_Secrets
         and type(C_Secrets.ShouldAurasBeSecret) == "function"
         and C_Secrets.ShouldAurasBeSecret()
@@ -1248,10 +1243,12 @@ end
 --------------------------------------------------
 
 local function CreateAuraIcon(parent, index, isDebuff, iconSize)
-    local aura = CreateFrame("Frame", nil, parent)
+
+    local aura = CreateFrame("Button", nil, parent)
     aura:SetSize(iconSize, iconSize)
     aura:EnableMouse(true)
     aura:RegisterForDrag("LeftButton")
+    aura:RegisterForClicks("RightButtonUp")
 
     aura.icon = aura:CreateTexture(nil, "ARTWORK")
     aura.icon:SetPoint("TOPLEFT", aura, "TOPLEFT", AURA_ICON_CONTENT_INSET, -AURA_ICON_CONTENT_INSET)
@@ -1281,7 +1278,10 @@ local function CreateAuraIcon(parent, index, isDebuff, iconSize)
         local unit = self.auraUnit or "target"
         local tooltipSet = false
 
-        if HasRetailAuraAPI then
+        if self.isTemporaryEnchant and self.inventorySlot and GameTooltip.SetInventoryItem then
+            pcall(GameTooltip.SetInventoryItem, GameTooltip, "player", self.inventorySlot)
+            tooltipSet = (GameTooltip:NumLines() or 0) > 0
+        elseif HasRetailAuraAPI then
             -- Retail strict path: instance ID only (Blizzard-style identity).
             if self.auraInstanceID and GameTooltip.SetUnitAuraByAuraInstanceID then
                 pcall(GameTooltip.SetUnitAuraByAuraInstanceID, GameTooltip, unit, self.auraInstanceID)
@@ -1314,6 +1314,24 @@ local function CreateAuraIcon(parent, index, isDebuff, iconSize)
         local container = self and self:GetParent()
         StopAuraContainerDrag(container)
     end)
+    aura:SetScript("OnClick", function(self, button)
+        if button ~= "RightButton" then
+            return
+        end
+        -- Era protects CancelItemTempEnchantment from addon-owned handlers.
+        -- Keep temporary enchants display-only; importantly, do not fall
+        -- through and treat their display index as a normal UnitAura index.
+        if self.isTemporaryEnchant then
+            return
+        end
+
+        if self.auraUnit == "player"
+            and self.auraFilter == "HELPFUL"
+            and type(CancelUnitBuff) == "function"
+            and self.auraIndex then
+            CancelUnitBuff("player", self.auraIndex, "HELPFUL")
+        end
+    end)
     aura:SetScript("OnMouseUp", function(self, button)
         if button ~= "LeftButton" then
             return
@@ -1344,6 +1362,13 @@ local function CreateAuraContainer(parent, isDebuff, unitToken, forcePreviewCont
             local currentIconSize = GetAuraIconSizeForType(isDebuff, unitToken)
             auraButton:SetSize(currentIconSize, currentIconSize)
             auraButton:SetTooltipAnchorPoint("ANCHOR_RIGHT")
+
+            -- Retail's AuraContainer owns aura data and protected click
+            -- handling.  Enable its secure right-click cancellation only for
+            -- player buffs; target/focus auras and debuffs remain read-only.
+            if unitToken == "player" and not isDebuff and auraButton.SetCancelAuraButtons then
+                auraButton:SetCancelAuraButtons("RightButtonUp")
+            end
 
             local icon = auraButton:CreateTexture(nil, "ARTWORK")
             icon:SetAllPoints()
@@ -1552,6 +1577,9 @@ local function UpdateAuraIcon(auraFrame, auraData, filter, unit, index)
     auraFrame.auraFilter = filter
     auraFrame.auraUnit = unit
     auraFrame.auraInstanceID = auraInstanceID
+    auraFrame.isTemporaryEnchant = auraData.isTemporaryEnchant == true
+    auraFrame.temporaryEnchantIndex = auraData.temporaryEnchantIndex
+    auraFrame.inventorySlot = auraData.inventorySlot
     
     if auraFrame.count then auraFrame.count:Hide() end
     if auraInstanceID and C_UnitAuras and C_UnitAuras.GetAuraApplicationDisplayCount then
@@ -1606,6 +1634,9 @@ local function UpdateFakeAuraIcon(auraFrame, index, isDebuff)
     auraFrame.auraFilter = nil
     auraFrame.auraUnit = nil
     auraFrame.auraInstanceID = nil
+    auraFrame.isTemporaryEnchant = nil
+    auraFrame.temporaryEnchantIndex = nil
+    auraFrame.inventorySlot = nil
     auraFrame.icon:SetTexture("Interface\\AddOns\\MattMinimalFrames\\Images\\MMF.png")
 
     if not auraFrame.count then
@@ -1750,6 +1781,45 @@ local function GetRetailPlayerDebuffs(unit)
     end
 
     return debuffs or {}
+end
+
+local function GetLegacyTemporaryEnchants()
+    local enchants = {}
+    if not Compat.IsClassic or type(GetWeaponEnchantInfo) ~= "function" then
+        return enchants
+    end
+
+    local hasMainHand, mainExpirationMS, mainCharges, mainEnchantID,
+        hasOffHand, offExpirationMS, offCharges, offEnchantID,
+        hasRanged, rangedExpirationMS, rangedCharges, rangedEnchantID = GetWeaponEnchantInfo()
+
+    local function AddEnchant(hasEnchant, expirationMS, charges, enchantID, inventorySlot, enchantIndex)
+        if not hasEnchant then
+            return
+        end
+
+        local icon = GetInventoryItemTexture and GetInventoryItemTexture("player", inventorySlot)
+        if not icon then
+            return
+        end
+
+        local remaining = (tonumber(expirationMS) or 0) / 1000
+        enchants[#enchants + 1] = {
+            icon = icon,
+            count = tonumber(charges) or 0,
+            duration = remaining,
+            expirationTime = remaining > 0 and (GetTime() + remaining) or 0,
+            spellId = enchantID,
+            isTemporaryEnchant = true,
+            temporaryEnchantIndex = enchantIndex,
+            inventorySlot = inventorySlot,
+        }
+    end
+
+    AddEnchant(hasMainHand, mainExpirationMS, mainCharges, mainEnchantID, 16, 1)
+    AddEnchant(hasOffHand, offExpirationMS, offCharges, offEnchantID, 17, 2)
+    AddEnchant(hasRanged, rangedExpirationMS, rangedCharges, rangedEnchantID, 18, 3)
+    return enchants
 end
 
 local function UpdateUnitAuras(unit)
@@ -1901,6 +1971,19 @@ local function UpdateUnitAuras(unit)
     end
 
     local buffs = HasRetailAuraAPI and GetRetailAurasByFilter(unit, "HELPFUL") or GetUnitAuras(unit, "HELPFUL")
+    if unit == "player" and Compat.IsClassic then
+        local temporaryEnchants = GetLegacyTemporaryEnchants()
+        if #temporaryEnchants > 0 then
+            local combinedBuffs = {}
+            for i = 1, #temporaryEnchants do
+                combinedBuffs[#combinedBuffs + 1] = temporaryEnchants[i]
+            end
+            for i = 1, #buffs do
+                combinedBuffs[#combinedBuffs + 1] = buffs[i]
+            end
+            buffs = combinedBuffs
+        end
+    end
     local debuffs = nil
     if unit == "target" and db.onlyShowPlayerDebuffsOnTarget == true and HasRetailAuraAPI then
         debuffs = GetRetailPlayerDebuffs(unit)
@@ -2049,17 +2132,14 @@ local function QueueEraPlayerAuraRefreshBurst()
         MMF_UpdatePlayerAuras()
 
         if attempts < 6 then
-            -- Era finishes its aura/edit-mode positioning asynchronously. Give
-            -- later passes enough time to run after that layout has settled.
+
             C_Timer.After(0.15 * attempts, RunPass)
         else
             pendingEraPlayerAuraRefreshBurst = false
         end
     end
 
-    -- PLAYER_ENTERING_WORLD can fire before Era's Blizzard aura frames have
-    -- completed their first population pass. Retry briefly so existing auras
-    -- appear without waiting for the next UNIT_AURA event.
+
     C_Timer.After(0.02, RunPass)
 end
 
@@ -2109,6 +2189,9 @@ auraEventFrame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 auraEventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
 auraEventFrame:RegisterEvent("SPELLS_CHANGED")
 auraEventFrame:RegisterEvent("PLAYER_TALENT_UPDATE")
+if Compat.IsClassic then
+    auraEventFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
+end
 auraEventFrame:SetScript("OnUpdate", function(self, elapsed)
     if ShouldSuspendForBlizzardEditMode() then
         return
@@ -2146,9 +2229,7 @@ auraEventFrame:SetScript("OnEvent", function(self, event, unit)
     if ShouldSuspendForBlizzardEditMode() then
         return
     end
-    -- Blizzard's restricted Retail AuraContainer owns UNIT_AURA processing.
-    -- Running MMF's legacy refresh path as well causes full reassignments and
-    -- restarts cooldown visuals, which presents as blinking aura icons.
+
     if UsesRestrictedAuraAPI and event == "UNIT_AURA" then
         return
     end
@@ -2195,6 +2276,8 @@ auraEventFrame:SetScript("OnEvent", function(self, event, unit)
             MMF_UpdateDispelHighlights()
         end
         QueueAuraResync("player")
+    elseif event == "UNIT_INVENTORY_CHANGED" and (unit == nil or unit == "player") then
+        MMF_UpdatePlayerAuras()
     elseif event == "UNIT_AURA" and unit == "focus" then
         MMF_UpdateFocusAuras()
         if MMF_UpdateDispelHighlights then
