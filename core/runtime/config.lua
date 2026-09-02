@@ -253,7 +253,14 @@ function MMF_GetIconTextureOptions(classToken)
         return entries
     end
 
-    local classData = JI.dataHelper and JI.dataHelper.class and JI.dataHelper.class[classToken or select(2, UnitClass("player"))]
+    if type(canaccessvalue) == "function" and not canaccessvalue(classToken) then
+        return entries
+    end
+    local resolvedClassToken = classToken or select(2, UnitClass("player"))
+    if type(canaccessvalue) == "function" and not canaccessvalue(resolvedClassToken) then
+        return entries
+    end
+    local classData = JI.dataHelper and JI.dataHelper.class and JI.dataHelper.class[resolvedClassToken]
     local previewTexString = classData and classData.texString
 
     for styleKey, data in pairs(styleContainer.styles) do
@@ -352,6 +359,9 @@ function MMF_GetIconTextureCoords(mediaKey, mediaType, classToken)
     end
 
     local token = classToken
+    if type(canaccessvalue) == "function" and not canaccessvalue(token) then
+        return nil
+    end
     if not token then
         return nil
     end
@@ -360,6 +370,109 @@ function MMF_GetIconTextureCoords(mediaKey, mediaType, classToken)
         return classData.texCoords
     end
     return nil
+end
+
+-- JiberishIcons 1.4.5 hooks Blizzard's UnitFramePortrait_Update and indexes
+-- its class table before checking whether UnitClass returned an accessible
+-- token. Retail 12.1 can make that token secret. Keep the upstream hook intact
+-- for normal updates, but fail closed before its two unsafe class-table reads.
+local jiberishPortraitGuardInstalled = false
+
+local function GuardJiberishFrameClass(frame)
+    if not frame or not frame.unit then
+        return true
+    end
+
+    local _, classToken = UnitClass(frame.unit)
+    if canaccessvalue(classToken) then
+        return true
+    end
+
+    -- Do not leave a previous unit's class art visible while the current unit
+    -- identity is restricted.
+    if frame.classIcon and frame.classIcon.Hide then
+        frame.classIcon:Hide()
+    end
+    if frame.classPortrait and frame.classPortrait.Hide then
+        frame.classPortrait:Hide()
+    end
+    return false
+end
+
+local function GuardKnownJiberishBlizzardFrames(specific)
+    local allAccessible = true
+    local frames = {
+        { frame = _G.PlayerFrame, unit = "player" },
+        { frame = _G.TargetFrame, unit = "target" },
+        { frame = _G.TargetFrameToT, unit = "targettarget" },
+        { frame = _G.FocusFrame, unit = "focus" },
+        { frame = _G.FocusFrameToT, unit = "focustarget" },
+    }
+    for index = 1, 4 do
+        frames[#frames + 1] = {
+            frame = _G.PartyFrame and _G.PartyFrame["MemberFrame" .. index] or _G["PartyMemberFrame" .. index],
+            unit = "party",
+        }
+    end
+
+    for _, entry in ipairs(frames) do
+        if (not specific or entry.unit == specific) and not GuardJiberishFrameClass(entry.frame) then
+            allAccessible = false
+        end
+    end
+    return allAccessible
+end
+
+local function InstallJiberishPortraitSecretGuard()
+    if jiberishPortraitGuardInstalled or type(canaccessvalue) ~= "function" then
+        return jiberishPortraitGuardInstalled
+    end
+
+    local engine = _G.ElvUI_JiberishIcons
+    local JI = type(engine) == "table" and engine[1] or nil
+    if type(JI) ~= "table" or type(JI.UnitFramePortrait_Update) ~= "function" then
+        return false
+    end
+
+    local originalUpdate = JI.UnitFramePortrait_Update
+    JI.UnitFramePortrait_Update = function(self, frame, updated)
+        if type(frame) == "string" then
+            if not GuardKnownJiberishBlizzardFrames(frame) then
+                return
+            end
+        elseif not GuardJiberishFrameClass(frame) then
+            return
+        end
+        return originalUpdate(self, frame, updated)
+    end
+
+    if type(JI.UpdateMedia) == "function" then
+        local originalUpdateMedia = JI.UpdateMedia
+        JI.UpdateMedia = function(self, specific)
+            if not GuardKnownJiberishBlizzardFrames(specific) then
+                return
+            end
+            return originalUpdateMedia(self, specific)
+        end
+    end
+
+    jiberishPortraitGuardInstalled = true
+    return true
+end
+
+if type(canaccessvalue) == "function" and not InstallJiberishPortraitSecretGuard() then
+    local jiberishGuardLoader = CreateFrame("Frame")
+    jiberishGuardLoader:RegisterEvent("ADDON_LOADED")
+    jiberishGuardLoader:RegisterEvent("PLAYER_LOGIN")
+    jiberishGuardLoader:SetScript("OnEvent", function(self, event, addonName)
+        if event == "PLAYER_LOGIN" or addonName == "ElvUI_JiberishIcons" then
+            if InstallJiberishPortraitSecretGuard() then
+                self:UnregisterAllEvents()
+            elseif event == "PLAYER_LOGIN" then
+                self:UnregisterEvent("PLAYER_LOGIN")
+            end
+        end
+    end)
 end
 
 function MMF_EnsureStatusBarTextureSelection()

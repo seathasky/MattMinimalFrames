@@ -25,6 +25,7 @@ local soloPartyVisibilityHookInstalled = false
 local partySelfVisibilityHookInstalled = false
 local pendingPartySelfVisibilityRefresh = false
 local pendingPartyRaidRosterRefresh = false
+local hiddenPartySelfFrames = setmetatable({}, { __mode = "k" })
 
 local function IsAccessibleString(value)
     if issecretvalue and issecretvalue(value) then
@@ -122,6 +123,13 @@ local function ApplyHideSelfToCompactPartyFrame()
         return
     end
 
+    -- With the option disabled, leave Blizzard's secure member frames alone.
+    -- The old path called Show() and UpdateLayout() on every refresh even at
+    -- the default setting, which tainted the party-frame system needlessly.
+    if not IsHideSelfInPartyEnabled() and next(hiddenPartySelfFrames) == nil then
+        return
+    end
+
     if type(_G.InCombatLockdown) == "function" and _G.InCombatLockdown() then
         pendingPartySelfVisibilityRefresh = true
         return
@@ -129,25 +137,18 @@ local function ApplyHideSelfToCompactPartyFrame()
 
     pendingPartySelfVisibilityRefresh = false
     local shouldHideSelf = ShouldHideSelfInPartyNow()
-    local changedAnyFrame = false
 
     for _, memberUnitFrame in ipairs(compactPartyFrame.memberUnitFrames) do
         local unitToken = memberUnitFrame and (memberUnitFrame.unit or memberUnitFrame.displayedUnit or memberUnitFrame.unitToken) or nil
         if memberUnitFrame and IsPlayerLikeUnitToken(unitToken) then
             if shouldHideSelf then
-                if memberUnitFrame:IsShown() then
-                    changedAnyFrame = true
-                end
                 memberUnitFrame:Hide()
-            else
-                changedAnyFrame = true
+                hiddenPartySelfFrames[memberUnitFrame] = true
+            elseif hiddenPartySelfFrames[memberUnitFrame] then
                 memberUnitFrame:Show()
+                hiddenPartySelfFrames[memberUnitFrame] = nil
             end
         end
-    end
-
-    if changedAnyFrame and type(compactPartyFrame.UpdateLayout) == "function" then
-        pcall(compactPartyFrame.UpdateLayout, compactPartyFrame)
     end
 end
 
@@ -327,9 +328,10 @@ local function ApplyPartyRaidHealthTextMode(mode)
 
     local normalizedMode = string.lower(mode)
 
-    if type(_G.CompactUnitFrameProfiles_SetSetting) == "function" then
-        pcall(_G.CompactUnitFrameProfiles_SetSetting, "healthText", normalizedMode)
-    end
+    -- Do not call CompactUnitFrameProfiles_* internals from addon code. Those
+    -- routines mutate Blizzard's secure profile state while executing on an
+    -- insecure stack. The CVar is the public setting and Blizzard refreshes
+    -- its frames when that setting changes.
     if type(_G.SetCVar) == "function" then
         pcall(_G.SetCVar, "raidFramesHealthText", normalizedMode)
     end
@@ -337,9 +339,6 @@ local function ApplyPartyRaidHealthTextMode(mode)
         pcall(_G.C_CVar.SetCVar, "raidFramesHealthText", normalizedMode)
     end
 
-    if type(_G.CompactUnitFrameProfiles_ApplyCurrentSettings) == "function" then
-        pcall(_G.CompactUnitFrameProfiles_ApplyCurrentSettings)
-    end
 end
 
 local VALID_PARTY_RAID_HEALTH_TEXT_MODES = {
@@ -363,13 +362,7 @@ end
 local function GetCurrentPartyRaidHealthTextMode()
     local mode = nil
 
-    if type(_G.CompactUnitFrameProfiles_GetSetting) == "function" then
-        local ok, value = pcall(_G.CompactUnitFrameProfiles_GetSetting, "healthText")
-        if ok then
-            mode = value
-        end
-    end
-    if not mode and type(_G.GetCVar) == "function" then
+    if type(_G.GetCVar) == "function" then
         local ok, value = pcall(_G.GetCVar, "raidFramesHealthText")
         if ok then
             mode = value
@@ -1164,16 +1157,6 @@ function MMF_UpdateBlizzardSoloPartyFrameVisibility()
         pcall(_G.C_CVar.SetCVar, "partyFramesDisplaySolo", cvarValue)
     end
 
-    if type(_G.CompactPartyFrame_UpdateVisibility) == "function" then
-        pcall(_G.CompactPartyFrame_UpdateVisibility)
-    end
-    if type(_G.CompactPartyFrame_Generate) == "function" then
-        pcall(_G.CompactPartyFrame_Generate)
-    end
-    if _G.CompactPartyFrame and type(_G.CompactPartyFrame.TryUpdate) == "function" then
-        pcall(_G.CompactPartyFrame.TryUpdate, _G.CompactPartyFrame)
-    end
-
     if _G.CompactPartyFrame and (not soloPartyVisibilityHookInstalled) and type(hooksecurefunc) == "function"
         and type(_G.CompactPartyFrame.UpdateVisibility) == "function" then
         hooksecurefunc(_G.CompactPartyFrame, "UpdateVisibility", function()
@@ -1186,13 +1169,8 @@ function MMF_UpdateBlizzardSoloPartyFrameVisibility()
 end
 
 function MMF_UpdateBlizzardPartySelfVisibility()
-    EnsurePartySelfVisibilityHook()
-
-    if type(_G.CompactPartyFrame_Generate) == "function" then
-        pcall(_G.CompactPartyFrame_Generate)
-    end
-    if _G.CompactPartyFrame and type(_G.CompactPartyFrame.TryUpdate) == "function" then
-        pcall(_G.CompactPartyFrame.TryUpdate, _G.CompactPartyFrame)
+    if IsHideSelfInPartyEnabled() then
+        EnsurePartySelfVisibilityHook()
     end
 
     ApplyHideSelfToCompactPartyFrame()

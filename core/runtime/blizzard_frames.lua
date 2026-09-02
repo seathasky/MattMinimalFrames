@@ -1,3 +1,40 @@
+local hiddenBlizzardFrames = setmetatable({}, { __mode = "k" })
+local castBarHooks = setmetatable({}, { __mode = "k" })
+
+local function HideBlizzardFrame(frame)
+    if not frame or hiddenBlizzardFrames[frame] then
+        return
+    end
+
+    -- Keep Blizzard's scripts, events, parent, and Lua fields intact. Replacing
+    -- an OnShow script or reparenting a protected unit frame permanently taints
+    -- the frame and can contaminate unrelated protected UI work later.
+    -- A secure visibility driver is the supported way to keep a protected
+    -- frame hidden through combat state changes.
+    if type(RegisterStateDriver) == "function" then
+        local ok = pcall(RegisterStateDriver, frame, "visibility", "hide")
+        if ok then
+            hiddenBlizzardFrames[frame] = true
+            return
+        end
+    end
+
+    -- Classic/non-protected fallback. Use a secure post-hook instead of
+    -- replacing Blizzard's OnShow handler.
+    frame:Hide()
+    if type(hooksecurefunc) == "function" then
+        local ok = pcall(hooksecurefunc, frame, "Show", function(self)
+            if hiddenBlizzardFrames[self]
+                and (type(InCombatLockdown) ~= "function" or not InCombatLockdown()) then
+                self:Hide()
+            end
+        end)
+        if ok then
+            hiddenBlizzardFrames[frame] = true
+        end
+    end
+end
+
 local function HideBlizzardFrames()
     local framesToHide = {
         PlayerFrame,
@@ -12,16 +49,10 @@ local function HideBlizzardFrames()
         _G.BossTargetFrameContainer,
     }
     for _, frame in pairs(framesToHide) do
-        if frame then
-            frame:UnregisterAllEvents()
-            frame:SetScript("OnShow", function(self) self:Hide() end)
-            MMF_HideFrame(frame)
-        end
+        HideBlizzardFrame(frame)
     end
     if TargetFrameToT then
-        TargetFrameToT:UnregisterAllEvents()
-        TargetFrameToT:SetScript("OnShow", function(self) self:Hide() end)
-        MMF_HideFrame(TargetFrameToT)
+        HideBlizzardFrame(TargetFrameToT)
     end
 
     local compat = _G.MMF_Compat
@@ -32,13 +63,7 @@ local function HideBlizzardFrames()
             _G.PlayerFrameComboPoints,
         }
         for _, frame in ipairs(comboFrames) do
-            if frame then
-                if frame.UnregisterAllEvents then
-                    frame:UnregisterAllEvents()
-                end
-                frame:SetScript("OnShow", function(self) self:Hide() end)
-                MMF_HideFrame(frame)
-            end
+            HideBlizzardFrame(frame)
         end
     end
 end
@@ -53,13 +78,16 @@ local function UpdateBlizzardPlayerCastBarVisibility()
 
     for _, frame in pairs(candidates) do
         if frame then
-            if not frame.mmfHideBlizzardCastBarHooked then
+            -- Do not touch Blizzard's cast-bar scripts unless the option is
+            -- actually enabled. Keep hook bookkeeping outside the frame so no
+            -- addon-owned Lua field is written onto a protected object.
+            if shouldHide and not castBarHooks[frame] then
                 frame:HookScript("OnShow", function(self)
                     if MattMinimalFramesDB and MattMinimalFramesDB.hideBlizzardPlayerCastBar == true then
                         self:Hide()
                     end
                 end)
-                frame.mmfHideBlizzardCastBarHooked = true
+                castBarHooks[frame] = true
             end
 
             if shouldHide then

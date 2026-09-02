@@ -809,6 +809,13 @@ local function ShouldShowLeaderIconForUnit(unit, db)
     if unit ~= "player" and unit ~= "target" then
         return false
     end
+    -- Retail can return an opaque (secret) boolean for a target's group-leader
+    -- state while target selection is changing.  A text prefix needs a Lua
+    -- branch, which cannot consume that value.  Keep the player-frame icon,
+    -- but leave target names unadorned instead of risking a taint error.
+    if unit == "target" then
+        return false
+    end
     if not UnitExists(unit) then
         return false
     end
@@ -819,7 +826,14 @@ local function ShouldShowLeaderIconForUnit(unit, db)
         return false
     end
     local ok, isLeader = pcall(UnitIsGroupLeader, unit)
-    return ok and isLeader == true
+    if not ok or not NotSecretValue(isLeader) then
+        return false
+    end
+
+    -- pcall does not make a secret value safe to inspect.  Check it before
+    -- comparing: UnitIsGroupLeader can return a secret boolean while the
+    -- target is changing under addon restrictions.
+    return isLeader == true
 end
 
 local function GetLevelSuffixForUnit(unit, db)

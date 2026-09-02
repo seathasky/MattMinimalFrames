@@ -644,6 +644,9 @@ local function UpdateAuraContainerLabel(container, shouldShow)
     end
 end
 
+local blizzardAuraVisibilityState = setmetatable({}, { __mode = "k" })
+local eraBlizzardAuraVisibilityHooks = setmetatable({}, { __mode = "k" })
+
 local function SetBlizzardAuraFrameVisible(frame, visible)
     if not frame then
         return
@@ -653,19 +656,20 @@ local function SetBlizzardAuraFrameVisible(frame, visible)
         -- Do not overwrite Blizzard's normal alpha/scale just because MMF's
         -- hide option is disabled. Era's aura layout owns these values, and
         -- forcing scale 1 can leave the frame clipped beyond the screen edge.
-        if frame.mmfAuraVisibilitySuppressed then
-            frame:SetAlpha(frame.mmfAuraOriginalAlpha or 1)
-            frame:SetScale(frame.mmfAuraOriginalScale or 1)
-            frame:EnableMouse(frame.mmfAuraOriginalMouseEnabled ~= false)
-            frame.mmfAuraVisibilitySuppressed = nil
+        local state = blizzardAuraVisibilityState[frame]
+        if state then
+            frame:SetAlpha(state.alpha or 1)
+            frame:SetScale(state.scale or 1)
+            frame:EnableMouse(state.mouseEnabled ~= false)
+            blizzardAuraVisibilityState[frame] = nil
         end
-        frame:Show()
     else
-        if not frame.mmfAuraVisibilitySuppressed then
-            frame.mmfAuraOriginalAlpha = frame:GetAlpha()
-            frame.mmfAuraOriginalScale = frame:GetScale()
-            frame.mmfAuraOriginalMouseEnabled = frame:IsMouseEnabled()
-            frame.mmfAuraVisibilitySuppressed = true
+        if not blizzardAuraVisibilityState[frame] then
+            blizzardAuraVisibilityState[frame] = {
+                alpha = frame:GetAlpha(),
+                scale = frame:GetScale(),
+                mouseEnabled = frame:IsMouseEnabled(),
+            }
         end
         frame:SetAlpha(0)
         frame:SetScale(0.0001)
@@ -678,7 +682,7 @@ local function EnsureEraBlizzardAuraVisibilityHook(frame, dbKey)
     -- Era's current Blizzard aura frames can change their own shown state after
     -- MMF applies the checkbox setting. Reapply only on Era; Retail and TBC keep
     -- their existing behavior.
-    if not Compat.IsClassic or not frame or frame.mmfEraVisibilityHooked then
+    if not Compat.IsClassic or not frame or eraBlizzardAuraVisibilityHooks[frame] then
         return
     end
     if type(hooksecurefunc) ~= "function" or type(frame.UpdateShownState) ~= "function" then
@@ -690,7 +694,7 @@ local function EnsureEraBlizzardAuraVisibilityHook(frame, dbKey)
         SetBlizzardAuraFrameVisible(self, db[dbKey] ~= true)
     end)
     if ok then
-        frame.mmfEraVisibilityHooked = true
+        eraBlizzardAuraVisibilityHooks[frame] = true
     end
 end
 
@@ -728,9 +732,6 @@ function MMF_UpdateBlizzardPlayerAuraVisibility()
         end
     end
 
-    if type(BuffFrame_UpdateAllBuffAnchors) == "function" then
-        pcall(BuffFrame_UpdateAllBuffAnchors)
-    end
 end
 
 local function SetAuraTestPreviewFrameState(enabled)

@@ -29,6 +29,35 @@ function MMF_CreatePopupWindowController(config)
         return parentLeft, parentRight or parentLeft, parentBottom, parentTop or parentBottom
     end
 
+    local function GetEffectiveScale(frame)
+        local scale = frame and frame.GetEffectiveScale and frame:GetEffectiveScale() or 1
+        if not scale or scale <= 0 then
+            return 1
+        end
+        return scale
+    end
+
+    local function GetPopupCenterInParentSpace(self)
+        if not self or not UIParent then return nil, nil end
+        local left = self:GetLeft()
+        local right = self:GetRight()
+        local top = self:GetTop()
+        local bottom = self:GetBottom()
+        if not left or not right or not top or not bottom then return nil, nil end
+
+        -- Region coordinates use each frame's effective scale. Convert the
+        -- popup center into UIParent's coordinate space before saving it.
+        local popupScale = GetEffectiveScale(self)
+        local parentScale = GetEffectiveScale(UIParent)
+        local parentLeft, parentRight, parentBottom, parentTop = GetParentBounds()
+        local popupCenterX = ((left + right) * 0.5) * popupScale
+        local popupCenterY = ((top + bottom) * 0.5) * popupScale
+        local parentCenterX = ((parentLeft + parentRight) * 0.5) * parentScale
+        local parentCenterY = ((parentTop + parentBottom) * 0.5) * parentScale
+        return (popupCenterX - parentCenterX) / parentScale,
+            (popupCenterY - parentCenterY) / parentScale
+    end
+
     local function GetDynamicMaxPopupHeight(self)
         local _, _, parentBottom, parentTop = GetParentBounds()
         local parentHeight = math.max(1, parentTop - parentBottom)
@@ -55,14 +84,8 @@ function MMF_CreatePopupWindowController(config)
 
     local function NormalizePopupAnchorToCenter(self)
         if not self or not UIParent then return nil, nil end
-        local left = self:GetLeft()
-        local right = self:GetRight()
-        local top = self:GetTop()
-        local bottom = self:GetBottom()
-        if not left or not right or not top or not bottom then return nil, nil end
-        local parentLeft, parentRight, parentBottom, parentTop = GetParentBounds()
-        local x = ((left + right) * 0.5) - ((parentLeft + parentRight) * 0.5)
-        local y = ((top + bottom) * 0.5) - ((parentTop + parentBottom) * 0.5)
+        local x, y = GetPopupCenterInParentSpace(self)
+        if not x or not y then return nil, nil end
         self:ClearAllPoints()
         self:SetPoint("CENTER", UIParent, "CENTER", x, y)
         return x, y
@@ -70,11 +93,18 @@ function MMF_CreatePopupWindowController(config)
 
     local function GetPopupCenterOffsets(self)
         if not self or not UIParent then return nil, nil end
+        local calculatedX, calculatedY = GetPopupCenterInParentSpace(self)
+        if calculatedX and calculatedY then
+            return calculatedX, calculatedY
+        end
+
+        -- Geometry can be unavailable while the popup is hidden during login.
+        -- A centered saved anchor is already expressed in UIParent coordinates.
         local point, relTo, relPoint, x, y = self:GetPoint(1)
         if point == "CENTER" and (relTo == UIParent or relTo == nil) and (relPoint == "CENTER" or relPoint == nil) then
             return x or 0, y or 0
         end
-        return NormalizePopupAnchorToCenter(self)
+        return nil, nil
     end
 
     local function PersistPopupPosition()
@@ -92,9 +122,9 @@ function MMF_CreatePopupWindowController(config)
         local parentLeft, parentRight, parentBottom, parentTop = GetParentBounds()
         local parentWidth = math.max(1, parentRight - parentLeft)
         local parentHeight = math.max(1, parentTop - parentBottom)
-        local frameScale = self:GetScale() or 1
-        local halfW = ((self:GetWidth() or 0) * frameScale) * 0.5
-        local halfH = ((self:GetHeight() or 0) * frameScale) * 0.5
+        local scaleRatio = GetEffectiveScale(self) / GetEffectiveScale(UIParent)
+        local halfW = ((self:GetWidth() or 0) * scaleRatio) * 0.5
+        local halfH = ((self:GetHeight() or 0) * scaleRatio) * 0.5
 
         local minX = (-parentWidth * 0.5) + halfW
         local maxX = (parentWidth * 0.5) - halfW
@@ -109,10 +139,10 @@ function MMF_CreatePopupWindowController(config)
 
         local clampedX = math.max(minX, math.min(maxX, x))
         local clampedY = math.max(minY, math.min(maxY, y))
-        if math.abs(clampedX - x) > 0.5 or math.abs(clampedY - y) > 0.5 then
-            self:ClearAllPoints()
-            self:SetPoint("CENTER", UIParent, "CENTER", clampedX, clampedY)
-        end
+        -- StartMoving may leave a scaled frame on a different anchor. Always
+        -- normalize it so subsequent scale changes cannot restore stale offsets.
+        self:ClearAllPoints()
+        self:SetPoint("CENTER", UIParent, "CENTER", clampedX, clampedY)
     end
 
     local function ApplyPopupScale(scale, preservePosition)

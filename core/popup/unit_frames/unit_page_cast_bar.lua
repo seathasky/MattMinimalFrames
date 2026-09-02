@@ -110,6 +110,12 @@ function MMF_BuildUnitFramesCastBarSection(ctx)
     CreateSlider(parent, "Cast Time Size", rightX, -70, width, castPrefix .. "CastTimeTextSize", 8, 20, 1,
         db[castPrefix .. "CastTimeTextSize"] or defaults[castPrefix .. "CastTimeTextSize"] or 9,
         function() MMF_RefreshUnitPageCastBar(unit) end, true)
+    CreateSlider(parent, "Width Scale", rightX, -98, width, castPrefix .. "FrameScaleX", 0.1, 6.0, 0.05,
+        db[castPrefix .. "FrameScaleX"] or defaults[castPrefix .. "FrameScaleX"] or 1.0,
+        function() MMF_RefreshUnitPageCastBar(unit) end)
+    CreateSlider(parent, "Height Scale", rightX, -126, width, castPrefix .. "FrameScaleY", 0.1, 10.0, 0.05,
+        db[castPrefix .. "FrameScaleY"] or defaults[castPrefix .. "FrameScaleY"] or 1.0,
+        function() MMF_RefreshUnitPageCastBar(unit) end)
     SyncOffsets()
     MattMinimalFramesDB["__temp" .. keyPrefix .. "CastBarX"] = nil
     MattMinimalFramesDB["__temp" .. keyPrefix .. "CastBarY"] = nil
