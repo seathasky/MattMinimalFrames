@@ -27,6 +27,10 @@ local function NotSecretValue(value)
     return not issecretvalue or not issecretvalue(value)
 end
 
+local function IsBossAuraUnit(unit)
+    return NotSecretValue(unit) and type(unit) == "string" and unit:match("^boss[1-5]$") ~= nil
+end
+
 local function ShouldUseOmniCCAuraText()
     if not Compat.IsTBC or type(_G.OmniCC) ~= "table" then
         return false
@@ -135,6 +139,7 @@ local function GetAuraUnitPrefix(unitToken)
 end
 
 local function GetAuraIconSizeForType(isDebuff, unitToken)
+    if IsBossAuraUnit(unitToken) then return 18 end
     local db = MattMinimalFramesDB or {}
     local prefix = GetAuraUnitPrefix(unitToken)
     local key
@@ -152,6 +157,7 @@ local function GetAuraIconSizeForType(isDebuff, unitToken)
 end
 
 local function GetAuraIconsPerRow(isDebuff, unitToken)
+    if IsBossAuraUnit(unitToken) then return MAX_AURA_ICONS end
     local db = MattMinimalFramesDB or {}
     local prefix = GetAuraUnitPrefix(unitToken)
     local key
@@ -169,6 +175,7 @@ local function GetAuraIconsPerRow(isDebuff, unitToken)
 end
 
 local function GetAuraRows(isDebuff, unitToken)
+    if IsBossAuraUnit(unitToken) then return 1 end
     local db = MattMinimalFramesDB or {}
     local prefix = GetAuraUnitPrefix(unitToken)
     local key
@@ -205,6 +212,7 @@ local function NormalizeAuraDirection(value, fallback)
 end
 
 local function GetAuraDirectionValue(isDebuff, unitToken)
+    if IsBossAuraUnit(unitToken) then return "left_down" end
     local db = MattMinimalFramesDB or {}
 
     if unitToken == "player" then
@@ -260,6 +268,16 @@ local function ApplyAuraContainerPosition(container, isDebuff, x, y)
     end
 
     local unitToken = container and container.mmfAuraUnit or "target"
+    if IsBossAuraUnit(unitToken) then
+        local scale = math.max(0.75, math.min(2.0, tonumber(MattMinimalFramesDB and MattMinimalFramesDB.bossDebuffIconScale) or 1.0))
+        if container.mmfBossDebuffScale ~= scale then
+            container:SetScale(scale)
+            container.mmfBossDebuffScale = scale
+        end
+        container:ClearAllPoints()
+        container:SetPoint("TOPRIGHT", ownerFrame, "LEFT", -6, GetAuraIconSizeForType(true, unitToken) * 0.5)
+        return
+    end
     local defaultX, defaultY
     if unitToken == "player" then
         defaultX = isDebuff and -2 or 2
@@ -850,7 +868,7 @@ local function ConfigureSecureAuraContainer(container, isDebuff)
 
     if isDebuff then
         local db = MattMinimalFramesDB or {}
-        filter = (unitToken == "target" and db.onlyShowPlayerDebuffsOnTarget == true)
+        filter = (IsBossAuraUnit(unitToken) or (unitToken == "target" and db.onlyShowPlayerDebuffsOnTarget == true))
             and "HARMFUL|PLAYER"
             or "HARMFUL"
     else
@@ -887,7 +905,7 @@ local function ConfigureSecureAuraContainer(container, isDebuff)
         maximumLineSize = (iconSize * rows) + (AURA_ICON_SPACING * math.max(0, rows - 1))
     end
     local anchorPoint
-    if unitToken == "player" then
+    if unitToken == "player" or IsBossAuraUnit(unitToken) then
         anchorPoint = isDebuff and "TOPRIGHT" or "TOPLEFT"
     else
         anchorPoint = isDebuff and "TOPLEFT" or "TOPRIGHT"
@@ -951,7 +969,7 @@ local function LayoutAuraContainer(container, isDebuff, size, activeCount)
     end
 
     local basePoint
-    if unitToken == "player" then
+    if unitToken == "player" or IsBossAuraUnit(unitToken) then
         basePoint = isDebuff and "TOPRIGHT" or "TOPLEFT"
     else
         basePoint = isDebuff and "TOPLEFT" or "TOPRIGHT"
@@ -1410,7 +1428,8 @@ local function CreateAuraContainer(parent, isDebuff, unitToken, forcePreviewCont
         container.mmfAuraIsDebuff = isDebuff
         container.mmfAuraGroupKey = isDebuff and "Debuffs" or "Buffs"
         container:SetUnit(unitToken)
-        container:AddAuraGroup(container.mmfAuraGroupKey, isDebuff and "HARMFUL" or "HELPFUL", {
+        local initialFilter = IsBossAuraUnit(unitToken) and "HARMFUL|PLAYER" or (isDebuff and "HARMFUL" or "HELPFUL")
+        container:AddAuraGroup(container.mmfAuraGroupKey, initialFilter, {
             maxFrameCount = GetVisibleAuraLimit(isDebuff, unitToken),
             initializeFrame = InitializeAuraButton,
             layout = {
@@ -1421,7 +1440,9 @@ local function CreateAuraContainer(parent, isDebuff, unitToken, forcePreviewCont
             },
         })
         ConfigureSecureAuraContainer(container, isDebuff)
-        container:SetEnabled(true)
+        local enabled = not IsBossAuraUnit(unitToken) or not MattMinimalFramesDB or MattMinimalFramesDB.showBossDebuffs ~= false
+        container:SetEnabled(enabled)
+        container:SetShown(enabled)
 
         local x, y = GetAuraOffsetsForUnit(unitToken, isDebuff)
         ApplyAuraContainerPosition(container, isDebuff, x, y)
@@ -1432,7 +1453,7 @@ local function CreateAuraContainer(parent, isDebuff, unitToken, forcePreviewCont
     container.mmfAuraUnit = unitToken
     container.mmfAuraOwnerFrame = parent
     container.mmfAuraIsDebuff = isDebuff
-    container:SetMovable(true)
+    container:SetMovable(not IsBossAuraUnit(unitToken))
     container:EnableMouse(true)
     container:RegisterForDrag("LeftButton")
 
@@ -1473,6 +1494,8 @@ local function CreateAuraContainer(parent, isDebuff, unitToken, forcePreviewCont
         unitPrefix = "PLAYER "
     elseif unitToken == "focus" then
         unitPrefix = "FOCUS "
+    elseif IsBossAuraUnit(unitToken) then
+        unitPrefix = string.upper(unitToken) .. " MY "
     end
     label:SetText(unitPrefix .. (isDebuff and "DEBUFFS" or "BUFFS"))
     label:SetTextColor(0.95, 0.96, 0.98)
@@ -1489,6 +1512,7 @@ local function CreateAuraContainer(parent, isDebuff, unitToken, forcePreviewCont
         UpdateAuraContainerLabel(self, false)
     end)
     container:SetScript("OnDragStart", function(self)
+        if IsBossAuraUnit(unitToken) then return end
         if CanStartAuraContainerDrag(self) then
             StartAuraContainerDrag(self)
         end
@@ -1497,6 +1521,7 @@ local function CreateAuraContainer(parent, isDebuff, unitToken, forcePreviewCont
         StopAuraContainerDrag(self)
     end)
     container:SetScript("OnMouseUp", function(self, button)
+        if IsBossAuraUnit(unitToken) then return end
         if button ~= "LeftButton" then
             return
         end
@@ -1556,6 +1581,16 @@ function MMF_SetupTargetAuras()
         if UsesRestrictedAuraAPI and not MMF_FocusFrame.DebuffPreviewContainer then
             MMF_FocusFrame.DebuffPreviewContainer = CreateAuraContainer(MMF_FocusFrame, true, "focus", true)
             MMF_FocusFrame.DebuffPreviewContainer:Hide()
+        end
+    end
+    for i = 1, 5 do
+        local frame = _G["MMF_Boss" .. i .. "Frame"]
+        if frame and not frame.DebuffContainer then
+            frame.DebuffContainer = CreateAuraContainer(frame, true, "boss" .. i)
+            if UsesRestrictedAuraAPI then
+                frame.DebuffPreviewContainer = CreateAuraContainer(frame, true, "boss" .. i, true)
+                frame.DebuffPreviewContainer:Hide()
+            end
         end
     end
 end
@@ -1783,6 +1818,51 @@ local function GetRetailPlayerDebuffs(unit)
 
     return debuffs or {}
 end
+
+local function UpdateBossAuras()
+    local preview = IsAuraFakePreviewEnabled()
+    local showDebuffs = not MattMinimalFramesDB or MattMinimalFramesDB.showBossDebuffs ~= false
+    for i = 1, 5 do
+        local unit = "boss" .. i
+        local frame = _G["MMF_Boss" .. i .. "Frame"]
+        local container = frame and frame.DebuffContainer
+        if container then
+            local shown = showDebuffs and frame:IsShown()
+            if container.mmfSecureAuraContainer then
+                -- Blizzard performs ownership filtering without exposing secret aura data.
+                ApplyAuraContainerPosition(container, true)
+                local enabled = shown and not preview
+                if container:IsEnabled() ~= enabled then container:SetEnabled(enabled) end
+                container:SetShown(enabled)
+                container = frame.DebuffPreviewContainer
+            end
+            if container then
+                ClearAuraContainer(container)
+                if shown and preview then
+                    container:Show()
+                    for index = 1, 3 do UpdateFakeAuraIcon(container.auras[index], index, true) end
+                    LayoutAuraContainer(container, true, nil, 3)
+                elseif shown and not UsesRestrictedAuraAPI and UnitExists(unit) then
+                    container:Show()
+                    -- Never fall back to an unfiltered harmful-aura query.
+                    local filter = "HARMFUL|PLAYER"
+                    local debuffs = HasRetailAuraAPI and GetRetailAurasByFilter(unit, filter) or GetUnitAuras(unit, filter)
+                    local count = math.min(#debuffs, GetVisibleAuraLimit(true, unit))
+                    for index = 1, count do
+                        UpdateAuraIcon(container.auras[index], debuffs[index], filter, unit, index)
+                    end
+                    LayoutAuraContainer(container, true, nil, count)
+                else
+                    container:Hide()
+                end
+                UpdateAuraContainerLabel(container, false)
+                ApplyAuraContainerPosition(container, true)
+            end
+        end
+    end
+end
+
+_G.MMF_UpdateBossAuras = UpdateBossAuras
 
 local function GetLegacyTemporaryEnchants()
     local enchants = {}
@@ -2202,6 +2282,8 @@ auraEventFrame:SetScript("OnUpdate", function(self, elapsed)
         return
     end
     self.mmfAuraPollElapsed = 0
+
+    UpdateBossAuras()
 
     if not HasRetailAuraAPI or UsesRestrictedAuraAPI then
         return

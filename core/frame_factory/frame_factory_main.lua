@@ -61,7 +61,7 @@ local function CreateSecureUnitFrame(unit, frameName, width, height, point, relP
         deps.CreateTargetFrameIcon(f)
     end
 
-    if unit == "player" or unit == "target" or unit == "focus" then
+    if unit == "player" or unit == "target" or unit == "focus" or unit:match("^boss[1-5]$") then
         deps.CreateCastBar(f, unit)
     end
 

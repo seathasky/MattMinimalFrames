@@ -498,6 +498,9 @@ function MMF_BuildUnitFramesUnitPageCore(ctx)
     elseif unit == "focus" then
         AddSection(164, MMF_BuildUnitFramesCastBarSection, { unit = unit, cardTone = "cast" })
         AddSection(168, MMF_BuildUnitFramesAppearanceSection, { unit = unit, cardTone = "appearance" })
+    elseif unit == "boss" then
+        AddSection(140, MMF_BuildUnitFramesCastBarSection, { unit = unit, cardTone = "cast" })
+        AddSection(168, MMF_BuildUnitFramesAppearanceSection, { unit = unit, cardTone = "appearance" })
     else
         AddSection(168, MMF_BuildUnitFramesAppearanceSection, { unit = unit, cardTone = "appearance" })
     end

@@ -170,16 +170,18 @@ _G.MMF_RefreshCastBarTextLayer = RefreshCastBarTextLayer
 _G.MMF_ApplyCastBarTextReadability = ApplyCastBarTextReadability
 
 local function CreateCastBar(frame, unit)
+    local isBoss = unit:match("^boss[1-5]$") ~= nil
     local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
     local settingKey = (unit == "player" and "showPlayerCastBar")
         or (unit == "target" and "showTargetCastBar")
         or (unit == "focus" and "showFocusCastBar")
+        or (isBoss and "showBossCastBar")
         or "showTargetCastBar"
     local showCastBar = MattMinimalFramesDB and MattMinimalFramesDB[settingKey]
     if showCastBar == nil then
         showCastBar = true
     end
-    if not showCastBar then return end
+    if not showCastBar and not isBoss then return end
 
     frame.castBarFrame = CreateFrame("Frame", nil, frame)
     frame.castBarFrame:SetFrameLevel(frame.healthBar:GetFrameLevel() + 5)
@@ -334,6 +336,10 @@ local function CreateCastBar(frame, unit)
     end
 
     local function ShowCastBar(spellName, notInterruptible, startTimeMs, endTimeMs)
+        if isBoss and MattMinimalFramesDB and MattMinimalFramesDB.showBossCastBar == false then
+            frame.castBarFrame:Hide()
+            return
+        end
         local r, g, b = MMF_Config.GetCastBarColor(MattMinimalFramesDB and MattMinimalFramesDB.castBarColor or "yellow")
         if unit == "target" then
             frame.castBar:SetStatusBarColor(r, g, b, 1)
@@ -538,7 +544,7 @@ local function CreateCastBar(frame, unit)
 
         elseif event == "UNIT_SPELLCAST_STOP" then
             if not frame.castInfo.casting then return end
-            if unit == "target" then
+            if unit == "target" or isBoss then
                 if not UnitCastingInfo(unit) then
                     SyncCastBarFromUnitState()
                 end
@@ -556,7 +562,7 @@ local function CreateCastBar(frame, unit)
 
         elseif event == "UNIT_SPELLCAST_FAILED" or event == "UNIT_SPELLCAST_INTERRUPTED" then
             if not frame.castInfo.casting then return end
-            if unit == "target" then
+            if unit == "target" or isBoss then
                 if not UnitCastingInfo(unit) then
                     SyncCastBarFromUnitState()
                 end
@@ -568,6 +574,13 @@ local function CreateCastBar(frame, unit)
             end
         end
     end)
+
+    if isBoss then
+        frame.mmfRefreshBossCastBar = SyncCastBarFromUnitState
+        frame:HookScript("OnShow", SyncCastBarFromUnitState)
+        frame:HookScript("OnHide", HideCastBar)
+        SyncCastBarFromUnitState()
+    end
 
     -- Classic Era can expose target cast state through UnitCastingInfo without
     -- reliably delivering every target UNIT_SPELLCAST event. The cast bar is

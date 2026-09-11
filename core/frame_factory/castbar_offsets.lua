@@ -2,7 +2,7 @@ local function SaveCastBarPosition(frame, unit)
     if not frame or not frame.castBarFrame or not unit then
         return
     end
-    if unit ~= "player" and unit ~= "target" and unit ~= "focus" then
+    if unit ~= "player" and unit ~= "target" and unit ~= "focus" and not unit:match("^boss[1-5]$") then
         return
     end
     local x, y = frame.castBarFrame:GetCenter()
@@ -57,6 +57,12 @@ local function GetFrameHeight(frame)
 end
 
 local function GetDefaultCastBarOffset(frame, unit, castBarHeight)
+    -- Keep the tightly stacked boss frames clear of cast bars and their text.
+    if unit and unit:match("^boss[1-5]$") then
+        local frameWidth = tonumber(frame and (frame.originalWidth or frame:GetWidth())) or 100
+        local castBarWidth = tonumber(frame and frame.castBarFrame and frame.castBarFrame:GetWidth()) or (frameWidth - 2)
+        return RoundCoordinate((frameWidth + castBarWidth) * 0.5 + 6), 0
+    end
     local frameHeight = GetFrameHeight(frame)
     local y = (-frameHeight * 0.5) - 1 - (castBarHeight * 0.5)
 
@@ -116,6 +122,11 @@ local function ApplyCastBarPosition(frame, unit)
     local width = math.max(8, baseWidth * scaleX)
     local legacyHeight = math.max(4, 8 * scaleY)
     local height = GetCastBarHeight(frame, scaleY)
+    if unit:match("^boss[1-5]$") then
+        local db = MattMinimalFramesDB or {}
+        width = math.max(40, math.min(400, tonumber(db.bossCastBarWidth) or 98))
+        height = math.max(4, math.min(60, tonumber(db.bossCastBarHeight) or 14))
+    end
     frame.castBarFrame:SetSize(width, height)
     frame.castBarFrame:ClearAllPoints()
 
@@ -151,6 +162,7 @@ end
 
 local function IsSupportedCastBarUnit(unit)
     return unit == "player" or unit == "target" or unit == "focus"
+        or (type(unit) == "string" and unit:match("^boss[1-5]$") ~= nil)
 end
 
 local function GetCastBarDefaultOffsetForUnit(unit)

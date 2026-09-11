@@ -36,7 +36,7 @@ end
 
 function MMF_BuildUnitFramesCastBarSection(ctx)
     local parent, unit = ctx.parent, ctx.unit
-    if unit ~= "player" and unit ~= "target" and unit ~= "focus" then return end
+    if unit ~= "player" and unit ~= "target" and unit ~= "focus" and unit ~= "boss" then return end
 
     local CreateCheckbox = ctx.createMinimalCheckbox or MMF_CreateMinimalCheckbox
     local CreateSlider = ctx.createMinimalSlider or MMF_CreateMinimalSlider
@@ -44,7 +44,7 @@ function MMF_BuildUnitFramesCastBarSection(ctx)
     MattMinimalFramesDB = MattMinimalFramesDB or {}
     local db, defaults = MattMinimalFramesDB, MattMinimalFrames_Defaults or {}
     local unitLabel = unit:sub(1, 1):upper() .. unit:sub(2)
-    local castBarTitle = string.upper(unitLabel .. " CAST BAR")
+    local castBarTitle = unit == "boss" and "BOSS CAST BARS & DEBUFFS" or string.upper(unitLabel .. " CAST BAR")
     local title = MMF_CreateUnitFramesSectionHeader and MMF_CreateUnitFramesSectionHeader(parent, castBarTitle, x, -12, "cast")
     if not title then
         title = parent:CreateFontString(nil, "OVERLAY")
@@ -56,6 +56,32 @@ function MMF_BuildUnitFramesCastBarSection(ctx)
             title:SetTextColor(MMF_GetPopupSectionTitleColor())
         end
         title:SetText(castBarTitle)
+    end
+
+    if unit == "boss" then
+        local function RefreshBossCastBars()
+            for index = 1, 5 do
+                local frame = MMF_GetFrameForUnit and MMF_GetFrameForUnit("boss" .. index)
+                if frame and frame.castBarFrame then
+                    if MMF_ApplyCastBarPosition then MMF_ApplyCastBarPosition(frame, frame.unit) end
+                    if frame.mmfRefreshBossCastBar then frame.mmfRefreshBossCastBar() end
+                    MMF_RefreshUnitPageCastBar(frame.unit)
+                end
+            end
+        end
+        CreateCheckbox(parent, "Enable Boss Cast Bars", x, -42, "showBossCastBar", true, RefreshBossCastBars)
+        CreateCheckbox(parent, "Enable My Boss Debuffs", x, -70, "showBossDebuffs", true, function()
+            if MMF_UpdateBossAuras then MMF_UpdateBossAuras() end
+        end)
+        CreateSlider(parent, "Debuff Icon Scale", x, -98, width, "bossDebuffIconScale", 0.75, 2.0, 0.05,
+            defaults.bossDebuffIconScale or 1.0, function()
+                if MMF_UpdateBossAuras then MMF_UpdateBossAuras() end
+            end)
+        CreateSlider(parent, "Cast Bar Width", rightX, -42, width, "bossCastBarWidth", 40, 400, 1,
+            defaults.bossCastBarWidth or 98, RefreshBossCastBars, true)
+        CreateSlider(parent, "Cast Bar Height", rightX, -70, width, "bossCastBarHeight", 4, 60, 1,
+            defaults.bossCastBarHeight or 14, RefreshBossCastBars, true)
+        return
     end
 
     local keyPrefix = unitLabel

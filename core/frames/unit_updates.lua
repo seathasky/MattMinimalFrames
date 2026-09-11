@@ -1812,15 +1812,17 @@ local function UpdateCastBarForEditMode(frame, unit, unlockedEditMode, db)
     if not frame or not frame.castBarFrame then
         return
     end
-    if unit ~= "player" and unit ~= "target" and unit ~= "focus" then
+    local isBoss = unit:match("^boss[1-5]$") ~= nil
+    if unit ~= "player" and unit ~= "target" and unit ~= "focus" and not isBoss then
         return
     end
 
     local enabledKey = (unit == "player" and "showPlayerCastBar")
         or (unit == "target" and "showTargetCastBar")
         or (unit == "focus" and "showFocusCastBar")
+        or (isBoss and "showBossCastBar")
         or "showTargetCastBar"
-    if db and db[enabledKey] == false and unlockedEditMode ~= true then
+    if db and db[enabledKey] == false and (isBoss or unlockedEditMode ~= true) then
         frame.castBarFrame:Hide()
         return
     end
@@ -1842,6 +1844,8 @@ local function UpdateCastBarForEditMode(frame, unit, unlockedEditMode, db)
                     frame.castBarText:SetText("Player Cast Bar")
                 elseif unit == "focus" then
                     frame.castBarText:SetText("Focus Cast Bar")
+                elseif isBoss then
+                    frame.castBarText:SetText("Boss Cast Bar")
                 else
                     frame.castBarText:SetText("Target Cast Bar")
                 end

@@ -102,7 +102,7 @@ local function ShowFrameResetPopup(frame, frameName)
     popup.title:SetText((frame.frameLabel or frame.unit or "Frame") .. " Options")
 
     local function ResetUnitCastBarToDefaults(unitToReset)
-        if unitToReset ~= "player" and unitToReset ~= "target" and unitToReset ~= "focus" then
+        if unitToReset ~= "player" and unitToReset ~= "target" and unitToReset ~= "focus" and not unitToReset:match("^boss[1-5]$") then
             return
         end
         if not MattMinimalFramesDB then
@@ -139,7 +139,7 @@ local function ShowFrameResetPopup(frame, frameName)
         popup:Hide()
     end)
 
-    local hasCastBar = (frame.castBarFrame ~= nil and (frame.unit == "player" or frame.unit == "target" or frame.unit == "focus"))
+    local hasCastBar = frame.castBarFrame ~= nil
     popup.resetCastBarBtn:SetShown(hasCastBar)
     popup:SetHeight(hasCastBar and 112 or 82)
     if hasCastBar then

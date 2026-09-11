@@ -84,7 +84,7 @@ local function MMF_SetupUnitFramesHeader(unitFramesCol, accentColor, createSubTa
         { unit = "targettarget", label = "Target of Target", subtitle = "Configure every setting that belongs to the target-of-target frame.", x = 0, y = 0, width = UNIT_PAGE_WIDTH, height = 668 },
         { unit = "pet", label = "Pet", subtitle = "Configure every setting that belongs to your pet frame.", x = 0, y = 0, width = UNIT_PAGE_WIDTH, height = 668 },
         { unit = "focus", label = "Focus", subtitle = "Configure every setting that belongs to your focus frame.", x = 0, y = 0, width = UNIT_PAGE_WIDTH, height = 1202 },
-        { unit = "boss", label = "Boss", subtitle = "Configure every setting that belongs to the boss-frame group.", x = 0, y = 0, width = UNIT_PAGE_WIDTH, height = 696 },
+        { unit = "boss", label = "Boss", subtitle = "Configure every setting that belongs to the boss-frame group.", x = 0, y = 0, width = UNIT_PAGE_WIDTH, height = 900 },
         { unit = "more", label = "More Settings", subtitle = "Shared presentation, indicators, overlays, and compatibility controls.", x = 0, y = 0, width = UNIT_PAGE_WIDTH, height = 1108 },
     }
 
