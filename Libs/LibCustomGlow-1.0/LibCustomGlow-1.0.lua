@@ -1,9 +1,9 @@
---[[
-This library contains work of Hendrick "nevcairiel" Leppkes
-https://www.wowace.com/projects/libbuttonglow-1-0
-]]
 
--- luacheck: globals CreateFromMixins ObjectPoolMixin CreateTexturePool CreateFramePool
+
+
+
+
+
 
 local MAJOR_VERSION = "LibCustomGlow-1.0"
 local MINOR_VERSION = 20
@@ -161,7 +161,7 @@ local function addFrameAndTex(r,color,name,key,N,xOffset,yOffset,texture,texCoor
 end
 
 
---Pixel Glow Functions--
+
 local pCalc1 = function(progress,s,th,p)
     local c
     if progress>p[3] or progress<p[0] then
@@ -356,11 +356,11 @@ lib.startList["Pixel Glow"] = lib.PixelGlow_Start
 lib.stopList["Pixel Glow"] = lib.PixelGlow_Stop
 
 
---Autocast Glow Functions--
+
 local function acUpdate(self,elapsed)
     local width,height = self:GetSize()
     if width ~= self.info.width or height ~= self.info.height then
-        if width*height == 0 then return end -- Avoid division by zero
+        if width*height == 0 then return end 
         self.info.width = width
         self.info.height = height
         self.info.perimeter = 2*(width+height)
@@ -452,7 +452,7 @@ table.insert(lib.glowList, "Autocast Shine")
 lib.startList["Autocast Shine"] = lib.AutoCastGlow_Start
 lib.stopList["Autocast Shine"] = lib.AutoCastGlow_Stop
 
---Action Button Glow--
+
 local function ButtonGlowResetter(framePool,frame)
     frame:SetScript("OnUpdate",nil)
     local parent = frame:GetParent()
@@ -556,14 +556,14 @@ local function configureButtonGlow(f,alpha)
     f.spark:SetTexture([[Interface\SpellActivationOverlay\IconAlert]])
     f.spark:SetTexCoord(0.00781250, 0.61718750, 0.00390625, 0.26953125)
 
-    -- inner glow
+    
     f.innerGlow = f:CreateTexture(nil, "ARTWORK")
     f.innerGlow:SetPoint("CENTER")
     f.innerGlow:SetAlpha(0)
     f.innerGlow:SetTexture([[Interface\SpellActivationOverlay\IconAlert]])
     f.innerGlow:SetTexCoord(0.00781250, 0.50781250, 0.27734375, 0.52734375)
 
-    -- inner glow over
+    
     f.innerGlowOver = f:CreateTexture(nil, "ARTWORK")
     f.innerGlowOver:SetPoint("TOPLEFT", f.innerGlow, "TOPLEFT")
     f.innerGlowOver:SetPoint("BOTTOMRIGHT", f.innerGlow, "BOTTOMRIGHT")
@@ -571,14 +571,14 @@ local function configureButtonGlow(f,alpha)
     f.innerGlowOver:SetTexture([[Interface\SpellActivationOverlay\IconAlert]])
     f.innerGlowOver:SetTexCoord(0.00781250, 0.50781250, 0.53515625, 0.78515625)
 
-    -- outer glow
+    
     f.outerGlow = f:CreateTexture(nil, "ARTWORK")
     f.outerGlow:SetPoint("CENTER")
     f.outerGlow:SetAlpha(0)
     f.outerGlow:SetTexture([[Interface\SpellActivationOverlay\IconAlert]])
     f.outerGlow:SetTexCoord(0.00781250, 0.50781250, 0.27734375, 0.52734375)
 
-    -- outer glow over
+    
     f.outerGlowOver = f:CreateTexture(nil, "ARTWORK")
     f.outerGlowOver:SetPoint("TOPLEFT", f.outerGlow, "TOPLEFT")
     f.outerGlowOver:SetPoint("BOTTOMRIGHT", f.outerGlow, "BOTTOMRIGHT")
@@ -586,7 +586,7 @@ local function configureButtonGlow(f,alpha)
     f.outerGlowOver:SetTexture([[Interface\SpellActivationOverlay\IconAlert]])
     f.outerGlowOver:SetTexCoord(0.00781250, 0.50781250, 0.53515625, 0.78515625)
 
-    -- ants
+    
     f.ants = f:CreateTexture(nil, "OVERLAY")
     f.ants:SetPoint("CENTER")
     f.ants:SetAlpha(0)
@@ -752,7 +752,7 @@ lib.startList["Action Button Glow"] = lib.ButtonGlow_Start
 lib.stopList["Action Button Glow"] = lib.ButtonGlow_Stop
 
 
--- ProcGlow
+
 
 local function ProcGlowResetter(framePool, frame)
     frame:Hide()
@@ -840,7 +840,7 @@ local function InitProcGlow(f)
 end
 
 local function SetupProcGlow(f, options)
-    f.key = "_ProcGlow" .. options.key -- for resetter
+    f.key = "_ProcGlow" .. options.key 
     f:SetScript("OnHide", function(self)
         if self.ProcStartAnim:IsPlaying() then
             self.ProcStartAnim:Stop()
@@ -852,12 +852,12 @@ local function SetupProcGlow(f, options)
     f:SetScript("OnShow", function(self)
         if self.startAnim then
             if not self.ProcStartAnim:IsPlaying() and not self.ProcLoopAnim:IsPlaying() then
-                --[[
-to future me:
-i wish you'r ok, if you wonder where are this constants coming from, check:
-https://github.com/Gethe/wow-ui-source/blob/eb4459c679a1bd8919cad92934ea83c4f5e77e8b/Interface/FrameXML/ActionButton.lua#L816
-https://github.com/Gethe/wow-ui-source/blob/d8e8ebf572c3b28237cf83e8fc5c0583b5453a2b/Interface/FrameXML/ActionButtonTemplate.xml#L5-L14
-                ]]
+                
+
+
+
+
+
                 local width, height = self:GetSize()
                 self.ProcStart:SetSize((width / 42 * 150) / 1.4, (height / 42 * 150) / 1.4)
                 self.ProcStart:Show()

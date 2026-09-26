@@ -9,21 +9,24 @@ local function CreatePowerBarContainer(frame, unit)
     frame.powerBarBG:SetColorTexture(0, 0, 0, 0.25)
 
     frame.powerBar = CreateFrame("StatusBar", nil, frame.powerBarFrame)
-    frame.powerBar:SetStatusBarTexture(GetStatusBarTexturePath())
+    local statusBarTexture = GetStatusBarTexturePath()
+        or (MMF_GetDefaultStatusBarTexturePath and MMF_GetDefaultStatusBarTexturePath())
+        or "Interface\\TargetingFrame\\UI-StatusBar"
+    frame.powerBar:SetStatusBarTexture(statusBarTexture)
     frame.powerBar:SetMinMaxValues(0, 1)
     frame.powerBar:SetValue(1)
     frame.powerBarFG = frame.powerBar:GetStatusBarTexture()
 
-    -- Player casters can have both a display power (for example Insanity)
-    -- and mana.  The second bar shares this container and is only shown when
-    -- both pools are meaningful.
+    
+    
+    
     local Compat = _G.MMF_Compat
     if unit == "player" and Compat and Compat.IsRetail then
         frame.secondaryPowerBarBG = frame.powerBarFrame:CreateTexture(nil, "BACKGROUND")
         frame.secondaryPowerBarBG:SetColorTexture(0, 0, 0, 0.25)
 
         frame.secondaryPowerBar = CreateFrame("StatusBar", nil, frame.powerBarFrame)
-        frame.secondaryPowerBar:SetStatusBarTexture(GetStatusBarTexturePath())
+        frame.secondaryPowerBar:SetStatusBarTexture(statusBarTexture)
         frame.secondaryPowerBar:SetMinMaxValues(0, 1)
         frame.secondaryPowerBar:SetValue(1)
         frame.secondaryPowerBarFG = frame.secondaryPowerBar:GetStatusBarTexture()

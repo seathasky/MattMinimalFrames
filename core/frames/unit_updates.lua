@@ -38,12 +38,12 @@ local SCALE_TO_100 = CurveConstants and CurveConstants.ScaleTo100
 local ClampColorChannel
 
 local TBC_TRACKED_ABSORB_SPELLS = {
-    -- Power Word: Shield
+    
     [17] = 44, [592] = 88, [600] = 158, [3747] = 234, [6065] = 301, [6066] = 381,
     [10898] = 484, [10899] = 605, [10900] = 760, [10901] = 942, [25217] = 1104, [25218] = 1265,
-    -- Ice Barrier
+    
     [11426] = 438, [13031] = 549, [13032] = 678, [13033] = 818, [27134] = 925, [33405] = 1075,
-    -- Voidwalker Sacrifice
+    
     [30115] = 0,
 }
 local GetTBCTrackedAbsorbTotal
@@ -94,9 +94,9 @@ local function ResolvePowerColor(unit, powerType, powerToken, db)
             ClampColorChannel(db[prefix .. "ManaBarColorB"], 1.0),
             ClampColorChannel(db[prefix .. "ManaBarColorA"], 1.0)
     end
-    -- WoW's stock Insanity purple is difficult to distinguish on very short
-    -- stacked bars. Keep overrides above authoritative, but use a vivid
-    -- magenta as the readable default.
+    
+    
+    
     if powerToken == "INSANITY" then
         return 1.0, 0.0, 0.72, 1.0
     end
@@ -129,8 +129,8 @@ local function ResolvePowerBGColor(unit, powerType, powerToken, db)
             ClampColorChannel(db[prefix .. "ManaBarBGColorA"], 0.25)
     end
 
-    -- An empty Insanity bar should be neutral rather than looking partially
-    -- filled; only the status-bar value receives the neon magenta color.
+    
+    
     if powerToken == "INSANITY" then
         return 0, 0, 0, 0.25
     end
@@ -150,6 +150,41 @@ local function NotSecretValue(value)
         return false
     end
     return true
+end
+
+local function SetCachedPowerStatusColor(statusBar, r, g, b, a)
+    if not statusBar then
+        return
+    end
+    a = a or 1
+    if NotSecretValue(r) and NotSecretValue(g) and NotSecretValue(b) and NotSecretValue(a) then
+        local applied = statusBar.mmfAppliedPowerStatusColor
+        if applied and applied[1] == r and applied[2] == g and applied[3] == b and applied[4] == a then
+            return
+        end
+        statusBar:SetStatusBarColor(r, g, b, a)
+        statusBar.mmfAppliedPowerStatusColor = { r, g, b, a }
+    else
+        statusBar:SetStatusBarColor(r, g, b, a)
+        statusBar.mmfAppliedPowerStatusColor = nil
+    end
+end
+
+local function SetCachedPowerBackgroundColor(texture, r, g, b, a)
+    if not texture then
+        return
+    end
+    if NotSecretValue(r) and NotSecretValue(g) and NotSecretValue(b) and NotSecretValue(a) then
+        local applied = texture.mmfAppliedPowerBackgroundColor
+        if applied and applied[1] == r and applied[2] == g and applied[3] == b and applied[4] == a then
+            return
+        end
+        texture:SetColorTexture(r, g, b, a)
+        texture.mmfAppliedPowerBackgroundColor = { r, g, b, a }
+    else
+        texture:SetColorTexture(r, g, b, a)
+        texture.mmfAppliedPowerBackgroundColor = nil
+    end
 end
 
 local function SafeUnitIsUnit(unitA, unitB)
@@ -343,7 +378,7 @@ local function IsDispelHighlightEnabledForUnit(unit, db)
     return false
 end
 
--- Blizzard ColorMixin objects for the color curve (same as oUF.colors.dispel)
+
 local DISPEL_CURVE_COLORS = {
     [1]  = DEBUFF_TYPE_MAGIC_COLOR   or CreateColor(0.2, 0.6, 1.0, 1),
     [2]  = DEBUFF_TYPE_CURSE_COLOR   or CreateColor(0.6, 0.0, 1.0, 1),
@@ -444,9 +479,9 @@ local function UpdateDispelHighlight(frame, db)
     end
 
     if Compat and Compat.IsRetail and C_UnitAuras and C_UnitAuras.GetAuraDataByIndex and C_UnitAuras.GetAuraDispelTypeColor and C_CurveUtil and Enum and Enum.LuaCurveType then
-        -- In 12.1, direct aura queries are forbidden to tainted callers while the
-        -- requested aura is secret.  Ask the non-secret predicate before touching
-        -- either the aura data or its instance-based dispel color.
+        
+        
+        
         local auraFilter = "HARMFUL|RAID"
         if C_Secrets and C_Secrets.ShouldUnitAuraIndexBeSecret
             and C_Secrets.ShouldUnitAuraIndexBeSecret(unit, 1, auraFilter) then
@@ -524,29 +559,46 @@ local function ApplyAbsorbBarColor(frame)
     local g = ClampColorChannel(db.absorbBarColorG, 0.84)
     local b = ClampColorChannel(db.absorbBarColorB, 1.0)
     local a = ClampColorChannel(db.absorbBarColorA, 0.7)
-    local useSolid = (db.useSolidAbsorbBar == true)
-
-    local desiredTexture = nil
-    if useSolid and MMF_GetStatusBarTexturePath then
+    local shieldTexture = "Interface\\AddOns\\MattMinimalFrames\\Textures\\shield.tga"
+    local designer = db.designer
+    local unitDesign = designer and designer.units and designer.units[frame.mmfDesignerKey]
+    local absorbDesign = unitDesign and unitDesign.elements and unitDesign.elements.absorb
+    local override = db.overrideBarTextures == true
+    local desiredTexture
+    if override then
+        desiredTexture = MMF_GetStatusBarTexturePath()
+    elseif absorbDesign and type(absorbDesign.texture) == "string" and absorbDesign.texture ~= "" then
+        desiredTexture = absorbDesign.texture
+    elseif db.useSolidAbsorbBar == true then
         desiredTexture = MMF_GetStatusBarTexturePath()
     else
-        desiredTexture = "Interface\\AddOns\\MattMinimalFrames\\Textures\\shield.tga"
+        desiredTexture = shieldTexture
     end
-    if desiredTexture then
+    local useSolid = desiredTexture ~= shieldTexture
+    local absorbTex = frame.absorbBar:GetStatusBarTexture()
+    local textureChanged = frame.mmfAbsorbTexturePath ~= desiredTexture or not absorbTex
+    if textureChanged and desiredTexture then
         frame.absorbBar:SetStatusBarTexture(desiredTexture)
+        frame.mmfAbsorbTexturePath = desiredTexture
+        absorbTex = frame.absorbBar:GetStatusBarTexture()
     end
 
-    frame.absorbBar:SetStatusBarColor(r, g, b, a)
-    local absorbTex = frame.absorbBar:GetStatusBarTexture()
+    local color = frame.mmfAbsorbAppliedColor
+    local colorChanged = not color or color[1] ~= r or color[2] ~= g or color[3] ~= b or color[4] ~= a
+    if colorChanged then
+        frame.absorbBar:SetStatusBarColor(r, g, b, a)
+        frame.mmfAbsorbAppliedColor = { r, g, b, a }
+    end
     if absorbTex then
-        absorbTex:SetHorizTile(not useSolid)
-        absorbTex:SetVertTile(not useSolid)
-        if useSolid then
-            absorbTex:SetTexCoord(0, 1, 0, 1)
-        else
-            absorbTex:SetTexCoord(0, 8, 0, 1)
+        if textureChanged or frame.mmfAbsorbSolid ~= useSolid then
+            absorbTex:SetHorizTile(not useSolid)
+            absorbTex:SetVertTile(not useSolid)
+            absorbTex:SetTexCoord(0, useSolid and 1 or 8, 0, 1)
+            frame.mmfAbsorbSolid = useSolid
         end
-        absorbTex:SetVertexColor(r, g, b, a)
+        if textureChanged or colorChanged then
+            absorbTex:SetVertexColor(r, g, b, a)
+        end
     end
 end
 
@@ -697,7 +749,7 @@ local function IsPowerPercentEnabledForUnit(db, unit)
             return IsCheckedFlag(db.showTargetPowerPercentText)
         end
     end
-    -- Backward compatibility with older single-toggle setting.
+    
     return db.showPowerPercentText == true
 end
 
@@ -712,7 +764,7 @@ local function GetPowerTextModeForUnit(db, unit)
         end
     end
 
-    -- Backward compatibility with the older percent checkbox behavior.
+    
     if IsPowerPercentEnabledForUnit(db, unit) then
         return "both"
     end
@@ -769,9 +821,9 @@ local function IsAutoResizeNameTextEnabled()
 end
 
 local function GetDisplayUnitName(unit, unitName)
-    -- Retail may mark UnitName results as secret while the target is changing.
-    -- Secret strings can be passed directly to FontString:SetText, but cannot
-    -- be inspected, compared, measured, or truncated by addon Lua.
+    
+    
+    
     if not NotSecretValue(unitName) then
         return unitName
     end
@@ -809,10 +861,10 @@ local function ShouldShowLeaderIconForUnit(unit, db)
     if unit ~= "player" and unit ~= "target" then
         return false
     end
-    -- Retail can return an opaque (secret) boolean for a target's group-leader
-    -- state while target selection is changing.  A text prefix needs a Lua
-    -- branch, which cannot consume that value.  Keep the player-frame icon,
-    -- but leave target names unadorned instead of risking a taint error.
+    
+    
+    
+    
     if unit == "target" then
         return false
     end
@@ -830,13 +882,14 @@ local function ShouldShowLeaderIconForUnit(unit, db)
         return false
     end
 
-    -- pcall does not make a secret value safe to inspect.  Check it before
-    -- comparing: UnitIsGroupLeader can return a secret boolean while the
-    -- target is changing under addon restrictions.
+    
+    
+    
     return isLeader == true
 end
 
 local function GetLevelSuffixForUnit(unit, db)
+    if MMF_Designer and MMF_Designer.ready and MMF_Designer.IsEnabled(unit,"level") then return "" end
     local showNameLevel = (MMF_GetShowNameLevel and MMF_GetShowNameLevel(unit))
     if showNameLevel == nil then
         showNameLevel = not (db and db.showNameLevel == false)
@@ -868,6 +921,7 @@ local TARGET_CLASSIFICATION_SUFFIXES = {
 }
 
 local function GetClassificationSuffixForUnit(unit, db)
+    if MMF_Designer and MMF_Designer.ready and MMF_Designer.IsEnabled(unit,"classification") then return "" end
     if unit ~= "target" or (db and db.showTargetClassification == false) then
         return ""
     end
@@ -882,9 +936,9 @@ local function GetClassificationSuffixForUnit(unit, db)
 end
 
 local function BuildNameTextWithLeaderIcon(unit, displayName, db)
-    -- Keep secret names opaque and let SetText consume them directly.  This
-    -- check must precede even nil/string comparisons, which are not permitted
-    -- for a secret value in tainted execution.
+    
+    
+    
     if not NotSecretValue(displayName) then
         return displayName
     end
@@ -895,6 +949,11 @@ local function BuildNameTextWithLeaderIcon(unit, displayName, db)
         return ""
     end
     local suffix = GetLevelSuffixForUnit(unit, db) .. GetClassificationSuffixForUnit(unit, db)
+    
+    
+    if MMF_Designer then
+        return displayName .. suffix
+    end
     if not ShouldShowLeaderIconForUnit(unit, db) then
         return displayName .. suffix
     end
@@ -911,7 +970,7 @@ local function GetReactionColorForNameText(unit)
     return 1, 1, 0
 end
 
-local function GetNameTextColor(unit, db)
+local function GetNameTextColor(unit, db, sample)
     local usePlayerClassColor = nil
     if MMF_GetColorPlayerNameTextByClass then
         usePlayerClassColor = MMF_GetColorPlayerNameTextByClass(unit)
@@ -932,14 +991,15 @@ local function GetNameTextColor(unit, db)
         return 1, 1, 1
     end
 
-    local unitExists = UnitExists(unit)
+    local unitExists = sample ~= nil or UnitExists(unit)
     if not unitExists and unit ~= "player" then
         return 1, 1, 1
     end
 
-    local isPlayerUnit = unitExists and UnitIsPlayer and UnitIsPlayer(unit)
+    local isPlayerUnit = sample and sample.isPlayer or (not sample and unitExists and UnitIsPlayer and UnitIsPlayer(unit))
     if usePlayerClassColor and isPlayerUnit and UnitClass and RAID_CLASS_COLORS then
         local _, classToken = UnitClass(unit)
+        if sample then classToken=sample.class end
         local classColor = NotSecretValue(classToken) and classToken and RAID_CLASS_COLORS[classToken]
         if classColor then
             return classColor.r or 1, classColor.g or 1, classColor.b or 1
@@ -947,6 +1007,9 @@ local function GetNameTextColor(unit, db)
     end
 
     if useNPCReactionColor and not isPlayerUnit then
+        if sample then
+            if sample.isEnemy then return .8,.2,.2 elseif sample.isFriend then return .2,.8,.2 else return 1,1,0 end
+        end
         return GetReactionColorForNameText(unit)
     end
 
@@ -954,28 +1017,7 @@ local function GetNameTextColor(unit, db)
 end
 
 local function TryApplyFont(region, fontPath, size, flags)
-    if not region then
-        return false
-    end
-    if MMF_SetFontSafe then
-        return MMF_SetFontSafe(region, fontPath, size, flags)
-    end
-    if not region.SetFont then
-        return false
-    end
-
-    local requestedFlags = flags or ""
-    local ok, applied = pcall(region.SetFont, region, fontPath, size, requestedFlags)
-    if ok and applied ~= false then
-        return true
-    end
-    if requestedFlags ~= "" then
-        ok, applied = pcall(region.SetFont, region, fontPath, size, "")
-        if ok and applied ~= false then
-            return true
-        end
-    end
-    return false
+    return MMF_SetFontSafe(region, fontPath, size, flags)
 end
 
 local function ApplyNameTextFontSize(frame, size, minSize)
@@ -987,13 +1029,51 @@ local function ApplyNameTextFontSize(frame, size, minSize)
     local rounded = math.floor(size + 0.5)
     local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or cfg.FONT_PATH
     local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
-    if TryApplyFont(frame.nameText, fontPath, rounded, fontFlags) then
-        frame.mmfAppliedNameFontSize = rounded
-    else
-        frame.mmfAppliedNameFontSize = nil
+    local currentPath, currentSize, currentFlags
+    if frame.nameText.GetFont then
+        currentPath, currentSize, currentFlags = frame.nameText:GetFont()
     end
-    if MMF_ApplyGlobalTextShadow then
+    local currentRounded = tonumber(currentSize) and math.floor(tonumber(currentSize) + 0.5) or nil
+    local nameFontChanged = false
+    if frame.mmfAppliedNameFontSize ~= rounded
+        or currentRounded ~= rounded
+        or currentPath ~= fontPath
+        or (currentFlags or "") ~= (fontFlags or "")
+    then
+        if TryApplyFont(frame.nameText, fontPath, rounded, fontFlags) then
+            frame.mmfAppliedNameFontSize = rounded
+            nameFontChanged = true
+        else
+            frame.mmfAppliedNameFontSize = nil
+        end
+    end
+
+    local shadowEnabled = not (MattMinimalFramesDB and MattMinimalFramesDB.useTextShadow == false)
+    if MMF_ApplyGlobalTextShadow and (nameFontChanged or frame.mmfAppliedNameTextShadow ~= shadowEnabled) then
         MMF_ApplyGlobalTextShadow(frame.nameText)
+        frame.mmfAppliedNameTextShadow = shadowEnabled
+    end
+end
+
+local function SetNameText(frame, text)
+    if not frame or not frame.nameText then
+        return
+    end
+
+    
+    
+    if not NotSecretValue(text) then
+        frame.nameText:SetText(text)
+        frame.mmfNameTextCacheSet = nil
+        frame.mmfCachedNameText = nil
+        frame.mmfNameResizeCache = nil
+        return
+    end
+
+    if not frame.mmfNameTextCacheSet or frame.mmfCachedNameText ~= text then
+        frame.nameText:SetText(text)
+        frame.mmfCachedNameText = text
+        frame.mmfNameTextCacheSet = true
     end
 end
 
@@ -1065,9 +1145,11 @@ local function ApplyCastBarFontSizes(frame, unit)
 
     local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or cfg.FONT_PATH
     local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
+    local castBarFontChanged = false
     if frame.castBarText and frame.mmfAppliedCastBarNameFontSize ~= roundedSpellName then
         if TryApplyFont(frame.castBarText, fontPath, roundedSpellName, fontFlags) then
             frame.mmfAppliedCastBarNameFontSize = roundedSpellName
+            castBarFontChanged = true
         else
             frame.mmfAppliedCastBarNameFontSize = nil
         end
@@ -1079,12 +1161,18 @@ local function ApplyCastBarFontSizes(frame, unit)
     if frame.castBarTime and frame.mmfAppliedCastBarHPFontSize ~= castTimeSize then
         if TryApplyFont(frame.castBarTime, fontPath, castTimeSize, fontFlags) then
             frame.mmfAppliedCastBarHPFontSize = castTimeSize
+            castBarFontChanged = true
         else
             frame.mmfAppliedCastBarHPFontSize = nil
         end
     end
 
     if frame.castBarFrame and MMF_ApplyCastBarPosition then
+        if castBarFontChanged then
+            
+            
+            frame.mmfAppliedCastBarLayout = nil
+        end
         MMF_ApplyCastBarPosition(frame, unit)
     elseif MMF_RefreshCastBarTextLayer then
         MMF_RefreshCastBarTextLayer(frame)
@@ -1124,13 +1212,32 @@ local function ApplyAutoResizeNameText(frame, unit, displayName)
     local autoEnabled = IsAutoResizeNameTextEnabled()
     local maxWidth = SafeGetNameTextMaxWidth(frame)
 
-    ApplyNameTextFontSize(frame, baseSize, 1)
-
-    -- Measuring text ultimately derived from a secret name is forbidden.
-    -- Leave it at the configured base size until UnitName is accessible again.
+    
+    
     if not NotSecretValue(displayName) then
+        frame.mmfNameResizeCache = nil
+        ApplyNameTextFontSize(frame, baseSize, 1)
         return
     end
+
+    local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or cfg.FONT_PATH
+    local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
+    local cache = frame.mmfNameResizeCache
+    if cache
+        and cache.text == displayName
+        and cache.baseSize == baseSize
+        and cache.autoEnabled == autoEnabled
+        and cache.maxWidth == maxWidth
+        and cache.fontPath == fontPath
+        and cache.fontFlags == fontFlags
+    then
+        ApplyNameTextFontSize(frame, cache.resolvedSize, 1)
+        return
+    end
+
+    ApplyNameTextFontSize(frame, baseSize, 1)
+
+    local resolvedSize = baseSize
 
     local hasDisplayName = false
     if displayName then
@@ -1139,9 +1246,27 @@ local function ApplyAutoResizeNameText(frame, unit, displayName)
     end
 
     if not autoEnabled or unit == "targettarget" or not hasDisplayName then
+        frame.mmfNameResizeCache = {
+            text = displayName,
+            baseSize = baseSize,
+            autoEnabled = autoEnabled,
+            maxWidth = maxWidth,
+            fontPath = fontPath,
+            fontFlags = fontFlags,
+            resolvedSize = resolvedSize,
+        }
         return
     end
     if not SafeIsGreater(maxWidth, 0) then
+        frame.mmfNameResizeCache = {
+            text = displayName,
+            baseSize = baseSize,
+            autoEnabled = autoEnabled,
+            maxWidth = maxWidth,
+            fontPath = fontPath,
+            fontFlags = fontFlags,
+            resolvedSize = resolvedSize,
+        }
         return
     end
 
@@ -1158,10 +1283,20 @@ local function ApplyAutoResizeNameText(frame, unit, displayName)
 
     local textWidth = GetNameTextWidthNoWrap(frame.nameText)
     if SafeIsLessOrEqual(textWidth, maxWidth) then
+        resolvedSize = size
+        frame.mmfNameResizeCache = {
+            text = displayName,
+            baseSize = baseSize,
+            autoEnabled = autoEnabled,
+            maxWidth = maxWidth,
+            fontPath = fontPath,
+            fontFlags = fontFlags,
+            resolvedSize = resolvedSize,
+        }
         return
     end
 
-    -- Auto mode should preserve the full name and only scale the font down.
+    
     local scale = SafeDivide(maxWidth, textWidth, 0)
     if SafeIsGreater(scale, 0) and SafeIsGreater(1, scale) then
         local target = math.floor((baseSize * scale) + 0.5)
@@ -1180,11 +1315,22 @@ local function ApplyAutoResizeNameText(frame, unit, displayName)
         ApplyNameTextFontSize(frame, size, minSize)
         textWidth = GetNameTextWidthNoWrap(frame.nameText)
     end
+
+    resolvedSize = size
+    frame.mmfNameResizeCache = {
+        text = displayName,
+        baseSize = baseSize,
+        autoEnabled = autoEnabled,
+        maxWidth = maxWidth,
+        fontPath = fontPath,
+        fontFlags = fontFlags,
+        resolvedSize = resolvedSize,
+    }
 end
 
---------------------------------------------------
--- HEAL PREDICTION UPDATE
---------------------------------------------------
+
+
+
 
 local function EnsureTextOverlayAbovePredictions(frame, overlayTopLevel)
     if not frame or not frame.nameOverlay then
@@ -1229,7 +1375,7 @@ end
 local function UpdateHealPrediction(frame)
     if not frame or (not frame.myHealPrediction and not frame.healAbsorbBar) then return end
 
-    -- Heal prediction colors/layers.
+    
     ApplyHealPredictionBarColor(frame)
     EnsureTextOverlayAbovePredictions(frame, nil)
 
@@ -1254,6 +1400,10 @@ local function UpdateHealPrediction(frame)
     local db = MattMinimalFramesDB or {}
     local showHealPrediction = db.showHealPrediction ~= false
     local showHealAbsorbBar = db.showHealAbsorbBar ~= false
+    if MMF_Designer and MMF_Designer.ready then
+        showHealPrediction=MMF_Designer.IsEnabled(unit,"myHeal") or MMF_Designer.IsEnabled(unit,"otherHeal")
+        showHealAbsorbBar=MMF_Designer.IsEnabled(unit,"healAbsorb")
+    end
     if not showHealPrediction and not showHealAbsorbBar then
         HideAllPredictionBars()
         return
@@ -1401,7 +1551,7 @@ local function UpdateHealPrediction(frame)
         end
     end
 
-    -- Heal prediction bars.
+    
     if showHealPrediction and frame.myHealPrediction and frame.otherHealPrediction then
         frame.myHealPrediction:SetValue(myHeal)
         frame.otherHealPrediction:SetValue(otherHeal)
@@ -1413,7 +1563,7 @@ local function UpdateHealPrediction(frame)
         return
     end
 
-    -- Heal absorb bar (player only).
+    
     local showForPlayerUnit = (unit == "player") or SafeUnitIsUnit(unit, "player")
     if not showForPlayerUnit then
         frame.healAbsorbBar:Hide()
@@ -1433,7 +1583,7 @@ local function UpdateHealPrediction(frame)
     end
     frame.healAbsorbBar:SetMinMaxValues(0, maxHealth)
 
-    -- Heal absorb source.
+    
     local rawHealAbsorb = nil
     if calculatorHealAbsorb ~= nil then
         rawHealAbsorb = calculatorHealAbsorb
@@ -1443,7 +1593,7 @@ local function UpdateHealPrediction(frame)
         end)
     end
 
-    -- Heal absorb shown amount.
+    
     local rawIncomingHeals = 0
     if UnitGetIncomingHeals then
         pcall(function()
@@ -1476,7 +1626,7 @@ local function UpdateHealPrediction(frame)
         end
     end
 
-    -- Heal absorb anchoring.
+    
     if verticalHealthFill then
         if hasOverHealAbsorb then
             if frame.healAbsorbBar.SetReverseFill then
@@ -1510,15 +1660,12 @@ local function UpdateHealPrediction(frame)
     frame.healAbsorbBar:Show()
 end
 
---------------------------------------------------
--- ABSORB BAR UPDATE
---------------------------------------------------
+
+
+
 
 local function UpdateAbsorbBar(frame)
     if not frame or not frame.absorbBar then return end
-
-    -- Damage absorb bar.
-    ApplyAbsorbBarColor(frame)
 
     local unit = frame.unit
     if not unit or not UnitExists(unit) then
@@ -1526,10 +1673,12 @@ local function UpdateAbsorbBar(frame)
         return
     end
 
-    if MattMinimalFramesDB and MattMinimalFramesDB.showAbsorbBar == false then
+    if (MMF_Designer and MMF_Designer.ready and not MMF_Designer.IsEnabled(frame.unit,"absorb")) or (not (MMF_Designer and MMF_Designer.ready) and MattMinimalFramesDB and MattMinimalFramesDB.showAbsorbBar == false) then
         frame.absorbBar:Hide()
         return
     end
+
+    ApplyAbsorbBarColor(frame)
 
     local isTBC = Compat and Compat.IsTBC == true
     local unitGetTotalAbsorbs = UnitGetTotalAbsorbs or _G.UnitGetTotalAbsorbs
@@ -1589,7 +1738,7 @@ local function UpdateAbsorbBar(frame)
         frame.absorbBar:SetMinMaxValues(0, safeMaxHealth)
 
         if missingHealth <= 0 and totalAbsorb > 0 then
-            -- Full HP: keep a tiny overflow sliver so shield presence is still visible.
+            
             if frame.absorbBar.SetReverseFill then
                 frame.absorbBar:SetReverseFill(false)
             end
@@ -1866,9 +2015,9 @@ local function UpdateCastBarForEditMode(frame, unit, unlockedEditMode, db)
     end
 end
 
---------------------------------------------------
--- UNIT FRAME UPDATE
---------------------------------------------------
+
+
+
 
 local function UpdateUnitFrame(frame)
     if ShouldSuspendForBlizzardEditMode() then
@@ -1881,47 +2030,48 @@ local function UpdateUnitFrame(frame)
     local manualTruncateEnabled = IsCheckedFlag(db.enableNameTruncation)
     local autoResizeEnabled = IsCheckedFlag(db.autoResizeTextOnLongName)
     local forceSingleLine = manualTruncateEnabled or autoResizeEnabled
-    pcall(function()
-        frame.nameText:SetWordWrap(not forceSingleLine)
-    end)
-    pcall(function()
-        frame.nameText:SetNonSpaceWrap(not forceSingleLine)
-    end)
-    pcall(function()
-        frame.nameText:SetMaxLines(forceSingleLine and 1 or 0)
-    end)
+    if frame.mmfNameTextSingleLine ~= forceSingleLine then
+        pcall(function()
+            frame.nameText:SetWordWrap(not forceSingleLine)
+        end)
+        pcall(function()
+            frame.nameText:SetNonSpaceWrap(not forceSingleLine)
+        end)
+        pcall(function()
+            frame.nameText:SetMaxLines(forceSingleLine and 1 or 0)
+        end)
+        
+        frame.mmfNameTextSingleLine = forceSingleLine
+    end
     local hideNameText = MMF_IsNameTextHidden and MMF_IsNameTextHidden(unit)
+    if MMF_Designer and MMF_Designer.ready then hideNameText = not MMF_Designer.IsEnabled(unit, "name") end
     local hideHPText = MMF_IsHPTextHidden and MMF_IsHPTextHidden(unit)
+    if MMF_Designer and MMF_Designer.ready then hideHPText = not MMF_Designer.IsEnabled(unit, "healthText") end
 
     local unlockedEditMode = (db.unlockFramesEditMode == true)
     local layoutTestMode = (db.layoutTestMode == true)
     local previewMode = (unlockedEditMode or layoutTestMode)
     local auraTestPreviewTarget = (unit == "target" and db.auraTestMode == true and not UnitExists(unit))
 
-    if frame.editModeFrameLabel then
-        frame.editModeFrameLabel:SetText(frame.frameLabel or unit)
-        frame.editModeFrameLabel:SetShown(previewMode and not UnitExists(unit))
-    end
-
     if hideNameText then
-        frame.nameText:SetText("")
+        SetNameText(frame, "")
         frame.nameText:Hide()
         ApplyNameTextFontSize(frame, MMF_GetNameTextSize and MMF_GetNameTextSize(unit) or tonumber(db.nameTextSize) or 12)
     elseif not UnitExists(unit) then
         if previewMode then
-            frame.nameText:SetText(frame.mmfLastKnownName or "Name")
+            SetNameText(frame, frame.mmfLastKnownName or "Name")
         elseif auraTestPreviewTarget then
-            frame.nameText:SetText("Target (Preview)")
+            SetNameText(frame, "Target (Preview)")
         else
-            frame.nameText:SetText("")
+            SetNameText(frame, "")
         end
         frame.nameText:Show()
         ApplyNameTextFontSize(frame, MMF_GetNameTextSize and MMF_GetNameTextSize(unit) or tonumber(db.nameTextSize) or 12)
     else
         frame.nameText:Show()
         local unitName = UnitName(unit)
-        -- Never compare or retain secret target names.  They are transient,
-        -- opaque values and caching one would also break edit-mode previews.
+        
+        
         if NotSecretValue(unitName) and type(unitName) == "string" and unitName ~= "" then
             frame.mmfLastKnownName = unitName
         end
@@ -1929,20 +2079,13 @@ local function UpdateUnitFrame(frame)
         local displayNameWithLeaderIcon = BuildNameTextWithLeaderIcon(unit, displayName, db)
         local nameTextWidth = SafeGetNameTextMaxWidth(frame)
         local useAnchorNamePosition = (MMF_IsNameTextAnchorEnabled and MMF_IsNameTextAnchorEnabled(unit)) or false
-        if unit == "targettarget" then
-            frame.nameText:SetText(displayNameWithLeaderIcon)
-            if useAnchorNamePosition then
-                frame.nameText:SetWidth(0)
-            else
-                frame.nameText:SetWidth(nameTextWidth)
-            end
-        else
-            frame.nameText:SetText(displayNameWithLeaderIcon)
-            if useAnchorNamePosition then
-                frame.nameText:SetWidth(0)
-            else
-                frame.nameText:SetWidth(nameTextWidth)
-            end
+        SetNameText(frame, displayNameWithLeaderIcon)
+        local desiredNameTextWidth = useAnchorNamePosition and 0 or nameTextWidth
+        
+        
+        local currentNameTextWidth = frame.nameText.GetWidth and frame.nameText:GetWidth()
+        if not NotSecretValue(currentNameTextWidth) or currentNameTextWidth ~= desiredNameTextWidth then
+            frame.nameText:SetWidth(desiredNameTextWidth)
         end
         if not useAnchorNamePosition then
             ApplyAutoResizeNameText(frame, unit, displayNameWithLeaderIcon)
@@ -1952,10 +2095,18 @@ local function UpdateUnitFrame(frame)
     end
 
     local nameR, nameG, nameB = GetNameTextColor(unit, db)
-    frame.nameText:SetTextColor(nameR, nameG, nameB, 1)
-
-    if MMF_UpdatePVPFlagIndicator then
-        MMF_UpdatePVPFlagIndicator(frame)
+    if NotSecretValue(nameR) and NotSecretValue(nameG) and NotSecretValue(nameB) then
+        local currentR, currentG, currentB, currentA
+        if frame.nameText.GetTextColor then
+            currentR, currentG, currentB, currentA = frame.nameText:GetTextColor()
+        end
+        if not NotSecretValue(currentR) or not NotSecretValue(currentG) or not NotSecretValue(currentB) or not NotSecretValue(currentA)
+            or currentR ~= nameR or currentG ~= nameG or currentB ~= nameB or currentA ~= 1
+        then
+            frame.nameText:SetTextColor(nameR, nameG, nameB, 1)
+        end
+    else
+        frame.nameText:SetTextColor(nameR, nameG, nameB, 1)
     end
 
     local unitExistsNow = UnitExists(unit)
@@ -2013,18 +2164,7 @@ local function UpdateUnitFrame(frame)
         healthPercentNormalized = SafeDivide(safeHP, safeMaxHP, nil)
     end
 
-    local supportsHPText = (
-        unit == "player"
-        or unit == "target"
-        or unit == "targettarget"
-        or unit == "pet"
-        or unit == "focus"
-        or unit == "boss1"
-        or unit == "boss2"
-        or unit == "boss3"
-        or unit == "boss4"
-        or unit == "boss5"
-    )
+    local supportsHPText = true
     if frame.hpText and supportsHPText then
         ApplyHPTextFontSize(frame, MMF_GetHPTextSize and MMF_GetHPTextSize(unit) or tonumber(db.hpTextSize) or 13)
         if hideHPText then
@@ -2032,7 +2172,7 @@ local function UpdateUnitFrame(frame)
             frame.hpText:Hide()
             if frame.hpTextDragFrame then frame.hpTextDragFrame:Hide() end
         elseif isPendingTargetOfTargetHealth then
-            -- Keep HP text blank until the first valid value arrives.
+            
             frame.hpText:SetText("")
             frame.hpText:Show()
             if frame.hpTextDragFrame then frame.hpTextDragFrame:Show() end
@@ -2103,7 +2243,7 @@ local function UpdateUnitFrame(frame)
                 frame.mmfPendingTargetOfTargetHealthRetry = nil
             end
         end
-        -- Stop here so stale zero-valued data cannot repaint later in this pass.
+        
         return
     else
         frame.mmfPendingTargetOfTargetHealthRetry = nil
@@ -2114,15 +2254,6 @@ local function UpdateUnitFrame(frame)
         UpdateAbsorbBar(frame)
     end
     UpdateCastBarForEditMode(frame, unit, previewMode, db)
-
-    if unit ~= "player" and unit ~= "target"
-        and unit ~= "targettarget" and unit ~= "pet" and unit ~= "focus"
-        and unit ~= "boss1" and unit ~= "boss2" and unit ~= "boss3" and unit ~= "boss4" and unit ~= "boss5" then
-        if frame.hpText then frame.hpText:Hide() end
-        if frame.hpTextDragFrame then frame.hpTextDragFrame:Hide() end
-        if frame.powerText then frame.powerText:Hide() end
-        if frame.powerTextDragFrame then frame.powerTextDragFrame:Hide() end
-    end
 
     local r, g, b = MMF_GetUnitColor(unit)
     if db.useHealthGradientColor == true then
@@ -2143,14 +2274,12 @@ local function UpdateUnitFrame(frame)
     if frame.healthBar then
         frame.healthBar:SetStatusBarColor(r, g, b, colorAlpha)
     end
-    UpdateDispelHighlight(frame, db)
-
-    if frame.powerBar and (unit == "player" or unit == "target") then
+    if frame.powerBar then
         local powerType, powerToken = UnitPowerType(unit)
 
-        -- Shaman class resources are displayed by the dedicated Current Class
-        -- bar. Keep the standard player-frame power display mana-only so the
-        -- same resource is not shown twice.
+        
+        
+        
         if unit == "player" and Compat and Compat.IsRetail and IS_PLAYER_SHAMAN then
             powerType = 0
             powerToken = "MANA"
@@ -2174,8 +2303,9 @@ local function UpdateUnitFrame(frame)
         else
             showPowerBar = (db.showTargetPowerBar ~= false)
         end
-        -- Unknown/secret Retail values should remain visible; only hide when
-        -- the client gives us a readable maximum of zero (or no maximum).
+        if MMF_Designer and MMF_Designer.ready then showPowerBar = MMF_Designer.IsEnabled(unit, "power") end
+        
+        
         local hasPower = true
         if NotSecretValue(maxPower) then
             hasPower = false
@@ -2194,10 +2324,10 @@ local function UpdateUnitFrame(frame)
             frame.powerBar:SetMinMaxValues(0, barMaxPower)
             frame.powerBar:SetValue(barPower)
             local pr, pg, pb, pa = ResolvePowerColor(unit, powerType, powerToken, db)
-            frame.powerBar:SetStatusBarColor(pr, pg, pb, pa or 1)
+            SetCachedPowerStatusColor(frame.powerBar, pr, pg, pb, pa)
             if frame.powerBarBG then
                 local bgR, bgG, bgB, bgA = ResolvePowerBGColor(unit, powerType, powerToken, db)
-                frame.powerBarBG:SetColorTexture(bgR, bgG, bgB, bgA)
+                SetCachedPowerBackgroundColor(frame.powerBarBG, bgR, bgG, bgB, bgA)
             end
             if frame.powerBarBorder then frame.powerBarBorder:Show() end
             frame.powerBarBG:Show()
@@ -2222,48 +2352,65 @@ local function UpdateUnitFrame(frame)
                 configuredWidth = db.targetPowerBarWidth or db.powerBarWidth or cfg.POWER_BAR_WIDTH or 218
             end
             if showSecondaryMana then
-                local gap = 1
-                local dualContentHeight = (configuredHeight * 2) + gap
+                local layoutChanged = frame.mmfPowerBarLayoutMode ~= "dual"
+                    or frame.mmfPowerBarLayoutWidth ~= configuredWidth
+                    or frame.mmfPowerBarLayoutHeight ~= configuredHeight
+                if layoutChanged then
+                    local gap = 1
+                    local dualContentHeight = (configuredHeight * 2) + gap
 
-                -- Preserve the user's configured bar height for both resources.
-                -- Splitting the default five pixels made each resource too thin
-                -- to read, so the player container grows only while dual power is
-                -- active.
-                frame.powerBarFrame:SetSize(configuredWidth + 2, dualContentHeight + 2)
+                    
+                    
+                    
+                    
+                    frame.powerBarFrame:SetSize(configuredWidth + 2, dualContentHeight + 2)
 
-                frame.powerBar:ClearAllPoints()
-                frame.powerBar:SetPoint("TOP", frame.powerBarBorder, "TOP", 0, -1)
-                frame.powerBar:SetSize(configuredWidth, configuredHeight)
-                frame.powerBarBG:ClearAllPoints()
-                frame.powerBarBG:SetPoint("TOP", frame.powerBarBorder, "TOP", 0, -1)
-                frame.powerBarBG:SetSize(configuredWidth, configuredHeight)
+                    frame.powerBar:ClearAllPoints()
+                    frame.powerBar:SetPoint("TOP", frame.powerBarBorder, "TOP", 0, -1)
+                    frame.powerBar:SetSize(configuredWidth, configuredHeight)
+                    frame.powerBarBG:ClearAllPoints()
+                    frame.powerBarBG:SetPoint("TOP", frame.powerBarBorder, "TOP", 0, -1)
+                    frame.powerBarBG:SetSize(configuredWidth, configuredHeight)
 
-                frame.secondaryPowerBar:ClearAllPoints()
-                frame.secondaryPowerBar:SetPoint("BOTTOM", frame.powerBarBorder, "BOTTOM", 0, 1)
-                frame.secondaryPowerBar:SetSize(configuredWidth, configuredHeight)
-                frame.secondaryPowerBarBG:ClearAllPoints()
-                frame.secondaryPowerBarBG:SetPoint("BOTTOM", frame.powerBarBorder, "BOTTOM", 0, 1)
-                frame.secondaryPowerBarBG:SetSize(configuredWidth, configuredHeight)
+                    frame.secondaryPowerBar:ClearAllPoints()
+                    frame.secondaryPowerBar:SetPoint("BOTTOM", frame.powerBarBorder, "BOTTOM", 0, 1)
+                    frame.secondaryPowerBar:SetSize(configuredWidth, configuredHeight)
+                    frame.secondaryPowerBarBG:ClearAllPoints()
+                    frame.secondaryPowerBarBG:SetPoint("BOTTOM", frame.powerBarBorder, "BOTTOM", 0, 1)
+                    frame.secondaryPowerBarBG:SetSize(configuredWidth, configuredHeight)
+                    frame.mmfPowerBarLayoutMode = "dual"
+                    frame.mmfPowerBarLayoutWidth = configuredWidth
+                    frame.mmfPowerBarLayoutHeight = configuredHeight
+                end
                 frame.secondaryPowerBar:SetMinMaxValues(0, manaMax)
                 frame.secondaryPowerBar:SetValue(mana)
                 local mr, mg, mb, ma = ResolvePowerColor(unit, 0, "MANA", db)
-                frame.secondaryPowerBar:SetStatusBarColor(mr, mg, mb, ma or 1)
+                SetCachedPowerStatusColor(frame.secondaryPowerBar, mr, mg, mb, ma)
                 local mbr, mbg, mbb, mba = ResolvePowerBGColor(unit, 0, "MANA", db)
-                frame.secondaryPowerBarBG:SetColorTexture(mbr, mbg, mbb, mba)
+                SetCachedPowerBackgroundColor(frame.secondaryPowerBarBG, mbr, mbg, mbb, mba)
                 frame.secondaryPowerBarBG:Show()
                 frame.secondaryPowerBar:Show()
             elseif frame.secondaryPowerBar then
-                frame.powerBarFrame:SetSize(configuredWidth + 2, configuredHeight + 2)
-                frame.powerBar:ClearAllPoints()
-                frame.powerBar:SetPoint("CENTER", frame.powerBarBorder, "CENTER", 0, 0)
-                frame.powerBar:SetSize(configuredWidth, configuredHeight)
-                frame.powerBarBG:ClearAllPoints()
-                frame.powerBarBG:SetPoint("CENTER", frame.powerBarBorder, "CENTER", 0, 0)
-                frame.powerBarBG:SetSize(configuredWidth, configuredHeight)
+                local layoutChanged = frame.mmfPowerBarLayoutMode ~= "single"
+                    or frame.mmfPowerBarLayoutWidth ~= configuredWidth
+                    or frame.mmfPowerBarLayoutHeight ~= configuredHeight
+                if layoutChanged then
+                    frame.powerBarFrame:SetSize(configuredWidth + 2, configuredHeight + 2)
+                    frame.powerBar:ClearAllPoints()
+                    frame.powerBar:SetPoint("CENTER", frame.powerBarBorder, "CENTER", 0, 0)
+                    frame.powerBar:SetSize(configuredWidth, configuredHeight)
+                    frame.powerBarBG:ClearAllPoints()
+                    frame.powerBarBG:SetPoint("CENTER", frame.powerBarBorder, "CENTER", 0, 0)
+                    frame.powerBarBG:SetSize(configuredWidth, configuredHeight)
+                    frame.mmfPowerBarLayoutMode = "single"
+                    frame.mmfPowerBarLayoutWidth = configuredWidth
+                    frame.mmfPowerBarLayoutHeight = configuredHeight
+                end
                 frame.secondaryPowerBar:Hide()
                 frame.secondaryPowerBarBG:Hide()
             end
         else
+            frame.mmfPowerBarLayoutMode = nil
             if frame.powerBarFrame then frame.powerBarFrame:Hide() end
             if frame.powerBarBorder then frame.powerBarBorder:Hide() end
             frame.powerBarBG:Hide()
@@ -2290,8 +2437,9 @@ local function UpdateUnitFrame(frame)
                 colorPowerText = IsCheckedFlag(db.colorTargetPowerTextByResource)
             end
 
-            if anchorPowerEnabled then
-                -- Anchor mode overrides normal power text visibility/position.
+            if MMF_Designer and MMF_Designer.ready then showPowerText = MMF_Designer.IsEnabled(unit, "powerText") end
+            if anchorPowerEnabled and not (MMF_Designer and MMF_Designer.ready) then
+                
                 showPowerText = true
             end
             if unit == "target" and not hasPower then
@@ -2353,13 +2501,15 @@ end
 
 MMF_UpdateUnitFrame = UpdateUnitFrame
 
+function MMF_UpdateDispelHighlight(frame)
+    UpdateDispelHighlight(frame, MattMinimalFramesDB or {})
+end
+
 function MMF_UpdateDispelHighlights()
-    local db = MattMinimalFramesDB or {}
-    if MMF_PlayerFrame then
-        UpdateDispelHighlight(MMF_PlayerFrame, db)
-    end
-    if MMF_TargetFrame then
-        UpdateDispelHighlight(MMF_TargetFrame, db)
+    
+    
+    for _, frame in ipairs(MMF_GetAllFrames()) do
+        MMF_UpdateDispelHighlight(frame)
     end
 end
 
@@ -2386,13 +2536,23 @@ function MMF_SetPowerBarSize(width, height, unit)
             frame.powerBarBG:SetHeight(height)
             frame.powerBar:SetWidth(width)
             frame.powerBar:SetHeight(height)
-            frame.powerBarFG:SetHeight(height)
+            if not frame.powerBarFG and frame.powerBar.GetStatusBarTexture then
+                frame.powerBarFG = frame.powerBar:GetStatusBarTexture()
+            end
+            if frame.powerBarFG then
+                frame.powerBarFG:SetHeight(height)
+            end
             if frame.secondaryPowerBar then
                 frame.secondaryPowerBar:SetWidth(width)
                 frame.secondaryPowerBar:SetHeight(height)
                 frame.secondaryPowerBarBG:SetWidth(width)
                 frame.secondaryPowerBarBG:SetHeight(height)
-                frame.secondaryPowerBarFG:SetHeight(height)
+                if not frame.secondaryPowerBarFG and frame.secondaryPowerBar.GetStatusBarTexture then
+                    frame.secondaryPowerBarFG = frame.secondaryPowerBar:GetStatusBarTexture()
+                end
+                if frame.secondaryPowerBarFG then
+                    frame.secondaryPowerBarFG:SetHeight(height)
+                end
             end
         end
     end
@@ -2418,7 +2578,7 @@ function MMF_SetPowerBarSize(width, height, unit)
         MattMinimalFramesDB.playerPowerBarHeight = height
         MattMinimalFramesDB.targetPowerBarWidth = width
         MattMinimalFramesDB.targetPowerBarHeight = height
-        -- Keep legacy keys in sync for backward compatibility.
+        
         MattMinimalFramesDB.powerBarWidth = width
         MattMinimalFramesDB.powerBarHeight = height
     end
@@ -2456,3 +2616,18 @@ function MMF_UpdatePowerBarVisibility()
         MMF_TargetFrame.powerBarFrame:SetShown(MattMinimalFramesDB.showTargetPowerBar ~= false)
     end
 end
+
+
+
+MMF_UnitVisualStyle = {
+    TextLayer = EnsureTextOverlayAbovePredictions,
+    PowerColor = ResolvePowerColor,
+    PowerBackground = ResolvePowerBGColor,
+    NameColor = GetNameTextColor,
+    HealPrediction = ApplyHealPredictionBarColor,
+    Absorb = ApplyAbsorbBarColor,
+    HealthGradient = GetHealthGradientColor,
+    FormatHealth = FormatPercentAndValue,
+    DisplayName = GetDisplayUnitName,
+    DecoratedName = BuildNameTextWithLeaderIcon,
+}

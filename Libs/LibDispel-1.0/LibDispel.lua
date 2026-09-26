@@ -33,14 +33,14 @@ end
 
 local function GetList(name, data)
 	local list = lib[name]
-	if list then -- clear the existing list
+	if list then 
 		wipe(list)
 	else
-		list = {} -- create new list
-		lib[name] = list -- add new list
+		list = {} 
+		lib[name] = list 
 	end
 
-	if data then -- import color data
+	if data then 
 		for key, value in next, data do
 			if type(value) == 'table' then
 				list[key] = CopyTable(value)
@@ -53,9 +53,9 @@ local function GetList(name, data)
 	return list
 end
 
-local BadList = GetList('BadList') -- Spells that backfire when dispelled
-local BlockList = GetList('BlockList') -- Spells blocked from AuraHighlight
-local DispelList = GetList('DispelList') -- List of types the player can dispel
+local BadList = GetList('BadList') 
+local BlockList = GetList('BlockList') 
+local DispelList = GetList('DispelList') 
 local DebuffColors = GetList('DebuffTypeColor', _G.DebuffTypeColor)
 
 SetList(DebuffColors, 'None', _G.DEBUFF_TYPE_NONE_COLOR or { r = 0.8, g = 0, b = 0 })
@@ -69,11 +69,11 @@ SetList(DebuffColors, 'BadDispel', { r = 0.05, g = 0.85, b = 0.94 })
 SetList(DebuffColors, 'Stealable', { r = 0.93, g = 0.91, b = 0.55 })
 
 if Retail then
-	-- Bad to dispel spells
-	BadList[34914] = "Vampiric Touch"		-- horrifies
-	BadList[233490] = "Unstable Affliction"	-- silences
+	
+	BadList[34914] = "Vampiric Touch"		
+	BadList[233490] = "Unstable Affliction"	
 
-	-- Block spells from AuraHighlight
+	
 	BlockList[140546] = "Fully Mutated"
 	BlockList[136184] = "Thick Bones"
 	BlockList[136186] = "Clear Mind"
@@ -81,7 +81,7 @@ if Retail then
 	BlockList[136180] = "Keen Eyesight"
 	BlockList[105171] = "Deep Corruption"
 	BlockList[108220] = "Deep Corruption"
-	BlockList[116095] = "Disable" -- slow
+	BlockList[116095] = "Disable" 
 end
 
 function lib:GetDebuffTypeColor()
@@ -105,7 +105,7 @@ function lib:IsDispellableByMe(debuffType)
 end
 
 function lib:ListUpdated()
-	-- callback function
+	
 end
 
 do
@@ -124,7 +124,7 @@ do
 		WarlockPetSpells[27277] = "Devour Magic Rank 6"
 		WarlockPetSpells[48011] = "Devour Magic Rank 7"
 	else
-		WarlockPetSpells[132411] = "Singe Magic" -- Grimoire of Sacrifice
+		WarlockPetSpells[132411] = "Singe Magic" 
 	end
 
 	local function CheckSpell(spellID, pet)
@@ -141,57 +141,57 @@ do
 
 	local function UpdateDispels(_, event, arg1)
 		if event == 'CHARACTER_POINTS_CHANGED' and (not arg1 or arg1 > 0) then
-			return -- Not interested in gained points from leveling
+			return 
 		end
 
-		-- this will fix a problem where spells dont show as existing because they are 'hidden'
+		
 		local undoRanks = (vanilla and GetCVar('ShowAllSpellRanks') ~= '1') and SetCVar('ShowAllSpellRanks', '1')
 
 		if event == 'UNIT_PET' then
 			DispelList.Magic = CheckPetSpells()
 		elseif myClass == 'DRUID' then
-			local cure = CheckSpell(88423) -- Nature's Cure Spell
-			local corruption = CheckSpell(2782) -- Remove Corruption (retail), Remove Curse (classic / TBC)
+			local cure = CheckSpell(88423) 
+			local corruption = CheckSpell(2782) 
 			DispelList.Magic = cure
-			DispelList.Poison = cure or (not vanilla and corruption) or CheckSpell(2893) or CheckSpell(8946) -- Abolish Poison / Cure Poison
+			DispelList.Poison = cure or (not vanilla and corruption) or CheckSpell(2893) or CheckSpell(8946) 
 			DispelList.Curse = cure or corruption
 		elseif myClass == 'MAGE' then
 			local greater = CheckSpell(412113)
-			DispelList.Curse = greater or CheckSpell(475) -- Remove Curse
+			DispelList.Curse = greater or CheckSpell(475) 
 			DispelList.Magic = greater
 		elseif myClass == 'MONK' then
-			local mwDetox = CheckSpell(115450) -- Detox (Mistweaver)
-			local detox = (not Retail and mwDetox) or (Retail and (CheckSpell(218164) or IsSpellKnown(388874))) -- Detox (Brewmaster or Windwalker) or Improved Detox (Mistweaver)
+			local mwDetox = CheckSpell(115450) 
+			local detox = (not Retail and mwDetox) or (Retail and (CheckSpell(218164) or IsSpellKnown(388874))) 
 			DispelList.Magic = mwDetox and (not Mists or CheckSpell(115451))
 			DispelList.Disease = detox
 			DispelList.Poison = detox
 		elseif myClass == 'PALADIN' then
-			local cleanse = CheckSpell(4987) -- Cleanse
-			local purify = CheckSpell(1152) -- Purify
-			local toxins = cleanse or purify or CheckSpell(213644) -- Cleanse Toxins
-			DispelList.Magic = cleanse and (not Mists or CheckSpell(53551)) -- Sacred Cleansing
+			local cleanse = CheckSpell(4987) 
+			local purify = CheckSpell(1152) 
+			local toxins = cleanse or purify or CheckSpell(213644) 
+			DispelList.Magic = cleanse and (not Mists or CheckSpell(53551)) 
 			DispelList.Poison = toxins
 			DispelList.Disease = toxins
 		elseif myClass == 'PRIEST' then
-			local dispel = CheckSpell(527) -- Dispel Magic
+			local dispel = CheckSpell(527) 
 			DispelList.Magic = dispel or CheckSpell(32375)
-			DispelList.Disease = Retail and (IsSpellKnown(390632) or CheckSpell(213634)) or not Retail and (CheckSpell(552) or CheckSpell(528)) -- Purify Disease / Abolish Disease / Cure Disease
+			DispelList.Disease = Retail and (IsSpellKnown(390632) or CheckSpell(213634)) or not Retail and (CheckSpell(552) or CheckSpell(528)) 
 		elseif myClass == 'SHAMAN' then
-			local purify = CheckSpell(77130) -- Purify Spirit
-			local cleanse = purify or CheckSpell(51886) -- Cleanse Spirit (Retail/Mists)
-			local toxins = (Retail and CheckSpell(383013)) or (vanilla and CheckSpell(526)) -- Poison Cleansing Totem (Retail), Cure Poison (Classic / TBC)
-			local cureDisease = vanilla and CheckSpell(2870) -- Cure Disease
-			local diseaseTotem = vanilla and CheckSpell(8170) -- Disease Cleansing Totem
+			local purify = CheckSpell(77130) 
+			local cleanse = purify or CheckSpell(51886) 
+			local toxins = (Retail and CheckSpell(383013)) or (vanilla and CheckSpell(526)) 
+			local cureDisease = vanilla and CheckSpell(2870) 
+			local diseaseTotem = vanilla and CheckSpell(8170) 
 
 			DispelList.Magic = purify
 			DispelList.Curse = cleanse
 			DispelList.Poison = toxins
 			DispelList.Disease = cureDisease or diseaseTotem
 		elseif myClass == 'EVOKER' then
-			local naturalize = CheckSpell(360823) -- Naturalize (Preservation)
-			local expunge = CheckSpell(365585) -- Expunge (Devastation)
-			local cauterizing = CheckSpell(374251) -- Cauterizing Flame
-			local scouringFlame = CheckSpell(378438) -- Scouring Flame (PvP Talent)
+			local naturalize = CheckSpell(360823) 
+			local expunge = CheckSpell(365585) 
+			local cauterizing = CheckSpell(374251) 
+			local scouringFlame = CheckSpell(378438) 
 
 			DispelList.Magic = naturalize or scouringFlame
 			DispelList.Poison = naturalize or expunge or cauterizing
@@ -207,10 +207,10 @@ do
 		end
 	end
 
-	-- setup events
+	
 	if not lib.frame then
 		lib.frame = CreateFrame('Frame')
-	else -- we are resetting it
+	else 
 		lib.frame:UnregisterAllEvents()
 	end
 

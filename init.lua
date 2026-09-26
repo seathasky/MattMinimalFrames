@@ -52,6 +52,31 @@ local function NormalizeLegacyTextSizes(db)
     end
 end
 
+
+
+
+
+local function ClearStartupFrameHoverState()
+    if not MMF_GetAllFrames then
+        return
+    end
+
+    local frames = MMF_GetAllFrames()
+    if type(frames) ~= "table" then
+        return
+    end
+
+    for _, frame in ipairs(frames) do
+        if frame then
+            if frame.highlightTexture then
+                frame.highlightTexture:Hide()
+            end
+            frame.mmfPlayerHovering = nil
+            frame.mmfDragInProgress = nil
+        end
+    end
+end
+
 local function Initialize()
     if MMF_Profiles_Initialize then
         MMF_Profiles_Initialize()
@@ -73,7 +98,7 @@ local function Initialize()
     NormalizeLegacyPowerBarDefaults(MattMinimalFramesDB)
     NormalizeLegacyTextSizes(MattMinimalFramesDB)
     if MattMinimalFramesDB then
-        -- Always reset preview-only aura test mode on UI load/reload.
+        
         MattMinimalFramesDB.auraTestMode = false
         MattMinimalFramesDB.layoutTestMode = false
     end
@@ -131,6 +156,7 @@ local function Initialize()
     else
         MMF_UnlockFrames()
     end
+    ClearStartupFrameHoverState()
 end
 
 local isInitialized = false
@@ -178,11 +204,12 @@ initFrame:SetScript("OnEvent", function(self, event, addonName)
             MattMinimalFramesDB.auraTestMode = false
             MattMinimalFramesDB.layoutTestMode = false
         end
+        ClearStartupFrameHoverState()
         if MMF_UpdateTargetAuras then
             MMF_UpdateTargetAuras()
         end
 
-        -- Apply selected SharedMedia again after all addons have loaded.
+        
         ReapplySharedMediaSelections()
         if MMF_UpdateBlizzardPlayerCastBarVisibility then
             MMF_UpdateBlizzardPlayerCastBarVisibility()

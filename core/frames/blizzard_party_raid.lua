@@ -25,6 +25,7 @@ local soloPartyVisibilityHookInstalled = false
 local partySelfVisibilityHookInstalled = false
 local pendingPartySelfVisibilityRefresh = false
 local pendingPartyRaidRosterRefresh = false
+local QueuePartyRaidNameStyle
 local hiddenPartySelfFrames = setmetatable({}, { __mode = "k" })
 
 local function IsAccessibleString(value)
@@ -35,6 +36,10 @@ local function IsAccessibleString(value)
         return false
     end
     return type(value) == "string"
+end
+local function IsReadableStyleValue(value)
+    return not (issecretvalue and issecretvalue(value))
+        and not (canaccessvalue and not canaccessvalue(value))
 end
 
 local function ApplySoloPartyFrameOverrideFromDB()
@@ -123,9 +128,9 @@ local function ApplyHideSelfToCompactPartyFrame()
         return
     end
 
-    -- With the option disabled, leave Blizzard's secure member frames alone.
-    -- The old path called Show() and UpdateLayout() on every refresh even at
-    -- the default setting, which tainted the party-frame system needlessly.
+    
+    
+    
     if not IsHideSelfInPartyEnabled() and next(hiddenPartySelfFrames) == nil then
         return
     end
@@ -279,7 +284,7 @@ local function IsBlizzardCompactRaidMemberFrame(frame)
     if type(frameName) == "string" and frameName:match("^CompactRaidFrame%d+$") then
         return true
     end
-    -- Fallback: member frames usually live under the raid container hierarchy.
+    
     local parent = frame
     for _ = 1, 8 do
         parent = SafeGetParent(parent)
@@ -327,16 +332,22 @@ local function ApplyPartyRaidHealthTextMode(mode)
     end
 
     local normalizedMode = string.lower(mode)
-
-    -- Do not call CompactUnitFrameProfiles_* internals from addon code. Those
-    -- routines mutate Blizzard's secure profile state while executing on an
-    -- insecure stack. The CVar is the public setting and Blizzard refreshes
-    -- its frames when that setting changes.
-    if type(_G.SetCVar) == "function" then
-        pcall(_G.SetCVar, "raidFramesHealthText", normalizedMode)
+    local getter = _G.C_CVar and _G.C_CVar.GetCVar or _G.GetCVar
+    if type(getter) == "function" then
+        local ok, current = pcall(getter, "raidFramesHealthText")
+        if ok and IsAccessibleString(current) and string.lower(current) == normalizedMode then
+            return
+        end
     end
+
+    
+    
+    
+    
     if type(_G.C_CVar) == "table" and type(_G.C_CVar.SetCVar) == "function" then
         pcall(_G.C_CVar.SetCVar, "raidFramesHealthText", normalizedMode)
+    elseif type(_G.SetCVar) == "function" then
+        pcall(_G.SetCVar, "raidFramesHealthText", normalizedMode)
     end
 
 end
@@ -572,11 +583,11 @@ local function RestorePartyRaidNameFont(fontString, original)
     local size = tonumber((fontString.GetFont and select(2, fontString:GetFont())) or (original and original.size)) or 10
     local flags = (original and original.flags) or ""
     if type(path) == "string" and path ~= "" then
-        pcall(fontString.SetFont, fontString, path, size, flags)
+        MMF_SetFontSafe(fontString, path, size, flags)
     elseif MMF_SetFontSafe then
         MMF_SetFontSafe(fontString, STANDARD_TEXT_FONT, size, flags)
     else
-        pcall(fontString.SetFont, fontString, STANDARD_TEXT_FONT, size, flags)
+        MMF_SetFontSafe(fontString, STANDARD_TEXT_FONT, size, flags)
     end
     cachedPartyRaidNameFontState[fontString] = nil
 end
@@ -623,7 +634,7 @@ local function RestorePartyRaidNameLayout(fontString, original)
     cachedPartyRaidNameCenterState[fontString] = nil
 end
 
-local function ApplyPartyRaidNameFont(fontString, frame)
+local function ApplyPartyRaidNameFont(fontString, frame, previewKind)
     if not IsFontString(fontString) then
         return
     end
@@ -634,11 +645,11 @@ local function ApplyPartyRaidNameFont(fontString, frame)
     if MattMinimalFramesDB and MattMinimalFramesDB.useSharedPartyRaidNameFont == true then
         fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or STANDARD_TEXT_FONT
     end
-    local _, currentSize, currentFlags = fontString:GetFont()
+    local currentPath, currentSize, currentFlags = fontString:GetFont()
     local size = tonumber(currentSize) or 10
     local sizeSetting = nil
     if MattMinimalFramesDB then
-        if IsBlizzardCompactRaidMemberFrame(frame) then
+        if previewKind == "raid" or (not previewKind and IsBlizzardCompactRaidMemberFrame(frame)) then
             sizeSetting = MattMinimalFramesDB.raidNameFontSize
         else
             sizeSetting = MattMinimalFramesDB.partyNameFontSize
@@ -661,15 +672,13 @@ local function ApplyPartyRaidNameFont(fontString, frame)
     end
 
     local cached = cachedPartyRaidNameFontState[fontString]
-    if cached and cached.path == fontPath and cached.size == size and cached.flags == flags then
+    if cached and cached.path == fontPath and cached.size == size and cached.flags == flags
+        and IsReadableStyleValue(currentPath) and IsReadableStyleValue(currentSize) and IsReadableStyleValue(currentFlags)
+        and currentPath == fontPath and currentSize == size and currentFlags == flags then
         return
     end
 
-    if MMF_SetFontSafe then
-        MMF_SetFontSafe(fontString, fontPath, size, flags)
-    else
-        pcall(fontString.SetFont, fontString, fontPath, size, flags)
-    end
+    MMF_SetFontSafe(fontString, fontPath, size, flags)
     cachedPartyRaidNameFontState[fontString] = {
         path = fontPath,
         size = size,
@@ -685,20 +694,28 @@ local function ApplyPartyRaidNameCenter(fontString, frame)
 
     local anchor = frame
 
-    if fontString.SetJustifyH then
+    if fontString.SetJustifyH and fontString:GetJustifyH() ~= "CENTER" then
         fontString:SetJustifyH("CENTER")
     end
-    if fontString.SetJustifyV then
+    if fontString.SetJustifyV and fontString:GetJustifyV() ~= "MIDDLE" then
         fontString:SetJustifyV("MIDDLE")
     end
 
     if anchor and fontString.ClearAllPoints and fontString.SetPoint then
-        fontString:ClearAllPoints()
-        fontString:SetPoint("CENTER", anchor, "CENTER", 0, 0)
+        local point,relative,relativePoint,x,y=fontString:GetPoint(1)
+        local matches=IsReadableStyleValue(point) and IsReadableStyleValue(relative)
+            and IsReadableStyleValue(relativePoint) and IsReadableStyleValue(x) and IsReadableStyleValue(y)
+            and point=="CENTER" and relative==anchor and relativePoint=="CENTER" and x==0 and y==0
+        if not matches or fontString:GetNumPoints()~=1 then
+            fontString:ClearAllPoints()
+            fontString:SetPoint("CENTER", anchor, "CENTER", 0, 0)
+        end
         if fontString.SetWidth and type(anchor.GetWidth) == "function" then
-            local anchorWidth = tonumber(anchor:GetWidth()) or 0
-            if anchorWidth > 0 then
-                fontString:SetWidth(math.max(8, anchorWidth - 8))
+            local anchorWidth = anchor:GetWidth()
+            if IsReadableStyleValue(anchorWidth) and type(anchorWidth)=="number" and anchorWidth > 0 then
+                local desired=math.max(8, anchorWidth - 8)
+                local current=fontString:GetWidth()
+                if IsReadableStyleValue(current) and current~=desired then fontString:SetWidth(desired) end
             end
         end
     end
@@ -792,7 +809,11 @@ local function ApplyRaidNameTruncation(fontString, frame)
 
     local nextText = TruncatePartyRaidNameText(fullName, truncateLen)
     if nextText then
-        pcall(fontString.SetText, fontString, nextText)
+        local current=fontString:GetText()
+        
+        if IsReadableStyleValue(current) and current~=nextText then
+            pcall(fontString.SetText, fontString, nextText)
+        end
     end
 end
 
@@ -837,7 +858,7 @@ local function RestorePartyRaidHealthTextStyle(fontString, original)
     local size = tonumber(original.size) or tonumber((fontString.GetFont and select(2, fontString:GetFont())) or 10) or 10
     local flags = original.flags or ""
     if type(path) == "string" and path ~= "" then
-        pcall(fontString.SetFont, fontString, path, size, flags)
+        MMF_SetFontSafe(fontString, path, size, flags)
     end
 
     if fontString.SetJustifyH then
@@ -870,7 +891,7 @@ local function ApplyPartyRaidCenteredHealthTextStyle(fontString, frame)
     local newSize = tonumber(size) or 10
     newSize = math.max(7, math.min(18, math.floor(newSize - 2 + 0.5)))
     if type(path) == "string" and path ~= "" then
-        pcall(fontString.SetFont, fontString, path, newSize, flags or "")
+        MMF_SetFontSafe(fontString, path, newSize, flags or "")
     end
 
     if fontString.SetJustifyH then
@@ -901,8 +922,8 @@ local function ApplyPartyRaidHealthTextStyleForFrame(frame)
         frame.healthBar and frame.healthBar.text,
     }
 
-    -- Blizzard may use different health-text regions across versions; include
-    -- all FontStrings under the healthBar tree as additional candidates.
+    
+    
     local seenCandidates = {}
     for _, candidate in ipairs(candidates) do
         if IsFontString(candidate) then
@@ -995,6 +1016,27 @@ local function ApplyPartyRaidNameStyleForFontString(fontString, frame)
     end
 end
 
+
+
+function MMF_StyleBlizzardGroupNameSample(fontString, frame, kind, sampleName)
+    CapturePartyRaidNameStyle(fontString)
+    local original = trackedPartyRaidNameStyles[fontString]
+    if IsPartyRaidNameStylingEnabled() then
+        ApplyPartyRaidNameFont(fontString, frame, kind)
+        if MattMinimalFramesDB.centerPartyRaidNames == true then
+            ApplyPartyRaidNameCenter(fontString, frame)
+        else
+            RestorePartyRaidNameLayout(fontString, original)
+        end
+        local limit = math.max(0, math.min(24, tonumber(MattMinimalFramesDB[kind.."NameTruncateLength"]) or 0))
+        fontString:SetText(TruncatePartyRaidNameText(sampleName, limit))
+    else
+        RestorePartyRaidNameFont(fontString, original)
+        RestorePartyRaidNameLayout(fontString, original)
+        fontString:SetText(sampleName)
+    end
+end
+
 local function ApplyPartyRaidNameStyleForFrame(frame)
     if not IsStylablePartyRaidNameFrame(frame) then
         return
@@ -1018,6 +1060,9 @@ local function TraverseFrameTree(frame, visitor, seen)
     end
     seen[frame] = true
     visitor(frame)
+    
+    
+    if IsStylablePartyRaidNameFrame(frame) then return end
 
     local children = { frame:GetChildren() }
     for _, child in ipairs(children) do
@@ -1094,13 +1139,14 @@ function MMF_ApplyRaidNameTruncationPreview()
 end
 
 function MMF_RefreshBlizzardPartyRaidNameFonts()
+    if not IsPartyRaidNameStylingEnabled() then return end
     local seen = {}
     local function Visit(frame)
         if not IsStylablePartyRaidNameFrame(frame) then
             return
         end
         if IsPartyRaidNameStylingEnabled() then
-            ApplyPartyRaidNameStyleForFrame(frame)
+            QueuePartyRaidNameStyle(frame)
         end
     end
     if _G.CompactPartyFrame then
@@ -1144,7 +1190,7 @@ function MMF_UpdateBlizzardSoloPartyFrameVisibility()
         if type(_G.C_PartyInfo.SetPartyFramesDisplaySolo) == "function" then
             pcall(_G.C_PartyInfo.SetPartyFramesDisplaySolo, showSoloParty)
         end
-        -- Enabling solo-party should guarantee the party frames system is shown.
+        
         if showSoloParty and type(_G.C_PartyInfo.SetPartyFramesDisplayed) == "function" then
             pcall(_G.C_PartyInfo.SetPartyFramesDisplayed, true)
         end
@@ -1176,6 +1222,41 @@ function MMF_UpdateBlizzardPartySelfVisibility()
     ApplyHideSelfToCompactPartyFrame()
 end
 
+
+
+local pendingNameFrames={}
+local applyingNameStyle={}
+local nameWorkFrame=CreateFrame("Frame")
+nameWorkFrame:Hide()
+QueuePartyRaidNameStyle=function(frame)
+    if not frame or applyingNameStyle[frame] or not IsPartyRaidNameStylingEnabled() then return end
+    pendingNameFrames[frame]=true
+    nameWorkFrame:Show()
+end
+nameWorkFrame:SetScript("OnUpdate",function(self)
+    local count=0
+    for frame in pairs(pendingNameFrames) do
+        pendingNameFrames[frame]=nil
+        if IsPartyRaidNameStylingEnabled() and not (frame.IsForbidden and frame:IsForbidden()) then
+            applyingNameStyle[frame]=true
+            local ok,err=pcall(ApplyPartyRaidNameStyleForFrame,frame)
+            applyingNameStyle[frame]=nil
+            if not ok and MMF_Designer and MMF_Designer.Report then MMF_Designer.Report("Blizzard name styling",err) end
+        end
+        count=count+1
+        if count>=4 then break end
+    end
+    if not next(pendingNameFrames) then self:Hide() end
+end)
+local function ApplyPartyRaidNameStyleNow(frame)
+    if not frame or applyingNameStyle[frame] or not IsPartyRaidNameStylingEnabled() then return end
+    if frame.IsForbidden and frame:IsForbidden() then return end
+    pendingNameFrames[frame]=nil
+    applyingNameStyle[frame]=true
+    local ok,err=pcall(ApplyPartyRaidNameStyleForFrame,frame)
+    applyingNameStyle[frame]=nil
+    if not ok and MMF_Designer and MMF_Designer.Report then MMF_Designer.Report("Blizzard name styling",err) end
+end
 local function EnsurePartyRaidNameHook()
     if type(hooksecurefunc) ~= "function" then
         return
@@ -1183,7 +1264,7 @@ local function EnsurePartyRaidNameHook()
     if not compactPartyRaidNameHookState.compactUnitFrameUpdateName and type(_G.CompactUnitFrame_UpdateName) == "function" then
         hooksecurefunc("CompactUnitFrame_UpdateName", function(frame)
             if IsPartyRaidNameStylingEnabled() then
-                ApplyPartyRaidNameStyleForFrame(frame)
+                ApplyPartyRaidNameStyleNow(frame)
             end
         end)
         compactPartyRaidNameHookState.compactUnitFrameUpdateName = true
@@ -1215,7 +1296,7 @@ local function EnsurePartyRaidNameHook()
     if not compactPartyRaidNameHookState.compactUnitFrameUpdateAll and type(_G.CompactUnitFrame_UpdateAll) == "function" then
         hooksecurefunc("CompactUnitFrame_UpdateAll", function(frame)
             if IsPartyRaidNameStylingEnabled() then
-                ApplyPartyRaidNameStyleForFrame(frame)
+                ApplyPartyRaidNameStyleNow(frame)
             end
         end)
         compactPartyRaidNameHookState.compactUnitFrameUpdateAll = true
@@ -1223,7 +1304,7 @@ local function EnsurePartyRaidNameHook()
     if not compactPartyRaidNameHookState.compactUnitFrameSetUnit and type(_G.CompactUnitFrame_SetUnit) == "function" then
         hooksecurefunc("CompactUnitFrame_SetUnit", function(frame)
             if IsPartyRaidNameStylingEnabled() then
-                ApplyPartyRaidNameStyleForFrame(frame)
+                ApplyPartyRaidNameStyleNow(frame)
             end
         end)
         compactPartyRaidNameHookState.compactUnitFrameSetUnit = true
@@ -1231,7 +1312,7 @@ local function EnsurePartyRaidNameHook()
     if not compactPartyRaidNameHookState.compactUnitFrameSetOptionTable and type(_G.CompactUnitFrame_SetOptionTable) == "function" then
         hooksecurefunc("CompactUnitFrame_SetOptionTable", function(frame)
             if IsPartyRaidNameStylingEnabled() then
-                ApplyPartyRaidNameStyleForFrame(frame)
+                ApplyPartyRaidNameStyleNow(frame)
             end
         end)
         compactPartyRaidNameHookState.compactUnitFrameSetOptionTable = true
@@ -1239,7 +1320,7 @@ local function EnsurePartyRaidNameHook()
     if not compactPartyRaidNameHookState.compactUnitFrameSetUpFrame and type(_G.CompactUnitFrame_SetUpFrame) == "function" then
         hooksecurefunc("CompactUnitFrame_SetUpFrame", function(frame)
             if IsPartyRaidNameStylingEnabled() then
-                ApplyPartyRaidNameStyleForFrame(frame)
+                ApplyPartyRaidNameStyleNow(frame)
             end
         end)
         compactPartyRaidNameHookState.compactUnitFrameSetUpFrame = true
@@ -1248,7 +1329,7 @@ local function EnsurePartyRaidNameHook()
         if not compactPartyRaidNameHookState.partyMemberUpdateMember and type(_G.PartyMemberFrameMixin.UpdateMember) == "function" then
             hooksecurefunc(_G.PartyMemberFrameMixin, "UpdateMember", function(self)
                 if IsPartyRaidNameStylingEnabled() then
-                    ApplyPartyRaidNameStyleForFrame(self)
+                    ApplyPartyRaidNameStyleNow(self)
                 end
             end)
             compactPartyRaidNameHookState.partyMemberUpdateMember = true
@@ -1256,7 +1337,7 @@ local function EnsurePartyRaidNameHook()
         if not compactPartyRaidNameHookState.partyMemberUpdateNameTextAnchors and type(_G.PartyMemberFrameMixin.UpdateNameTextAnchors) == "function" then
             hooksecurefunc(_G.PartyMemberFrameMixin, "UpdateNameTextAnchors", function(self)
                 if IsPartyRaidNameStylingEnabled() then
-                    ApplyPartyRaidNameStyleForFrame(self)
+                    ApplyPartyRaidNameStyleNow(self)
                 end
             end)
             compactPartyRaidNameHookState.partyMemberUpdateNameTextAnchors = true

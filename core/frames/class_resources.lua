@@ -43,9 +43,9 @@ if not hasResourceSupport then
     return
 end
 
---------------------------------------------------
--- CONFIG
---------------------------------------------------
+
+
+
 
 local BAR_LAYOUT_DEFAULTS = {
     runeBar = { width = 30, height = 10, spacing = 4, x = 0, y = 48, maxRunes = 6, legacyPosKey = "runeBarPosition" },
@@ -153,15 +153,20 @@ local GetComboPointState
 local function IsArcaneSpec()
     if playerClass ~= "MAGE" then return false end
     local spec = Compat.GetSpecialization()
-    local arcaneSpec = (_G.SPEC_MAGE_ARCANE ~= nil) and _G.SPEC_MAGE_ARCANE or 1
-    return SafeEq(spec, arcaneSpec)
+    
+    if SafeEq(spec, 1) then return true end
+    if type(GetSpecializationInfo)=="function" and spec~=nil then
+        local ok,specID=pcall(GetSpecializationInfo,spec)
+        return ok and SafeEq(specID,62)
+    end
+    return false
 end
 
 local function IsElementalSpec()
     if playerClass ~= "SHAMAN" then return false end
     local spec = Compat.GetSpecialization()
-    -- GetSpecialization returns the tab index (Elemental = 1), while some
-    -- clients/constants expose the specialization ID (Elemental = 262).
+    
+    
     if SafeEq(spec, 1) or (_G.SPEC_SHAMAN_ELEMENTAL ~= nil and SafeEq(spec, _G.SPEC_SHAMAN_ELEMENTAL)) then
         return true
     end
@@ -205,6 +210,22 @@ local function GetFrameByPrefix(prefix)
     return nil
 end
 
+local function GetDesignerResourceSetting()
+    local profile=MattMinimalFramesDB and MattMinimalFramesDB.designer
+    local player=profile and profile.units and profile.units.player
+    return player and player.elements and player.elements.resources
+end
+
+function MMF_EnsureDesignerClassResource()
+    local config=CLASS_BAR_CONFIG[playerClass]
+    local setting=GetDesignerResourceSetting()
+    if not config or not setting then return end
+    MattMinimalFramesDB[config.showKey]=setting.enabled~=false
+    if setting.enabled~=false and not GetFrameByPrefix(config.prefix) then
+        MMF_InitializeClassResources()
+    end
+end
+
 local function RoundInt(num)
     return math.floor((num or 0) + 0.5)
 end
@@ -220,7 +241,8 @@ SafeNe = function(a, b)
     local ok, result = pcall(function()
         return a ~= b
     end)
-    return ok and result or true
+    if ok then return result end
+    return true
 end
 
 SafeLe = function(a, b)
@@ -235,13 +257,9 @@ local function GetPowerCountSafe(powerType, maxCount)
     pcall(function()
         raw = UnitPower("player", powerType) or 0
     end)
-    local count = 0
-    for i = 1, maxCount do
-        if SafeLe(i, raw) then
-            count = i
-        end
-    end
-    return count
+    
+    
+    return raw
 end
 
 local function GetPowerMaxCountSafe(powerType, fallbackMax)
@@ -249,6 +267,7 @@ local function GetPowerMaxCountSafe(powerType, fallbackMax)
     pcall(function()
         raw = UnitPowerMax("player", powerType) or fallbackMax
     end)
+    if (issecretvalue and issecretvalue(raw)) or (canaccessvalue and not canaccessvalue(raw)) then return fallbackMax end
     raw = tonumber(raw) or fallbackMax
     if raw < 1 then
         raw = fallbackMax
@@ -260,6 +279,23 @@ local function GetPowerMaxCountSafe(powerType, fallbackMax)
         end
     end
     return count
+end
+
+local function RegisterPlayerPowerEvents(frame, includeMaxPower)
+    if not frame then return end
+    
+    
+    frame:RegisterUnitEvent("UNIT_POWER_UPDATE", "player")
+    frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
+    if includeMaxPower then
+        frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
+    end
+end
+
+local function SetResourceSegmentValue(segment,index,value)
+    segment:SetMinMaxValues(index-1,index)
+    segment:SetValue(value)
+    segment:SetAlpha(1)
 end
 
 local function GetDBNumber(key, defaultValue)
@@ -294,7 +330,7 @@ local function SaveCenterOffsets(frame, prefix)
         MattMinimalFramesDB[prefix .. "Y"] = RoundInt(cy - uy)
     end
 
-    -- Keep an absolute fallback point like unit frames for extra persistence safety.
+    
     local left, top = frame:GetLeft(), frame:GetTop()
     local frameName = frame:GetName()
     if frameName and left and top then
@@ -465,8 +501,9 @@ end
 
 local DragHelpers = _G.MMF_FrameFactoryDragHelpers or {}
 
-local function CreateBaseResourceBar(frameName, prefix, moveLabel, color, numRunes, initialValue)
-    local frame = CreateFrame("Frame", frameName, UIParent)
+local function CreateBaseResourceBar(frameName, prefix, moveLabel, color, numRunes, initialValue, previewParent)
+    local frame = CreateFrame("Frame", frameName, previewParent or UIParent)
+    frame.mmfPreview = previewParent ~= nil
     frame.mmfLayoutKey = prefix
     frame.mmfMaxRunes = numRunes
     frame:SetMovable(true)
@@ -481,7 +518,9 @@ local function CreateBaseResourceBar(frameName, prefix, moveLabel, color, numRun
     frame.runes = {}
     for i = 1, numRunes do
         local rune = CreateFrame("StatusBar", nil, frame)
-        rune:SetStatusBarTexture(GetStatusBarTexturePath())
+        local statusBarTexture = GetStatusBarTexturePath()
+            or (MMF_GetDefaultStatusBarTexturePath and MMF_GetDefaultStatusBarTexturePath())
+        rune:SetStatusBarTexture(statusBarTexture)
         rune:SetMinMaxValues(0, 1)
         rune:SetValue(initialValue or 0)
         rune:SetOrientation("HORIZONTAL")
@@ -490,6 +529,21 @@ local function CreateBaseResourceBar(frameName, prefix, moveLabel, color, numRun
         rune.bg:SetColorTexture(0.1, 0.1, 0.1, 0.8)
         rune:SetStatusBarColor(color[1], color[2], color[3], 1)
         frame.runes[i] = rune
+    end
+
+    if previewParent then
+        frame:EnableMouse(false)
+        frame:SetClampedToScreen(false)
+        local w,h,gap = GetLayout(prefix)
+        frame:SetSize(numRunes*w + math.max(0,numRunes-1)*gap + 2, h+2)
+        frame:SetPoint("CENTER",previewParent,"CENTER",0,-60)
+        for i,rune in ipairs(frame.runes) do
+            rune:SetSize(w,h)
+            rune:SetPoint("LEFT",frame,"LEFT",1+(i-1)*(w+gap),0)
+            rune:EnableMouse(false)
+        end
+        frame.mmfVisibleRunes=numRunes
+        return frame
     end
 
     frame:SetScript("OnDragStart", function(self)
@@ -515,21 +569,13 @@ local function CreateBaseResourceBar(frameName, prefix, moveLabel, color, numRun
 
     frame.moveHint = frame:CreateFontString(nil, "OVERLAY")
     local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
-    if MMF_SetFontSafe then
-        MMF_SetFontSafe(frame.moveHint, (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, fontFlags)
-    else
-        frame.moveHint:SetFont((MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, fontFlags)
-    end
+    MMF_SetFontSafe(frame.moveHint, (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or MMF_GetDefaultFontPath(), 10, fontFlags)
     frame.moveHint:SetText(moveLabel)
     frame.moveHint:SetPoint("BOTTOM", frame, "TOP", 0, 2)
     frame.moveHint:Hide()
 
     frame.moveSubtext = frame:CreateFontString(nil, "OVERLAY")
-    if MMF_SetFontSafe then
-        MMF_SetFontSafe(frame.moveSubtext, (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, fontFlags)
-    else
-        frame.moveSubtext:SetFont((MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 9, fontFlags)
-    end
+    MMF_SetFontSafe(frame.moveSubtext, (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath()) or MMF_GetDefaultFontPath(), 9, fontFlags)
     frame.moveSubtext:SetText(GetResourceBarDragHint())
     frame.moveSubtext:SetPoint("TOP", frame.moveHint, "BOTTOM", 0, -2)
     frame.moveSubtext:SetTextColor(0.7, 0.7, 0.7)
@@ -610,6 +656,21 @@ local function CreateEssenceBar()
     return MMF_EssenceBar
 end
 
+local function CreateResourceValueText(frame)
+    frame.valueOverlay = CreateFrame("Frame", nil, frame)
+    frame.valueOverlay:SetAllPoints(frame)
+    frame.valueOverlay:SetFrameLevel(frame:GetFrameLevel() + 10)
+    frame.valueText = frame.valueOverlay:CreateFontString(nil, "OVERLAY")
+    local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath())
+        or MMF_GetDefaultFontPath()
+    local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
+    MMF_SetFontSafe(frame.valueText, fontPath, 10, fontFlags)
+    frame.valueText:SetPoint("CENTER", frame, "CENTER", 0, 0)
+    frame.valueText:SetTextColor(1, 1, 1, 1)
+    frame.valueText:SetDrawLayer("OVERLAY", 7)
+    frame.valueText:Hide()
+end
+
 local function CreateMaelstromBar()
     if MMF_MaelstromBar then return MMF_MaelstromBar end
     MMF_MaelstromBar = CreateBaseResourceBar(
@@ -620,22 +681,7 @@ local function CreateMaelstromBar()
         BAR_LAYOUT_DEFAULTS.maelstromBar.maxRunes,
         0
     )
-    MMF_MaelstromBar.valueOverlay = CreateFrame("Frame", nil, MMF_MaelstromBar)
-    MMF_MaelstromBar.valueOverlay:SetAllPoints(MMF_MaelstromBar)
-    MMF_MaelstromBar.valueOverlay:SetFrameLevel(MMF_MaelstromBar:GetFrameLevel() + 10)
-    MMF_MaelstromBar.valueText = MMF_MaelstromBar.valueOverlay:CreateFontString(nil, "OVERLAY")
-    local fontPath = (MMF_GetGlobalFontPath and MMF_GetGlobalFontPath())
-        or "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
-    local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
-    if MMF_SetFontSafe then
-        MMF_SetFontSafe(MMF_MaelstromBar.valueText, fontPath, 10, fontFlags)
-    else
-        MMF_MaelstromBar.valueText:SetFont(fontPath, 10, fontFlags)
-    end
-    MMF_MaelstromBar.valueText:SetPoint("CENTER", MMF_MaelstromBar, "CENTER", 0, 0)
-    MMF_MaelstromBar.valueText:SetTextColor(1, 1, 1, 1)
-    MMF_MaelstromBar.valueText:SetDrawLayer("OVERLAY", 7)
-    MMF_MaelstromBar.valueText:Hide()
+    CreateResourceValueText(MMF_MaelstromBar)
     _G.MMF_MaelstromBar = MMF_MaelstromBar
     return MMF_MaelstromBar
 end
@@ -658,15 +704,13 @@ local function EnsureComboPointBarInitialized()
         frame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "player")
     end
     if isClassicComboMode then
-        frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
-        frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
+        RegisterPlayerPowerEvents(frame, true)
         frame:RegisterEvent("PLAYER_TARGET_CHANGED")
         frame:RegisterEvent("COMBO_TARGET_CHANGED")
         frame:RegisterUnitEvent("UNIT_ENTERED_VEHICLE", "player")
         frame:RegisterUnitEvent("UNIT_EXITED_VEHICLE", "player")
     else
-        frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
-        frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
+        RegisterPlayerPowerEvents(frame, true)
         frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
         frame:RegisterEvent("PLAYER_TALENT_UPDATE")
     end
@@ -679,9 +723,9 @@ function MMF_EnsureComboPointBarInitialized()
     return EnsureComboPointBarInitialized()
 end
 
---------------------------------------------------
--- LAYOUT UPDATE API
---------------------------------------------------
+
+
+
 
 function MMF_UpdateClassBarLayout(prefix)
     local frame = GetFrameByPrefix(prefix)
@@ -729,9 +773,9 @@ function MMF_ResetCurrentClassBarSettings()
     return showChanged
 end
 
---------------------------------------------------
--- BAR UPDATE LOGIC
---------------------------------------------------
+
+
+
 
 local function UpdateRuneBar()
     if not MMF_RuneBar or not MMF_RuneBar:IsShown() then return end
@@ -794,13 +838,7 @@ local function UpdateHolyPowerBar(self, event, unit)
                         end
                     end
                 end
-                if SafeLe(i, numHolyPower) then
-                    rune:SetValue(1)
-                    rune:SetAlpha(1)
-                else
-                    rune:SetValue(0)
-                    rune:SetAlpha(0.4)
-                end
+                SetResourceSegmentValue(rune,i,numHolyPower)
             else
                 if LibCustomGlow then
                     LibCustomGlow.PixelGlow_Stop(rune, HOLY_POWER_GLOW_KEY)
@@ -813,8 +851,10 @@ end
 
 UpdateComboPointBar = function()
     if not MMF_ComboPointBar then return end
-
-    if playerClass == "DRUID" then
+    local designed=GetDesignerResourceSetting()
+    if designed then
+        if not MMF_ComboPointBar:IsShown() then return end
+    elseif playerClass == "DRUID" then
         local _, powerToken = UnitPowerType("player")
         if powerToken ~= "ENERGY" then
             MMF_ComboPointBar:Hide()
@@ -837,13 +877,7 @@ UpdateComboPointBar = function()
         if rune then
             if SafeLe(i, maxComboPoints) then
                 rune:Show()
-                if SafeLe(i, numComboPoints) then
-                    rune:SetValue(1)
-                    rune:SetAlpha(1)
-                else
-                    rune:SetValue(0)
-                    rune:SetAlpha(0.4)
-                end
+                SetResourceSegmentValue(rune,i,numComboPoints)
             else
                 rune:Hide()
             end
@@ -858,13 +892,7 @@ local function UpdateSoulShardBar()
     for i = 1, MMF_SoulShardBar.mmfMaxRunes do
         local rune = MMF_SoulShardBar.runes[i]
         if rune then
-            if SafeLe(i, numSoulShards) then
-                rune:SetValue(1)
-                rune:SetAlpha(1)
-            else
-                rune:SetValue(0)
-                rune:SetAlpha(0.4)
-            end
+            SetResourceSegmentValue(rune,i,numSoulShards)
         end
     end
 end
@@ -883,13 +911,7 @@ local function UpdateChiBar()
         if rune then
             if SafeLe(i, maxChi) then
                 rune:Show()
-                if SafeLe(i, numChi) then
-                    rune:SetValue(1)
-                    rune:SetAlpha(1)
-                else
-                    rune:SetValue(0)
-                    rune:SetAlpha(0.4)
-                end
+                SetResourceSegmentValue(rune,i,numChi)
             else
                 rune:Hide()
             end
@@ -899,25 +921,25 @@ end
 
 local function UpdateArcaneChargeBar()
     if not MMF_ArcaneChargeBar or not MMF_ArcaneChargeBar:IsShown() then return end
-    if not IsArcaneSpec() then return end
-
-    local numCharges = GetPowerCountSafe(Enum.PowerType.ArcaneCharges, MMF_ArcaneChargeBar.mmfMaxRunes)
+    
+    
+    local numCharges = UnitPower("player", Enum.PowerType.ArcaneCharges)
     for i = 1, MMF_ArcaneChargeBar.mmfMaxRunes do
         local rune = MMF_ArcaneChargeBar.runes[i]
         if rune then
-            if SafeLe(i, numCharges) then
-                rune:SetValue(1)
-                rune:SetAlpha(1)
-            else
-                rune:SetValue(0)
-                rune:SetAlpha(0.4)
-            end
+            rune:SetMinMaxValues(i-1,i)
+            rune:SetValue(numCharges)
+            rune:SetAlpha(1)
         end
     end
 end
 
 local function ArcaneChargeBar_OnSpecChange()
     if not MMF_ArcaneChargeBar then return end
+    if GetDesignerResourceSetting() then
+        MMF_RefreshClassResourceVisibility()
+        return
+    end
     if not (MattMinimalFramesDB and MattMinimalFramesDB.showArcaneChargeBar) then return end
     if IsArcaneSpec() then
         MMF_ArcaneChargeBar:Show()
@@ -941,13 +963,7 @@ local function UpdateEssenceBar()
         if rune then
             if SafeLe(i, maxEssence) then
                 rune:Show()
-                if SafeLe(i, numEssence) then
-                    rune:SetValue(1)
-                    rune:SetAlpha(1)
-                else
-                    rune:SetValue(0)
-                    rune:SetAlpha(0.4)
-                end
+                SetResourceSegmentValue(rune,i,numEssence)
             else
                 rune:Hide()
             end
@@ -968,9 +984,9 @@ local function UpdateMaelstromBar()
         local auras = Compat.GetUnitAuras and Compat.GetUnitAuras("player", "HELPFUL|PLAYER") or {}
         for _, aura in ipairs(auras) do
             if SafeEq(aura.spellId, 344179) or SafeEq(aura.spellId, 187880)
-                or (maelstromWeaponName and aura.name == maelstromWeaponName)
-                or (alternateAuraName and aura.name == alternateAuraName) then
-                stacks = (Compat.GetAuraCount and Compat.GetAuraCount(aura, "player")) or aura.applications or aura.count or 0
+                or (maelstromWeaponName and SafeEq(aura.name, maelstromWeaponName))
+                or (alternateAuraName and SafeEq(aura.name, alternateAuraName)) then
+                stacks = aura.applications or aura.count or (Compat.GetAuraCount and Compat.GetAuraCount(aura, "player")) or 0
                 break
             end
         end
@@ -978,32 +994,42 @@ local function UpdateMaelstromBar()
         for i = 1, MMF_MaelstromBar.mmfMaxRunes or BAR_LAYOUT_DEFAULTS.maelstromBar.maxRunes do
             local rune = MMF_MaelstromBar.runes[i]
             if rune then
-                rune:SetMinMaxValues(0, 1)
-                rune:SetValue(SafeLe(i, stacks) and 1 or 0)
-                rune:SetAlpha(1)
+                SetResourceSegmentValue(rune,i,stacks)
                 rune:Show()
             end
         end
         return
     end
 
-    if not IsElementalSpec() then return end
+    if not IsElementalSpec() then
+        
+        
+        if UnitPowerPercent then
+            local fraction=UnitPowerPercent("player",Enum.PowerType.Mana,false)
+            local count=MMF_MaelstromBar.mmfMaxRunes
+            for i,rune in ipairs(MMF_MaelstromBar.runes) do
+                rune:SetMinMaxValues((i-1)/count,i/count)
+                rune:SetValue(fraction)
+                rune:SetAlpha(1)
+                rune:Show()
+            end
+            if MMF_MaelstromBar.valueText then
+                MMF_MaelstromBar.valueText:SetText(UnitPower("player",Enum.PowerType.Mana))
+                MMF_MaelstromBar.valueText:Show()
+            end
+        end
+        return
+    end
 
-    local powerType = _G.ADDITIONAL_POWER_BAR_INDEX
-    if powerType == nil then
-        powerType = Enum and Enum.PowerType and Enum.PowerType.Maelstrom
-    end
-    if not powerType then
-        powerType = 11
-    end
+    local powerType = Enum and Enum.PowerType and Enum.PowerType.Maelstrom or 11
     local current = 0
     pcall(function()
         current = UnitPower("player", powerType) or 0
     end)
     if MMF_MaelstromBar.valueText then
-        -- Passing the raw value directly avoids arithmetic/string conversion
-        -- on restricted power values while still allowing the UI widget to
-        -- render the current amount.
+        
+        
+        
         MMF_MaelstromBar.valueText:SetText(current)
         MMF_MaelstromBar.valueText:Show()
     end
@@ -1013,15 +1039,19 @@ local function UpdateMaelstromBar()
         maxRunes = 1
     end
 
-    -- Taint-safe update: never do Lua math/comparisons with `current`.
-    -- Each segment maps to a fixed [start, finish] range and consumes the raw value directly.
+    
+    
+    local fraction=UnitPowerPercent and UnitPowerPercent("player",powerType,false)
     for i = 1, maxRunes do
         local rune = MMF_MaelstromBar.runes[i]
         if rune then
-            local segmentStart = (i - 1) * 10
-            local segmentFinish = i * 10
-            rune:SetMinMaxValues(segmentStart, segmentFinish)
-            rune:SetValue(current)
+            if UnitPowerPercent then
+                rune:SetMinMaxValues((i-1)/maxRunes,i/maxRunes)
+                rune:SetValue(fraction)
+            else
+                rune:SetMinMaxValues((i-1)*10,i*10)
+                rune:SetValue(current)
+            end
             rune:SetAlpha(1)
             rune:Show()
         end
@@ -1034,7 +1064,11 @@ local function ShouldShowResourceBar(prefix)
     end
 
     local shouldShow = false
-    if prefix == "runeBar" then
+    local designed=GetDesignerResourceSetting()
+    local classConfig=CLASS_BAR_CONFIG[playerClass]
+    if designed and classConfig and prefix==classConfig.prefix then
+        shouldShow=designed.enabled~=false
+    elseif prefix == "runeBar" then
         shouldShow = playerClass == "DEATHKNIGHT" and MattMinimalFramesDB.showRuneBar == true
     elseif prefix == "holyPowerBar" then
         shouldShow = playerClass == "PALADIN" and MattMinimalFramesDB.showHolyPowerBar == true
@@ -1063,6 +1097,16 @@ local function ShouldShowResourceBar(prefix)
 
     if not shouldShow then
         return false
+    end
+
+    
+    
+    if prefix == "arcaneChargeBar" and not IsArcaneSpec() then return false end
+    if prefix == "chiBar" and not SafeEq(Compat.GetSpecialization(), 3) then return false end
+    if prefix == "maelstromBar" and not (IsElementalSpec() or IsEnhancementSpec()) then return false end
+    if prefix == "comboPointBar" and playerClass == "DRUID" then
+        local _, powerToken = UnitPowerType("player")
+        if not SafeEq(powerToken, "ENERGY") then return false end
     end
 
     if MattMinimalFramesDB.hideCurrentClassBarOOCNoTarget == true then
@@ -1121,6 +1165,8 @@ local function EnsureClassResourceVisibilityEvents()
     classResourceVisibilityEventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
     classResourceVisibilityEventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
     classResourceVisibilityEventFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
+    classResourceVisibilityEventFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
+    classResourceVisibilityEventFrame:RegisterUnitEvent("UNIT_DISPLAYPOWER", "player")
     classResourceVisibilityEventFrame:SetScript("OnEvent", function(_, event)
         if MMF_RefreshClassResourceVisibility then
             MMF_RefreshClassResourceVisibility()
@@ -1178,9 +1224,9 @@ function MMF_RefreshClassResourceVisibility()
     if MMF_MaelstromBar and MMF_MaelstromBar:IsShown() then UpdateMaelstromBar() end
 end
 
---------------------------------------------------
--- LEGACY SCALE API (COMPAT)
---------------------------------------------------
+
+
+
 
 function MMF_UpdateRuneBarScale(scale)
     if MMF_RuneBar then MMF_RuneBar:SetScale(scale) end
@@ -1214,9 +1260,9 @@ function MMF_UpdateMaelstromBarScale(scale)
     if MMF_MaelstromBar then MMF_MaelstromBar:SetScale(scale) end
 end
 
---------------------------------------------------
--- INITIALIZATION
---------------------------------------------------
+
+
+
 
 function MMF_InitializeClassResources()
     EnsureClassResourceVisibilityEvents()
@@ -1243,8 +1289,7 @@ function MMF_InitializeClassResources()
             local frame = CreateHolyPowerBar()
             ApplyLegacyScale(frame, "holyPowerBar")
             frame:Show()
-            frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
-            frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
+            RegisterPlayerPowerEvents(frame, true)
             frame:RegisterEvent("PLAYER_ENTERING_WORLD")
             frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
             frame:RegisterEvent("PLAYER_TALENT_UPDATE")
@@ -1261,7 +1306,7 @@ function MMF_InitializeClassResources()
             local frame = CreateSoulShardBar()
             ApplyLegacyScale(frame, "soulShardBar")
             frame:Show()
-            frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
+            RegisterPlayerPowerEvents(frame, false)
             frame:RegisterEvent("PLAYER_ENTERING_WORLD")
             frame:SetScript("OnEvent", UpdateSoulShardBar)
             UpdateSoulShardBar(frame)
@@ -1271,8 +1316,7 @@ function MMF_InitializeClassResources()
             local frame = CreateChiBar()
             ApplyLegacyScale(frame, "chiBar")
             frame:Show()
-            frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
-            frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
+            RegisterPlayerPowerEvents(frame, true)
             frame:RegisterEvent("PLAYER_ENTERING_WORLD")
             frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
             frame:RegisterEvent("PLAYER_TALENT_UPDATE")
@@ -1288,7 +1332,7 @@ function MMF_InitializeClassResources()
             else
                 frame:Hide()
             end
-            frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
+            RegisterPlayerPowerEvents(frame, false)
             frame:RegisterEvent("PLAYER_ENTERING_WORLD")
             frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
             frame:SetScript("OnEvent", function(self, event)
@@ -1306,8 +1350,7 @@ function MMF_InitializeClassResources()
             local frame = CreateEssenceBar()
             ApplyLegacyScale(frame, "essenceBar")
             frame:Show()
-            frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
-            frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
+            RegisterPlayerPowerEvents(frame, true)
             frame:RegisterEvent("PLAYER_ENTERING_WORLD")
             frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
             frame:RegisterEvent("PLAYER_TALENT_UPDATE")
@@ -1318,7 +1361,7 @@ function MMF_InitializeClassResources()
         if MattMinimalFramesDB and MattMinimalFramesDB.showMaelstromBar == nil then
             MattMinimalFramesDB.showMaelstromBar = true
         end
-        -- Migrate early Maelstrom defaults (too wide) to tighter sizing.
+        
         if MattMinimalFramesDB then
             if MattMinimalFramesDB.maelstromBarWidth == nil or MattMinimalFramesDB.maelstromBarWidth == 30 then
                 MattMinimalFramesDB.maelstromBarWidth = BAR_LAYOUT_DEFAULTS.maelstromBar.width
@@ -1335,8 +1378,7 @@ function MMF_InitializeClassResources()
             else
                 frame:Hide()
             end
-            frame:RegisterUnitEvent("UNIT_POWER_FREQUENT", "player")
-            frame:RegisterUnitEvent("UNIT_MAXPOWER", "player")
+            RegisterPlayerPowerEvents(frame, true)
             frame:RegisterUnitEvent("UNIT_AURA", "player")
             frame:RegisterEvent("PLAYER_ENTERING_WORLD")
             frame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
@@ -1361,4 +1403,30 @@ function MMF_InitializeClassResources()
     if MMF_RefreshClassResourceVisibility then
         MMF_RefreshClassResourceVisibility()
     end
+end
+
+
+function MMF_GetResourceVisualDefinition()
+    local c = CLASS_BAR_CONFIG[playerClass]
+    if not c then return nil end
+    local d = BAR_LAYOUT_DEFAULTS[c.prefix]
+    if not d then return nil end
+    local count=GetVisibleRunes(c.prefix)
+    if type(count)~="number" or (issecretvalue and issecretvalue(count)) then count=d.maxRunes end
+    count=math.max(1,math.min(d.maxRunes,math.floor(count)))
+    local colors={runeBar={.3,.8,1}, holyPowerBar=HOLY_POWER_BASE_COLOR, comboPointBar={1,.8,.2},
+        soulShardBar={.9,.5,1},chiBar={.2,1,.8},arcaneChargeBar={.4,.7,1},essenceBar={1,.5,.7},maelstromBar={0,.44,.87}}
+    local label=c.resourceLabel
+    if c.prefix=="maelstromBar" then
+        label=IsEnhancementSpec() and "Maelstrom Weapon" or IsElementalSpec() and "Maelstrom" or "Mana"
+    end
+    return {prefix=c.prefix,count=count,maxCount=d.maxRunes,color=GetClassBarColor(colors[c.prefix]),
+        label=label,hasText=c.prefix=="maelstromBar",showKey=c.showKey}
+end
+function MMF_CreateResourcePreview(parent)
+    local d=MMF_GetResourceVisualDefinition()
+    if not d then return nil end
+    local frame=CreateBaseResourceBar(nil,d.prefix,d.label,d.color,d.count,0,parent)
+    if d.hasText then CreateResourceValueText(frame) end
+    return frame
 end

@@ -7,7 +7,7 @@ MMF_Config = {
     MAX_AURA_ICONS = 16,
     AURA_ROW_ICONS = 4,
     UPDATE_INTERVAL = 0.1,
-    FONT_PATH = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf",
+    FONT_PATH = MMF_GetDefaultFontPath(),
     TEXTURE_PATH = "Interface\\AddOns\\MattMinimalFrames\\Textures\\Melli.tga",
     SHIELD_TEXTURE_PATH = "Interface\\AddOns\\MattMinimalFrames\\Textures\\shield.tga",
     FRAME_DEFINITIONS = {
@@ -63,9 +63,7 @@ local BACKGROUND = LSM and LSM.MediaType and LSM.MediaType.BACKGROUND or "backgr
 local SOUND = LSM and LSM.MediaType and LSM.MediaType.SOUND or "sound"
 local MMF_STATUSBAR_DEFAULT = "MMF Melli"
 local MMF_FONT_DEFAULT = "MMF Naowh"
-local MMF_FONT_DEFAULT_PATH = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
 local fontApplyToken = 0
-local fontValidationString = nil
 
 local function NormalizeMediaName(value)
     if type(value) ~= "string" then
@@ -76,39 +74,6 @@ local function NormalizeMediaName(value)
         return nil
     end
     return trimmed
-end
-
-local function GetFontValidationString()
-    if fontValidationString then
-        return fontValidationString
-    end
-    local parent = UIParent or _G.UIParent
-    if not parent then
-        return nil
-    end
-    local probe = parent:CreateFontString(nil, "OVERLAY")
-    probe:Hide()
-    fontValidationString = probe
-    return fontValidationString
-end
-
-local function IsUsableFontPath(fontPath)
-    if type(fontPath) ~= "string" or fontPath == "" then
-        return false
-    end
-
-    local probe = GetFontValidationString()
-    if not probe then
-        return false
-    end
-
-    local ok, applied = pcall(probe.SetFont, probe, fontPath, 12, "OUTLINE")
-    if ok and applied ~= false then
-        return true
-    end
-
-    ok, applied = pcall(probe.SetFont, probe, fontPath, 12, "")
-    return ok and applied ~= false
 end
 
 local MMF_STATUSBAR_REGISTRY = {
@@ -178,7 +143,10 @@ local MMF_STATUSBAR_REGISTRY = {
 }
 local MMF_LEGACY_STATUSBAR_ALIASES = {}
 local MMF_FONT_REGISTRY = {
-    { name = MMF_FONT_DEFAULT, path = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf" },
+    { name = "MMF Naowh", path = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf" },
+    { name = "MMF Minimalistic", path = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Minimalistic.ttf" },
+    { name = "MMF Championship", path = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Championship.ttf" },
+    { name = "MMF Game Default", path = MMF_GetDefaultFontPath() },
 }
 local MMF_SOUND_REGISTRY = {
     { name = "MMF Are You Sure", path = "Interface\\AddOns\\MattMinimalFrames\\Sounds\\are-you-sure-about-that.mp3" },
@@ -372,10 +340,10 @@ function MMF_GetIconTextureCoords(mediaKey, mediaType, classToken)
     return nil
 end
 
--- JiberishIcons 1.4.5 hooks Blizzard's UnitFramePortrait_Update and indexes
--- its class table before checking whether UnitClass returned an accessible
--- token. Retail 12.1 can make that token secret. Keep the upstream hook intact
--- for normal updates, but fail closed before its two unsafe class-table reads.
+
+
+
+
 local jiberishPortraitGuardInstalled = false
 
 local function GuardJiberishFrameClass(frame)
@@ -388,8 +356,8 @@ local function GuardJiberishFrameClass(frame)
         return true
     end
 
-    -- Do not leave a previous unit's class art visible while the current unit
-    -- identity is restricted.
+    
+    
     if frame.classIcon and frame.classIcon.Hide then
         frame.classIcon:Hide()
     end
@@ -492,8 +460,8 @@ function MMF_EnsureStatusBarTextureSelection()
         MattMinimalFramesDB.statusBarTexture = selected
     end
 
-    -- Do not clobber a valid user selection just because another addon
-    -- registers its SharedMedia entry later in the loading sequence.
+    
+    
     if LSM and not LSM:IsValid(STATUSBAR, selected) then
         return selected
     end
@@ -502,7 +470,19 @@ function MMF_EnsureStatusBarTextureSelection()
 end
 
 function MMF_GetStatusBarTexturePath()
-    local selected = MMF_EnsureStatusBarTextureSelection and MMF_EnsureStatusBarTextureSelection() or MMF_STATUSBAR_DEFAULT
+    local useOverride = MMF_ShouldOverrideBarTextures and MMF_ShouldOverrideBarTextures()
+    local selected = useOverride
+        and (MMF_EnsureStatusBarTextureSelection and MMF_EnsureStatusBarTextureSelection() or MMF_STATUSBAR_DEFAULT)
+        or MMF_STATUSBAR_DEFAULT
+
+    
+    
+    for _, media in ipairs(MMF_STATUSBAR_REGISTRY) do
+        if media.name == selected then
+            return media.path
+        end
+    end
+
     if LSM then
         local fetched = LSM:Fetch(STATUSBAR, selected, true)
         if fetched then
@@ -516,12 +496,21 @@ function MMF_GetStatusBarTexturePath()
     return MMF_Config.TEXTURE_PATH
 end
 
+function MMF_GetDefaultStatusBarTexturePath()
+    return MMF_Config.TEXTURE_PATH
+end
+
+function MMF_ShouldOverrideBarTextures()
+    return MattMinimalFramesDB and MattMinimalFramesDB.overrideBarTextures == true
+end
+
 function MMF_GetFontOptions()
     local list = {}
     if LSM then
         local names = LSM:List(FONT) or {}
         for _, name in ipairs(names) do
             local normalized = NormalizeMediaName(name)
+            local path = normalized and LSM:Fetch(FONT, normalized, true)
             if normalized then
                 list[#list + 1] = normalized
             end
@@ -541,19 +530,28 @@ function MMF_GetFontOptions()
     return list
 end
 
-function MMF_GetGlobalFontPath()
-    local selected = NormalizeMediaName(MattMinimalFramesDB and MattMinimalFramesDB.globalFont) or MMF_FONT_DEFAULT
+local function GetGlobalFontPathByName(fontName)
+    local selected = NormalizeMediaName(fontName) or MMF_FONT_DEFAULT
+    if selected == "MMF Game Default" then
+        return MMF_GetDefaultFontPath(), true
+    end
     if LSM then
         local fetched = LSM:Fetch(FONT, selected, true)
-        if fetched and IsUsableFontPath(fetched) then
-            return fetched
-        end
-        local fallback = LSM:Fetch(FONT, MMF_FONT_DEFAULT, true)
-        if fallback and IsUsableFontPath(fallback) then
-            return fallback
+        if fetched and MMF_IsFontPathUsable(fetched) then return fetched, true end
+        if fetched then return MMF_GetDefaultFontPath(), true end
+    end
+    for _,media in ipairs(MMF_FONT_REGISTRY) do
+        if media.name==selected then
+            if MMF_IsFontPathUsable(media.path) then return media.path,true end
+            return MMF_GetDefaultFontPath(),true
         end
     end
-    return MMF_FONT_DEFAULT_PATH
+    return MMF_GetDefaultFontPath(), false
+end
+
+function MMF_GetGlobalFontPath()
+    local path = GetGlobalFontPathByName(MattMinimalFramesDB and MattMinimalFramesDB.globalFont)
+    return path
 end
 
 function MMF_GetGlobalTextFontFlags()
@@ -579,21 +577,6 @@ function MMF_ApplyGlobalTextShadow(fontString)
     fontString:SetShadowColor(0, 0, 0, 0.9)
 end
 
-local function GetGlobalFontPathByName(fontName)
-    local selected = NormalizeMediaName(fontName) or MMF_FONT_DEFAULT
-    if LSM then
-        local fetched = LSM:Fetch(FONT, selected, true)
-        if fetched and IsUsableFontPath(fetched) then
-            return fetched, true
-        end
-        local fallback = LSM:Fetch(FONT, MMF_FONT_DEFAULT, true)
-        if fallback and IsUsableFontPath(fallback) then
-            return fallback, false
-        end
-    end
-    return MMF_FONT_DEFAULT_PATH, selected == MMF_FONT_DEFAULT
-end
-
 function MMF_GetGlobalFontPathByName(fontName)
     return GetGlobalFontPathByName(fontName)
 end
@@ -614,8 +597,8 @@ function MMF_SetGlobalFont(fontName)
         MMF_UpdateBlizzardPartyRaidNameFonts()
     end
 
-    -- Some SharedMedia fonts can register slightly later on reload/login.
-    -- Retry briefly so a single selection applies immediately and persists.
+    
+    
     if not matched and C_Timer and C_Timer.After then
         local attempts = 0
         local function RetryApply()
@@ -668,6 +651,7 @@ if LSM and LSM.RegisterCallback then
         if not MattMinimalFramesDB then return end
         local normalizedKey = NormalizeMediaName(mediaKey)
 
+        if mediaType == FONT then MMF_ClearFontCache() end
         if mediaType == FONT and normalizedKey and normalizedKey == NormalizeMediaName(MattMinimalFramesDB.globalFont) then
             MMF_Config.FONT_PATH = MMF_GetGlobalFontPath() or MMF_Config.FONT_PATH
             if MMF_ApplyGlobalFont then
@@ -817,10 +801,10 @@ local function GetCustomBarColor(baseKey, fallbackR, fallbackG, fallbackB)
         ClampColorChannel(MattMinimalFramesDB[baseKey .. "B"], fallbackB)
 end
 
-function MMF_GetUnitColor(unit)
+function MMF_GetUnitColor(unit, sample)
     if not unit then return 1, 1, 1 end
     local isBossUnit = (unit == "boss1" or unit == "boss2" or unit == "boss3" or unit == "boss4" or unit == "boss5")
-    MMF_BossHostileColorMemory = MMF_BossHostileColorMemory or {}
+    if not sample then MMF_BossHostileColorMemory = MMF_BossHostileColorMemory or {} end
     local now = (type(GetTime) == "function" and GetTime()) or 0
     if unit == "target" and MattMinimalFramesDB then
         local mode = tostring(MattMinimalFramesDB.targetBarColorMode or "default"):lower()
@@ -886,9 +870,10 @@ function MMF_GetUnitColor(unit)
             end
         end
     end
-    if UnitIsPlayer(unit) then
+    local isPlayer = sample and sample.isPlayer or (not sample and UnitIsPlayer(unit))
+    if isPlayer then
         local isPlayerUnit = (unit == "player")
-            or SafeUnitIsUnit(unit, "player")
+            or (not sample and SafeUnitIsUnit(unit, "player"))
         if isPlayerUnit and MattMinimalFramesDB then
             local mode = tostring(MattMinimalFramesDB.playerBarColorMode or "class"):lower()
             if mode == "custom" then
@@ -906,6 +891,7 @@ function MMF_GetUnitColor(unit)
             end
         end
         local _, class = UnitClass(unit)
+        if sample then class = sample.class end
         if class and IsNonSecretValue(class) then
             local colors = RAID_CLASS_COLORS[class]
             if colors then
@@ -913,14 +899,15 @@ function MMF_GetUnitColor(unit)
             end
         end
     else
-        local isEnemy = UnitIsEnemy("player", unit)
-        local isFriend = UnitIsFriend("player", unit)
+        local isEnemy = sample and sample.isEnemy or (not sample and UnitIsEnemy("player", unit))
+        local isFriend = sample and sample.isFriend or (not sample and UnitIsFriend("player", unit))
         if isEnemy then
-            if isBossUnit then
+            if isBossUnit and not sample then
                 MMF_BossHostileColorMemory[unit] = now
             end
             return 0.8, 0.2, 0.2
         elseif isBossUnit and (not isFriend) then
+            if sample then return 0.8, 0.2, 0.2 end
             local recentlyHostile = false
             local lastHostileAt = MMF_BossHostileColorMemory[unit]
             if type(lastHostileAt) == "number" and (now - lastHostileAt) <= 1.5 then
@@ -966,8 +953,8 @@ function MMF_ResetSecureAttributes(frame)
     frame:SetAttribute("unit", frame.unit)
     frame:SetAttribute("*type1", "target")
     frame:SetAttribute("*type2", "togglemenu")
-    -- If Retail click-cast moves interaction bindings onto modified clicks
-    -- (e.g. CTRL+Left/Right), block plain Left/Right so click-cast overrides.
+    
+    
     local targetUsesModifier = false
     local menuUsesModifier = false
     if C_ClickBindings and Enum and Enum.ClickBindingType and Enum.ClickBindingInteraction then
@@ -1093,10 +1080,18 @@ local function GetPerUnitTextFormatToggle(unit, suffix, legacyKey, defaultValue)
 end
 
 function MMF_GetShowHPValueText(unit)
+    if MMF_Designer and MMF_Designer.ready then
+        local cfg=MMF_Designer.UnitDesign(MMF_Designer.Key(unit))
+        if cfg and cfg.showHealthValue~=nil then return cfg.showHealthValue end
+    end
     return GetPerUnitTextFormatToggle(unit, "ShowHPValueText", "showHPValueText", true)
 end
 
 function MMF_GetShowHPPercentText(unit)
+    if MMF_Designer and MMF_Designer.ready then
+        local cfg=MMF_Designer.UnitDesign(MMF_Designer.Key(unit))
+        if cfg and cfg.showHealthPercent~=nil then return cfg.showHealthPercent end
+    end
     return GetPerUnitTextFormatToggle(unit, "ShowHPPercentText", "showHPPercentText", false)
 end
 
@@ -1114,9 +1109,9 @@ end
 
 function MMF_GetShowNameLevel(unit)
     if unit == "player" or unit == "target" then
-        -- This is one shared P/T option. Treat either legacy per-unit value as
-        -- enabled so existing profiles that only saved the player flag also
-        -- show the target level immediately.
+        
+        
+        
         return GetPerUnitTextFormatToggle("player", "ShowNameLevel", "showNameLevel", false)
             or GetPerUnitTextFormatToggle("target", "ShowNameLevel", "showNameLevel", false)
     end
@@ -1367,28 +1362,7 @@ local function ForEachUnitFrame(unit, callback)
 end
 
 local function TryApplyFrameFont(region, fontPath, size, flags)
-    if not region then
-        return false
-    end
-    if MMF_SetFontSafe then
-        return MMF_SetFontSafe(region, fontPath, size, flags)
-    end
-    if not region.SetFont then
-        return false
-    end
-
-    local requestedFlags = flags or ""
-    local ok, applied = pcall(region.SetFont, region, fontPath, size, requestedFlags)
-    if ok and applied ~= false then
-        return true
-    end
-    if requestedFlags ~= "" then
-        ok, applied = pcall(region.SetFont, region, fontPath, size, "")
-        if ok and applied ~= false then
-            return true
-        end
-    end
-    return false
+    return MMF_SetFontSafe(region, fontPath, size, flags)
 end
 
 function MMF_UpdateNameTextSize(size, unit)

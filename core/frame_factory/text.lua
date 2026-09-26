@@ -156,11 +156,7 @@ local function CreateNameText(frame, unit)
     local fontSize = MMF_GetNameTextSize(unit)
     local nameX = MMF_GetNameTextXOffset and MMF_GetNameTextXOffset(unit) or 0
     local nameY = MMF_GetNameTextYOffset and MMF_GetNameTextYOffset(unit) or 0
-    if MMF_SetFontSafe then
-        MMF_SetFontSafe(frame.nameText, fontPath, fontSize, fontFlags)
-    else
-        frame.nameText:SetFont(fontPath, fontSize, fontFlags)
-    end
+    MMF_SetFontSafe(frame.nameText, fontPath, fontSize, fontFlags)
     frame.nameText:SetTextColor(1, 1, 1, 1)
     if MMF_ApplyGlobalTextShadow then
         MMF_ApplyGlobalTextShadow(frame.nameText)
@@ -227,25 +223,17 @@ local function CreateResourceText(frame, unit)
     local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
     local hpSize = MMF_GetHPTextSize and MMF_GetHPTextSize(unit) or 13
 
-    -- Match the name text's draw sublevel so the glyph outline stays above
-    -- borders and status-bar artwork on compact frames such as ToT and focus.
+    
+    
     frame.hpText = frame.nameOverlay:CreateFontString(nil, "OVERLAY", nil, 7)
-    if MMF_SetFontSafe then
-        MMF_SetFontSafe(frame.hpText, fontPath, hpSize, fontFlags)
-    else
-        frame.hpText:SetFont(fontPath, hpSize, fontFlags)
-    end
+    MMF_SetFontSafe(frame.hpText, fontPath, hpSize, fontFlags)
     frame.hpText:SetTextColor(1, 1, 1)
     if MMF_ApplyGlobalTextShadow then
         MMF_ApplyGlobalTextShadow(frame.hpText)
     end
 
     frame.powerText = frame.nameOverlay:CreateFontString(nil, "OVERLAY")
-    if MMF_SetFontSafe then
-        MMF_SetFontSafe(frame.powerText, fontPath, 13, fontFlags)
-    else
-        frame.powerText:SetFont(fontPath, 13, fontFlags)
-    end
+    MMF_SetFontSafe(frame.powerText, fontPath, 13, fontFlags)
     frame.powerText:SetTextColor(1, 1, 1)
     if MMF_ApplyGlobalTextShadow then
         MMF_ApplyGlobalTextShadow(frame.powerText)

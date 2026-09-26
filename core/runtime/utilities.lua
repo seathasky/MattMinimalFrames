@@ -16,44 +16,122 @@ local function IsFiniteNumber(value)
     return type(value) == "number" and value == value and value > -math.huge and value < math.huge
 end
 
-local function SafeSetFont(region, fontPath, size, flags)
-    if not region or not region.SetFont then
-        return false
-    end
-    if not IsFiniteNumber(size) or size <= 0 then
-        return false
-    end
 
-    local fallbackPath = "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf"
-    local requestedPath = fontPath
-    if type(requestedPath) ~= "string" or requestedPath == "" then
-        requestedPath = fallbackPath
-    end
 
-    local requestedFlags = flags or ""
-    local ok, applied = pcall(region.SetFont, region, requestedPath, size, requestedFlags)
-    if ok and applied ~= false then
-        return true
-    end
 
-    if requestedFlags ~= "" then
-        ok, applied = pcall(region.SetFont, region, requestedPath, size, "")
-        if ok and applied ~= false then
-            return true
-        end
-    end
+local defaultFontPath
+local rejectedFontPaths = {}
+local usableFontPaths = {}
+local fontValidationString
 
-    ok, applied = pcall(region.SetFont, region, fallbackPath, size, requestedFlags)
-    if ok and applied ~= false then
-        return true
-    end
-
-    ok, applied = pcall(region.SetFont, region, fallbackPath, size, "")
-    return ok and applied ~= false
+local function FontPathKey(path)
+    if type(path) ~= "string" then return nil end
+    return path:gsub("\\", "/"):lower()
 end
 
-function MMF_SetFontSafe(region, fontPath, size, flags)
-    return SafeSetFont(region, fontPath, size, flags)
+function MMF_GetDefaultFontPath()
+    if defaultFontPath then return defaultFontPath end
+    for _, name in ipairs({"GameFontNormal", "GameFontHighlight", "GameFontHighlightSmall"}) do
+        local font = _G[name]
+        if font and type(font.GetFont) == "function" then
+            local ok, path = pcall(font.GetFont, font)
+            if ok and type(path) == "string" and path ~= "" then
+                defaultFontPath = path
+                return path
+            end
+        end
+    end
+    defaultFontPath = STANDARD_TEXT_FONT or "Fonts\\FRIZQT__.TTF"
+    return defaultFontPath
+end
+
+function MMF_IsLegacyBundledFontPath(path)
+    local key = FontPathKey(path)
+    return key and key:match("^interface/addons/mattminimalframes/fonts/") ~= nil or false
+end
+
+function MMF_ClearFontCache()
+    wipe(rejectedFontPaths)
+    wipe(usableFontPaths)
+end
+
+function MMF_ResolveFontPath(path)
+    path = NormalizeMediaName(path)
+    local bundled={ ["MMF Naowh"]="Naowh", ["MMF Minimalistic"]="Minimalistic", ["MMF Championship"]="Championship" }
+    if bundled[path] then path="Interface\\AddOns\\MattMinimalFrames\\Fonts\\"..bundled[path]..".ttf" end
+    if not path or path == "MMF Game Default" or rejectedFontPaths[FontPathKey(path)] then
+        return MMF_GetDefaultFontPath(), false
+    end
+    return path, true
+end
+
+local function CurrentFont(region)
+    if not region or type(region.GetFont) ~= "function" then return nil end
+    local ok, path, size = pcall(region.GetFont, region)
+    if ok and type(path) == "string" and path ~= "" and IsFiniteNumber(size) and size > 0 then
+        return path, size
+    end
+end
+
+
+
+local function SafeSetFont(region, fontPath, size, flags, rawSetter)
+    if not region or type(region.SetFont) ~= "function"
+        or not IsFiniteNumber(size) or size <= 0 then return false end
+    if not rawSetter and region.mmfDesignerInfo and MMF_Designer and not MMF_Designer.capturing then
+        return CurrentFont(region) ~= nil
+    end
+
+    local setter = rawSetter or region.SetFont
+    local requestedPath, exact = MMF_ResolveFontPath(fontPath)
+    local fallbackPath = MMF_GetDefaultFontPath()
+    local requestedFlags = type(flags) == "string" and flags or ""
+    local function Try(path, style)
+        local ok, result = pcall(setter, region, path, size, style)
+        if not ok or result == false then return false end
+        
+        
+        local actual, actualSize = CurrentFont(region)
+        return FontPathKey(actual) == FontPathKey(path)
+            and actualSize ~= nil and math.abs(actualSize - size) < 0.05
+    end
+    if Try(requestedPath, requestedFlags) or (requestedFlags ~= "" and Try(requestedPath, "")) then
+        usableFontPaths[FontPathKey(requestedPath)] = true
+        return true, exact
+    end
+    if FontPathKey(requestedPath) ~= FontPathKey(fallbackPath) then
+        
+        
+        rejectedFontPaths[FontPathKey(requestedPath)] = true
+        usableFontPaths[FontPathKey(requestedPath)] = nil
+        if Try(fallbackPath, requestedFlags) or (requestedFlags ~= "" and Try(fallbackPath, "")) then
+            return true, false
+        end
+    end
+    local fallbackObject = GameFontNormal or GameFontHighlight
+    if fallbackObject and type(region.SetFontObject) == "function" then
+        local ok = pcall(region.SetFontObject, region, fallbackObject)
+        if ok and CurrentFont(region) then return true, false end
+    end
+    return CurrentFont(region) ~= nil, false
+end
+
+function MMF_SetFontSafe(region, fontPath, size, flags, rawSetter)
+    return SafeSetFont(region, fontPath, size, flags, rawSetter)
+end
+
+function MMF_IsFontPathUsable(path)
+    local resolved, exact = MMF_ResolveFontPath(path)
+    if not exact then return false end
+    local key = FontPathKey(resolved)
+    if key == FontPathKey(MMF_GetDefaultFontPath()) or usableFontPaths[key] then return true end
+    if not fontValidationString then
+        if not UIParent then return false end
+        fontValidationString = UIParent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+        fontValidationString:Hide()
+    end
+    local applied, matched = SafeSetFont(fontValidationString, resolved, 12, "")
+    return applied and matched == true
 end
 
 function MMF_ClampGUIScale(value)
@@ -61,13 +139,13 @@ function MMF_ClampGUIScale(value)
     if not IsFiniteNumber(scale) then
         return 1.0
     end
-    if scale < 0.5 then
-        return 0.5
+    if scale < 0.1 then
+        return 0.1
     end
     if scale > 1.5 then
         return 1.5
     end
-    return math.floor(scale * 10 + 0.5) / 10
+    return math.floor(scale * 100 + 0.5) / 100
 end
 
 function MMF_AddEditModeHighlight(frame, name)
@@ -94,9 +172,9 @@ function MMF_ShowFrame(frame, parent)
     end
 end
 
---------------------------------------------------
--- ALIGNMENT GRID
---------------------------------------------------
+
+
+
 
 local alignmentGrid = nil
 
@@ -115,7 +193,7 @@ function MMF_ToggleAlignmentGrid(show)
         local sw, sh = UIParent:GetWidth(), UIParent:GetHeight()
         local sp = 25
 
-        -- Center crosshair
+        
         local cv = alignmentGrid:CreateTexture(nil, "OVERLAY")
         cv:SetColorTexture(0.784, 0.271, 0.980, 0.5)
         cv:SetSize(2, sh)
@@ -126,7 +204,7 @@ function MMF_ToggleAlignmentGrid(show)
         ch:SetSize(sw, 2)
         ch:SetPoint("CENTER", alignmentGrid, "CENTER", 0, 0)
 
-        -- Grid lines radiating from center 
+        
         for i = 1, math.floor(sw / sp / 2) do
             local off = i * sp
             local r = alignmentGrid:CreateTexture(nil, "ARTWORK")
@@ -155,11 +233,16 @@ function MMF_ToggleAlignmentGrid(show)
     alignmentGrid:Show()
 end
 
---------------------------------------------------
--- STATUSBAR TEXTURE
---------------------------------------------------
+
+
+
 
 function MMF_ApplyStatusBarTexture()
+    
+    
+    if not (MMF_ShouldOverrideBarTextures and MMF_ShouldOverrideBarTextures()) then
+        return
+    end
     local texturePath = MMF_GetStatusBarTexturePath and MMF_GetStatusBarTexturePath()
     if not texturePath then return end
 
@@ -168,9 +251,11 @@ function MMF_ApplyStatusBarTexture()
         if frame then
             if frame.healthBar then
                 frame.healthBar:SetStatusBarTexture(texturePath)
+                frame.healthBarFG = frame.healthBar:GetStatusBarTexture()
             end
             if frame.powerBar then
                 frame.powerBar:SetStatusBarTexture(texturePath)
+                frame.powerBarFG = frame.powerBar:GetStatusBarTexture()
             end
             if frame.secondaryPowerBar then
                 frame.secondaryPowerBar:SetStatusBarTexture(texturePath)
@@ -181,6 +266,18 @@ function MMF_ApplyStatusBarTexture()
             end
             if frame.otherHealPrediction then
                 frame.otherHealPrediction:SetStatusBarTexture(texturePath)
+            end
+            if frame.healAbsorbBar then
+                frame.healAbsorbBar:SetStatusBarTexture(texturePath)
+            end
+            if frame.absorbBar then
+                frame.absorbBar:SetStatusBarTexture(texturePath)
+                local absorbTexture = frame.absorbBar:GetStatusBarTexture()
+                if absorbTexture then
+                    absorbTexture:SetHorizTile(false)
+                    absorbTexture:SetVertTile(false)
+                    absorbTexture:SetTexCoord(0, 1, 0, 1)
+                end
             end
             if frame.castBar then
                 frame.castBar:SetStatusBarTexture(texturePath)
@@ -215,6 +312,10 @@ function MMF_SetStatusBarTexture(textureName)
     if not textureName then return end
     if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
     MattMinimalFramesDB.statusBarTexture = textureName
+    
+    
+    
+    MattMinimalFramesDB.overrideBarTextures = true
     MMF_ApplyStatusBarTexture()
 end
 
@@ -422,9 +523,9 @@ function MMF_ApplyHealthBarBorderStyle()
     end
 end
 
---------------------------------------------------
--- GLOBAL FONT
---------------------------------------------------
+
+
+
 
 local function ApplyFontToPopupTree(frame, fontPath)
     if not frame or not fontPath then return end
@@ -542,21 +643,12 @@ function MMF_ApplyGlobalFont()
                 end
             end
             if frame.castBarFrame and MMF_ApplyCastBarPosition then
+                
+                
+                frame.mmfAppliedCastBarLayout = nil
                 MMF_ApplyCastBarPosition(frame, unit)
             elseif MMF_RefreshCastBarTextLayer and (frame.castBarText or frame.castBarTime) then
                 MMF_RefreshCastBarTextLayer(frame)
-            end
-            if frame.moveHint then
-                SafeSetFont(frame.moveHint, fontPath, 10, fontFlags)
-                if MMF_ApplyGlobalTextShadow then
-                    MMF_ApplyGlobalTextShadow(frame.moveHint)
-                end
-            end
-            if frame.moveSubtext then
-                SafeSetFont(frame.moveSubtext, fontPath, 9, fontFlags)
-                if MMF_ApplyGlobalTextShadow then
-                    MMF_ApplyGlobalTextShadow(frame.moveSubtext)
-                end
             end
             if frame.pvpFlagText then
                 SafeSetFont(frame.pvpFlagText, fontPath, 10, fontFlags)

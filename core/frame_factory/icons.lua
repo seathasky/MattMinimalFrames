@@ -3,6 +3,10 @@ local function IsNonSecretValue(value)
 end
 
 local function GetPlayerFrameIconMode()
+    if MMF_Designer and MMF_Designer.ready then
+        local cfg=MMF_Designer.ElementDesign("player","portrait")
+        return cfg.enabled~=false and (cfg.iconMode or "class") or "off"
+    end
     local mode = MattMinimalFramesDB and MattMinimalFramesDB.playerFrameIconMode or nil
     if mode == "sharedmedia" and MattMinimalFramesDB and MattMinimalFramesDB.playerFrameIconMediaType == "jiberish" then
         return "jiberish"
@@ -20,6 +24,10 @@ local function GetPlayerFrameIconMode()
 end
 
 local function GetTargetFrameIconMode()
+    if MMF_Designer and MMF_Designer.ready then
+        local cfg=MMF_Designer.ElementDesign("target","portrait")
+        return cfg.enabled~=false and (cfg.iconMode or "class") or "off"
+    end
     local mode = MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconMode or nil
     if mode == "sharedmedia" and MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconMediaType == "jiberish" then
         return "jiberish"
@@ -275,12 +283,13 @@ local function ApplyPlayerFrameIconMode(frame, mode)
     icon:Show()
 end
 
-local function ApplyTargetFrameIconMode(frame, mode)
+local function ApplyTargetFrameIconMode(frame, mode, sourceUnit)
     if not frame or not frame.targetIcon then return end
 
     ApplyFrameIconPlacement(frame)
     mode = mode or GetTargetFrameIconMode()
     local icon = frame.targetIcon
+    sourceUnit = sourceUnit or "target"
     if mode == "off" then
         icon:Hide()
         if frame.portraitModel then
@@ -293,7 +302,7 @@ local function ApplyTargetFrameIconMode(frame, mode)
         frame.portraitModel:Hide()
     end
 
-    if not UnitExists("target") then
+    if not UnitExists(sourceUnit) then
         icon:Hide()
         if frame.portraitModel then
             frame.portraitModel:Hide()
@@ -303,19 +312,19 @@ local function ApplyTargetFrameIconMode(frame, mode)
 
     if mode == "portrait_animated" then
         icon:Hide()
-        ApplyAnimatedPortrait(frame, "target")
+        ApplyAnimatedPortrait(frame, sourceUnit)
         return
     end
 
     if mode == "portrait" or mode == "portrait_zoomed" or mode == "portrait_more_zoomed" then
-        ApplyUnitPortrait(icon, "target", mode)
+        ApplyUnitPortrait(icon, sourceUnit, mode)
         return
     end
 
     if mode == "sharedmedia" or mode == "jiberish" then
         local mediaKey = (MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconStyle) or (MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconMediaKey)
         local mediaType = (mode == "jiberish" and "jiberish") or (MattMinimalFramesDB and MattMinimalFramesDB.targetFrameIconMediaType) or "jiberish"
-        local _, classToken = UnitClass("target")
+        local _, classToken = UnitClass(sourceUnit)
         if IsNonSecretValue(classToken) and ApplySharedMediaIconTexture(icon, mediaKey, mediaType, classToken) then
             return
         end
@@ -323,8 +332,8 @@ local function ApplyTargetFrameIconMode(frame, mode)
         return
     end
 
-    if UnitIsPlayer("target") then
-        local _, classFile = UnitClass("target")
+    if UnitIsPlayer(sourceUnit) then
+        local _, classFile = UnitClass(sourceUnit)
         local coords = IsNonSecretValue(classFile) and classFile and CLASS_ICON_TCOORDS and CLASS_ICON_TCOORDS[classFile]
         if coords then
             icon:SetTexture("Interface\\GLUES\\CHARACTERCREATE\\UI-CHARACTERCREATE-CLASSES")
@@ -375,6 +384,9 @@ local function CreateTargetFrameIcon(frame)
 end
 
 _G.MMF_FrameFactoryIcons = {
+    ApplyUnitPortrait = ApplyUnitPortrait,
+    ApplyAnimatedPortrait = ApplyAnimatedPortrait,
+    ApplyClassCoords = ApplyClassCoords,
     GetPlayerFrameIconMode = GetPlayerFrameIconMode,
     GetTargetFrameIconMode = GetTargetFrameIconMode,
     ClampIconOffset = ClampIconOffset,

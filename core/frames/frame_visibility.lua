@@ -98,7 +98,7 @@ local function EnsureVisibilityHooks(frame, unit)
         local inCombat = (type(InCombatLockdown) == "function") and InCombatLockdown() or false
         local alpha = MMF_GetCombatVisibilityBaseAlphaForUnit and MMF_GetCombatVisibilityBaseAlphaForUnit(unit) or 1
 
-        -- Target/TOT should be instant in combat, but fade outside combat.
+        
         if inCombat and IsTargetLikeUnit(unit) and alpha >= 1 then
             StopAlphaDriver(self)
             self:SetAlpha(alpha)
@@ -107,7 +107,7 @@ local function EnsureVisibilityHooks(frame, unit)
 
         if MMF_GetCombatVisibilityFadeTime then
             local fade = MMF_GetCombatVisibilityFadeTime()
-            -- Out of combat, prime from hidden alpha so target reveal fades in.
+            
             self:SetAlpha(0)
             MMF_SetAlphaSmooth(self, alpha, fade)
         else
@@ -146,8 +146,8 @@ local function EnsureVisibilityHooks(frame, unit)
             fade = 0
         end
 
-        -- RegisterUnitWatch hides target/TOT instantly when the unit disappears.
-        -- Suspend it briefly so we can complete the out-of-combat fade-out.
+        
+        
         SuspendUnitWatch(self)
         self.mmfOOCFadeOutActive = true
 
@@ -471,8 +471,8 @@ local function ApplyBossFrameVisibility()
                 frame.mmfSuppressCombatVisibilityOnShow = true
                 frame:Hide()
             elseif revealHiddenFrames then
-                -- Keep unit watch suspended in preview/edit mode so boss frames
-                -- do not auto-hide when no live boss unit exists.
+                
+                
                 SuspendUnitWatch(frame)
                 StopAlphaDriver(frame)
                 frame:SetAlpha(1)
@@ -480,14 +480,15 @@ local function ApplyBossFrameVisibility()
                 frame:Show()
             else
                 ResumeUnitWatch(frame)
-                -- Let RegisterUnitWatch control live boss visibility.
-                -- Forcing show/hide on every event can fight UnitWatch and cause flicker.
+                
+                
             end
         end
     end
 end
 
 function MMF_UpdateCombatFrameVisibility()
+    if MMF_Designer and MMF_Designer.ready and MMF_Designer.UpdateVisibility then return MMF_Designer.UpdateVisibility() end
     if ShouldSuspendForBlizzardEditMode() then
         return
     end
@@ -540,7 +541,7 @@ function MMF_UpdateCombatFrameVisibility()
             return
         end
 
-        -- Entering combat should immediately reveal target/TOT only.
+        
         if inCombat and (unit == "target" or unit == "targettarget") and alpha >= 1 then
             StopAlphaDriver(frame)
             frame:SetAlpha(alpha)

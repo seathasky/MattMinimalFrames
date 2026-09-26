@@ -99,7 +99,7 @@ local function IsUnitInRange(unit)
         return false
     end
 
-    -- Self-target can be represented as "target"; never treat self as out of range.
+    
     if unit == "player" or (UnitIsUnit and NormalizeBooleanResult(SafeCall(UnitIsUnit, unit, "player")) == true) then
         return true
     end
@@ -127,7 +127,7 @@ local function IsUnitInRange(unit)
         end
     end
 
-    -- Avoid protected-function taint in combat; this fallback is optional.
+    
     local inCombat = InCombatLockdown and NormalizeBooleanResult(SafeCall(InCombatLockdown)) == true
     if CheckInteractDistance and not inCombat then
         local interact = SafeCall(CheckInteractDistance, unit, 4)
@@ -137,7 +137,7 @@ local function IsUnitInRange(unit)
         end
     end
 
-    -- If no API can determine range for this unit type, avoid false dimming.
+    
     return true
 end
 
@@ -150,6 +150,7 @@ local function UpdateFrameRange(frame, unit)
         return
     end
     if not frame then return end
+    if frame.IsShown and not frame:IsShown() then return end
     if frame.mmfOOCFadeOutActive then
         return
     end
@@ -186,8 +187,8 @@ local function UpdateFrameRange(frame, unit)
         return
     end
 
-    -- When combat visibility is enabled for target/TOT, let that system
-    -- fully control alpha behavior so it matches player-style fades.
+    
+    
     if useCombatVisibilityFade then
         local targetAlpha = baseAlpha
         local currentAlpha = frame:GetAlpha()
@@ -223,7 +224,7 @@ local function UpdateFrameRange(frame, unit)
     local currentAlpha = frame:GetAlpha()
 
     if currentAlpha ~= targetAlpha then
-        -- Match combat visibility behavior: reveal instantly on combat entry.
+        
         if useCombatVisibilityFade and inCombat and targetAlpha >= 1 then
             if MMF_StopAlphaDriver then
                 MMF_StopAlphaDriver(frame)
@@ -317,9 +318,7 @@ end
 local eventFrame = CreateFrame("Frame")
 eventFrame:RegisterEvent("PLAYER_LOGIN")
 eventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
-eventFrame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED")
 eventFrame:RegisterEvent("SPELLS_CHANGED")
-eventFrame:RegisterEvent("UNIT_AURA")
 eventFrame:RegisterEvent("PLAYER_FOCUS_CHANGED")
 eventFrame:RegisterEvent("UNIT_TARGET")
 
@@ -337,24 +336,30 @@ eventFrame:SetScript("OnEvent", function(_, event, unit)
 
     if event == "PLAYER_TARGET_CHANGED" or
        event == "PLAYER_FOCUS_CHANGED" or
-       event == "UNIT_TARGET" or
-       unit == "target" or
-       unit == "focus" or
-       unit == "targettarget" then
+       event == "SPELLS_CHANGED" or
+       (event == "UNIT_TARGET" and unit == "target") then
         UpdateAllFrames()
         C_Timer.After(0.1, UpdateAllFrames)
     end
 end)
 
-local updateThrottle = 0
-local rangeUpdater = CreateFrame("Frame")
-rangeUpdater:SetScript("OnUpdate", function(_, elapsed)
+local function PollRangeFrames()
     if ShouldSuspendForBlizzardEditMode() then
         return
     end
-    updateThrottle = updateThrottle + elapsed
-    if updateThrottle >= 0.2 then
-        updateThrottle = 0
-        UpdateAllFrames()
-    end
-end)
+    UpdateAllFrames()
+end
+
+if C_Timer and type(C_Timer.NewTicker) == "function" then
+    eventFrame.mmfRangeTicker = C_Timer.NewTicker(0.2, PollRangeFrames)
+else
+    local updateThrottle = 0
+    local rangeUpdater = CreateFrame("Frame")
+    rangeUpdater:SetScript("OnUpdate", function(_, elapsed)
+        updateThrottle = updateThrottle + elapsed
+        if updateThrottle >= 0.2 then
+            updateThrottle = 0
+            PollRangeFrames()
+        end
+    end)
+end

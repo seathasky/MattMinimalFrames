@@ -47,8 +47,8 @@ local function ApplyFramePosition(frame, frameName, unit, defaultPoint, defaultR
 
     frame:ClearAllPoints()
 
-    -- Migration safety: preserve existing legacy saved positions until they are
-    -- explicitly replaced (drag/reset/center-slider flows clear legacy keys).
+    
+    
     if hasLegacyPosition then
         frame:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", pos.left, pos.top)
         return

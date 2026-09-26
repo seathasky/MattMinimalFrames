@@ -81,7 +81,7 @@ local function NormalizeLegacyHPTextPosition(db)
     if type(db) ~= "table" then return end
     if db.hpTextPositionMigrated then return end
     db.hpTextPositionMigrated = true
-    -- Default Y shifted from -14.5 to 8 (inside the frame). Shift any saved positions by the same delta.
+    
     local delta = 22.5
     local positions = db.hpTextPositions
     if type(positions) == "table" then
@@ -103,7 +103,7 @@ local function NormalizeLegacyPowerBarDefaults(db)
         db.playerPowerBarHeight = 3
         db.showPlayerPowerText = true
         db.colorPlayerPowerTextByResource = true
-        -- Reset saved bar/text positions so they pick up the new attached-bottom defaults
+        
         if type(db.powerBarPositions) == "table" then
             db.powerBarPositions["player"] = nil
         end
@@ -117,7 +117,7 @@ local function NormalizeLegacyPowerBarDefaults(db)
         db.showTargetPowerBar = true
         db.targetPowerBarWidth = 218
         db.targetPowerBarHeight = 3
-        -- Reset the old short bar position so target uses the attached-bottom default.
+        
         if type(db.powerBarPositions) == "table" then
             db.powerBarPositions["target"] = nil
         end

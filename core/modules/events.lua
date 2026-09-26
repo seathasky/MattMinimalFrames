@@ -84,7 +84,7 @@ local function ApplyPetActionBarDefaultLayout(frame)
         return
     end
 
-    -- Retail (and newer Classic action bars) provide Blizzard's grid layout.
+    
     if type(frame.UpdateGridLayout) == "function" then
         frame.numRows = PET_ACTION_BAR_ROWS
         frame.isHorizontal = true
@@ -93,8 +93,8 @@ local function ApplyPetActionBarDefaultLayout(frame)
         return
     end
 
-    -- TBC Anniversary and Classic Era use the legacy PetActionBarFrame and
-    -- globally named buttons, so reproduce Retail's five-by-two grid directly.
+    
+    
     local buttons = {}
     for index = 1, PET_ACTION_BAR_ROWS * PET_ACTION_BAR_COLUMNS do
         local button = _G["PetActionButton" .. index]
@@ -189,6 +189,7 @@ local function SavePetFrameHappinessPosition(frame)
 end
 
 local function ApplyPetFrameHappinessPosition(frame)
+    if MMF_Designer and MMF_Designer.ready then return end
     if not frame or not frame.petHappinessDragFrame then
         return
     end
@@ -222,27 +223,9 @@ local function EnsurePetFrameHappinessIcon()
         return frame.petHappinessDragFrame
     end
 
-    local dragFrame = CreateFrame("Frame", nil, frame)
-    dragFrame:SetSize(PET_HAPPINESS_BASE_SIZE, PET_HAPPINESS_BASE_SIZE)
-    dragFrame:SetMovable(true)
-    dragFrame:EnableMouse(false)
-    dragFrame:RegisterForDrag("LeftButton")
-    dragFrame:SetFrameStrata(frame:GetFrameStrata() or "MEDIUM")
-    dragFrame:SetFrameLevel((frame:GetFrameLevel() or 0) + 40)
-
-    local icon = dragFrame:CreateTexture(nil, "ARTWORK")
-    icon:SetAllPoints()
-    icon:SetTexture("Interface\\PetPaperDollFrame\\UI-PetHappiness")
-    do
-        local left, right, top, bottom = GetInsetTexCoord(PET_HAPPINESS_TEX_COORDS[3])
-        icon:SetTexCoord(left, right, top, bottom)
-    end
-
-    local border = dragFrame:CreateTexture(nil, "BORDER")
-    border:SetPoint("TOPLEFT", dragFrame, "TOPLEFT", -1, 1)
-    border:SetPoint("BOTTOMRIGHT", dragFrame, "BOTTOMRIGHT", 1, -1)
-    border:SetColorTexture(0, 0, 0, 1)
-
+    local dragFrame=MMF_ExtraVisuals.CreateHappiness(frame)
+    local icon,border=frame.petHappinessIcon,frame.petHappinessBorder
+    dragFrame:SetMovable(true);dragFrame:RegisterForDrag("LeftButton")
     dragFrame:SetScript("OnDragStart", function(self)
         if InCombatLockdown and InCombatLockdown() then
             return
@@ -302,13 +285,7 @@ local function UpdatePetFrameHappinessIcon(forceVisibleInEditMode)
     local getPetHappiness = rawget(_G, "GetPetHappiness")
     local happiness = getPetHappiness and getPetHappiness() or nil
     local coords = PET_HAPPINESS_TEX_COORDS[happiness]
-    if coords then
-        local left, right, top, bottom = GetInsetTexCoord(coords)
-        icon:SetTexCoord(left, right, top, bottom)
-    else
-        local left, right, top, bottom = GetInsetTexCoord(PET_HAPPINESS_TEX_COORDS[3])
-        icon:SetTexCoord(left, right, top, bottom)
-    end
+    MMF_ExtraVisuals.Happiness(icon,happiness)
 
     local editMode = MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
     local shouldShow = hasPet and coords ~= nil
@@ -322,7 +299,7 @@ local function UpdatePetFrameHappinessIcon(forceVisibleInEditMode)
     dragFrame:SetShown(shouldShow)
 
     local canDrag = editMode and not (MattMinimalFramesDB and MattMinimalFramesDB.enableTextDragInEditMode == true)
-    dragFrame:EnableMouse(canDrag)
+    dragFrame:EnableMouse(canDrag and not (MMF_Designer and MMF_Designer.ready))
 end
 
 local function SavePetActionBarPosition(frame)
@@ -371,7 +348,7 @@ local function EnsurePetActionBarEditBackdrop(frame)
     backdrop:RegisterForDrag("LeftButton")
 
     local title = backdrop:CreateFontString(nil, "OVERLAY")
-    title:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 11, "")
+    MMF_SetFontSafe(title, MMF_GetDefaultFontPath(), 11, "")
     title:SetPoint("BOTTOM", backdrop, "TOP", 0, 2)
     title:SetTextColor(1, 1, 1)
     title:SetText("Pet Ability Bar")
@@ -474,6 +451,7 @@ local function EnsurePetActionBarMover()
 end
 
 function MMF_UpdatePetActionBarEditMode()
+    if MMF_Designer then return end 
     local frame = GetPetActionBarFrame()
     local editMode = MattMinimalFramesDB and MattMinimalFramesDB.unlockFramesEditMode == true
     if not frame then
@@ -504,6 +482,7 @@ function MMF_UpdatePetActionBarEditMode()
 end
 
 function MMF_ApplyPetActionBarPosition()
+    if MMF_Designer then return end 
     EnsurePetActionBarMover()
     ApplyPetActionBarSavedPosition()
     UpdatePetFrameHappinessIcon(false)
@@ -523,9 +502,9 @@ function MMF_GetPetFrameHappinessDefaultCenterOffset()
     return GetPetFrameHappinessDefaultOffset()
 end
 
---------------------------------------------------
--- FRAME LOCKING
---------------------------------------------------
+
+
+
 
 local function SetUnitWatchState(frame, enabled)
     if not frame then
@@ -546,8 +525,9 @@ local function SetUnitWatchState(frame, enabled)
     end
 end
 
--- Patches mouse over fix here
+
 local function ApplyTextMouseState(frame, locked)
+    if MMF_Designer then locked=true end
     if not frame then
         return
     end
@@ -628,6 +608,7 @@ local function ApplyFrameLockState(locked)
 end
 
 function MMF_RefreshFrameLockState()
+    if MMF_Designer and MMF_Designer.ready then return MMF_Designer.UpdateVisibility() end
     if IsEditModeActive() and MattMinimalFramesDB then
         MattMinimalFramesDB.locked = false
     end
@@ -644,6 +625,7 @@ function MMF_RefreshFrameLockState()
 end
 
 function MMF_SetEditMode(enabled)
+    if MMF_Designer and MMF_Designer.ready then return MMF_Designer.SetMoveMode(enabled) end
     if not MattMinimalFramesDB then
         MattMinimalFramesDB = {}
     end
@@ -678,6 +660,7 @@ function MMF_SetEditMode(enabled)
 end
 
 function MMF_LockFrames()
+    if MMF_Designer and MMF_Designer.ready then return MMF_Designer.UpdateVisibility() end
     if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
 
     if IsEditModeActive() then
@@ -708,6 +691,7 @@ function MMF_LockFrames()
 end
 
 function MMF_UnlockFrames()
+    if MMF_Designer and MMF_Designer.ready then return MMF_Designer.UpdateVisibility() end
     if not MattMinimalFramesDB then MattMinimalFramesDB = {} end
 
     if IsEditModeActive() then
@@ -737,9 +721,9 @@ function MMF_UnlockFrames()
     ApplyFrameLockState(false)
 end
 
---------------------------------------------------
--- CORE EVENT HANDLER
---------------------------------------------------
+
+
+
 
 local function RequestUnitUpdate(unit)
     if MMF_RequestUnitUpdate then
@@ -808,6 +792,9 @@ local function ClearTargetOfTargetTransientVisuals()
     end
     if frame.nameText then
         frame.nameText:SetText("")
+        frame.mmfCachedNameText = nil
+        frame.mmfNameTextCacheSet = nil
+        frame.mmfNameResizeCache = nil
     end
     if frame.hpText then
         frame.hpText:SetText("")
@@ -873,42 +860,42 @@ local function SafeRegisterEvent(frame, eventName)
     local ok = pcall(frame.RegisterEvent, frame, eventName)
     return ok
 end
-coreEventFrame:RegisterEvent("PLAYER_REGEN_ENABLED")
-coreEventFrame:RegisterEvent("PLAYER_REGEN_DISABLED")
-coreEventFrame:RegisterEvent("UNIT_HEALTH")
+SafeRegisterEvent(coreEventFrame, "PLAYER_REGEN_ENABLED")
+SafeRegisterEvent(coreEventFrame, "PLAYER_REGEN_DISABLED")
+SafeRegisterEvent(coreEventFrame, "UNIT_HEALTH")
 if Compat and Compat.IsTBC == true then
-    coreEventFrame:RegisterEvent("UNIT_MAXHEALTH")
+    SafeRegisterEvent(coreEventFrame, "UNIT_MAXHEALTH")
 end
-coreEventFrame:RegisterEvent("UNIT_AURA")
-coreEventFrame:RegisterEvent("UNIT_POWER_UPDATE")
-coreEventFrame:RegisterEvent("UNIT_POWER_FREQUENT")
-coreEventFrame:RegisterEvent("UNIT_MAXPOWER")
-coreEventFrame:RegisterEvent("UNIT_POWER_BAR_HIDE")
-coreEventFrame:RegisterEvent("UNIT_POWER_BAR_SHOW")
-coreEventFrame:RegisterEvent("PLAYER_ALIVE")
-coreEventFrame:RegisterEvent("PLAYER_DEAD")
-coreEventFrame:RegisterEvent("PLAYER_ENTERING_WORLD")
-coreEventFrame:RegisterEvent("PLAYER_UPDATE_RESTING")
-coreEventFrame:RegisterEvent("UNIT_NAME_UPDATE")
-coreEventFrame:RegisterEvent("PLAYER_TARGET_CHANGED")
-coreEventFrame:RegisterEvent("PLAYER_FOCUS_CHANGED")
-coreEventFrame:RegisterEvent("UNIT_DISPLAYPOWER")
-coreEventFrame:RegisterEvent("UPDATE_SHAPESHIFT_FORM")
-coreEventFrame:RegisterEvent("PLAYER_SPECIALIZATION_CHANGED")
-coreEventFrame:RegisterEvent("UNIT_PET")
+SafeRegisterEvent(coreEventFrame, "UNIT_AURA")
+SafeRegisterEvent(coreEventFrame, "UNIT_POWER_UPDATE")
+SafeRegisterEvent(coreEventFrame, "UNIT_POWER_FREQUENT")
+SafeRegisterEvent(coreEventFrame, "UNIT_MAXPOWER")
+SafeRegisterEvent(coreEventFrame, "UNIT_POWER_BAR_HIDE")
+SafeRegisterEvent(coreEventFrame, "UNIT_POWER_BAR_SHOW")
+SafeRegisterEvent(coreEventFrame, "PLAYER_ALIVE")
+SafeRegisterEvent(coreEventFrame, "PLAYER_DEAD")
+SafeRegisterEvent(coreEventFrame, "PLAYER_ENTERING_WORLD")
+SafeRegisterEvent(coreEventFrame, "PLAYER_UPDATE_RESTING")
+SafeRegisterEvent(coreEventFrame, "UNIT_NAME_UPDATE")
+SafeRegisterEvent(coreEventFrame, "PLAYER_TARGET_CHANGED")
+SafeRegisterEvent(coreEventFrame, "PLAYER_FOCUS_CHANGED")
+SafeRegisterEvent(coreEventFrame, "UNIT_DISPLAYPOWER")
+SafeRegisterEvent(coreEventFrame, "UPDATE_SHAPESHIFT_FORM")
+SafeRegisterEvent(coreEventFrame, "PLAYER_SPECIALIZATION_CHANGED")
+SafeRegisterEvent(coreEventFrame, "UNIT_PET")
 SafeRegisterEvent(coreEventFrame, "UNIT_HAPPINESS")
 SafeRegisterEvent(coreEventFrame, "PET_UI_UPDATE")
 SafeRegisterEvent(coreEventFrame, "PET_BAR_UPDATE")
-coreEventFrame:RegisterEvent("UNIT_TARGET")
-coreEventFrame:RegisterEvent("UNIT_HEAL_PREDICTION")
-coreEventFrame:RegisterEvent("UNIT_ABSORB_AMOUNT_CHANGED")
+SafeRegisterEvent(coreEventFrame, "UNIT_TARGET")
+SafeRegisterEvent(coreEventFrame, "UNIT_HEAL_PREDICTION")
+SafeRegisterEvent(coreEventFrame, "UNIT_ABSORB_AMOUNT_CHANGED")
 SafeRegisterEvent(coreEventFrame, "UNIT_HEAL_ABSORB_AMOUNT_CHANGED")
 if Compat and Compat.IsTBC == true then
-    coreEventFrame:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED")
+    SafeRegisterEvent(coreEventFrame, "COMBAT_LOG_EVENT_UNFILTERED")
 end
-coreEventFrame:RegisterEvent("UNIT_FACTION")
-coreEventFrame:RegisterEvent("PLAYER_FLAGS_CHANGED")
-coreEventFrame:RegisterEvent("GROUP_ROSTER_UPDATE")
+SafeRegisterEvent(coreEventFrame, "UNIT_FACTION")
+SafeRegisterEvent(coreEventFrame, "PLAYER_FLAGS_CHANGED")
+SafeRegisterEvent(coreEventFrame, "GROUP_ROSTER_UPDATE")
 SafeRegisterEvent(coreEventFrame, "INSTANCE_ENCOUNTER_ENGAGE_UNIT")
 SafeRegisterEvent(coreEventFrame, "ENCOUNTER_START")
 SafeRegisterEvent(coreEventFrame, "ENCOUNTER_END")
@@ -932,6 +919,17 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
     if Compat and Compat.GetAccessibleUnitToken then
         unit = Compat.GetAccessibleUnitToken(unit)
     end
+    local refreshCombatVisibility = event == "PLAYER_REGEN_ENABLED"
+        or event == "PLAYER_REGEN_DISABLED"
+        or event == "PLAYER_ENTERING_WORLD"
+        or event == "PLAYER_TARGET_CHANGED"
+        or event == "PLAYER_FOCUS_CHANGED"
+        or (event == "GROUP_ROSTER_UPDATE" and not (MMF_Designer and MMF_Designer.ready))
+        or event == "UNIT_PET"
+        or (event == "UNIT_TARGET" and unit == "target")
+        or event == "INSTANCE_ENCOUNTER_ENGAGE_UNIT"
+        or event == "ENCOUNTER_START"
+        or event == "ENCOUNTER_END"
     local shouldFlushNow = false
     if ShouldSuspendForBlizzardEditMode() then
         return
@@ -957,6 +955,9 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
         if MMF_UpdatePlayerCombatIndicator then
             MMF_UpdatePlayerCombatIndicator()
         end
+        if event == "PLAYER_ENTERING_WORLD" then
+            RefreshPVPIndicators()
+        end
         if MMF_UpdatePlayerRestingIndicator then
             MMF_UpdatePlayerRestingIndicator()
         elseif MMF_PlayerFrame and MMF_PlayerFrame.restingTexture then
@@ -969,6 +970,7 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
 
     elseif event == "PLAYER_TARGET_CHANGED" then
         ClearTargetOfTargetTransientVisuals()
+        RefreshPVPIndicators()
         if MMF_UpdateUnitFrame then
             if MMF_TargetFrame then
                 MMF_UpdateUnitFrame(MMF_TargetFrame)
@@ -1043,6 +1045,9 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
         for i = 1, 5 do
             RequestUnitUpdate("boss" .. i)
         end
+        if MMF_UpdateBossAuras then
+            MMF_UpdateBossAuras()
+        end
         shouldFlushNow = true
 
     elseif event == "UPDATE_BINDINGS" then
@@ -1107,27 +1112,34 @@ coreEventFrame:SetScript("OnEvent", function(_, event, unit)
     end
 
     if MMF_FlushRequestedUpdates then
-        if shouldFlushNow
-            or ((event == "UNIT_HEALTH" or event == "UNIT_MAXHEALTH" or event == "UNIT_AURA" or event == "UNIT_POWER_UPDATE" or event == "UNIT_POWER_FREQUENT" or event == "UNIT_MAXPOWER" or event == "UNIT_POWER_BAR_HIDE" or event == "UNIT_POWER_BAR_SHOW" or event == "UNIT_DISPLAYPOWER")
-            and (unit == nil or unit == "player")) then
+        
+        
+        if shouldFlushNow then
             MMF_FlushRequestedUpdates()
         end
     end
 
-    if MMF_UpdateCombatFrameVisibility then
+    if refreshCombatVisibility and MMF_UpdateCombatFrameVisibility then
         MMF_UpdateCombatFrameVisibility()
     end
 end)
 
-local pvpRefreshElapsed = 0
-coreEventFrame:SetScript("OnUpdate", function(_, elapsed)
+local function RefreshPVPIndicatorsIfActive()
     if ShouldSuspendForBlizzardEditMode() then
         return
     end
-    pvpRefreshElapsed = pvpRefreshElapsed + (elapsed or 0)
-    if pvpRefreshElapsed < 1.0 then
-        return
-    end
-    pvpRefreshElapsed = 0
     RefreshPVPIndicators()
-end)
+end
+
+if C_Timer and type(C_Timer.NewTicker) == "function" then
+    coreEventFrame.mmfPVPRefreshTicker = C_Timer.NewTicker(1.0, RefreshPVPIndicatorsIfActive)
+else
+    local pvpRefreshElapsed = 0
+    coreEventFrame:SetScript("OnUpdate", function(_, elapsed)
+        pvpRefreshElapsed = pvpRefreshElapsed + (elapsed or 0)
+        if pvpRefreshElapsed >= 1.0 then
+            pvpRefreshElapsed = 0
+            RefreshPVPIndicatorsIfActive()
+        end
+    end)
+end

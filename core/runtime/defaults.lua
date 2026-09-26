@@ -16,7 +16,7 @@ local mmfDefaults = {
     targetFrameIconYOffset = 0,
     targetFrameIconScale = 1.0,
     showTargetMarkers = false,
-    showLeaderIcons = true,
+    showLeaderIcons = false,
     showTargetClassification = true,
     hideRestingIcon = false,
     hideCombatIcon = false,
@@ -54,7 +54,7 @@ local mmfDefaults = {
     showDruidManaPowerText = false,
     showPVPFlagIndicator = false,
     showTBCPVPFlagIndicator = true,
-    -- Legacy key name retained for profile compatibility; applies to TBC and Era.
+    
     showTBCTargetTapColor = true,
     playerManaBarColorR = 0.2,
     playerManaBarColorG = 0.7,
@@ -91,56 +91,56 @@ local mmfDefaults = {
     hideBlizzardPlayerDebuffs = false,
     onlyShowPlayerDebuffsOnTarget = false,
     auraTestMode = false,
-    showRuneBar = true,
+    showRuneBar = false,
     runeBarScale = 1.0,
     runeBarWidth = 30,
     runeBarHeight = 10,
     runeBarSpacing = 4,
     runeBarX = 0,
     runeBarY = 48,
-    showHolyPowerBar = true,
+    showHolyPowerBar = false,
     holyPowerBarScale = 1.0,
     holyPowerBarWidth = 30,
     holyPowerBarHeight = 10,
     holyPowerBarSpacing = 4,
     holyPowerBarX = 0,
     holyPowerBarY = 48,
-    showComboPointBar = true,
+    showComboPointBar = false,
     comboPointBarScale = 1.0,
     comboPointBarWidth = 30,
     comboPointBarHeight = 10,
     comboPointBarSpacing = 4,
     comboPointBarX = 0,
     comboPointBarY = 48,
-    showSoulShardBar = true,
+    showSoulShardBar = false,
     soulShardBarScale = 1.0,
     soulShardBarWidth = 30,
     soulShardBarHeight = 10,
     soulShardBarSpacing = 4,
     soulShardBarX = 0,
     soulShardBarY = 48,
-    showChiBar = true,
+    showChiBar = false,
     chiBarScale = 1.0,
     chiBarWidth = 30,
     chiBarHeight = 10,
     chiBarSpacing = 4,
     chiBarX = 0,
     chiBarY = 48,
-    showArcaneChargeBar = true,
+    showArcaneChargeBar = false,
     arcaneChargeBarScale = 1.0,
     arcaneChargeBarWidth = 30,
     arcaneChargeBarHeight = 10,
     arcaneChargeBarSpacing = 4,
     arcaneChargeBarX = 0,
     arcaneChargeBarY = 48,
-    showEssenceBar = true,
+    showEssenceBar = false,
     essenceBarScale = 1.0,
     essenceBarWidth = 30,
     essenceBarHeight = 10,
     essenceBarSpacing = 4,
     essenceBarX = 0,
     essenceBarY = 48,
-    showMaelstromBar = true,
+    showMaelstromBar = false,
     maelstromBarScale = 1.0,
     maelstromBarWidth = 12,
     maelstromBarHeight = 10,
@@ -285,38 +285,38 @@ local mmfDefaults = {
     petHideHPText = false,
     focusHideHPText = false,
     bossHideHPText = false,
-    -- Buff position (TOPRIGHT of buff list relative to BOTTOMRIGHT of target frame)
+    
     buffXOffset = -2,
     buffYOffset = -6,
     buffAuraDirection = "left_down",
-    -- Player buff position (TOPLEFT of buff list relative to BOTTOMLEFT of player frame)
+    
     playerBuffXOffset = 2,
     playerBuffYOffset = -6,
     playerBuffAuraDirection = "right_down",
-    -- Debuff position (relative to selected debuff direction anchor on target frame)
+    
     debuffXOffset = 3,
     debuffYOffset = 27,
     debuffAuraDirection = "right_up",
-    -- Player debuff position (relative to TOPRIGHT of player frame)
+    
     playerDebuffXOffset = -2,
     playerDebuffYOffset = 27,
     playerDebuffAuraDirection = "left_up",
-    -- Focus buff position (TOPRIGHT of buff list relative to BOTTOMRIGHT of focus frame)
+    
     focusBuffXOffset = -2,
     focusBuffYOffset = -6,
     focusBuffAuraDirection = "left_down",
-    -- Focus debuff position (relative to selected debuff direction anchor on focus frame)
+    
     focusDebuffXOffset = 3,
     focusDebuffYOffset = 27,
     focusDebuffAuraDirection = "right_up",
-    -- Popup position (nil = default center)
+    
     popupPosition = nil,
-    -- Fade popup a bit when cursor is not over it
+    
     popupInactiveFade = true,
     popupInactiveFadeAlpha = 0.60,
-    -- Move hints
+    
     showMoveHints = false,
-    -- Tools note
+    
     showToolsNote = false,
     toolsNoteText = "",
     toolsNoteAlpha = 0.9,
@@ -328,12 +328,12 @@ local mmfDefaults = {
     toolsNoteFontSize = 11,
     toolsNoteMouseoverOpaque = false,
     toolsNoteLocked = false,
-    -- Minimap button (LibDBIcon format)
+    
     minimap = { hide = false },
-    -- Layout panel selectors
+    
     framePositionUnit = "player",
     frameStyleUnit = "player",
-    -- Frame scale settings
+    
     playerFrameScaleX = 1.0,
     playerFrameScaleY = 1.0,
     targetFrameScaleX = 1.0,
@@ -355,7 +355,7 @@ local mmfDefaults = {
     targetCastBarFrameScaleY = 1.0,
     focusCastBarFrameScaleX = 1.0,
     focusCastBarFrameScaleY = 1.0,
-    -- Heal prediction / absorb
+    
     showHealPrediction = true,
     showOverhealPrediction = false,
     containOverhealWithinFrame = false,
@@ -372,7 +372,7 @@ local mmfDefaults = {
     absorbBarColorG = 0.84,
     absorbBarColorB = 1.0,
     absorbBarColorA = 0.7,
-    -- Cast bar settings
+    
     showPlayerCastBar = true,
     showTargetCastBar = true,
     showFocusCastBar = true,
@@ -381,8 +381,8 @@ local mmfDefaults = {
     bossCastBarWidth = 98,
     bossCastBarHeight = 14,
     bossDebuffIconScale = 1.0,
-    hideBlizzardPlayerCastBar = false,
-    castBarColor = "yellow",  -- key for MMF_Config.CAST_BAR_COLORS
+    hideBlizzardPlayerCastBar = true,
+    castBarColor = "yellow",  
     castBarCustomColorR = 1.0,
     castBarCustomColorG = 1.0,
     castBarCustomColorB = 0.0,
@@ -425,13 +425,14 @@ local mmfDefaults = {
     healthBarBorderAlpha = 1.0,
     healthBarBorderSize = 1,
     statusBarTexture = "MMF Melli",
+    overrideBarTextures = false,
     globalFont = "MMF Naowh",
     useTextOutline = true,
     useTextShadow = true,
 }
 
--- Power bar configuration constants (for convenience)
-mmfDefaults.DEFAULT_POWER_BAR_VERTICAL_OFFSET = -24  -- Distance from bottom of frame
-mmfDefaults.DEFAULT_POWER_BAR_HORIZONTAL_OFFSET = 4   -- Distance from edge of frame
+
+mmfDefaults.DEFAULT_POWER_BAR_VERTICAL_OFFSET = -24  
+mmfDefaults.DEFAULT_POWER_BAR_HORIZONTAL_OFFSET = 4   
 
 MattMinimalFrames_Defaults = mmfDefaults

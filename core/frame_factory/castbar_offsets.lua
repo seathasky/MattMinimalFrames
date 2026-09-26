@@ -20,6 +20,8 @@ local function SaveCastBarPosition(frame, unit)
         x = MMF_FrameFactoryPositioningUtils and MMF_FrameFactoryPositioningUtils.RoundCoordinate(x - px) or x - px,
         y = MMF_FrameFactoryPositioningUtils and MMF_FrameFactoryPositioningUtils.RoundCoordinate(y - py) or y - py,
     }
+    
+    frame.mmfAppliedCastBarLayout = nil
     if MMF_SyncCastBarOffsetControlsForUnit then
         MMF_SyncCastBarOffsetControlsForUnit(unit)
     end
@@ -43,8 +45,8 @@ end
 local function GetCastBarHeight(frame, scaleY)
     local scale = tonumber(scaleY) or 1.0
     local baseHeight = 8 * scale
-    -- Scale the text-derived floor too, otherwise the font size alone caps
-    -- how small the bar can get and Scale Y below 1.0 has no visible effect.
+    
+    
     local textFloor = math.max(
         GetFontStringHeight(frame and frame.castBarText, 9) + 2,
         GetFontStringHeight(frame and frame.castBarTime, 9) + 2
@@ -56,18 +58,20 @@ local function GetFrameHeight(frame)
     return tonumber(frame and (frame.originalHeight or frame:GetHeight())) or 28
 end
 
-local function GetDefaultCastBarOffset(frame, unit, castBarHeight)
-    -- Keep the tightly stacked boss frames clear of cast bars and their text.
+local function GetDefaultCastBarOffset(frame, unit, castBarHeight, requestedWidth)
+    
     if unit and unit:match("^boss[1-5]$") then
         local frameWidth = tonumber(frame and (frame.originalWidth or frame:GetWidth())) or 100
-        local castBarWidth = tonumber(frame and frame.castBarFrame and frame.castBarFrame:GetWidth()) or (frameWidth - 2)
+        local castBarWidth = tonumber(requestedWidth)
+            or tonumber(frame and frame.castBarFrame and frame.castBarFrame:GetWidth())
+            or (frameWidth - 2)
         return RoundCoordinate((frameWidth + castBarWidth) * 0.5 + 6), 0
     end
     local frameHeight = GetFrameHeight(frame)
     local y = (-frameHeight * 0.5) - 1 - (castBarHeight * 0.5)
 
-    -- Player and target power bars sit below their owner frame. Keep the
-    -- default cast bar below the power-bar container instead of overlapping it.
+    
+    
     if (unit == "player" or unit == "target") and frame and frame.powerBarFrame then
         local powerBottomOffset = tonumber(MMF_Config and MMF_Config.POWER_BAR_VERTICAL_OFFSET) or -5
         y = (-frameHeight * 0.5) + powerBottomOffset - 1 - (castBarHeight * 0.5)
@@ -94,8 +98,8 @@ local function ApplyCastBarPosition(frame, unit)
     if not frame or not frame.castBarFrame or not unit then
         return
     end
-    -- Skip while the user is actively dragging the cast bar; re-anchoring here
-    -- fights StartMoving() every frame and makes the drag feel jittery/snappy.
+    
+    
     if frame.castBarFrame.mmfExclusiveDragActive then
         return
     end
@@ -127,9 +131,6 @@ local function ApplyCastBarPosition(frame, unit)
         width = math.max(40, math.min(400, tonumber(db.bossCastBarWidth) or 98))
         height = math.max(4, math.min(60, tonumber(db.bossCastBarHeight) or 14))
     end
-    frame.castBarFrame:SetSize(width, height)
-    frame.castBarFrame:ClearAllPoints()
-
     local dbPos = MattMinimalFramesDB and MattMinimalFramesDB.castBarPositions and MattMinimalFramesDB.castBarPositions[unit]
     local dbX = dbPos and tonumber(dbPos.x) or nil
     local dbY = dbPos and tonumber(dbPos.y) or nil
@@ -138,25 +139,59 @@ local function ApplyCastBarPosition(frame, unit)
         dbX = nil
         dbY = nil
     end
-    if dbX ~= nil and dbY ~= nil then
-        frame.castBarFrame:SetPoint("CENTER", frame, "CENTER", dbX, dbY)
-    else
-        local defaultX, defaultY = GetDefaultCastBarOffset(frame, unit, height)
-        frame.castBarFrame:SetPoint("CENTER", frame, "CENTER", defaultX, defaultY)
+    if dbX == nil or dbY == nil then
+        dbX, dbY = GetDefaultCastBarOffset(frame, unit, height, width)
     end
 
-    local timeWidth = 36
-    if frame.castBarTime then
-        frame.castBarTime:SetWidth(timeWidth)
+    local applied = frame.mmfAppliedCastBarLayout
+    local actualAnchorMatches = false
+    if frame.castBarFrame.GetNumPoints and frame.castBarFrame.GetPoint
+        and frame.castBarFrame:GetNumPoints() == 1
+    then
+        local point, relativeTo, relativePoint, x, y = frame.castBarFrame:GetPoint(1)
+        local hasSecretAnchor = issecretvalue and (
+            issecretvalue(point)
+            or issecretvalue(relativeTo)
+            or issecretvalue(relativePoint)
+            or issecretvalue(x)
+            or issecretvalue(y)
+        )
+        if hasSecretAnchor then
+            
+            
+            actualAnchorMatches = true
+        else
+            actualAnchorMatches = point == "CENTER"
+                and relativeTo == frame
+                and relativePoint == "CENTER"
+                and x == dbX
+                and y == dbY
+        end
     end
-    if frame.castBarText then
-        frame.castBarText:SetWidth(math.max(8, width - timeWidth - 8))
-    end
-    if MMF_RefreshCastBarTextLayer then
-        MMF_RefreshCastBarTextLayer(frame)
-    end
-    if MMF_SyncCastBarOffsetControlsForUnit then
-        MMF_SyncCastBarOffsetControlsForUnit(unit)
+    local layoutChanged = not applied
+        or applied.width ~= width
+        or applied.height ~= height
+        or applied.x ~= dbX
+        or applied.y ~= dbY
+        or not actualAnchorMatches
+        or frame.castBarFrame:GetWidth() ~= width
+        or frame.castBarFrame:GetHeight() ~= height
+    if layoutChanged then
+        frame.castBarFrame:SetSize(width, height)
+        frame.castBarFrame:ClearAllPoints()
+        frame.castBarFrame:SetPoint("CENTER", frame, "CENTER", dbX, dbY)
+
+        local timeWidth = 36
+        if frame.castBarTime then
+            frame.castBarTime:SetWidth(timeWidth)
+        end
+        if frame.castBarText then
+            frame.castBarText:SetWidth(math.max(8, width - timeWidth - 8))
+        end
+        frame.mmfAppliedCastBarLayout = { width = width, height = height, x = dbX, y = dbY }
+        if MMF_RefreshCastBarTextLayer then
+            MMF_RefreshCastBarTextLayer(frame)
+        end
     end
 end
 
@@ -244,6 +279,7 @@ local function SetCastBarOffsetForUnit(unit, offsetX, offsetY)
 
     local frame = MMF_GetFrameForUnit and MMF_GetFrameForUnit(unit)
     if frame and frame.castBarFrame then
+        frame.mmfAppliedCastBarLayout = nil
         ApplyCastBarPosition(frame, unit)
     end
     UpdateCastBarOffsetControlsForUnit(unit)
@@ -259,6 +295,7 @@ local function ResetCastBarOffsetForUnit(unit)
 
     local frame = MMF_GetFrameForUnit and MMF_GetFrameForUnit(unit)
     if frame and frame.castBarFrame then
+        frame.mmfAppliedCastBarLayout = nil
         ApplyCastBarPosition(frame, unit)
     end
     UpdateCastBarOffsetControlsForUnit(unit)

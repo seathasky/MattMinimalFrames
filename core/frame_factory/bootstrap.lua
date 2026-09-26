@@ -17,9 +17,9 @@ local ApplyFrameIconPlacement = IconUtils.ApplyFrameIconPlacement or noop
 local TargetMarkerUtils = _G.MMF_FrameFactoryTargetMarkers or {}
 local CreateTargetMarker = TargetMarkerUtils.CreateTargetMarker or noop
 
---------------------------------------------------
--- FRAME POSITIONING
---------------------------------------------------
+
+
+
 
 local PositioningUtils = _G.MMF_FrameFactoryPositioningUtils or {}
 local PositioningModule = _G.MMF_FrameFactoryPositioning or {}
@@ -29,11 +29,7 @@ if PositioningAPI.Install then
     PositioningAPI.Install(PositioningUtils, PositioningModule)
 end
 
-local function SaveFramePosition(frame, frameName)
-    if PositioningModule.SaveFramePosition then
-        return PositioningModule.SaveFramePosition(frame, frameName)
-    end
-end
+
 
 local CastbarOffsetUtils = _G.MMF_FrameFactoryCastbarOffsets or {}
 local CastbarOffsetAPI = _G.MMF_FrameFactoryCastbarOffsetsAPI or {}
@@ -51,13 +47,11 @@ local function RestoreFramePosition(frame, frameName, defaultPoint, defaultRelPo
     end
 end
 
---------------------------------------------------
--- TOOLTIP HANDLERS
---------------------------------------------------
+
+
+
 
 local DragHelpers = _G.MMF_FrameFactoryDragHelpers or {}
-local DragSetupUtils = _G.MMF_FrameFactoryDragSetup or {}
-local ResetPopupUtils = _G.MMF_FrameFactoryResetPopup or {}
 local TextPositionUtils = _G.MMF_FrameFactoryTextPositions or {}
 local PowerBarUtils = _G.MMF_FrameFactoryPowerBar or {}
 local HealthPowerUtils = _G.MMF_FrameFactoryHealthPower or {}
@@ -67,32 +61,15 @@ local TextUtils = _G.MMF_FrameFactoryText or {}
 local PVPUtils = _G.MMF_FrameFactoryPVPIndicator or {}
 local UpdateAPI = _G.MMF_FrameFactoryUpdateAPI or {}
 local CreateTooltipHandlers = DragHelpers.CreateTooltipHandlers or noop
-local ShowFrameResetPopup = ResetPopupUtils.ShowFrameResetPopup or noop
 
---------------------------------------------------
--- DRAG HANDLERS
---------------------------------------------------
 
-local IsEditModeDragEnabled = DragHelpers.IsEditModeDragEnabled or function() return false end
+
+
+
 local CanStartFrameDrag = DragHelpers.CanStartFrameDrag or function() return false end
 local GetDragHintText = DragHelpers.GetDragHintText or function() return "Shift+Drag to move" end
 local TryBeginFrameMoving = DragHelpers.TryBeginFrameMoving
 local TryStopFrameMoving = DragHelpers.TryStopFrameMoving or function() return false end
-
-_G.MMF_FrameFactoryDragSetupDeps = {
-    cfg = cfg,
-    SetFontSafe = MMF_SetFontSafe,
-    GetFrameDefinition = MMF_GetFrameDefinition,
-    IsEditModeDragEnabled = IsEditModeDragEnabled,
-    CanStartFrameDrag = CanStartFrameDrag,
-    GetDragHintText = GetDragHintText,
-    TryBeginFrameMoving = TryBeginFrameMoving,
-    TryStopFrameMoving = TryStopFrameMoving,
-    SaveFramePosition = SaveFramePosition,
-    ShowFrameResetPopup = ShowFrameResetPopup,
-}
-
-local CreateDragHandlers = DragSetupUtils.CreateDragHandlers or noop
 
 _G.MMF_FrameFactoryPowerBarDeps = {
     cfg = cfg,
@@ -103,15 +80,15 @@ _G.MMF_FrameFactoryPowerBarDeps = {
     GetDragHintText = GetDragHintText,
 }
 
---------------------------------------------------
--- HEALTH BAR CREATION
---------------------------------------------------
+
+
+
 
 local CreateHealthBar = HealthPowerUtils.CreateHealthBar or noop
 
---------------------------------------------------
--- POWER BAR CREATION
---------------------------------------------------
+
+
+
 
 local CreatePowerBarContainer = PowerBarUtils.CreatePowerBarContainer or noop
 local SetupPowerBar = PowerBarUtils.SetupPowerBar or noop
@@ -124,21 +101,21 @@ local ApplyHPTextPosition = TextPositionUtils.ApplyHPTextPosition or noop
 
 MMF_ApplyHPTextPosition = ApplyHPTextPosition
 
---------------------------------------------------
--- ABSORB BAR CREATION
---------------------------------------------------
+
+
+
 
 local CreateAbsorbBar = HealthPowerUtils.CreateAbsorbBar or noop
 
---------------------------------------------------
--- HEAL PREDICTION BAR CREATION
---------------------------------------------------
+
+
+
 
 local CreateHealPredictionBar = HealthPowerUtils.CreateHealPredictionBar or noop
 
---------------------------------------------------
--- TEXT ELEMENTS
---------------------------------------------------
+
+
+
 
 local CreateNameText = TextUtils.CreateNameText or noop
 local CreateResourceText = TextUtils.CreateResourceText or noop
@@ -159,21 +136,20 @@ local CreateTargetFrameIcon = IconUtils.CreateTargetFrameIcon or noop
 local CreatePVPFlagIndicator = PVPUtils.CreatePVPFlagIndicator or noop
 local UpdatePVPFlagIndicator = PVPUtils.UpdatePVPFlagIndicator or noop
 
--- CAST BAR (Player, Target, Focus)
---------------------------------------------------
+
+
 
 local CreateCastBar = CastbarUtils.CreateCastBar or noop
 
---------------------------------------------------
--- MAIN FRAME CREATION
---------------------------------------------------
+
+
+
 
 _G.MMF_FrameFactoryMainDeps = {
     Compat = Compat,
     ResetSecureAttributes = MMF_ResetSecureAttributes,
     CreateTooltipHandlers = CreateTooltipHandlers,
     RestoreFramePosition = RestoreFramePosition,
-    CreateDragHandlers = CreateDragHandlers,
     CreateHealthBar = CreateHealthBar,
     CreatePowerBarContainer = CreatePowerBarContainer,
     CreateHealPredictionBar = CreateHealPredictionBar,

@@ -12,6 +12,10 @@ function MMF_ApplyActiveProfileLive()
         return
     end
 
+    local designerWasReady=MMF_Designer and MMF_Designer.ready
+    local migrateLegacyProfile=designerWasReady and type(MattMinimalFramesDB.designer)~="table"
+    if migrateLegacyProfile then MMF_Designer.capturing=true;MMF_Designer.ready=false end
+
     local function ApplyFramePositions()
         if MMF_ApplyAllFramePositions then
             MMF_ApplyAllFramePositions()
@@ -153,6 +157,11 @@ function MMF_ApplyActiveProfileLive()
             end
         end
     end
+    if MMF_UpdateDispelHighlights then MMF_UpdateDispelHighlights() end
+    if MMF_UpdatePVPFlagIndicator then
+        MMF_UpdatePVPFlagIndicator(MMF_PlayerFrame)
+        MMF_UpdatePVPFlagIndicator(MMF_TargetFrame)
+    end
 
     if MMF_WelcomePopup then
         local guiScale = (MMF_ClampGUIScale and MMF_ClampGUIScale(MattMinimalFramesDB.guiScale)) or 1.0
@@ -162,4 +171,10 @@ function MMF_ApplyActiveProfileLive()
             MMF_WelcomePopup:SetScale(guiScale)
         end
     end
+    if migrateLegacyProfile then MMF_Designer.capturing=false;MMF_Designer.ready=true end
+    if MMF_Designer and MMF_Designer.ready then
+        MMF_Designer.ApplyAll()
+        if MMF_Designer.RefreshEditor then MMF_Designer.RefreshEditor() end
+    end
+
 end

@@ -1,5 +1,6 @@
 local function CreateTooltipHandlers(frame)
     local function ShouldShowUnitTooltip(unit)
+        if MMF_Designer and MMF_Designer.Key(unit) then return true end
         return unit == "target"
             or unit == "targettarget"
             or unit == "player"
@@ -13,7 +14,7 @@ local function CreateTooltipHandlers(frame)
     end
 
     frame:SetScript("OnEnter", function(self)
-        -- Highlight is strictly a hover affordance; keep it independent of tooltip eligibility.
+        
         if self.highlightTexture then
             self.highlightTexture:Show()
         end
@@ -88,6 +89,9 @@ local function ReleaseDragOwner(frame)
 end
 
 local function CanStartFrameDrag(frame, allowTextMoveMode)
+    if MMF_Designer then
+        return not InCombatLockdown() and MMF_Designer.moveMode==true and MMF_Designer.frames[frame]~=nil
+    end
     if InCombatLockdown() then
         return false
     end

@@ -152,7 +152,9 @@ local function CreateHealthBar(frame)
     frame.healthBar = CreateFrame("StatusBar", nil, frame)
     frame.healthBar:SetPoint("TOPLEFT", frame, "TOPLEFT", contentInset, -contentInset)
     frame.healthBar:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -contentInset, contentInset)
-    frame.healthBar:SetStatusBarTexture(GetStatusBarTexturePath())
+    local statusBarTexture = GetStatusBarTexturePath()
+        or (MMF_GetDefaultStatusBarTexturePath and MMF_GetDefaultStatusBarTexturePath())
+    frame.healthBar:SetStatusBarTexture(statusBarTexture)
     frame.healthBar:SetMinMaxValues(0, 1)
     frame.healthBar:SetValue(1)
     frame.healthBarFG = frame.healthBar:GetStatusBarTexture()
@@ -179,8 +181,9 @@ local function CreateAbsorbBar(frame)
     local useSolid = (db.useSolidAbsorbBar == true)
 
     frame.absorbBar = CreateFrame("StatusBar", nil, frame.healPredictionClip)
-    if useSolid and MMF_GetStatusBarTexturePath then
-        frame.absorbBar:SetStatusBarTexture(MMF_GetStatusBarTexturePath())
+    local solidTexture = useSolid and MMF_GetStatusBarTexturePath and MMF_GetStatusBarTexturePath()
+    if solidTexture then
+        frame.absorbBar:SetStatusBarTexture(solidTexture)
     else
         frame.absorbBar:SetStatusBarTexture("Interface\\AddOns\\MattMinimalFrames\\Textures\\shield.tga")
     end
@@ -205,6 +208,8 @@ end
 
 local function CreateHealPredictionBar(frame)
     local Compat = _G.MMF_Compat
+    local statusBarTexture = GetStatusBarTexturePath()
+        or (MMF_GetDefaultStatusBarTexturePath and MMF_GetDefaultStatusBarTexturePath())
 
     frame.healPredictionClip = CreateFrame("Frame", nil, frame.healthBar)
     frame.healPredictionClip:SetAllPoints(frame.healthBar)
@@ -212,20 +217,26 @@ local function CreateHealPredictionBar(frame)
     frame.healPredictionClip:SetFrameLevel(frame.healthBar:GetFrameLevel() + 1)
 
     frame.myHealPrediction = CreateFrame("StatusBar", nil, frame.healPredictionClip)
-    frame.myHealPrediction:SetStatusBarTexture(GetStatusBarTexturePath())
+    if statusBarTexture then
+        frame.myHealPrediction:SetStatusBarTexture(statusBarTexture)
+    end
     frame.myHealPrediction:GetStatusBarTexture():SetVertexColor(0, 0.827, 0.765, 0.7)
     frame.myHealPrediction:SetFrameLevel(frame.healthBar:GetFrameLevel() + 1)
     frame.myHealPrediction:Hide()
 
     frame.otherHealPrediction = CreateFrame("StatusBar", nil, frame.healPredictionClip)
-    frame.otherHealPrediction:SetStatusBarTexture(GetStatusBarTexturePath())
+    if statusBarTexture then
+        frame.otherHealPrediction:SetStatusBarTexture(statusBarTexture)
+    end
     frame.otherHealPrediction:GetStatusBarTexture():SetVertexColor(0, 0.631, 0.557, 0.7)
     frame.otherHealPrediction:SetFrameLevel(frame.healthBar:GetFrameLevel() + 1)
     frame.otherHealPrediction:Hide()
 
-    -- Heal absorb bar.
+    
     frame.healAbsorbBar = CreateFrame("StatusBar", nil, frame.healPredictionClip)
-    frame.healAbsorbBar:SetStatusBarTexture(GetStatusBarTexturePath())
+    if statusBarTexture then
+        frame.healAbsorbBar:SetStatusBarTexture(statusBarTexture)
+    end
     frame.healAbsorbBar:SetStatusBarColor(0.85, 0.15, 0.15, 0.65)
     do
         local healAbsorbTex = frame.healAbsorbBar:GetStatusBarTexture()
@@ -241,7 +252,7 @@ local function CreateHealPredictionBar(frame)
 
     ApplyHealthFillDirection(frame)
 
-    if Compat.IsRetail and CreateUnitHealPredictionCalculator then
+    if not frame.mmfPreview and Compat.IsRetail and CreateUnitHealPredictionCalculator then
         frame.healPredictionCalculator = CreateUnitHealPredictionCalculator()
     end
 end
@@ -256,6 +267,8 @@ local function ApplyHealthFillDirections(getAllFramesFn)
 end
 
 _G.MMF_FrameFactoryHealthPower = {
+    GetBackgroundStyle = GetHealthBarBGColorFromDB,
+    GetBorderStyle = GetHealthBarBorderStyleFromDB,
     ApplyHealthFillDirection = ApplyHealthFillDirection,
     CreateHealthBar = CreateHealthBar,
     CreateAbsorbBar = CreateAbsorbBar,

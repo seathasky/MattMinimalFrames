@@ -2,6 +2,8 @@ local cfg = MMF_Config
 
 function MMF_CreateAllMinimalFrames()
     for _, def in ipairs(cfg.FRAME_DEFINITIONS) do
+        local suspended = MMF_Designer and MMF_Designer.suspendedUnitTypes[MMF_Designer.Key(def.unit)]
+        if not suspended and (not def.designerOptional or (MMF_Designer and MMF_Designer.IsUnitEnabled(def.unit))) then
         local frame = MMF_CreateSecureUnitFrame(
             def.unit,
             def.name,
@@ -29,9 +31,13 @@ function MMF_CreateAllMinimalFrames()
             if MMF_FlushRequestedUpdates then
                 MMF_FlushRequestedUpdates()
             end
+            if MMF_Designer and MMF_Designer.ready and MMF_Designer.UpdateExtras then
+                MMF_Designer.UpdateExtras(self)
+            end
         end)
 
         _G[def.name] = frame
+        end
     end
 
     C_Timer.After(0, function()

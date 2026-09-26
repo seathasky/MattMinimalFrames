@@ -215,7 +215,7 @@ local function MigrateProfile(profile)
     end
 
     if version < 3 then
-        -- New name-overflow features should start disabled for existing profiles.
+        
         profile.enableNameTruncation = false
         profile.autoResizeTextOnLongName = false
         local len = tonumber(profile.nameTruncationLength) or 14
@@ -225,7 +225,7 @@ local function MigrateProfile(profile)
     end
 
     if version < 4 then
-        -- Safety migration: force both toggles off so neither feature is enabled by default.
+        
         profile.enableNameTruncation = false
         profile.autoResizeTextOnLongName = false
         local len = tonumber(profile.nameTruncationLength) or 14
@@ -340,8 +340,8 @@ local function ApplyCharacterProfilePreference()
         return
     end
 
-    -- Backward compatibility: older installs may store character mappings by
-    -- short name only (e.g. "Nilm") while newer APIs resolve "Nilm-Realm".
+    
+    
     local shortName = UnitName and UnitName("player")
     if type(shortName) == "string" and shortName ~= "" then
         local shortMappedProfile = MattMinimalFramesProfilesDB.characterProfiles[shortName]
@@ -440,10 +440,24 @@ local function EnsureProfile(name)
     end
     local profile = MattMinimalFramesProfilesDB.profiles[name]
     MigrateProfile(profile)
+    
+    
+    if not profile.blizzardPlayerCastBarDefaultMigrated then
+        profile.hideBlizzardPlayerCastBar = true
+        profile.blizzardPlayerCastBarDefaultMigrated = true
+    end
+    
+    
+    if profile.barTextureOverrideMigratedV1 == true and profile.barTextureOverrideMigratedV2 ~= true then
+        profile.overrideBarTextures = false
+    end
+    
+    profile.barTextureOverrideMigratedV1 = nil
+    profile.barTextureOverrideMigratedV2 = nil
     if type(MattMinimalFrames_Defaults) == "table" then
         ApplyDefaults(profile, MattMinimalFrames_Defaults)
     end
-    -- Normalize persisted checkbox values (`true/false` vs `1/nil`/stringy values).
+    
     profile.enableNameTruncation = (profile.enableNameTruncation == true or profile.enableNameTruncation == 1)
     profile.autoResizeTextOnLongName = (profile.autoResizeTextOnLongName == true or profile.autoResizeTextOnLongName == 1)
     local len = tonumber(profile.nameTruncationLength) or 14
@@ -540,7 +554,7 @@ function MMF_GetProfileNames()
     return list
 end
 
-function MMF_SwitchProfile(name)
+function MMF_SwitchProfile(name, deferLiveRefresh)
     if type(name) ~= "string" or name == "" then return false end
     EnsureProfilesRoot()
     if type(MattMinimalFramesProfilesDB.profiles[name]) ~= "table" then
@@ -549,7 +563,7 @@ function MMF_SwitchProfile(name)
     MattMinimalFramesProfilesDB.activeProfile = name
     SetCurrentCharacterProfile(name)
     BindActiveProfile()
-    if MMF_ApplyActiveProfileLive then
+    if not deferLiveRefresh and MMF_ApplyActiveProfileLive then
         MMF_ApplyActiveProfileLive()
     end
     return true
@@ -597,7 +611,7 @@ function MMF_DeleteProfile(name)
     return true
 end
 
-function MMF_ResetProfile(name)
+function MMF_ResetProfile(name, deferLiveRefresh)
     EnsureProfilesRoot()
     local profileName = name or MMF_GetActiveProfileName()
     if type(profileName) ~= "string" or profileName == "" then
@@ -607,7 +621,7 @@ function MMF_ResetProfile(name)
     EnsureProfile(profileName)
     if profileName == MMF_GetActiveProfileName() then
         BindActiveProfile()
-        if MMF_ApplyActiveProfileLive then
+        if not deferLiveRefresh and MMF_ApplyActiveProfileLive then
             MMF_ApplyActiveProfileLive()
         end
     end

@@ -19,9 +19,9 @@ local function ShouldSuspendForBlizzardEditMode()
     return _G.MMF_ShouldSuspendForBlizzardEditMode and _G.MMF_ShouldSuspendForBlizzardEditMode() == true
 end
 
---------------------------------------------------
--- HELPER FUNCTIONS
---------------------------------------------------
+
+
+
 
 local function NotSecretValue(value)
     return not issecretvalue or not issecretvalue(value)
@@ -115,8 +115,8 @@ local function ClearAuraContainer(container)
     if not container then
         return
     end
-    -- Restricted retail aura containers own their state in Blizzard's secure
-    -- environment. AddOn Lua must never inspect or clear their aura buttons.
+    
+    
     if container.mmfSecureAuraContainer then
         return
     end
@@ -326,6 +326,7 @@ local function IsAuraDragModeEnabled()
 end
 
 local function CanStartAuraContainerDrag(container)
+    if MMF_Designer then return false end
     if not container then
         return false
     end
@@ -486,11 +487,7 @@ local function EnsureAuraOptionsPopup()
     popup:Hide()
 
     local title = popup:CreateFontString(nil, "OVERLAY")
-    if MMF_SetFontSafe then
-        MMF_SetFontSafe(title, "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    else
-        title:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    end
+    MMF_SetFontSafe(title, MMF_GetDefaultFontPath(), 10, "")
     title:SetPoint("TOPLEFT", 10, -8)
     title:SetTextColor(1, 1, 1)
     title:SetText("Aura Options")
@@ -500,11 +497,7 @@ local function EnsureAuraOptionsPopup()
     close:SetSize(16, 16)
     close:SetPoint("TOPRIGHT", -6, -6)
     local closeText = close:CreateFontString(nil, "OVERLAY")
-    if MMF_SetFontSafe then
-        MMF_SetFontSafe(closeText, "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    else
-        closeText:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-    end
+    MMF_SetFontSafe(closeText, MMF_GetDefaultFontPath(), 10, "")
     closeText:SetPoint("CENTER")
     closeText:SetTextColor(0.8, 0.8, 0.8)
     closeText:SetText("x")
@@ -522,11 +515,7 @@ local function EnsureAuraOptionsPopup()
         btn:SetBackdropColor(0.06, 0.08, 0.1, 0.96)
         btn:SetBackdropBorderColor(0.18, 0.22, 0.25, 1)
         local txt = btn:CreateFontString(nil, "OVERLAY")
-        if MMF_SetFontSafe then
-            MMF_SetFontSafe(txt, "Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-        else
-            txt:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, "")
-        end
+        MMF_SetFontSafe(txt, MMF_GetDefaultFontPath(), 10, "")
         txt:SetPoint("CENTER")
         txt:SetTextColor(0.9, 0.9, 0.9)
         txt:SetText(label)
@@ -626,7 +615,7 @@ local function IsAuraTestModeEnabled()
         return false
     end
 
-    -- Outside of edit/layout preview, suppress fake aura previews in combat.
+    
     local isPreviewMode = (MattMinimalFramesDB.unlockFramesEditMode == true)
         or (MattMinimalFramesDB.layoutTestMode == true)
     if not isPreviewMode and (type(InCombatLockdown) == "function") and InCombatLockdown() then
@@ -671,9 +660,9 @@ local function SetBlizzardAuraFrameVisible(frame, visible)
     end
 
     if visible then
-        -- Do not overwrite Blizzard's normal alpha/scale just because MMF's
-        -- hide option is disabled. Era's aura layout owns these values, and
-        -- forcing scale 1 can leave the frame clipped beyond the screen edge.
+        
+        
+        
         local state = blizzardAuraVisibilityState[frame]
         if state then
             frame:SetAlpha(state.alpha or 1)
@@ -697,9 +686,9 @@ local function SetBlizzardAuraFrameVisible(frame, visible)
 end
 
 local function EnsureEraBlizzardAuraVisibilityHook(frame, dbKey)
-    -- Era's current Blizzard aura frames can change their own shown state after
-    -- MMF applies the checkbox setting. Reapply only on Era; Retail and TBC keep
-    -- their existing behavior.
+    
+    
+    
     if not Compat.IsClassic or not frame or eraBlizzardAuraVisibilityHooks[frame] then
         return
     end
@@ -837,6 +826,9 @@ local function GetAuraOffsetsForUnit(unit, isDebuff)
 end
 
 local function ConfigureSecureAuraContainer(container, isDebuff)
+    if MMF_Designer and MMF_Designer.ready and MMF_Designer.ConfigureAuraContainer then
+        return MMF_Designer.ConfigureAuraContainer(container,isDebuff)
+    end
     if not container or not container.mmfSecureAuraContainer then
         return
     end
@@ -918,6 +910,9 @@ local function ConfigureSecureAuraContainer(container, isDebuff)
 end
 
 local function LayoutAuraContainer(container, isDebuff, size, activeCount)
+    if MMF_Designer and MMF_Designer.ready and MMF_Designer.ConfigureAuraContainer then
+        return MMF_Designer.ConfigureAuraContainer(container,isDebuff)
+    end
     if container and container.mmfSecureAuraContainer then
         ConfigureSecureAuraContainer(container, isDebuff)
         return
@@ -1029,9 +1024,9 @@ local function LayoutAuraContainer(container, isDebuff, size, activeCount)
     end
 end
 
---------------------------------------------------
--- UPDATE FUNCTIONS (called from popup sliders)
---------------------------------------------------
+
+
+
 
 function MMF_UpdateAuraTextScale(scale)
     if not MMF_TargetFrame and not MMF_PlayerFrame and not MMF_FocusFrame then return end
@@ -1053,7 +1048,7 @@ function MMF_UpdateAuraTextScale(scale)
                 if auraButton then
                     local countText = auraButton:GetApplicationCount()
                     if countText then
-                        countText:SetFont(STANDARD_TEXT_FONT, fontSize, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
+                        MMF_SetFontSafe(countText, STANDARD_TEXT_FONT, fontSize, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
                     end
                 end
             end
@@ -1062,7 +1057,7 @@ function MMF_UpdateAuraTextScale(scale)
         if container and container.auras then
             for _, aura in ipairs(container.auras) do
                 if aura.count then
-                    aura.count:SetFont(STANDARD_TEXT_FONT, fontSize, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
+                    MMF_SetFontSafe(aura.count, STANDARD_TEXT_FONT, fontSize, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
                 end
             end
         end
@@ -1111,7 +1106,7 @@ function MMF_UpdateTimerTextScale(scale)
                         local regions = { cooldown:GetRegions() }
                         for _, region in ipairs(regions) do
                             if region and region.SetFont then
-                                region:SetFont(STANDARD_TEXT_FONT, fontSize, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
+                                MMF_SetFontSafe(region, STANDARD_TEXT_FONT, fontSize, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
                             end
                         end
                     end
@@ -1122,7 +1117,7 @@ function MMF_UpdateTimerTextScale(scale)
         if container and container.auras then
             for _, aura in ipairs(container.auras) do
                 if aura.timerText then
-                    aura.timerText:SetFont(STANDARD_TEXT_FONT, fontSize, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
+                    MMF_SetFontSafe(aura.timerText, STANDARD_TEXT_FONT, fontSize, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
                 end
             end
         end
@@ -1257,9 +1252,9 @@ function MMF_UpdateFocusDebuffPosition(x, y)
     end
 end
 
---------------------------------------------------
--- AURA ICON CREATION
---------------------------------------------------
+
+
+
 
 local function CreateAuraIcon(parent, index, isDebuff, iconSize)
 
@@ -1269,27 +1264,7 @@ local function CreateAuraIcon(parent, index, isDebuff, iconSize)
     aura:RegisterForDrag("LeftButton")
     aura:RegisterForClicks("RightButtonUp")
 
-    aura.icon = aura:CreateTexture(nil, "ARTWORK")
-    aura.icon:SetPoint("TOPLEFT", aura, "TOPLEFT", AURA_ICON_CONTENT_INSET, -AURA_ICON_CONTENT_INSET)
-    aura.icon:SetPoint("BOTTOMRIGHT", aura, "BOTTOMRIGHT", -AURA_ICON_CONTENT_INSET, AURA_ICON_CONTENT_INSET)
-    aura.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-    aura.cooldown = CreateFrame("Cooldown", nil, aura, "CooldownFrameTemplate")
-    aura.cooldown:SetAllPoints(aura.icon)
-    aura.cooldown:SetDrawEdge(false)
-    aura.cooldown:SetHideCountdownNumbers(false)
-    aura.cooldown:EnableMouse(false)
-    aura.timerText = aura.cooldown:GetRegions()
-    if aura.timerText and aura.timerText.SetFont then
-        aura.timerText:SetFont(STANDARD_TEXT_FONT, 12, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
-        aura.timerText:ClearAllPoints()
-        aura.timerText:SetPoint("CENTER", aura.cooldown, "CENTER", 0, 0)
-    end
-    if isDebuff then
-        aura.border = aura:CreateTexture(nil, "OVERLAY")
-        aura.border:SetTexture("Interface\\Buttons\\UI-Debuff-Border")
-        aura.border:SetPoint("TOPLEFT", aura, "TOPLEFT", -AURA_DEBUFF_BORDER_OUTSET, AURA_DEBUFF_BORDER_OUTSET)
-        aura.border:SetPoint("BOTTOMRIGHT", aura, "BOTTOMRIGHT", AURA_DEBUFF_BORDER_OUTSET, -AURA_DEBUFF_BORDER_OUTSET)
-    end
+    MMF_AuraVisuals.Create(aura, isDebuff, false)
     aura:SetScript("OnEnter", function(self)
         GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
         GameTooltip:ClearLines()
@@ -1301,7 +1276,7 @@ local function CreateAuraIcon(parent, index, isDebuff, iconSize)
             pcall(GameTooltip.SetInventoryItem, GameTooltip, "player", self.inventorySlot)
             tooltipSet = (GameTooltip:NumLines() or 0) > 0
         elseif HasRetailAuraAPI then
-            -- Retail strict path: instance ID only (Blizzard-style identity).
+            
             if self.auraInstanceID and GameTooltip.SetUnitAuraByAuraInstanceID then
                 pcall(GameTooltip.SetUnitAuraByAuraInstanceID, GameTooltip, unit, self.auraInstanceID)
                 tooltipSet = (GameTooltip:NumLines() or 0) > 0
@@ -1337,9 +1312,9 @@ local function CreateAuraIcon(parent, index, isDebuff, iconSize)
         if button ~= "RightButton" then
             return
         end
-        -- Era protects CancelItemTempEnchantment from addon-owned handlers.
-        -- Keep temporary enchants display-only; importantly, do not fall
-        -- through and treat their display index as a normal UnitAura index.
+        
+        
+        
         if self.isTemporaryEnchant then
             return
         end
@@ -1369,9 +1344,9 @@ local function CreateAuraIcon(parent, index, isDebuff, iconSize)
     return aura
 end
 
---------------------------------------------------
--- CONTAINER SETUP
---------------------------------------------------
+
+
+
 
 local function CreateAuraContainer(parent, isDebuff, unitToken, forcePreviewContainer)
     local iconSize = GetAuraIconSizeForType(isDebuff, unitToken)
@@ -1382,43 +1357,15 @@ local function CreateAuraContainer(parent, isDebuff, unitToken, forcePreviewCont
             auraButton:SetSize(currentIconSize, currentIconSize)
             auraButton:SetTooltipAnchorPoint("ANCHOR_RIGHT")
 
-            -- Retail's AuraContainer owns aura data and protected click
-            -- handling.  Enable its secure right-click cancellation only for
-            -- player buffs; target/focus auras and debuffs remain read-only.
+            
+            
+            
             if unitToken == "player" and not isDebuff and auraButton.SetCancelAuraButtons then
                 auraButton:SetCancelAuraButtons("RightButtonUp")
             end
 
-            local icon = auraButton:CreateTexture(nil, "ARTWORK")
-            icon:SetAllPoints()
-            icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-            auraButton:SetIcon(icon)
-
-            local cooldown = CreateFrame("Cooldown", nil, auraButton, "CooldownFrameTemplate")
-            cooldown:SetAllPoints(icon)
-            cooldown:SetDrawEdge(false)
-            cooldown:SetHideCountdownNumbers(false)
-            local timerFontSize = math.max(8, math.floor(12 * MMF_GetTimerTextScale()))
-            local cooldownRegions = { cooldown:GetRegions() }
-            for _, region in ipairs(cooldownRegions) do
-                if region and region.SetFont then
-                    region:SetFont(STANDARD_TEXT_FONT, timerFontSize, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
-                end
-            end
-            auraButton:SetDurationCooldown(cooldown)
-
-            local count = auraButton:CreateFontString(nil, "OVERLAY")
-            count:SetPoint("BOTTOMRIGHT", auraButton, "BOTTOMRIGHT", -1, 1)
-            local scale = MMF_GetAuraTextScale()
-            count:SetFont(STANDARD_TEXT_FONT, math.max(6, math.floor(10 * scale)), (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
-            auraButton:SetApplicationCount(count)
-
-            if isDebuff then
-                local border = auraButton:CreateTexture(nil, "OVERLAY")
-                border:SetTexture("Interface\\Buttons\\UI-Debuff-Border")
-                border:SetPoint("TOPLEFT", auraButton, "TOPLEFT", -AURA_DEBUFF_BORDER_OUTSET, AURA_DEBUFF_BORDER_OUTSET)
-                border:SetPoint("BOTTOMRIGHT", auraButton, "BOTTOMRIGHT", AURA_DEBUFF_BORDER_OUTSET, -AURA_DEBUFF_BORDER_OUTSET)
-            end
+            MMF_AuraVisuals.Create(auraButton, isDebuff, true)
+            if MMF_Designer and MMF_Designer.StyleAuraButton then MMF_Designer.StyleAuraButton(auraButton,unitToken,isDebuff) end
         end
 
         local container = CreateFrame("AuraContainer", nil, parent, "CustomAuraContainerTemplate")
@@ -1483,7 +1430,7 @@ local function CreateAuraContainer(parent, isDebuff, unitToken, forcePreviewCont
     LayoutAuraContainer(container, isDebuff, iconSize, 1)
 
     local label = container:CreateFontString(nil, "OVERLAY")
-    label:SetFont("Interface\\AddOns\\MattMinimalFrames\\Fonts\\Naowh.ttf", 10, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
+    MMF_SetFontSafe(label, MMF_GetDefaultFontPath(), 10, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
     if isDebuff then
         label:SetPoint("BOTTOMLEFT", container, "TOPLEFT", 0, 6)
     else
@@ -1595,9 +1542,9 @@ function MMF_SetupTargetAuras()
     end
 end
 
---------------------------------------------------
--- AURA UPDATE
---------------------------------------------------
+
+
+
 
 local function UpdateAuraIcon(auraFrame, auraData, filter, unit, index)
     if not auraFrame or type(auraData) ~= "table" or not auraData.icon then
@@ -1624,7 +1571,7 @@ local function UpdateAuraIcon(auraFrame, auraData, filter, unit, index)
             auraFrame.count:SetPoint("BOTTOMRIGHT", auraFrame, "BOTTOMRIGHT", -1, 1)
         end
         local scale = MMF_GetAuraTextScale()
-        auraFrame.count:SetFont("Fonts\\FRIZQT__.TTF", math.max(6, math.floor(10 * scale)), (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
+        MMF_SetFontSafe(auraFrame.count, MMF_GetDefaultFontPath(), math.max(6, math.floor(10 * scale)), (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
         auraFrame.count:SetText(C_UnitAuras.GetAuraApplicationDisplayCount(unit, auraInstanceID, 2, 999))
         auraFrame.count:Show()
     elseif auraData.count and auraData.count > 1 then
@@ -1633,7 +1580,7 @@ local function UpdateAuraIcon(auraFrame, auraData, filter, unit, index)
             auraFrame.count:SetPoint("BOTTOMRIGHT", auraFrame, "BOTTOMRIGHT", -1, 1)
         end
         local scale = MMF_GetAuraTextScale()
-        auraFrame.count:SetFont("Fonts\\FRIZQT__.TTF", math.max(6, math.floor(10 * scale)), (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
+        MMF_SetFontSafe(auraFrame.count, MMF_GetDefaultFontPath(), math.max(6, math.floor(10 * scale)), (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
         auraFrame.count:SetText(auraData.count)
         auraFrame.count:Show()
     end
@@ -1652,7 +1599,7 @@ local function UpdateAuraIcon(auraFrame, auraData, filter, unit, index)
         if auraFrame.timerText and auraFrame.timerText.SetFont then
             local timerScale = MMF_GetTimerTextScale()
             local timerFontSize = math.max(8, math.floor(12 * timerScale))
-            auraFrame.timerText:SetFont(STANDARD_TEXT_FONT, timerFontSize, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
+            MMF_SetFontSafe(auraFrame.timerText, STANDARD_TEXT_FONT, timerFontSize, (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
         end
     end
     
@@ -1680,7 +1627,7 @@ local function UpdateFakeAuraIcon(auraFrame, index, isDebuff)
         auraFrame.count:SetPoint("BOTTOMRIGHT", auraFrame, "BOTTOMRIGHT", -1, 1)
     end
     local scale = MMF_GetAuraTextScale()
-    auraFrame.count:SetFont("Fonts\\FRIZQT__.TTF", math.max(6, math.floor(10 * scale)), (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
+    MMF_SetFontSafe(auraFrame.count, MMF_GetDefaultFontPath(), math.max(6, math.floor(10 * scale)), (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
     local count = (index % 4) + 1
     auraFrame.count:SetText(count > 1 and count or "")
     auraFrame.count:Show()
@@ -1692,7 +1639,7 @@ local function UpdateFakeAuraIcon(auraFrame, index, isDebuff)
     end
     if auraFrame.timerText and auraFrame.timerText.SetFont then
         local timerScale = MMF_GetTimerTextScale()
-        auraFrame.timerText:SetFont(STANDARD_TEXT_FONT, math.max(8, math.floor(12 * timerScale)), (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
+        MMF_SetFontSafe(auraFrame.timerText, STANDARD_TEXT_FONT, math.max(8, math.floor(12 * timerScale)), (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE")
         auraFrame.timerText:Show()
     end
 
@@ -1765,7 +1712,7 @@ local function CopyRetailAuraData(aura, index)
     end
 
     return {
-        -- Retail path mirrors Blizzard packed aura payload shape.
+        
         name = aura.name,
         icon = aura.icon,
         count = aura.count,
@@ -1819,44 +1766,72 @@ local function GetRetailPlayerDebuffs(unit)
     return debuffs or {}
 end
 
-local function UpdateBossAuras()
+local UpdateBossAuras
+local function EnsureBossAuraShowHook(frame)
+    if frame and not frame.mmfBossAuraShowHooked then
+        frame.mmfBossAuraShowHooked = true
+        frame:HookScript("OnShow", function(self)
+            UpdateBossAuras(self.unit)
+        end)
+    end
+end
+
+UpdateBossAuras = function(unitFilter)
+    if MMF_Designer and MMF_Designer.ready then
+        for i=1,5 do
+            local unit = "boss"..i
+            if not unitFilter or unitFilter == unit then
+                local frame = MMF_GetFrameForUnit(unit)
+                if frame then
+                    EnsureBossAuraShowHook(frame)
+                    if frame:IsShown() then
+                        MMF_Designer.RefreshAuras(frame)
+                    end
+                end
+            end
+        end
+        return
+    end
     local preview = IsAuraFakePreviewEnabled()
     local showDebuffs = not MattMinimalFramesDB or MattMinimalFramesDB.showBossDebuffs ~= false
     for i = 1, 5 do
         local unit = "boss" .. i
-        local frame = _G["MMF_Boss" .. i .. "Frame"]
-        local container = frame and frame.DebuffContainer
-        if container then
-            local shown = showDebuffs and frame:IsShown()
-            if container.mmfSecureAuraContainer then
-                -- Blizzard performs ownership filtering without exposing secret aura data.
-                ApplyAuraContainerPosition(container, true)
-                local enabled = shown and not preview
-                if container:IsEnabled() ~= enabled then container:SetEnabled(enabled) end
-                container:SetShown(enabled)
-                container = frame.DebuffPreviewContainer
-            end
+        if not unitFilter or unitFilter == unit then
+            local frame = _G["MMF_Boss" .. i .. "Frame"]
+            EnsureBossAuraShowHook(frame)
+            local container = frame and frame.DebuffContainer
             if container then
-                ClearAuraContainer(container)
-                if shown and preview then
-                    container:Show()
-                    for index = 1, 3 do UpdateFakeAuraIcon(container.auras[index], index, true) end
-                    LayoutAuraContainer(container, true, nil, 3)
-                elseif shown and not UsesRestrictedAuraAPI and UnitExists(unit) then
-                    container:Show()
-                    -- Never fall back to an unfiltered harmful-aura query.
-                    local filter = "HARMFUL|PLAYER"
-                    local debuffs = HasRetailAuraAPI and GetRetailAurasByFilter(unit, filter) or GetUnitAuras(unit, filter)
-                    local count = math.min(#debuffs, GetVisibleAuraLimit(true, unit))
-                    for index = 1, count do
-                        UpdateAuraIcon(container.auras[index], debuffs[index], filter, unit, index)
-                    end
-                    LayoutAuraContainer(container, true, nil, count)
-                else
-                    container:Hide()
+                local shown = showDebuffs and frame:IsShown()
+                if container.mmfSecureAuraContainer then
+                    
+                    ApplyAuraContainerPosition(container, true)
+                    local enabled = shown and not preview
+                    if container:IsEnabled() ~= enabled then container:SetEnabled(enabled) end
+                    container:SetShown(enabled)
+                    container = frame.DebuffPreviewContainer
                 end
-                UpdateAuraContainerLabel(container, false)
-                ApplyAuraContainerPosition(container, true)
+                if container then
+                    ClearAuraContainer(container)
+                    if shown and preview then
+                        container:Show()
+                        for index = 1, 3 do UpdateFakeAuraIcon(container.auras[index], index, true) end
+                        LayoutAuraContainer(container, true, nil, 3)
+                    elseif shown and not UsesRestrictedAuraAPI and UnitExists(unit) then
+                        container:Show()
+                        
+                        local filter = "HARMFUL|PLAYER"
+                        local debuffs = HasRetailAuraAPI and GetRetailAurasByFilter(unit, filter) or GetUnitAuras(unit, filter)
+                        local count = math.min(#debuffs, GetVisibleAuraLimit(true, unit))
+                        for index = 1, count do
+                            UpdateAuraIcon(container.auras[index], debuffs[index], filter, unit, index)
+                        end
+                        LayoutAuraContainer(container, true, nil, count)
+                    else
+                        container:Hide()
+                    end
+                    UpdateAuraContainerLabel(container, false)
+                    ApplyAuraContainerPosition(container, true)
+                end
             end
         end
     end
@@ -1866,7 +1841,7 @@ _G.MMF_UpdateBossAuras = UpdateBossAuras
 
 local function GetLegacyTemporaryEnchants()
     local enchants = {}
-    if not Compat.IsClassic or type(GetWeaponEnchantInfo) ~= "function" then
+    if (Compat.IsRetail or HasRetailAuraAPI) or type(GetWeaponEnchantInfo) ~= "function" then
         return enchants
     end
 
@@ -1903,18 +1878,16 @@ local function GetLegacyTemporaryEnchants()
     return enchants
 end
 
+MMF_GetLegacyTemporaryEnchants = GetLegacyTemporaryEnchants
+
 local function UpdateUnitAuras(unit)
+    if MMF_Designer and MMF_Designer.ready then
+        return MMF_Designer.RefreshAuras(MMF_GetFrameForUnit(unit))
+    end
     if ShouldSuspendForBlizzardEditMode() then
         return
     end
-    local frame
-    if unit == "player" then
-        frame = MMF_PlayerFrame
-    elseif unit == "focus" then
-        frame = MMF_FocusFrame
-    else
-        frame = MMF_TargetFrame
-    end
+    local frame = MMF_GetFrameForUnit and MMF_GetFrameForUnit(unit)
     if not frame or not frame.BuffContainer or not frame.DebuffContainer then return end
 
     local db = MattMinimalFramesDB or {}
@@ -2157,9 +2130,9 @@ function MMF_UpdateFocusAuras()
     UpdateUnitAuras("focus")
 end
 
---------------------------------------------------
--- AURA EVENTS
---------------------------------------------------
+
+
+
 
 local pendingAuraResync = {}
 local pendingTargetRefreshBurst = false
@@ -2273,38 +2246,6 @@ auraEventFrame:RegisterEvent("PLAYER_TALENT_UPDATE")
 if Compat.IsClassic then
     auraEventFrame:RegisterEvent("UNIT_INVENTORY_CHANGED")
 end
-auraEventFrame:SetScript("OnUpdate", function(self, elapsed)
-    if ShouldSuspendForBlizzardEditMode() then
-        return
-    end
-    self.mmfAuraPollElapsed = (self.mmfAuraPollElapsed or 0) + (elapsed or 0)
-    if self.mmfAuraPollElapsed < 0.20 then
-        return
-    end
-    self.mmfAuraPollElapsed = 0
-
-    UpdateBossAuras()
-
-    if not HasRetailAuraAPI or UsesRestrictedAuraAPI then
-        return
-    end
-    if not ((type(InCombatLockdown) == "function") and InCombatLockdown()) then
-        return
-    end
-    if type(UnitExists) ~= "function" then
-        return
-    end
-
-    if UnitExists("target") then
-        MMF_UpdateTargetAuras()
-    end
-    if UnitExists("focus") then
-        MMF_UpdateFocusAuras()
-    end
-    if MMF_UpdateDispelHighlights then
-        MMF_UpdateDispelHighlights()
-    end
-end)
 auraEventFrame:SetScript("OnEvent", function(self, event, unit)
     if Compat and Compat.GetAccessibleUnitToken then
         unit = Compat.GetAccessibleUnitToken(unit)
@@ -2322,6 +2263,7 @@ auraEventFrame:SetScript("OnEvent", function(self, event, unit)
         MMF_UpdateTargetAuras()
         MMF_UpdatePlayerAuras()
         MMF_UpdateFocusAuras()
+        UpdateBossAuras()
         QueueEraPlayerAuraRefreshBurst()
         if MMF_UpdateDispelHighlights then
             MMF_UpdateDispelHighlights()
@@ -2343,9 +2285,12 @@ auraEventFrame:SetScript("OnEvent", function(self, event, unit)
         MMF_UpdateTargetAuras()
         MMF_UpdatePlayerAuras()
         MMF_UpdateFocusAuras()
+        UpdateBossAuras()
         if MMF_UpdateDispelHighlights then
             MMF_UpdateDispelHighlights()
         end
+    elseif event == "UNIT_AURA" and IsBossAuraUnit(unit) then
+        UpdateBossAuras(unit)
     elseif event == "UNIT_AURA" and unit == "target" then
         MMF_UpdateTargetAuras()
         if MMF_UpdateDispelHighlights then
@@ -2424,3 +2369,40 @@ auraEventFrame:SetScript("OnEvent", function(self, event, unit)
         end
     end
 end)
+
+if Compat.IsRetail then
+    local wasEditModeSuspended = ShouldSuspendForBlizzardEditMode()
+    local function RefreshAfterEditModeCloses()
+        local isEditModeSuspended = ShouldSuspendForBlizzardEditMode()
+        if wasEditModeSuspended and not isEditModeSuspended then
+            MMF_UpdateBlizzardPlayerAuraVisibility()
+            MMF_UpdateTargetAuras()
+            MMF_UpdatePlayerAuras()
+            MMF_UpdateFocusAuras()
+            UpdateBossAuras()
+            if MMF_UpdateDispelHighlights then
+                MMF_UpdateDispelHighlights()
+            end
+        end
+        wasEditModeSuspended = isEditModeSuspended
+    end
+
+    if C_Timer and type(C_Timer.NewTicker) == "function" then
+        auraEventFrame.mmfEditModeResumeTicker = C_Timer.NewTicker(0.25, RefreshAfterEditModeCloses)
+    else
+        local elapsedSinceCheck = 0
+        auraEventFrame:SetScript("OnUpdate", function(_, elapsed)
+            elapsedSinceCheck = elapsedSinceCheck + (elapsed or 0)
+            if elapsedSinceCheck >= 0.25 then
+                elapsedSinceCheck = 0
+                RefreshAfterEditModeCloses()
+            end
+        end)
+    end
+end
+
+
+MMF_CreateAuraContainer = CreateAuraContainer
+MMF_UpdateAurasForUnit = UpdateUnitAuras
+MMF_UpdateAuraIconData = UpdateAuraIcon
+MMF_UsesRestrictedAuraAPI = UsesRestrictedAuraAPI

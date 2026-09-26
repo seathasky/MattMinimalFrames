@@ -1,5 +1,6 @@
 local cfg = MMF_Config or {}
 local Compat = _G.MMF_Compat
+local usesDurationObjects = type(UnitCastingDuration)=="function" and type(UnitChannelDuration)=="function" and Enum and Enum.StatusBarTimerDirection and Enum.StatusBarInterpolation
 local DragHelpers = _G.MMF_FrameFactoryDragHelpers or {}
 local CastbarOffsetUtils = _G.MMF_FrameFactoryCastbarOffsets or {}
 
@@ -77,7 +78,7 @@ local function ApplyCastBarTextReadability(fontString)
 
     local fontPath, fontSize = fontString:GetFont()
     if fontPath and fontSize and fontString.SetFont then
-        pcall(fontString.SetFont, fontString, fontPath, fontSize, "OUTLINE")
+        MMF_SetFontSafe(fontString, fontPath, fontSize, "OUTLINE")
     end
     fontString:SetTextColor(1, 1, 1, 1)
     if fontString.SetShadowOffset then
@@ -181,7 +182,7 @@ local function CreateCastBar(frame, unit)
     if showCastBar == nil then
         showCastBar = true
     end
-    if not showCastBar and not isBoss then return end
+    if not showCastBar and not isBoss and not MMF_Designer then return end
 
     frame.castBarFrame = CreateFrame("Frame", nil, frame)
     frame.castBarFrame:SetFrameLevel(frame.healthBar:GetFrameLevel() + 5)
@@ -204,7 +205,9 @@ local function CreateCastBar(frame, unit)
     frame.castBar:SetAllPoints(frame.castBarFrame)
     frame.castBar:SetMinMaxValues(0, 1)
     frame.castBar:SetValue(0)
-    frame.castBar:SetStatusBarTexture(GetStatusBarTexturePath())
+    local statusBarTexture = GetStatusBarTexturePath()
+        or (MMF_GetDefaultStatusBarTexturePath and MMF_GetDefaultStatusBarTexturePath())
+    frame.castBar:SetStatusBarTexture(statusBarTexture)
     frame.castBar:SetStatusBarColor(1, 1, 1, 1)
     frame.castBar:SetAlpha(1)
 
@@ -214,22 +217,14 @@ local function CreateCastBar(frame, unit)
     frame.castBarTextOverlay:EnableMouse(false)
 
     frame.castBarText = frame.castBarTextOverlay:CreateFontString(nil, "OVERLAY")
-    if MMF_SetFontSafe then
-        MMF_SetFontSafe(frame.castBarText, cfg.FONT_PATH, 9, fontFlags)
-    else
-        frame.castBarText:SetFont(cfg.FONT_PATH, 9, fontFlags)
-    end
+    MMF_SetFontSafe(frame.castBarText, cfg.FONT_PATH, 9, fontFlags)
     frame.castBarText:SetTextColor(1, 1, 1, 1)
     frame.castBarText:SetWordWrap(false)
     frame.castBarText:SetDrawLayer("OVERLAY", 7)
     ApplyCastBarTextReadability(frame.castBarText)
 
     frame.castBarTime = frame.castBarTextOverlay:CreateFontString(nil, "OVERLAY")
-    if MMF_SetFontSafe then
-        MMF_SetFontSafe(frame.castBarTime, cfg.FONT_PATH, 9, fontFlags)
-    else
-        frame.castBarTime:SetFont(cfg.FONT_PATH, 9, fontFlags)
-    end
+    MMF_SetFontSafe(frame.castBarTime, cfg.FONT_PATH, 9, fontFlags)
     frame.castBarTime:SetTextColor(1, 1, 1, 1)
     frame.castBarTime:SetWordWrap(false)
     frame.castBarTime:SetDrawLayer("OVERLAY", 7)
@@ -307,6 +302,15 @@ local function CreateCastBar(frame, unit)
     end)
     frame.castBarFrame:Hide()
 
+    if frame.mmfPreview then
+        frame.castBarFrame:EnableMouse(false)
+        frame.castBarFrame:SetScript("OnDragStart", nil)
+        frame.castBarFrame:SetScript("OnDragStop", nil)
+        frame.castBarFrame:SetScript("OnEnter", nil)
+        frame.castBarFrame:SetScript("OnLeave", nil)
+        return
+    end
+
     frame.castInfo = {
         casting = false,
         channeling = false,
@@ -317,7 +321,12 @@ local function CreateCastBar(frame, unit)
 
     local function SetCastTimeText(seconds)
         if frame.castBarTime then
-            if NotSecretValue(seconds) and type(seconds) == "number" and seconds > 0 then
+            
+            
+            if not NotSecretValue(seconds) then
+                frame.castBarTime:SetFormattedText("%.1f", seconds)
+                return true
+            elseif type(seconds) == "number" and seconds > 0 then
                 frame.castBarTime:SetFormattedText("%.1f", seconds)
                 return true
             else
@@ -335,8 +344,31 @@ local function CreateCastBar(frame, unit)
         return (endTimeMs / 1000) - GetTime()
     end
 
+    local function GetRemainingFromDurationObject(durationObject)
+        if durationObject and durationObject.GetRemainingDuration then
+            local ok, remaining = pcall(durationObject.GetRemainingDuration, durationObject)
+            if ok then return remaining end
+        end
+    end
+
     local function ShowCastBar(spellName, notInterruptible, startTimeMs, endTimeMs)
-        if isBoss and MattMinimalFramesDB and MattMinimalFramesDB.showBossCastBar == false then
+        if frame.designerCastIcon then
+            local icon
+            if frame.castInfo.casting then icon=select(3,UnitCastingInfo(unit))
+            else icon=select(3,UnitChannelInfo(unit)) end
+            frame.designerCastIcon:SetTexture(icon)
+            frame.designerCastIcon:Show()
+        end
+        if frame.designerCastShield then
+            if not NotSecretValue(notInterruptible) then
+                
+                local ok = pcall(frame.designerCastShield.SetShown, frame.designerCastShield, notInterruptible)
+                if not ok then frame.designerCastShield:Hide() end
+            else
+                frame.designerCastShield:SetShown(notInterruptible==true)
+            end
+        end
+        if (MMF_Designer and MMF_Designer.ready and not MMF_Designer.IsEnabled(unit,"cast")) or (not MMF_Designer and isBoss and MattMinimalFramesDB and MattMinimalFramesDB.showBossCastBar == false) then
             frame.castBarFrame:Hide()
             return
         end
@@ -357,13 +389,30 @@ local function CreateCastBar(frame, unit)
         else
             frame.castBarText:SetText("")
         end
-        if Compat.IsTBC or Compat.IsClassic then
+        if not usesDurationObjects then
             SetCastTimeText(GetSafeRemainingSeconds(endTimeMs))
         else
-            SetCastTimeText(nil)
+            
+            
+            local duration, direction
+            if frame.castInfo.casting then
+                duration = UnitCastingDuration(unit)
+                direction = Enum.StatusBarTimerDirection.ElapsedTime
+            else
+                duration = UnitChannelDuration(unit)
+                direction = Enum.StatusBarTimerDirection.RemainingTime
+            end
+            if duration then
+                frame.castBar:SetTimerDuration(duration, Enum.StatusBarInterpolation.Immediate, direction)
+                SetCastTimeText(GetRemainingFromDurationObject(duration))
+            else
+                frame.castBar:SetMinMaxValues(0, 1)
+                frame.castBar:SetValue(frame.castInfo.casting and 0 or 1, Enum.StatusBarInterpolation.Immediate)
+                SetCastTimeText(nil)
+            end
         end
         RefreshCastBarTextLayer(frame)
-        if (Compat.IsTBC or Compat.IsClassic) and startTimeMs and endTimeMs then
+        if (not usesDurationObjects) and startTimeMs and endTimeMs then
             frame.castInfo.startTimeMs = startTimeMs
             frame.castInfo.endTimeMs = endTimeMs
             local maxVal = (endTimeMs - startTimeMs) / 1000
@@ -409,7 +458,7 @@ local function CreateCastBar(frame, unit)
         return false
     end
 
-    if Compat.IsTBC or Compat.IsClassic then
+    if not usesDurationObjects then
         frame.castBarFrame:SetScript("OnUpdate", function(self, elapsed)
             local info = frame.castInfo
             if info.casting and info.startTimeMs and info.endTimeMs then
@@ -445,15 +494,14 @@ local function CreateCastBar(frame, unit)
     else
         local StatusBarTimerDirection = Enum.StatusBarTimerDirection
         local StatusBarInterpolation = Enum.StatusBarInterpolation
-        local function GetRemainingFromDurationObject(durationObject)
-            if durationObject and durationObject.GetRemainingDuration then
-                local ok, remaining = pcall(durationObject.GetRemainingDuration, durationObject)
-                if ok and type(remaining) == "number" and NotSecretValue(remaining) then
-                    return remaining
-                end
-            end
-        end
+        local castUpdateElapsed = 0
         frame.castBarFrame:SetScript("OnUpdate", function(self, elapsed)
+            castUpdateElapsed = castUpdateElapsed + (elapsed or 0)
+            if castUpdateElapsed < 0.05 then
+                return
+            end
+            castUpdateElapsed = 0
+
             local info = frame.castInfo
             if info.casting then
                 local name = UnitCastingInfo(unit)
@@ -497,7 +545,7 @@ local function CreateCastBar(frame, unit)
     elseif unit == "focus" then
         eventFrame:RegisterEvent("PLAYER_FOCUS_CHANGED")
     end
-    if Compat.IsTBC or Compat.IsClassic then
+    if not usesDurationObjects then
         eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_DELAYED", unit)
         eventFrame:RegisterUnitEvent("UNIT_SPELLCAST_CHANNEL_UPDATE", unit)
     end
@@ -524,7 +572,7 @@ local function CreateCastBar(frame, unit)
                 ShowCastBar(name, notInterruptible, startTime, endTime)
             end
 
-        elseif (Compat.IsTBC or Compat.IsClassic) and event == "UNIT_SPELLCAST_DELAYED" then
+        elseif (not usesDurationObjects) and event == "UNIT_SPELLCAST_DELAYED" then
             if frame.castInfo.casting then
                 local name, _, _, startTime, endTime = UnitCastingInfo(unit)
                 if name and startTime and endTime then
@@ -533,7 +581,7 @@ local function CreateCastBar(frame, unit)
                 end
             end
 
-        elseif (Compat.IsTBC or Compat.IsClassic) and event == "UNIT_SPELLCAST_CHANNEL_UPDATE" then
+        elseif (not usesDurationObjects) and event == "UNIT_SPELLCAST_CHANNEL_UPDATE" then
             if frame.castInfo.channeling then
                 local name, _, _, startTime, endTime = UnitChannelInfo(unit)
                 if name and startTime and endTime then
@@ -544,7 +592,7 @@ local function CreateCastBar(frame, unit)
 
         elseif event == "UNIT_SPELLCAST_STOP" then
             if not frame.castInfo.casting then return end
-            if unit == "target" or isBoss then
+            if unit ~= "player" then
                 if not UnitCastingInfo(unit) then
                     SyncCastBarFromUnitState()
                 end
@@ -562,7 +610,7 @@ local function CreateCastBar(frame, unit)
 
         elseif event == "UNIT_SPELLCAST_FAILED" or event == "UNIT_SPELLCAST_INTERRUPTED" then
             if not frame.castInfo.casting then return end
-            if unit == "target" or isBoss then
+            if unit ~= "player" then
                 if not UnitCastingInfo(unit) then
                     SyncCastBarFromUnitState()
                 end
@@ -575,6 +623,7 @@ local function CreateCastBar(frame, unit)
         end
     end)
 
+    frame.mmfSyncCastBar = SyncCastBarFromUnitState
     if isBoss then
         frame.mmfRefreshBossCastBar = SyncCastBarFromUnitState
         frame:HookScript("OnShow", SyncCastBarFromUnitState)
@@ -582,10 +631,10 @@ local function CreateCastBar(frame, unit)
         SyncCastBarFromUnitState()
     end
 
-    -- Classic Era can expose target cast state through UnitCastingInfo without
-    -- reliably delivering every target UNIT_SPELLCAST event. The cast bar is
-    -- hidden while idle, so poll from the always-active event frame to recover
-    -- missed starts and early stops.
+    
+    
+    
+    
     if Compat.IsClassic and unit == "target" then
         local castStatePollElapsed = 0
         eventFrame:SetScript("OnUpdate", function(self, elapsed)
@@ -613,4 +662,3 @@ end
 _G.MMF_FrameFactoryCastbar = {
     CreateCastBar = CreateCastBar,
 }
-

@@ -54,7 +54,7 @@ local function SetPlayerCombatVisual(frame, isInCombat)
     end
 
     local frameOutlineEnabled = IsCombatFrameOutlineEnabled()
-    local hideCombatIcon = IsCombatIconHidden()
+    local hideCombatIcon = not frame.mmfPreview and IsCombatIconHidden()
 
     frame.combatTexture:SetShown(isInCombat == true and not hideCombatIcon)
     if frame.combatIconOutlineTextures then
@@ -226,7 +226,7 @@ local function SetPlayerRestingVisual(frame, isResting)
         return
     end
 
-    local hideRestingIcon = MattMinimalFramesDB and MattMinimalFramesDB.hideRestingIcon == true
+    local hideRestingIcon = not frame.mmfPreview and MattMinimalFramesDB and MattMinimalFramesDB.hideRestingIcon == true
     if hideRestingIcon then
         frame.restingTexture:Hide()
         if frame.restingAnim and frame.restingUsesAnimation then
@@ -408,14 +408,18 @@ local function CreatePlayerIndicators(frame)
     CreateCombatIconOutline(frame)
     CreateCombatFrameOutline(frame)
     ConfigurePlayerCombatTexture(frame)
-    SetPlayerCombatVisual(frame, IsPlayerInCombat())
+    SetPlayerCombatVisual(frame, not frame.mmfPreview and IsPlayerInCombat())
 
     frame.restingTexture = frame.nameOverlay:CreateTexture(nil, "OVERLAY", nil, 7)
     ConfigurePlayerRestingTexture(frame)
-    SetPlayerRestingVisual(frame, IsResting())
+    SetPlayerRestingVisual(frame, not frame.mmfPreview and IsResting())
 end
 
 _G.MMF_FrameFactoryIndicators = {
+    SetCombatState = SetPlayerCombatVisual,
+    SetRestingState = SetPlayerRestingVisual,
+    ConfigureCombat = ConfigurePlayerCombatTexture,
+    ConfigureResting = ConfigurePlayerRestingTexture,
     CreatePlayerIndicators = CreatePlayerIndicators,
     UpdatePlayerRestingIndicator = UpdatePlayerRestingIndicator,
     UpdatePlayerCombatIndicator = UpdatePlayerCombatIndicator,

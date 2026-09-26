@@ -1,12 +1,12 @@
---@curseforge-project-slug: libdbicon-1-0@
------------------------------------------------------------------------
--- LibDBIcon-1.0
---
--- Allows addons to easily create a lightweight minimap icon as an alternative to heavier LDB displays.
---
+
+
+
+
+
+
 
 local DBICON10 = "LibDBIcon-1.0"
-local DBICON10_MINOR = 55 -- Bump on changes
+local DBICON10_MINOR = 55 
 if not LibStub then error(DBICON10 .. " requires LibStub.") end
 local ldb = LibStub("LibDataBroker-1.1", true)
 if not ldb then error(DBICON10 .. " requires LibDataBroker-1.1.") end
@@ -130,7 +130,7 @@ local function onLeaveCompartment(self, menu)
 	end
 end
 
---------------------------------------------------------------------------------
+
 
 local onDragStart, updatePosition
 
@@ -259,15 +259,15 @@ local function createButton(name, object, db, customCompartmentIcon)
 	button:SetSize(31, 31)
 	button:RegisterForClicks("anyUp")
 	button:RegisterForDrag("LeftButton")
-	button:SetHighlightTexture(136477) --"Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight"
+	button:SetHighlightTexture(136477) 
 	if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
 		local overlay = button:CreateTexture(nil, "OVERLAY")
 		overlay:SetSize(50, 50)
-		overlay:SetTexture(136430) --"Interface\\Minimap\\MiniMap-TrackingBorder"
+		overlay:SetTexture(136430) 
 		overlay:SetPoint("TOPLEFT", button, "TOPLEFT")
 		local background = button:CreateTexture(nil, "BACKGROUND")
 		background:SetSize(24, 24)
-		background:SetTexture(136467) --"Interface\\Minimap\\UI-Minimap-Background"
+		background:SetTexture(136467) 
 		background:SetPoint("CENTER", button, "CENTER")
 		local icon = button:CreateTexture(nil, "ARTWORK")
 		icon:SetSize(18, 18)
@@ -277,11 +277,11 @@ local function createButton(name, object, db, customCompartmentIcon)
 	else
 		local overlay = button:CreateTexture(nil, "OVERLAY")
 		overlay:SetSize(53, 53)
-		overlay:SetTexture(136430) --"Interface\\Minimap\\MiniMap-TrackingBorder"
+		overlay:SetTexture(136430) 
 		overlay:SetPoint("TOPLEFT")
 		local background = button:CreateTexture(nil, "BACKGROUND")
 		background:SetSize(20, 20)
-		background:SetTexture(136467) --"Interface\\Minimap\\UI-Minimap-Background"
+		background:SetTexture(136467) 
 		background:SetPoint("TOPLEFT", 7, -5)
 		local icon = button:CreateTexture(nil, "ARTWORK")
 		icon:SetSize(17, 17)
@@ -330,11 +330,11 @@ local function createButton(name, object, db, customCompartmentIcon)
 	if db and db.showInCompartment then
 		lib:AddButtonToCompartment(name, customCompartmentIcon)
 	end
-	lib.callbacks:Fire("LibDBIcon_IconCreated", button, name) -- Fire 'Icon Created' callback
+	lib.callbacks:Fire("LibDBIcon_IconCreated", button, name) 
 end
 
--- Wait a bit with the initial positioning to let any GetMinimapShape addons
--- load up.
+
+
 if not lib.loggedIn then
 	local frame = CreateFrame("Frame")
 	frame:SetScript("OnEvent", function(self)
@@ -374,9 +374,9 @@ do
 	Minimap:HookScript("OnLeave", OnMinimapLeave)
 end
 
---------------------------------------------------------------------------------
--- Button API
---
+
+
+
 
 function lib:Register(name, object, db, customCompartmentIcon)
 	if not object.icon then error("Can't register LDB objects without icons set!") end
@@ -487,9 +487,9 @@ function lib:SetButtonToPosition(button, position)
 	updatePosition(lib.objects[button] or button, position)
 end
 
---------------------------------------------------------------------------------
--- Addon Compartment API
---
+
+
+
 
 function lib:IsButtonCompartmentAvailable()
 	if AddonCompartmentFrame then
@@ -548,9 +548,9 @@ function lib:RemoveButtonFromCompartment(buttonName)
 	end
 end
 
---------------------------------------------------------------------------------
--- Upgrades
---
+
+
+
 
 for name, button in next, lib.objects do
 	local db = button.db
@@ -564,7 +564,7 @@ for name, button in next, lib.objects do
 	button:SetScript("OnMouseDown", onMouseDown)
 	button:SetScript("OnMouseUp", onMouseUp)
 
-	if not button.fadeOut then -- Upgrade to 39
+	if not button.fadeOut then 
 		button.fadeOut = button:CreateAnimationGroup()
 		local animOut = button.fadeOut:CreateAnimation("Alpha")
 		animOut:SetOrder(1)
@@ -575,8 +575,8 @@ for name, button in next, lib.objects do
 		button.fadeOut:SetToFinalAlpha(true)
 	end
 end
-lib:SetButtonRadius(lib.radius) -- Upgrade to 40
-if lib.notCreated then -- Upgrade to 50
+lib:SetButtonRadius(lib.radius) 
+if lib.notCreated then 
 	for name in next, lib.notCreated do
 		createButton(name, lib.notCreated[name][1], lib.notCreated[name][2])
 	end

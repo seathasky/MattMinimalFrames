@@ -1,4 +1,4 @@
--- Clique click-casting support (Retail/Classic compatible).
+
 
 local function RegisterFramesWithClique()
     if type(MMF_GetAllFrames) ~= "function" then return false end

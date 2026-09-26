@@ -9,6 +9,79 @@ local function GetDefaultPowerTextAnchor(frame, unit)
     return "BOTTOMLEFT", frame, "BOTTOMLEFT", 3, 3
 end
 
+local appliedTextAnchors = setmetatable({}, { __mode = "k" })
+local appliedTextJustifications = setmetatable({}, { __mode = "k" })
+
+local function IsAppliedAnchor(region, point, relativeTo, relativePoint, x, y)
+    local applied = appliedTextAnchors[region]
+    return applied
+        and applied[1] == point
+        and applied[2] == relativeTo
+        and applied[3] == relativePoint
+        and applied[4] == x
+        and applied[5] == y
+end
+
+local function RememberAppliedAnchor(region, point, relativeTo, relativePoint, x, y)
+    appliedTextAnchors[region] = { point, relativeTo, relativePoint, x, y }
+end
+
+local function SetPointIfChanged(region, point, relativeTo, relativePoint, x, y)
+    if not region then
+        return
+    end
+    if region.GetNumPoints and region.GetPoint and region:GetNumPoints() == 1 then
+        local currentPoint, currentRelativeTo, currentRelativePoint, currentX, currentY = region:GetPoint(1)
+        
+        
+        local hasSecretAnchor = issecretvalue and (
+            issecretvalue(currentPoint)
+            or issecretvalue(currentRelativeTo)
+            or issecretvalue(currentRelativePoint)
+            or issecretvalue(currentX)
+            or issecretvalue(currentY)
+        )
+        if hasSecretAnchor then
+            if IsAppliedAnchor(region, point, relativeTo, relativePoint, x, y) then
+                return
+            end
+        else
+            if currentPoint == point
+                and currentRelativeTo == relativeTo
+                and currentRelativePoint == relativePoint
+                and currentX == x
+                and currentY == y
+            then
+                RememberAppliedAnchor(region, point, relativeTo, relativePoint, x, y)
+                return
+            end
+        end
+    end
+
+    region:ClearAllPoints()
+    region:SetPoint(point, relativeTo, relativePoint, x, y)
+    RememberAppliedAnchor(region, point, relativeTo, relativePoint, x, y)
+end
+
+local function SetJustifyIfChanged(region, justify)
+    if not region or not region.SetJustifyH then
+        return
+    end
+    local currentJustify = region.GetJustifyH and region:GetJustifyH()
+    if region.GetJustifyH then
+        if issecretvalue and issecretvalue(currentJustify) then
+            if appliedTextJustifications[region] == justify then
+                return
+            end
+        elseif currentJustify == justify then
+            appliedTextJustifications[region] = justify
+            return
+        end
+    end
+    region:SetJustifyH(justify)
+    appliedTextJustifications[region] = justify
+end
+
 local function ApplyPowerTextPosition(frame, unit)
     if not frame or not frame.powerText then return end
 
@@ -19,11 +92,8 @@ local function ApplyPowerTextPosition(frame, unit)
         if frame.powerTextDragFrame then
             frame.powerTextDragFrame:Hide()
         end
-        frame.powerText:ClearAllPoints()
-        frame.powerText:SetPoint(preset.point, frame, preset.relPoint, preset.x, preset.y)
-        if frame.powerText.SetJustifyH then
-            frame.powerText:SetJustifyH(preset.justify or "CENTER")
-        end
+        SetPointIfChanged(frame.powerText, preset.point, frame, preset.relPoint, preset.x, preset.y)
+        SetJustifyIfChanged(frame.powerText, preset.justify or "CENTER")
         return
     end
 
@@ -31,47 +101,35 @@ local function ApplyPowerTextPosition(frame, unit)
         if frame.powerTextDragFrame.mmfDragInProgress then
             return
         end
-        frame.powerTextDragFrame:ClearAllPoints()
         local pos = MattMinimalFramesDB and MattMinimalFramesDB.powerTextPositions and MattMinimalFramesDB.powerTextPositions[unit]
         local hasCustomPosition = type(pos) == "table" and type(pos.x) == "number" and type(pos.y) == "number"
         if hasCustomPosition then
-            frame.powerTextDragFrame:SetPoint("CENTER", frame, "CENTER", pos.x, pos.y)
+            SetPointIfChanged(frame.powerTextDragFrame, "CENTER", frame, "CENTER", pos.x, pos.y)
         else
             local point, relFrame, relPoint, x, y = GetDefaultPowerTextAnchor(frame, unit)
-            frame.powerTextDragFrame:SetPoint(point, relFrame, relPoint, x, y)
+            SetPointIfChanged(frame.powerTextDragFrame, point, relFrame, relPoint, x, y)
         end
 
-        frame.powerText:ClearAllPoints()
         if unit == "player" then
-            frame.powerText:SetPoint("BOTTOMLEFT", frame.powerTextDragFrame, "BOTTOMLEFT", 0, 0)
-            if frame.powerText.SetJustifyH then
-                frame.powerText:SetJustifyH("LEFT")
-            end
+            SetPointIfChanged(frame.powerText, "BOTTOMLEFT", frame.powerTextDragFrame, "BOTTOMLEFT", 0, 0)
+            SetJustifyIfChanged(frame.powerText, "LEFT")
         elseif unit == "target" then
-            frame.powerText:SetPoint("BOTTOMRIGHT", frame.powerTextDragFrame, "BOTTOMRIGHT", 0, 0)
-            if frame.powerText.SetJustifyH then
-                frame.powerText:SetJustifyH("RIGHT")
-            end
+            SetPointIfChanged(frame.powerText, "BOTTOMRIGHT", frame.powerTextDragFrame, "BOTTOMRIGHT", 0, 0)
+            SetJustifyIfChanged(frame.powerText, "RIGHT")
         elseif hasCustomPosition then
-            frame.powerText:SetPoint("CENTER", frame.powerTextDragFrame, "CENTER", 0, 0)
-            if frame.powerText.SetJustifyH then
-                frame.powerText:SetJustifyH("CENTER")
-            end
+            SetPointIfChanged(frame.powerText, "CENTER", frame.powerTextDragFrame, "CENTER", 0, 0)
+            SetJustifyIfChanged(frame.powerText, "CENTER")
         else
             local point, relFrame, relPoint, x, y = GetDefaultPowerTextAnchor(frame, unit)
-            frame.powerText:SetPoint(point, relFrame, relPoint, x, y)
-            if frame.powerText.SetJustifyH then
-                frame.powerText:SetJustifyH("CENTER")
-            end
+            SetPointIfChanged(frame.powerText, point, relFrame, relPoint, x, y)
+            SetJustifyIfChanged(frame.powerText, "CENTER")
         end
         return
     end
 
     local point, relFrame, relPoint, x, y = GetDefaultPowerTextAnchor(frame, unit)
-    frame.powerText:SetPoint(point, relFrame, relPoint, x, y)
-    if frame.powerText.SetJustifyH then
-        frame.powerText:SetJustifyH("CENTER")
-    end
+    SetPointIfChanged(frame.powerText, point, relFrame, relPoint, x, y)
+    SetJustifyIfChanged(frame.powerText, "CENTER")
 end
 
 local function GetDefaultHPTextAnchor(frame, unit)

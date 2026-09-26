@@ -1,28 +1,33 @@
 local _, MMF = ...
 MMF = MMF or {}
 
---------------------------------------------------
--- VERSION DETECTION
---------------------------------------------------
+
+
+
 
 local WOW_PROJECT_MAINLINE = WOW_PROJECT_MAINLINE or 1
 local WOW_PROJECT_BURNING_CRUSADE_CLASSIC = WOW_PROJECT_BURNING_CRUSADE_CLASSIC or 5
 local WOW_PROJECT_CLASSIC = WOW_PROJECT_CLASSIC or 2
+local interfaceVersion = select(4, GetBuildInfo())
 
 MMF.IsRetail = (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE)
 MMF.IsTBC = (WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC)
 MMF.IsClassic = (WOW_PROJECT_ID == WOW_PROJECT_CLASSIC)
-MMF.IsClassicEra = MMF.IsClassic or MMF.IsTBC
+
+
+
+MMF.IsForever = (WOW_PROJECT_FOREVER ~= nil and WOW_PROJECT_ID == WOW_PROJECT_FOREVER)
+    or (WOW_PROJECT_CLASSIC_FOREVER ~= nil and WOW_PROJECT_ID == WOW_PROJECT_CLASSIC_FOREVER)
+    or (interfaceVersion >= 16000 and interfaceVersion < 17000)
+MMF.IsKnownProject = MMF.IsRetail or MMF.IsClassic or MMF.IsTBC or MMF.IsForever
+
+MMF.IsClassicEra = not MMF.IsRetail
 MMF_IsRetail = MMF.IsRetail
 MMF_IsTBC = MMF.IsTBC
 MMF_IsClassic = MMF.IsClassic
 MMF_IsClassicEra = MMF.IsClassicEra
 
-function MMF.ShouldSuspendForBlizzardEditMode()
-    if not MMF.IsRetail then
-        return false
-    end
-
+function MMF.IsBlizzardEditModeActive()
     local frame = _G.EditModeManagerFrame
     if not frame then
         return false
@@ -45,160 +50,19 @@ function MMF.ShouldSuspendForBlizzardEditMode()
     return false
 end
 
+_G.MMF_IsBlizzardEditModeActive = MMF.IsBlizzardEditModeActive
+
+function MMF.ShouldSuspendForBlizzardEditMode()
+    
+    
+    if MMF_Designer and MMF_Designer.ready then return false end
+    return MMF.IsBlizzardEditModeActive()
+end
 _G.MMF_ShouldSuspendForBlizzardEditMode = MMF.ShouldSuspendForBlizzardEditMode
 
-local blizzardEditModeNoticeFrame
 
-local function EnsureFrameEditModeLabel(frame)
-    if not frame or frame.mmfBlizzardEditModeLabel then
-        return
-    end
 
-    local label = frame:CreateFontString(nil, "OVERLAY")
-    label:SetDrawLayer("OVERLAY", 7)
-    label:SetPoint("CENTER", frame, "CENTER", 0, 0)
-    label:SetJustifyH("CENTER")
-    label:SetJustifyV("MIDDLE")
-    label:SetWidth(math.max((frame.GetWidth and frame:GetWidth()) or 0, 90) - 8)
-    label:SetWordWrap(true)
-    label:SetTextColor(0.96, 0.32, 0.32, 1)
-    label:SetFontObject(GameFontNormal)
-    label:SetText("Blizzard Edit Mode: use MMF Edit Mode for this frame")
-    label:Hide()
 
-    frame.mmfBlizzardEditModeLabel = label
-end
-
-local function UpdateFrameEditModeLabelText(frame)
-    if not frame or not frame.mmfBlizzardEditModeLabel then
-        return
-    end
-
-    local width = (frame.GetWidth and frame:GetWidth()) or 0
-    local label = frame.mmfBlizzardEditModeLabel
-    label:SetWidth(math.max(width - 8, 56))
-
-    if width <= 110 then
-        label:SetText("Use MMF\nEdit Mode")
-    elseif width <= 150 then
-        label:SetText("Blizzard Edit Mode:\nUse MMF Edit Mode")
-    else
-        label:SetText("Blizzard Edit Mode: use MMF Edit Mode for this frame")
-    end
-end
-
-local function UpdateFrameEditModeLabels(isVisible)
-    if type(MMF_GetAllFrames) ~= "function" then
-        return
-    end
-
-    for _, frame in ipairs(MMF_GetAllFrames() or {}) do
-        if frame then
-            EnsureFrameEditModeLabel(frame)
-            if frame.mmfBlizzardEditModeLabel then
-                UpdateFrameEditModeLabelText(frame)
-                if isVisible then
-                    frame.mmfBlizzardEditModeLabel:Show()
-                else
-                    frame.mmfBlizzardEditModeLabel:Hide()
-                end
-            end
-        end
-    end
-end
-
-local function EnsureBlizzardEditModeNotice()
-    if not MMF.IsRetail or blizzardEditModeNoticeFrame then
-        return
-    end
-
-    local frame = CreateFrame("Frame", nil, UIParent, "BackdropTemplate")
-    frame:SetFrameStrata("DIALOG")
-    frame:SetFrameLevel(200)
-    frame:SetClampedToScreen(true)
-    frame:SetSize(780, 54)
-    frame:SetPoint("TOP", UIParent, "TOP", 0, -28)
-    frame:SetBackdrop({
-        bgFile = "Interface\\Buttons\\WHITE8x8",
-        edgeFile = "Interface\\Buttons\\WHITE8x8",
-        edgeSize = 1,
-        insets = { left = 1, right = 1, top = 1, bottom = 1 },
-    })
-    frame:SetBackdropColor(0.10, 0.01, 0.01, 0.88)
-    frame:SetBackdropBorderColor(0.80, 0.16, 0.16, 0.95)
-    frame:Hide()
-
-    local headline = frame:CreateFontString(nil, "OVERLAY")
-    headline:SetPoint("TOPLEFT", frame, "TOPLEFT", 14, -7)
-    headline:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -14, -7)
-    headline:SetJustifyH("CENTER")
-    headline:SetJustifyV("MIDDLE")
-    headline:SetWordWrap(false)
-    headline:SetTextColor(1, 0.86, 0.18, 1)
-    local fontFlags = (MMF_GetGlobalTextFontFlags and MMF_GetGlobalTextFontFlags()) or "OUTLINE"
-    if MMF_SetFontSafe then
-        MMF_SetFontSafe(headline, MMF_Config and MMF_Config.FONT_PATH or "Fonts\\FRIZQT__.TTF", 16, fontFlags)
-    else
-        headline:SetFont("Fonts\\FRIZQT__.TTF", 16, fontFlags)
-    end
-    headline:SetText("You are in Blizzard Edit Mode")
-
-    local text = frame:CreateFontString(nil, "OVERLAY")
-    text:SetPoint("TOPLEFT", headline, "BOTTOMLEFT", 0, -4)
-    text:SetPoint("TOPRIGHT", headline, "BOTTOMRIGHT", 0, -4)
-    text:SetJustifyH("CENTER")
-    text:SetJustifyV("TOP")
-    text:SetWordWrap(true)
-    text:SetTextColor(1, 0.93, 0.93, 1)
-    text:SetFontObject(GameFontNormal)
-    text:SetText("Use MMF Edit Mode for player, target, focus, and other personal frames.\nUse Blizzard Edit Mode only for party and raid frames.")
-
-    frame.headline = headline
-    frame.text = text
-    blizzardEditModeNoticeFrame = frame
-end
-
-function MMF.UpdateBlizzardEditModeNotice()
-    if not MMF.IsRetail then
-        return
-    end
-
-    EnsureBlizzardEditModeNotice()
-    if not blizzardEditModeNoticeFrame then
-        return
-    end
-
-    if MMF.ShouldSuspendForBlizzardEditMode() then
-        blizzardEditModeNoticeFrame:Show()
-        UpdateFrameEditModeLabels(true)
-    else
-        blizzardEditModeNoticeFrame:Hide()
-        UpdateFrameEditModeLabels(false)
-    end
-end
-
-do
-    local noticeDriver = CreateFrame("Frame")
-    local elapsedSinceUpdate = 0
-
-    noticeDriver:RegisterEvent("PLAYER_LOGIN")
-    noticeDriver:RegisterEvent("PLAYER_ENTERING_WORLD")
-    noticeDriver:SetScript("OnEvent", function()
-        MMF.UpdateBlizzardEditModeNotice()
-    end)
-    noticeDriver:SetScript("OnUpdate", function(_, elapsed)
-        elapsedSinceUpdate = elapsedSinceUpdate + elapsed
-        if elapsedSinceUpdate < 0.20 then
-            return
-        end
-        elapsedSinceUpdate = 0
-        MMF.UpdateBlizzardEditModeNotice()
-    end)
-end
-
---------------------------------------------------
--- API COMPATIBILITY
---------------------------------------------------
 
 function MMF.GetSpellName(spellID)
     if _G.GetSpellInfo then
@@ -218,8 +82,9 @@ if MMF.IsRetail and C_Spell and C_Spell.IsSpellInRange then
 end
 
 function MMF.GetSpecialization()
-    if MMF.IsRetail and _G.GetSpecialization then
-        return _G.GetSpecialization()
+    if MMF.IsRetail then
+        local getter = C_SpecializationInfo and C_SpecializationInfo.GetSpecialization or _G.GetSpecialization
+        if getter then return getter() end
     end
     return nil
 end
@@ -240,9 +105,9 @@ function MMF.GetAccessibleUnitToken(unit)
     return unit
 end
 
---------------------------------------------------
--- RANGE CHECK SPELL TABLES
---------------------------------------------------
+
+
+
 
 MMF.FriendSpells_Retail = {
     DEATHKNIGHT = 47541,
@@ -296,14 +161,14 @@ MMF.HarmSpells_TBC = {
 MMF.FriendSpells = MMF.IsClassicEra and MMF.FriendSpells_TBC or MMF.FriendSpells_Retail
 MMF.HarmSpells = MMF.IsClassicEra and MMF.HarmSpells_TBC or MMF.HarmSpells_Retail
 
---------------------------------------------------
--- AURA API COMPATIBILITY
---------------------------------------------------
 
--- Classic Era also exposes parts of C_UnitAuras, but its AuraUtil callback
--- shape is still the Classic one.  Treating API presence as a Retail signal
--- sends Era through the packed-aura path and produces empty aura lists.
-MMF.HasRetailAuraAPI = MMF.IsRetail and (C_UnitAuras ~= nil)
+
+
+
+
+
+
+MMF.HasRetailAuraAPI = C_UnitAuras ~= nil and type(C_UnitAuras.GetAuraDataByIndex)=="function"
 
 local function IsSecretValue(value)
     return issecretvalue and issecretvalue(value)
@@ -321,8 +186,8 @@ local function CloneAuraData(aura, index)
         return nil
     end
 
-    -- C_UnitAuras aura tables can be pooled/reused internally.
-    -- Copy fields we rely on so each entry remains stable for the current update pass.
+    
+    
     return {
         name = SafeAuraField(aura.name),
         icon = SafeAuraField(aura.icon),
@@ -357,7 +222,7 @@ function MMF.GetUnitAuras(unit, filter)
     local isHelpful = filterString:find("HELPFUL", 1, true) ~= nil
 
     if MMF.HasRetailAuraAPI then
-        -- Retail: use Blizzard's packed aura path (same pattern as FrameXML).
+        
         if AuraUtil and AuraUtil.ForEachAura then
             local usePackedAura = true
             AuraUtil.ForEachAura(unit, filterString, 40, function(aura)
@@ -372,7 +237,7 @@ function MMF.GetUnitAuras(unit, filter)
             return auras
         end
 
-        -- Retail hard fallback: direct C_UnitAuras indexed API only.
+        
         local GetAuraDataByIndex = C_UnitAuras and C_UnitAuras.GetAuraDataByIndex
         if GetAuraDataByIndex then
             for i = 1, 40 do
@@ -389,7 +254,7 @@ function MMF.GetUnitAuras(unit, filter)
         return auras
     end
 
-    -- Classic/TBC path.
+    
     if AuraUtil and AuraUtil.ForEachAura then
         AuraUtil.ForEachAura(unit, filterString, 40, function(name, icon, count, debuffType, duration, expirationTime, source, isStealable, _, spellId, ...)
             local value1, value2, value3 = ...
@@ -417,6 +282,7 @@ function MMF.GetUnitAuras(unit, filter)
         if filterString:find("PLAYER", 1, true) then
             unitFilter = "PLAYER"
         end
+        if type(auraFunc) ~= "function" then return auras end
         for i = 1, 40 do
             local name, icon, count, debuffType, duration, expirationTime, source, _, _, spellId, _, _, _, _, _, _, value1, value2, value3 = auraFunc(unit, i, unitFilter)
             if not name then break end
@@ -445,14 +311,14 @@ function MMF.SetAuraCooldown(cooldownFrame, auraData, unit)
     
     if MMF.HasRetailAuraAPI and auraData.auraInstanceID then
         local GetAuraDuration = C_UnitAuras.GetAuraDuration
-        local auraDuration = GetAuraDuration(unit, auraData.auraInstanceID)
+        local auraDuration = type(GetAuraDuration)=="function" and GetAuraDuration(unit, auraData.auraInstanceID) or nil
         if auraDuration and cooldownFrame.SetCooldownFromDurationObject then
             cooldownFrame:SetCooldownFromDurationObject(auraDuration)
             return
         end
     end
     
-    -- Check if duration is a secret value to avoid taint
+    
     local isSecretDuration = issecretvalue and issecretvalue(auraData.duration)
     if not isSecretDuration then
         local ok, startTime, duration = pcall(function()
@@ -485,19 +351,19 @@ function MMF.GetAuraCount(auraData, unit)
     return (auraData.count and type(auraData.count) == "number" and auraData.count) or 0
 end
 
---------------------------------------------------
--- FEATURE FLAGS
---------------------------------------------------
+
+
+
 
 MMF.HasDeathKnight = MMF.IsRetail
--- Vanilla Classic has no native focus unit. Do not expose controls or create a
--- secure unit frame that can never acquire a unit on Era.
+
+
 MMF.HasFocusFrame = not MMF.IsClassic
 MMF.HasSpecialization = MMF.IsRetail
 
---------------------------------------------------
--- DEBUG
---------------------------------------------------
+
+
+
 
 function MMF.PrintVersion()
     local version = "Unknown"
