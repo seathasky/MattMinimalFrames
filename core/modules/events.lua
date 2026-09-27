@@ -149,7 +149,7 @@ local function GetInsetTexCoord(coords)
 end
 
 local function SupportsPetFrameHappinessIcon()
-    return Compat and Compat.IsClassicEra == true and type(rawget(_G, "GetPetHappiness")) == "function"
+    return Compat and Compat.HasPetHappiness == true
 end
 
 local function GetPetFrameHappinessScale()
@@ -282,8 +282,7 @@ local function UpdatePetFrameHappinessIcon(forceVisibleInEditMode)
     end
 
     local hasPet = type(UnitExists) == "function" and UnitExists("pet")
-    local getPetHappiness = rawget(_G, "GetPetHappiness")
-    local happiness = getPetHappiness and getPetHappiness() or nil
+    local happiness = Compat.GetPetHappiness()
     local coords = PET_HAPPINESS_TEX_COORDS[happiness]
     MMF_ExtraVisuals.Happiness(icon,happiness)
 

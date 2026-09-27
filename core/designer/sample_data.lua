@@ -136,6 +136,7 @@ function S.ApplyData(frame)
     X.Resurrection(frame.designerResurrection)
     X.RaidMarker(frame.targetMarker,D.sampleChoices.raidMarker or 8)
     X.Happiness(frame.designerHappiness,D.sampleChoices.happiness or 3)
+    if frame.shamanTotemTimers then MMF_TotemTimers.Sample(frame) end
     local portrait=D.ElementDesign(key,"portrait")
     local mode=portrait.iconMode or "class"
     if D.selection and D.selection.id=="portraitModel" then mode="portrait_animated" end

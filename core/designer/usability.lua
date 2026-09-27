@@ -35,6 +35,7 @@ local components={
     {id="power",label="Power bar",category="core",toggleAll=true,members={"power","powerFill","powerBackground","powerBorder"}},
     {id="powerText",label="Power text",category="core",members={"powerText"}},
     {id="secondaryPower",label="Secondary mana bar",category="core",toggleAll=true,members={"secondaryPower","secondaryPowerBackground"}},
+    {id="shamanTotemTimers",label="Shaman Totem Timers",category="core",members={"shamanTotemTimers"}},
 
     {id="cast",label="Cast bar",category="castAuras",toggleAll=true,members={"cast","castFill","castBackground","castBorder"}},
     {id="castName",label="Cast spell name",category="castAuras",members={"castName"}},

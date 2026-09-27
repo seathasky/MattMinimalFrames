@@ -22,9 +22,12 @@ function X.Ensure(frame)
     local key=frame.mmfDesignerKey or D.Key(frame.unit)
     local overlay=frame.nameOverlay or frame
     if frame.mmfDesignerExtrasCreated then return end
+    if key=="player" and select(2,UnitClass("player"))=="SHAMAN" then
+        MMF_TotemTimers.Create(frame)
+    end
     local fields={designerLevel="level",designerClassification="classification",designerStatus="status",
         designerLeader="leader",designerRole="role",designerReady="ready",designerResurrection="resurrection",designerPortrait="portrait"}
-    if key=="pet" and type(GetPetHappiness)=="function" then
+    if key=="pet" and MMF_Compat.HasPetHappiness then
         X.CreateHappiness(frame)
         frame.designerHappiness=frame.petHappinessIcon
     end

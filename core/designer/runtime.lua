@@ -149,6 +149,7 @@ end
 function D.UpdateExtras(frame)
     if not D.ready or not frame or not frame.mmfDesignerKey then return end
     local unit,key=frame.unit,frame.mmfDesignerKey
+    if frame.shamanTotemTimers and not frame.mmfPreview then MMF_TotemTimers.Update(frame) end
     local exists=IsTrue(UnitExists,unit)
     if not exists then
         for _,field in ipairs({"designerLevel","designerClassification","designerStatus","designerLeader","designerRole","designerReady","designerResurrection","designerPortrait","designerHappiness"}) do
@@ -235,10 +236,10 @@ function D.UpdateExtras(frame)
         frame.pvpFlagText:SetText("PvP")
         Display(frame.pvpFlagText,Enabled("pvp") and IsTrue(UnitIsPVP,unit))
     end
-    if frame.designerHappiness and GetPetHappiness then
-        local happiness=Public(GetPetHappiness)
+    if frame.designerHappiness and Compat.HasPetHappiness then
+        local happiness=Public(Compat.GetPetHappiness)
         local show=Enabled("happiness") and type(happiness)=="number" and happiness>=1 and happiness<=3
-        if show and frame.designerHappiness~=frame.petHappinessIcon then
+        if show then
             MMF_ExtraVisuals.Happiness(frame.designerHappiness,happiness)
         end
         Display(frame.designerHappiness,show)
@@ -552,6 +553,7 @@ function D.Start()
 end
 
 local events=CreateFrame("Frame")
+pcall(events.RegisterEvent,events,"PLAYER_TOTEM_UPDATE")
 for _,event in ipairs({"ADDON_LOADED","PLAYER_LOGIN","PLAYER_REGEN_DISABLED","PLAYER_REGEN_ENABLED","GROUP_ROSTER_UPDATE","PLAYER_ENTERING_WORLD","PLAYER_TARGET_CHANGED","PLAYER_FOCUS_CHANGED","UNIT_TARGET","UNIT_AURA","UNIT_HEALTH","UNIT_MAXHEALTH","UNIT_PET","PLAYER_SPECIALIZATION_CHANGED","READY_CHECK","READY_CHECK_CONFIRM","READY_CHECK_FINISHED","INCOMING_RESURRECT_CHANGED","RAID_TARGET_UPDATE","PLAYER_ROLES_ASSIGNED","UNIT_FLAGS","UNIT_CONNECTION","UNIT_FACTION","PLAYER_FLAGS_CHANGED","PLAYER_PVP_UPDATE","PLAYER_DEAD","PLAYER_ALIVE","UNIT_HAPPINESS","PET_UI_UPDATE","PET_BAR_UPDATE"}) do
     pcall(events.RegisterEvent,events,event)
 end

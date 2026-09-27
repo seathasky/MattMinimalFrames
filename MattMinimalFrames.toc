@@ -1,7 +1,7 @@
 ## Interface: 120100, 11508, 20506, 160001
 ## Title: Matt's Minimal Frames
 ## Author: Seathasky
-## Version: 10.0.0
+## Version: 10.0.1
 ## X-Curse-Project-ID: 1362998
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
 ## SavedVariables: MattMinimalFramesDB, MattMinimalFramesProfilesDB, MattMinimalFramesGlobalDB
@@ -51,6 +51,7 @@ core/frame_factory/bootstrap.lua
 core/frame_factory/visuals.lua
 core/frame_factory/visual_style.lua
 core/frame_factory/extras.lua
+core/frame_factory/totem_timers.lua
 core/frame_factory/frame_factory_main.lua
 core/frames/unit_updates.lua
 core/modules/combat_queue.lua

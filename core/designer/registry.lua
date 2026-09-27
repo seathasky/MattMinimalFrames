@@ -4,8 +4,9 @@ function D.Available(key,spec)
     if not D.Supports(key) then return false end
     if spec.only and spec.only~=key then return false end
     local id=spec.id
+    if id=="shamanTotemTimers" then return key=="player" and select(2,UnitClass("player"))=="SHAMAN" end
     if id=="leader" then return key=="player" or key=="party" or key=="raid" end
-    if id=="happiness" or id=="happinessBorder" then return key=="pet" and type(GetPetHappiness)=="function" end
+    if id=="happiness" or id=="happinessBorder" then return key=="pet" and MMF_Compat.HasPetHappiness==true end
     if id=="secondaryPower" or id=="secondaryPowerBackground" then return key=="player" and MMF_Compat.IsRetail end
     if id:match("^combatIconOutline") then return key=="player" and (tonumber(id:match("(%d+)$")) or 0)<=4 end
     if id:match("^resource") then

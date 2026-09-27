@@ -190,6 +190,7 @@ Element("resurrection", "Incoming resurrection", "icon", "designerResurrection",
 Element("combat", "Combat indicator", "icon", "combatTexture", nil, 22, 22, 0, 12, true, "player")
 Element("resting", "Resting indicator", "icon", "restingTexture", nil, 20, 20, 0, 12, true, "player")
 Element("happiness", "Pet happiness", "icon", "designerHappiness", nil, 18, 18, 60, 0, true, "pet")
+Element("shamanTotemTimers", "Shaman Totem Timers", "group", "shamanTotemTimers", nil, 140, 36, 0, -82, false, "player")
 Element("resources", "Class resource group", "group", "designerResources", nil, 220, 8, 0, -60, false, "player")
 D.catalogByID.resources.defaults.point="TOP"
 D.catalogByID.resources.defaults.relativePoint="BOTTOM"

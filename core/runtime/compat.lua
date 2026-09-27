@@ -10,7 +10,6 @@ local WOW_PROJECT_BURNING_CRUSADE_CLASSIC = WOW_PROJECT_BURNING_CRUSADE_CLASSIC 
 local WOW_PROJECT_CLASSIC = WOW_PROJECT_CLASSIC or 2
 local interfaceVersion = select(4, GetBuildInfo())
 
-MMF.IsRetail = (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE)
 MMF.IsTBC = (WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC)
 MMF.IsClassic = (WOW_PROJECT_ID == WOW_PROJECT_CLASSIC)
 
@@ -19,7 +18,20 @@ MMF.IsClassic = (WOW_PROJECT_ID == WOW_PROJECT_CLASSIC)
 MMF.IsForever = (WOW_PROJECT_FOREVER ~= nil and WOW_PROJECT_ID == WOW_PROJECT_FOREVER)
     or (WOW_PROJECT_CLASSIC_FOREVER ~= nil and WOW_PROJECT_ID == WOW_PROJECT_CLASSIC_FOREVER)
     or (interfaceVersion >= 16000 and interfaceVersion < 17000)
+    or (interfaceVersion >= 160000 and interfaceVersion < 170000)
+-- Explicit Forever identification takes precedence over the shared project ID.
+MMF.IsRetail = not MMF.IsForever and (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE)
 MMF.IsKnownProject = MMF.IsRetail or MMF.IsClassic or MMF.IsTBC or MMF.IsForever
+
+MMF.HasPetHappiness = not MMF.IsRetail and (MMF.IsClassic or MMF.IsForever or MMF.IsTBC)
+
+function MMF.GetPetHappiness()
+    if not MMF.HasPetHappiness then return nil end
+    local getter = C_PetInfo and C_PetInfo.GetPetHappiness
+    if type(getter) ~= "function" then getter = _G.GetPetHappiness end
+    if type(getter) == "function" then return getter() end
+    return nil
+end
 
 MMF.IsClassicEra = not MMF.IsRetail
 MMF_IsRetail = MMF.IsRetail
