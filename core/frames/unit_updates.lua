@@ -425,12 +425,10 @@ local function GetLegacyDispelTypeColor(dispelType)
     return nil, nil, nil
 end
 
-local function FindLegacyDispellableDebuffType(unit, dispelList)
-    for i = 1, 40 do
-        local name, _, _, debuffType = UnitDebuff(unit, i)
-        if not name then
-            break
-        end
+local function FindDispellableDebuffType(unit, dispelList)
+    -- Classic-family clients can expose packed aura data without UnitDebuff.
+    for _, aura in ipairs(Compat.GetUnitAuras(unit, "HARMFUL")) do
+        local debuffType = aura.dispelName or aura.debuffType
         if debuffType and dispelList[debuffType] then
             return debuffType
         end
@@ -512,7 +510,7 @@ local function UpdateDispelHighlight(frame, db)
             frame.dispelHighlight:Hide()
         end
     else
-        local debuffType = FindLegacyDispellableDebuffType(unit, dispelList)
+        local debuffType = FindDispellableDebuffType(unit, dispelList)
         if debuffType then
             local r, g, b = GetLegacyDispelTypeColor(debuffType)
             if r and g and b then
