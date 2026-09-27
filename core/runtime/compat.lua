@@ -182,6 +182,21 @@ MMF.HarmSpells = MMF.IsClassicEra and MMF.HarmSpells_TBC or MMF.HarmSpells_Retai
 
 MMF.HasRetailAuraAPI = C_UnitAuras ~= nil and type(C_UnitAuras.GetAuraDataByIndex)=="function"
 
+function MMF.CanReadAuras()
+    -- Check before calling an aura API: restricted clients can reject the call itself.
+    if C_Secrets and type(C_Secrets.ShouldAurasBeSecret) == "function" then
+        return not C_Secrets.ShouldAurasBeSecret()
+    end
+    -- Do not enumerate on a restricted build without a runtime access predicate.
+    if type(GetBuildOption) == "function" and GetBuildOption("RestrictedAuraAPI") == true then
+        return false
+    end
+    if C_Secrets and type(C_Secrets.HasSecretRestrictions) == "function" then
+        return not C_Secrets.HasSecretRestrictions()
+    end
+    return true
+end
+
 local function IsSecretValue(value)
     return issecretvalue and issecretvalue(value)
 end
@@ -230,6 +245,7 @@ end
 
 function MMF.GetUnitAuras(unit, filter)
     local auras = {}
+    if not MMF.CanReadAuras() then return auras end
     local filterString = (type(filter) == "string" and filter ~= "") and filter or "HELPFUL"
     local isHelpful = filterString:find("HELPFUL", 1, true) ~= nil
 

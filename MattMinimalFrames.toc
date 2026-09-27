@@ -1,7 +1,7 @@
 ## Interface: 120100, 11508, 20506, 160001
 ## Title: Matt's Minimal Frames
 ## Author: Seathasky
-## Version: 10.0.2
+## Version: 10.0.2-hf
 ## X-Curse-Project-ID: 1362998
 ## IconTexture: Interface\AddOns\MattMinimalFrames\Images\MMF.png
 ## SavedVariables: MattMinimalFramesDB, MattMinimalFramesProfilesDB, MattMinimalFramesGlobalDB

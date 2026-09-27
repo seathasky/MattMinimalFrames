@@ -449,6 +449,10 @@ local function UpdateDispelHighlight(frame, db)
     end
 
     local unit = frame.unit
+    if not Compat.CanReadAuras() then
+        frame.dispelHighlight:Hide()
+        return
+    end
     if (unit ~= "player" and unit ~= "target") or not IsDispelHighlightEnabledForUnit(unit, db) then
         frame.dispelHighlight:Hide()
         return
@@ -476,7 +480,7 @@ local function UpdateDispelHighlight(frame, db)
         return
     end
 
-    if Compat and Compat.IsRetail and C_UnitAuras and C_UnitAuras.GetAuraDataByIndex and C_UnitAuras.GetAuraDispelTypeColor and C_CurveUtil and Enum and Enum.LuaCurveType then
+    if Compat and Compat.HasRetailAuraAPI and C_UnitAuras and C_UnitAuras.GetAuraDataByIndex and C_UnitAuras.GetAuraDispelTypeColor and C_CurveUtil and Enum and Enum.LuaCurveType then
         
         
         
