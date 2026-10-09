@@ -1738,4 +1738,7 @@ local function Slash(message)
     elseif command=="help" then D.Notify("/mmf opens the designer; /mmf move moves complete frames; /mmf settings opens global settings; /mmf diagnose prints build details.")
     else D.Open() end
 end
-SlashCmdList=SlashCmdList or {};SlashCmdList.MATTMINIMALFRAMES=Slash;SlashCmdList.MMF=Slash;SLASH_MATTMINIMALFRAMES1="/mmf"
+
+SlashCmdList.MATTMINIMALFRAMES = Slash
+SlashCmdList.MMF = Slash
+SLASH_MATTMINIMALFRAMES1 = "/mmf"
