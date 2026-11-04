@@ -1,4 +1,4 @@
-## Interface: 120100, 11508, 20506, 16001
+## Interface: 120100, 11508, 20506, 160001
 ## Title: Matt's Minimal Frames
 ## Author: Seathasky
 ## Version: 10.0.3
