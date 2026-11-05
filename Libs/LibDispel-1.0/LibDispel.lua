@@ -221,7 +221,8 @@ do
 
 	if Retail or TBC then
 		frame:RegisterEvent('LEARNED_SPELL_IN_SKILL_LINE')
-	elseif not Classic then
+	elseif not Classic and wowtoc ~= 16001 then
+		-- Forever uses SPELLS_CHANGED; LEARNED_SPELL_IN_TAB is unavailable.
 		frame:RegisterEvent('LEARNED_SPELL_IN_TAB')
 	end
 
