@@ -449,6 +449,9 @@ local function UpdateDispelHighlight(frame, db)
     end
 
     local unit = frame.unit
+    if MMF_UpdateRestrictedDispelHighlight and MMF_UpdateRestrictedDispelHighlight(frame, db) then
+        return
+    end
     if not Compat.CanReadAuras() then
         frame.dispelHighlight:Hide()
         return

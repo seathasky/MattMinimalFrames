@@ -13,6 +13,53 @@ local UsesRestrictedAuraAPI = HasRetailAuraAPI and (
     or (C_Secrets and type(C_Secrets.HasSecretRestrictions) == "function" and C_Secrets.HasSecretRestrictions())
 )
 
+-- Let Blizzard select the aura and own the texture's color/visibility when
+-- addon aura enumeration is restricted (including Forever combat).
+function MMF_UpdateRestrictedDispelHighlight(frame, db)
+    if not UsesRestrictedAuraAPI or not C_AuraContainerUtil
+        or not Enum or not Enum.CustomAuraButtonDispelTypeTextureStyle then
+        return false
+    end
+
+    local unit = frame.unit
+    local enabled = (unit == "player" and db.showPlayerDispelHighlight == true)
+        or (unit == "target" and db.showTargetDispelHighlight == true)
+    enabled = enabled and UnitExists(unit) and UnitIsFriend("player", unit)
+
+    local container = frame.mmfDispelAuraContainer
+    if not container and enabled then
+        container = CreateFrame("AuraContainer", nil, frame.dispelOverlay, "CustomAuraContainerTemplate")
+        container:SetAllPoints(frame.dispelOverlay)
+        container:SetUnit(unit)
+        container:AddAuraSlot("DispelHighlight", "HARMFUL|RAID", {
+            initializeFrame = function(button)
+                button:SetAllPoints(container)
+                button:EnableMouse(false)
+                local texture = button:CreateTexture(nil, "OVERLAY")
+                texture:SetAllPoints(frame.dispelHighlight)
+                texture:SetBlendMode("BLEND")
+                texture:SetTexture("Interface\\AddOns\\MattMinimalFrames\\Textures\\GradientH")
+                button:AddDispelTypeTexture(texture, {
+                    style = Enum.CustomAuraButtonDispelTypeTextureStyle.PreserveAsset,
+                })
+            end,
+        })
+        frame.mmfDispelAuraContainer = container
+    end
+
+    -- Keep the designer's geometry anchor, but never draw the manual texture
+    -- over the native one or inspect the native button's secret visibility.
+    frame.dispelHighlight:Hide()
+    if container then
+        container:SetEnabled(enabled == true)
+        container:SetShown(enabled == true)
+        if enabled then
+            container:UpdateAllAuras()
+        end
+    end
+    return true
+end
+
 local issecretvalue = issecretvalue
 
 local function ShouldSuspendForBlizzardEditMode()
@@ -2255,6 +2302,12 @@ auraEventFrame:SetScript("OnEvent", function(self, event, unit)
     end
 
     if UsesRestrictedAuraAPI and event == "UNIT_AURA" then
+        -- Secure containers update their own icons, but our dispel texture is
+        -- separate. Refresh it too so removed debuffs do not leave a stale tint.
+        -- The highlight updater checks aura access before reading any data.
+        if MMF_UpdateDispelHighlights then
+            MMF_UpdateDispelHighlights()
+        end
         return
     end
     if event == "PLAYER_ENTERING_WORLD" then
